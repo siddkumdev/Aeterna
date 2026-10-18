@@ -1,0 +1,14 @@
+{
+  "min_state": {
+    "PF07": "review",
+    "D01": "done",
+    "D03": "done",
+    "D04": "done"
+  },
+  "rank": {
+    "todo": 0,
+    "doing": 1,
+    "review": 2,
+    "done": 3
+  }
+}

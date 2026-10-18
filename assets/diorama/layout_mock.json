@@ -1,0 +1,18 @@
+{
+  "_status": "MOCK layout for review shots only. NOT a gameplay decision: the real board layout (paths, 6 houses, 3 forest spawn points) is open (asset list G13) and Siddharth decides it. Replace this file, or add layout_<name>.json, when he does.",
+  "_how": "cells are [column, row] of the footprint's corner, 0-11 from the board's front-left (column = +X to the right, row = +Y away from the player). footprint = [w, h] cells. rot = 0/90/180/270 degrees. 'asset' = path of the exported .glb; entries with asset null are planned spots that are NOT rendered until a real asset exists. 'real' assets only are rendered (Siddharth, 2026-10-17).",
+  "board_cells": 12,
+  "placements": [
+    {"label": "Fire Tower", "asset": "assets/export/defense/ew_defense_fire_tower_v07.glb", "cell": [3, 6], "footprint": [2, 2], "rot": 0},
+    {"label": "Bomb tower (Tipping Cauldron)", "asset": "assets/export/defense/ew_defense_bomb_tower_v06.glb", "cell": [7, 5], "footprint": [2, 2], "rot": 0},
+    {"label": "Wind crossbow tower", "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb", "cell": [5, 8], "footprint": [2, 2], "rot": 0}
+  ],
+  "planned": [
+    {"label": "house", "cell": [5, 2], "footprint": [2, 2]},
+    {"label": "house", "cell": [8, 2], "footprint": [2, 2]},
+    {"label": "house", "cell": [2, 2], "footprint": [2, 2]},
+    {"label": "forest spawn", "cell": [0, 10], "footprint": [1, 1]},
+    {"label": "forest spawn", "cell": [6, 11], "footprint": [1, 1]},
+    {"label": "forest spawn", "cell": [11, 10], "footprint": [1, 1]}
+  ]
+}

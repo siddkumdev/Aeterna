@@ -1,0 +1,10 @@
+# personal machine paths (each person has their own; see local.env.example)
+local.env
+# scratch
+_work/
+# Blender backups, Python caches
+*.blend1
+__pycache__/
+*.pyc
+# Godot import cache (rebuilt by: python tools/sync_to_godot.py --check)
+godot/.godot/

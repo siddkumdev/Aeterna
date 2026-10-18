@@ -1,0 +1,25 @@
+{
+  "layout": "layout_mock.json",
+  "assets": [
+    {
+      "label": "Fire Tower",
+      "asset": "assets/export/defense/ew_defense_fire_tower_v07.glb",
+      "tris": 1664
+    },
+    {
+      "label": "Bomb tower (Tipping Cauldron)",
+      "asset": "assets/export/defense/ew_defense_bomb_tower_v06.glb",
+      "tris": 1564
+    },
+    {
+      "label": "Wind crossbow tower",
+      "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb",
+      "tris": 1446
+    }
+  ],
+  "tris": 4674,
+  "mesh_objects": 16,
+  "material_slots": 16,
+  "vfx_standins": 2,
+  "engine": "BLENDER_EEVEE_NEXT"
+}
