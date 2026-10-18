@@ -1,5 +1,7 @@
 # Endless Watch: project conventions
 
+@AGENTS.md
+
 Conventions only. Architecture, algorithms and art decisions are NOT recorded here: gameplay comes from the team prompt by prompt, art decisions live in `art/art_bible.md` and `art/decisions.md`.
 
 ## Team

@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 # Godot import cache (rebuilt by: python tools/sync_to_godot.py --check)
 godot/.godot/
+# personal Claude Code settings (shared ones are in .claude/settings.json)
+.claude/settings.local.json

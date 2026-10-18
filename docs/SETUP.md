@@ -39,7 +39,12 @@ Must end with `0 FAIL`.
 - Render a sheet: `python tools/make_sheet.py assets/blend/crossbow_tower.blend _work/test_sheet` (writes `_work/test_sheet/sheet.png`).
 - Run the game in the simulator: `powershell -File godot\run_sim.ps1`.
 
-## 7. How we work together
+## 7. Claude Code extras (come with the repo)
+- Project skills and the art critic load automatically. `CLAUDE.md` (rules) imports `AGENTS.md` (how the agent behaves).
+- When you open the project, Claude Code may ask you to trust the project settings: they add Siddharth's `i-have-adhd` plugin (from GitHub `ayghri/i-have-adhd`; it only switches on if you type `/i-have-adhd`) and the Blender MCP server.
+- Blender MCP (optional, for letting Claude look at a live Blender scene): install `uv` (`python -m pip install uv`), install the Blender add-on that `mcp-for-blender` documents, and approve the `blender` server when asked. The asset pipeline itself does not need it.
+
+## 8. How we work together
 - **Tracker:** the live asset tracker is a private claude.ai page owned by Siddharth; he shares it from the page's Share menu. Put your name as owner on an item before starting it.
 - **One owner per asset**, on its own branch: `git switch -c asset/<short>`; pull `main` before you start.
 - **Never edit `.blend` or `.glb` by hand.** Change the generator in `assets/generators/` and regenerate; binary files cannot be merged.
