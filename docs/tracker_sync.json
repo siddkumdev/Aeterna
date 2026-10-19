@@ -3,7 +3,8 @@
     "PF07": "review",
     "D01": "done",
     "D03": "done",
-    "D04": "done"
+    "D04": "done",
+    "D05": "review"
   },
   "rank": {
     "todo": 0,

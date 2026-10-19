@@ -15,11 +15,16 @@
       "label": "Wind crossbow tower",
       "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb",
       "tris": 1446
+    },
+    {
+      "label": "Airship",
+      "asset": "assets/export/defense/ew_defense_airship_v01.glb",
+      "tris": 1798
     }
   ],
-  "tris": 4674,
-  "mesh_objects": 16,
-  "material_slots": 16,
+  "tris": 6472,
+  "mesh_objects": 22,
+  "material_slots": 22,
   "vfx_standins": 2,
   "engine": "BLENDER_EEVEE_NEXT"
 }

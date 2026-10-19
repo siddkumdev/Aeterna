@@ -5,7 +5,8 @@
   "placements": [
     {"label": "Fire Tower", "asset": "assets/export/defense/ew_defense_fire_tower_v07.glb", "cell": [3, 6], "footprint": [2, 2], "rot": 0},
     {"label": "Bomb tower (Tipping Cauldron)", "asset": "assets/export/defense/ew_defense_bomb_tower_v06.glb", "cell": [7, 5], "footprint": [2, 2], "rot": 0},
-    {"label": "Wind crossbow tower", "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb", "cell": [5, 8], "footprint": [2, 2], "rot": 0}
+    {"label": "Wind crossbow tower", "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb", "cell": [5, 8], "footprint": [2, 2], "rot": 0},
+    {"label": "Airship", "asset": "assets/export/defense/ew_defense_airship_v01.glb", "cell": [9, 7], "footprint": [2, 2], "rot": 0}
   ],
   "planned": [
     {"label": "house", "cell": [5, 2], "footprint": [2, 2]},

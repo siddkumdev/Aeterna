@@ -23,8 +23,17 @@ Rules that apply to all VFX:
 | Bombs | The bomb models stay, but they need VFX: fuse sparks on the displayed bombs (since v04 the bomb models have no glow of their own, so the fuse VFX is their only light), and on thrown bombs an ember trail and an impact blast. | `__fuse_anchor_1..3` (each a child of its `__bomb_N` part), `__bomb_anchor` | X30 |
 | AoE blast | Blast ring covering the 1-cell radius where the bomb lands; reads from above. | landing point; `__pulse_anchor` for the range ring | X13-style |
 
+## Airship (D05, `ew_defense_airship_v01`, awaiting approval)
+| Effect | What Siddharth asked for | Anchor | Asset list |
+|---|---|---|---|
+| Flaming cannonball | "A mix between a cannonball and a fireball" (2026-10-19): a dark cannonball wrapped in fire (orange/red), trail in flight, burst on hitting a flyer. | `__muzzle_anchor` (child of `__barrel`) | D20, X02, X27 |
+| Cannon smoke + muzzle flash | Puff of smoke and a flash at the muzzle on each shot (2026-10-19). | `__muzzle_anchor` | X27 |
+| Burner flame | Small flame at the balloon's mouth; flares as the cannon charges a shot (2026-10-19). | `__burner_anchor` | X27 |
+| Balloon bob, flag flutter | Idle animation (tweens on parts, not VFX), picked 2026-10-19. | parts `__ship`, `__flag` | D18 |
+| Tether follows the bob | Not VFX: when `__ship` bobs, re-aim `__tether` (pivot at the stake top) at `__tether_anchor`; the rope has a fixed length, so keep the bob under ~4 mm or stretch it along its own direction (art critic, 2026-10-19). | `__tether_anchor` | D18 |
+
 ## Other towers
-- Airship, Watch Hut: not designed yet. Same idle / charge-up / attack rule (asset list X27).
+- Watch Hut: not designed yet. Same idle / charge-up / attack rule (asset list X27).
 
 ## Wind crossbow tower (D04, `ew_defense_crossbow_tower_v03`; name open)
 | Effect | What Siddharth asked for | Anchor | Asset list |
