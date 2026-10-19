@@ -80,9 +80,9 @@ Change column (what happened to the tracker item):
 ## V Village and villagers
 | ID | Pri | Kind | Asset | Notes | Budget | Change |
 |---|---|---|---|---|---|---|
-| V01 | P0 | model | House, terracotta roof: Dormer Cottage | 2 x 2. Cream walls, steep roof with a front dormer, door canopy, swing shutters (moodboard #4). Intact + broken (half collapsed) states via moving parts and _broken pose markers. BUILT: ew_village_cottage_v02 (1476 tris, half-collapsed broken state), awaiting approval | 1-2k | CHANGED |
-| V02 | P0 | model | House, teal roof: Log Cabin | 2 x 2. Log walls, big A-frame roof, porch on posts, roll-up shutters (moodboard #5). Intact + broken states. BUILT: ew_village_cabin_v02 (1996 tris, half-collapsed broken state), awaiting approval | 1-2k | CHANGED |
-| V03 | P1 | model | House, orange roof: Timber Townhouse | 2 x 2. Two storeys, half-timbered, jettied upper floor, teal flap shutters. Intact + broken states. BUILT: ew_village_townhouse_v02 (1572 tris, half-collapsed broken state), awaiting approval | 1-2k | CHANGED |
+| V01 | P0 | model | House, terracotta roof: Dormer Cottage | 2 x 2. Cream walls, steep roof with a front dormer, door canopy, swing shutters (moodboard #4). Intact + broken (half collapsed) states via moving parts and _broken pose markers. BUILT: ew_village_cottage_v03 (1556 tris, half-collapsed broken state; v02 approved by Siddharth 2026-10-19), v03 tweaks awaiting approval | 1-2k | CHANGED |
+| V02 | P0 | model | House, teal roof: Log Cabin | 2 x 2. Log walls, big A-frame roof, porch on posts, roll-up shutters (moodboard #5). Intact + broken states. BUILT: ew_village_cabin_v03 (1828 tris, half-collapsed broken state; v02 approved by Siddharth 2026-10-19), v03 tweaks awaiting approval | 1-2k | CHANGED |
+| V03 | P1 | model | House, orange roof: Timber Townhouse | 2 x 2. Two storeys, half-timbered, jettied upper floor, teal flap shutters. Intact + broken states. BUILT: ew_village_townhouse_v03 (1652 tris, half-collapsed broken state; v02 approved by Siddharth 2026-10-19), v03 tweaks awaiting approval | 1-2k | CHANGED |
 | V04 | P2 | model | House D (cabin) | The spec has 6 houses in 3 roof colours, so a 4th design is a cut candidate. | 1-2k | EDIT |
 | V05 | P2 | model | Village hall / heart | Cut candidate; conflicts with "all buildings uniform 2 x 2". Decide if a landmark is wanted. | ~2k | EDIT |
 | V06 | P2 | model | Bakery | Cut candidate: the baker lives in a normal house (outfit and apron carry the identity). | 1-2k | EDIT |

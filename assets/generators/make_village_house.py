@@ -336,7 +336,7 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
-FINAL = {"cottage": "ew_village_cottage_v02", "cabin": "ew_village_cabin_v02", "townhouse": "ew_village_townhouse_v02"}
+FINAL = {"cottage": "ew_village_cottage_v03", "cabin": "ew_village_cabin_v03", "townhouse": "ew_village_townhouse_v03"}
 TINY = 0.001  # scale of parts that are hidden (not yet appeared / already gone)
 
 
@@ -369,6 +369,7 @@ def win_final(w, h, frame, style, shutter_col):
             static.append(bc.box("shutter", (hw + 0.001, 0.003, h + 0.004), (sx * (hw + 0.004 + hw / 2), -0.0015, 0), shutter_col))
     elif style == "roll":
         r = bc.cone("roll", 0.0035, 0.0035, w + 0.006, (0, 0, 0), shutter_col, 6)
+        r["no_bevel"] = True  # v03: a bevelled 6-sided drum cost the cabin ~40 tris per window
         static += put([r], Matrix.Translation((0, -0.004, h / 2 + 0.0055)) @ Matrix.Rotation(math.radians(90), 4, "Y"))
     elif style == "flap":  # propped 35 degrees so side flaps stay inside the 2 x 2 cells
         a = math.radians(35)
@@ -404,6 +405,8 @@ class House:
     def __init__(self, notch):
         self.static, self.glow, self.door, self.rubble, self.rafters = [], [], [], [], []
         self.roof_fall, self.chimney, self.corner = [], [], []
+        self.chimney_cap, self.roof_hole = [], []  # v03: cap breaks off; missing tile on the slope that stays up
+        self.cap_rest = None  # (target xy, surface z(x, y), rotation) where the cap comes to rest
         self.hinge = self.door_m = self.chim = self.lantern = self.smoke = self.ridge = None
         self.notch = notch  # (x0, y1, z0): the knocked-out corner is x > x0, y < y1, z > z0 (front-right, top)
 
@@ -574,7 +577,25 @@ def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.004
             stubs.append(stick("rafter_snapped", mid, tip, 0.0035, "wood_dark"))
         else:
             static.append(stick("rafter", p0, p1, 0.0035, "wood_dark"))
-    put(static + fall + stubs, Mrot)
+    # v03 (Siddharth: damage should show from behind too): a missing tile (dark hole) and a slipped tile on
+    # the slope that stays up; both appear when the house breaks (__roof_hole)
+    sd = -fall_side
+    e, r = line(sd)
+    n = normal(sd)
+    ang = sd * math.degrees(a)
+    hp = e.lerp(r, 0.52) + n * 0.0009
+    hp.y = length * 0.22
+    hole = tilted("roof_hole", (0.013, 0.011, 0.0012), (0, ang, 0), tuple(hp), "ink")
+    tile = bc.box("tile_slipped", (0.013, 0.011, 0.003), (0, 0, 0), col)
+    tp = e.lerp(r, 0.30) + n * 0.0026  # one edge lifted 16 degrees so it reads against the slope (flat it vanished)
+    tp.y = length * 0.22 + 0.004
+    put([tile], Matrix.Translation(tp) @ Matrix.Rotation(math.radians(28), 4, n) @ Matrix.Rotation(math.radians(ang), 4, "Y")
+        @ Matrix.Rotation(math.radians(16), 4, "Y"))
+    for o in (hole, tile):
+        o["no_bevel"] = True
+    holes = [hole, tile]
+    put(static + fall + stubs + holes, Mrot)
+    house.roof_hole += holes
     house.static += static
     house.roof_fall += fall
     house.rafters += stubs
@@ -590,7 +611,10 @@ def chimney_final(house, x, y, z_bottom, z_top, w, col, roof_surface_z, z_attic)
     mid = bc.box("chimney_mid", (w, w, zc - z_cut), (x, y, (z_cut + zc) / 2), col)
     mid["no_bevel"] = True  # mostly hidden inside the roof
     house.roof_fall.append(mid)
-    house.chimney += chimney(x, y, zc - 0.003, z_top, w, col)
+    body, *cap = chimney(x, y, zc - 0.003, z_top, w, col)
+    house.chimney.append(body)
+    house.chimney_cap += cap  # v03: the cap breaks off on its own so the fallen piece reads as a chimney
+    house.cap_c = Vector((x, y, z_top + 0.001))
     house.chim = Vector((x, y, zc - 0.003))
     house.smoke = Vector((x, y, z_top + 0.004))
 
@@ -668,12 +692,14 @@ def cottage():
     chimney_final(hs, cx, cy, 0.062, Hh + RH + 0.010, 0.014, "stone", roof_z(RH, D, cy - 0.007, Hh), Hh)
     hs.land = (Vector((0.024, -0.023)), 0.022)  # the chimney lands in the breach (x, y on the notch floor, z)
     rubble_spread(hs, [(0.010, -0.041, 0.0, 5), (0.034, -0.040, 0.0, 4), (0.044, -0.020, 0.0, 3),
-                       (-0.040, -0.041, 0.0, 2)], roof_col, "wall_cream", 1)
+                       (-0.040, -0.041, 0.0, 2), (-0.016, 0.041, 0.0, 3)], roof_col, "wall_cream", 1)
+    hs.cap_rest = (Vector((0.030, 0.0405)), GROUND, LEAN, D / 2)  # the cap falls off behind the house
     return hs, Vector((0.010, -0.010, 0.05))
 
 
 def cabin():
-    """C: Log Cabin, teal roof, roll shutters. Right roof side falls; front-right corner of the logs knocked out."""
+    """C: Log Cabin, teal roof, roll shutters. Left roof side (with the chimney) falls, like the other two lose
+    the slope with the chimney (v03, Siddharth); front-right corner of the logs knocked out."""
     W, D, Hh, RH = 0.070, 0.058, 0.054, 0.060
     y0 = 0.008
     hs = House(notch=(0.013, y0 - D / 2 + 0.017, 0.020))
@@ -687,7 +713,7 @@ def cabin():
         for sx in (-1, 1):
             hs.wall_box("log", (0.006, D - 0.004, ch * 0.86), (sx * (W / 2 - 0.001), y0, z), "wood_light")
     hs.notch_lining(W / 2 - 0.001, y0 - D / 2 + 0.002, Hh)
-    roof_final(hs, W, D, RH, Hh, roof_col, "wood_dark", oh=0.007, at=(0, y0), fall_side=1)
+    roof_final(hs, W, D, RH, Hh, roof_col, "wood_dark", oh=0.007, at=(0, y0), fall_side=-1)
     hs.split_gables()
     py0, py1 = -0.037, y0 - D / 2
     hs.static.append(bc.box("deck", (W, py1 - py0, 0.006), (0, (py0 + py1) / 2, 0.003), "wood_light"))
@@ -707,9 +733,15 @@ def cabin():
     hs.glow += put(g, Mg)
     cx, cy = -0.022, y0 + 0.012
     chimney_final(hs, cx, cy, 0.040, Hh + RH + 0.002, 0.013, "stone", roof_z(RH, W, abs(cx) - 0.0065, Hh), Hh)
-    hs.land = (Vector((0.024, -0.014)), 0.020)
-    rubble_spread(hs, [(0.024, -0.029, 0.006, 3), (0.004, -0.043, 0.0, 3), (0.042, -0.012, 0.0, 1)],
-                  roof_col, "wood_light", 2)
+    # the chimney falls into the open left half of the attic, lying along the ridge, clear of the stump
+    hs.land = (Vector((-0.008, y0 - 0.004)), Hh + 0.0012, 90)
+    rubble_spread(hs, [(0.022, -0.029, 0.006, 3), (-0.014, -0.043, 0.0, 2), (-0.043, -0.004, 0.0, 2),
+                       (0.012, 0.0435, 0.0, 3), (-0.026, 0.0435, 0.0, 1)], roof_col, "wood_light", 2)
+    # the cap slides onto the porch roof (14 degree slope, top face through p0)
+    t14 = math.radians(14)
+    p0 = Vector((0, (py0 + py1) / 2 - 0.002, 0.048)) + Vector((0, -math.sin(t14), math.cos(t14))) * 0.002
+    hs.cap_rest = (Vector((-0.017, -0.0345)), lambda x, y: p0.z + math.tan(t14) * (y - p0.y),
+                   Matrix.Rotation(t14, 4, "X") @ Matrix.Rotation(math.radians(9), 4, "Y") @ Matrix.Rotation(math.radians(8), 4, "Z"))
     return hs, Vector((0.010, y0 - 0.006, 0.045))
 
 
@@ -754,8 +786,30 @@ def townhouse():
     chimney_final(hs, cx, cy, 0.080, zt + RH + 0.014, 0.013, "stone", roof_z(RH, D + 2 * J, abs(cy) - 0.0065, zt), zt)
     hs.land = (Vector((0.020, -0.023)), H1 + 0.005)
     rubble_spread(hs, [(0.004, -0.039, 0.0, 4), (0.030, -0.038, 0.0, 5), (0.042, -0.012, 0.0, 3),
-                       (-0.040, -0.039, 0.0, 2)], roof_col, "wall_cream", 3)
+                       (-0.040, -0.039, 0.0, 2), (-0.018, 0.041, 0.0, 3)], roof_col, "wall_cream", 3)
+    hs.cap_rest = (Vector((0.022, 0.0405)), GROUND, LEAN, D / 2 + J)
     return hs, Vector((0.012, -0.012, 0.07))
+
+
+GROUND = (lambda x, y: 0.0)
+LEAN = Matrix.Rotation(math.radians(10), 4, "Z") @ Matrix.Rotation(math.radians(-70), 4, "X")  # cap leans on the back wall,
+# socket facing out (lying tipped it was wider than the strip behind the house and sank into the wall)
+
+
+def rest(objs, pivot, target_xy, surface_z, R, wall_y=None, sink=0.0005):
+    """Marker matrix that turns a part (origin at pivot) by R, centres it over target_xy (kept inside the 2 x 2
+    cells) and lowers it until its lowest point touches surface_z(x, y), sunk by `sink`. With wall_y it is
+    pushed back until it touches the back wall at y = wall_y instead (leaning on it)."""
+    pts = [R.to_3x3() @ ((o.matrix_world @ v.co) - pivot) for o in objs for v in o.data.vertices]
+    lo = Vector((min(p.x for p in pts), min(p.y for p in pts)))
+    hi = Vector((max(p.x for p in pts), max(p.y for p in pts)))
+    t = target_xy - (lo + hi) / 2
+    if wall_y is not None:
+        t.y = wall_y + 0.0002 - lo.y
+    t.x += max(0.0, -0.0485 - (lo.x + t.x)) - max(0.0, hi.x + t.x - 0.0485)
+    t.y += max(0.0, -0.0485 - (lo.y + t.y)) - max(0.0, hi.y + t.y - 0.0485)
+    tz = max(surface_z(p.x + t.x, p.y + t.y) - p.z for p in pts) - sink
+    return Matrix.Translation((t.x, t.y, tz)) @ R
 
 
 def lay_down(objs, pivot, target_xy, ground_z, yaw=20):
@@ -791,6 +845,8 @@ def build_final(kind, state="intact"):
     fall_c = centre(hs.roof_fall)
     corner_c = centre(hs.corner)
     chim_land = lay_down(hs.chimney, hs.chim, *hs.land)
+    cap_land = rest(hs.chimney_cap, hs.cap_c, *hs.cap_rest)
+    hole_c = centre(hs.roof_hole)
     root = bc.assemble(name, [
         ("", hs.static, (0, 0, 0), None),
         ("windows", hs.glow, (0, 0, 0.03), ""),
@@ -798,12 +854,14 @@ def build_final(kind, state="intact"):
         ("roof_fall", hs.roof_fall, tuple(fall_c), ""),
         ("wall_corner", hs.corner, tuple(corner_c), ""),
         ("chimney", hs.chimney, tuple(hs.chim), ""),
+        ("chimney_cap", hs.chimney_cap, tuple(hs.cap_c), ""),
+        ("roof_hole", hs.roof_hole, tuple(hole_c), ""),
         ("rubble", hs.rubble, tuple(pile_c), ""),
         ("rafters", hs.rafters, tuple(raf_c), ""),
     ])
     bpy.data.objects[name + "__windows"]["ew_broken"] = "off"
-    bc.anchor(root, "smoke_anchor", hs.smoke, parent_suffix="chimney", size=0.012)
-    bc.anchor(root, "rubble_anchor", hs.smoke - Vector((0, 0, 0.005)), parent_suffix="chimney", size=0.008)
+    bc.anchor(root, "smoke_anchor", hs.smoke, parent_suffix="chimney_cap", size=0.012)
+    bc.anchor(root, "rubble_anchor", hs.smoke - Vector((0, 0, 0.005)), parent_suffix="chimney_cap", size=0.008)
     bc.anchor(root, "lantern_anchor", hs.lantern, size=0.006)
     bc.anchor(root, "dust_anchor", dust, size=0.08)
     Fd = hs.door_m.to_3x3().to_4x4()
@@ -817,13 +875,14 @@ def build_final(kind, state="intact"):
         tgt.z = max(0.004, c.z * 0.25)
         return Matrix.Translation(tgt) @ Matrix.Rotation(math.radians(tilt), 4, "X") @ tiny
 
-    poses = {"roof_fall": gone(fall_c, 35), "wall_corner": gone(corner_c, -25), "chimney": chim_land,
+    poses = {"roof_fall": gone(fall_c, 35), "wall_corner": gone(corner_c, -25), "chimney": chim_land, "chimney_cap": cap_land,
+             "roof_hole": Matrix.Translation(hole_c),
              "door": Matrix.Translation(top + R_door.to_3x3() @ (hs.hinge - top)) @ R_door,
              "rubble": Matrix.Translation(pile_c), "rafters": Matrix.Translation(raf_c)}
     for part, M in poses.items():
         pose(root, part, part + "_broken", M)
     pose(root, "door", "door_open", Matrix.Translation(hs.hinge) @ Fd @ Matrix.Rotation(math.radians(80), 4, "Z") @ Fd.inverted())
-    for part in ("rubble", "rafters"):
+    for part in ("rubble", "rafters", "roof_hole"):
         bpy.data.objects[name + "__" + part].scale = (TINY, TINY, TINY)
         bpy.data.objects[name + "__" + part]["ew_starts_hidden"] = True
     if state == "broken":  # preview only: every part in its broken pose, windows off
