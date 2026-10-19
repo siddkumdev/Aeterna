@@ -43,7 +43,7 @@ Rules that apply to all VFX:
 ## World and other effects already on the asset list
 See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, time rewind, boss effects, rarity reveal, shutter close and more). Those come from the spec, not from Siddharth's VFX comments; move an item here when he adds direction to it.
 
-## Village houses (V01-V03: ew_village_cottage_v05, ew_village_cabin_v05, ew_village_townhouse_v05; v04 approved, v05 awaiting approval)
+## Village houses (V01-V03: ew_village_cottage_v05, ew_village_cabin_v05, ew_village_townhouse_v05; v05 approved by Siddharth 2026-10-19)
 | Effect | What Siddharth asked for | Anchor | Asset list |
 |---|---|---|---|
 | Chimney smoke | Chimney socket for smoke (2026-10-19); smoke stops when the house is broken. Also the blocked-chimney help request (rubble pulled out of the socket). | `__smoke_anchor`, `__rubble_anchor` (children of `__chimney`) | X19, V12 |

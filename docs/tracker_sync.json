@@ -5,9 +5,9 @@
     "D03": "done",
     "D04": "done",
     "D05": "done",
-    "V01": "review",
-    "V02": "review",
-    "V03": "review"
+    "V01": "done",
+    "V02": "done",
+    "V03": "done"
   },
   "rank": {
     "todo": 0,
