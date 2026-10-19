@@ -73,6 +73,7 @@ Every change round makes a **new version** (`_v01` -> `_v02`), keeping old expor
 - `docs/VFX_NOTES.md`: every effect he mentions.
 - `docs/ASSET_LIST.md`: the asset's row reflects the chosen design.
 - Then run the **tracker-sync** skill (every round): regenerates and republishes the live tracker and moves the item's status forward.
+- Then run the **github-sync** skill (every round): commit and push on `asset/<short>`; on approval merge it into `main`.
 - New durable preferences go to memory.
 
 ## 8. Done

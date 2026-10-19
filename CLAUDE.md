@@ -24,7 +24,8 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - Claim an asset in the tracker (owner) before working on it; one owner per asset at a time.
 - One branch per asset (`asset/<short>`), merged to `main` when approved. Pull before starting, push when done.
 - Never hand-edit `.blend` or `.glb`: change the generator and regenerate (binaries cannot be merged). Shared logs (`ASSETS.md`, `decisions.md`, `VFX_NOTES.md`, `ASSET_LIST.md`) are append-a-row files; on a merge conflict keep both rows.
-- Commit or push only when the user asks.
+- After every addition or change, commit and push (skill: `github-sync`; standing instruction from Siddharth, 2026-10-19). Unapproved asset work goes on `asset/<short>`, everything else on `main`. Never force-push.
+- Never credit Claude in git: no `Co-Authored-By: Claude` trailer and no "Generated with Claude Code" line in commits or PRs (Siddharth, 2026-10-19).
 
 ## Platform and tooling
 - Windows 11, Blender 4.5, Godot 4.7.2 stable (console build for headless runs), Python 3.10+ with Pillow, Meta XR Simulator 207.1, Git + Git LFS. Machine paths live in each person's git-ignored `local.env` (copy `local.env.example`; keys `BLENDER_EXE`, `GODOT_EXE`, `META_XR_SIM_JSON`), loaded by `tools/ew_env.py`. Check a machine with `python tools/doctor.py`; new machine: `docs/SETUP.md`.
@@ -63,6 +64,7 @@ _work/      scratch input (git-ignored)
 - Variant sheet: `python tools/make_variant_sheet.py <out.png> A=<a.blend> B=<b.blend> ...`
 - Asset-building workflow: the `make-asset` skill (ask the user first, variants, build, critic, show, version, log, done only on approval by Siddharth or his teammate).
 - Bring into Godot (copy, import, shared materials, anchors, check): `python tools/sync_to_godot.py assets/export/<category>/<file>.glb` (skill: godot-import; `--check` re-checks all). Headless Godot runs always need `--xr-mode off`.
+- GitHub sync (commit + push after every change, right branch, no Claude credit): skill `github-sync`.
 - Tracker sync (regenerate + republish the live asset tracker, move built items' status forward): `python tools/sync_tracker.py` then the tracker-sync skill steps.
 - Generate headless: `blender -b -P assets/generators/make_<name>.py` (Blender = `BLENDER_EXE` from `local.env`)
 - Machine check: `python tools/doctor.py`

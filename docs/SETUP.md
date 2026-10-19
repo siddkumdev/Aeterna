@@ -50,5 +50,6 @@ Must end with `0 FAIL`.
 - **Never edit `.blend` or `.glb` by hand.** Change the generator in `assets/generators/` and regenerate; binary files cannot be merged.
 - **Logs are add-a-row** (`assets/ASSETS.md`, `art/decisions.md`, `docs/VFX_NOTES.md`, `docs/ASSET_LIST.md`). On a merge conflict keep both rows.
 - **Approval:** either of us can approve an asset (`approved by <name> (date)` in `ASSETS.md`); then merge the branch into `main` and push.
+- **GitHub stays current:** Claude commits and pushes after every change (skill `github-sync`), with no Claude co-author lines. Pull before you start.
 - **Claude:** project rules are in `CLAUDE.md`; workflows are skills in `.claude/skills/` (start an asset with "make-asset"). They come with the repo, so both Claudes behave the same.
 - The repo stays **private**: the moodboard contains other people's images.
