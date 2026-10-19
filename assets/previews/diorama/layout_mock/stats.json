@@ -23,21 +23,21 @@
     },
     {
       "label": "Cottage (terracotta)",
-      "asset": "assets/export/village/ew_village_cottage_v03.glb",
-      "tris": 1556
+      "asset": "assets/export/village/ew_village_cottage_v04.glb",
+      "tris": 1652
     },
     {
       "label": "Log cabin (teal)",
-      "asset": "assets/export/village/ew_village_cabin_v03.glb",
-      "tris": 1828
+      "asset": "assets/export/village/ew_village_cabin_v04.glb",
+      "tris": 1948
     },
     {
       "label": "Townhouse (orange)",
-      "asset": "assets/export/village/ew_village_townhouse_v03.glb",
-      "tris": 1652
+      "asset": "assets/export/village/ew_village_townhouse_v04.glb",
+      "tris": 1748
     }
   ],
-  "tris": 11508,
+  "tris": 11820,
   "mesh_objects": 52,
   "material_slots": 52,
   "vfx_standins": 2,

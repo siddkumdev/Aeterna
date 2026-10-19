@@ -6,7 +6,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	for f in ["cottage", "cabin", "townhouse"]:
-		var scene: Node3D = load("res://assets/village/ew_village_%s_v03.glb" % f).instantiate()
+		var scene: Node3D = load("res://assets/village/ew_village_%s_v04.glb" % f).instantiate()
 		get_root().add_child(scene)
 		var parts := {}
 		for n in _all(scene):

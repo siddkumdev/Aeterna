@@ -336,7 +336,7 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
-FINAL = {"cottage": "ew_village_cottage_v03", "cabin": "ew_village_cabin_v03", "townhouse": "ew_village_townhouse_v03"}
+FINAL = {"cottage": "ew_village_cottage_v04", "cabin": "ew_village_cabin_v04", "townhouse": "ew_village_townhouse_v04"}
 TINY = 0.001  # scale of parts that are hidden (not yet appeared / already gone)
 
 
@@ -540,8 +540,7 @@ def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.004
     for side in (-1, 1):
         if side == fall_side:
             fall.append(slab(side))
-        else:
-            static.append(slab(side))
+        else:  # the standing slab is built in strips around its hole below
             e, r = line(side)
             n = normal(side)
             p0, p1 = e.lerp(r, 0.2), e.lerp(r, 0.85)
@@ -577,23 +576,48 @@ def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.004
             stubs.append(stick("rafter_snapped", mid, tip, 0.0035, "wood_dark"))
         else:
             static.append(stick("rafter", p0, p1, 0.0035, "wood_dark"))
-    # v03 (Siddharth: damage should show from behind too): a missing tile (dark hole) and a slipped tile on
-    # the slope that stays up; both appear when the house breaks (__roof_hole)
+    # v04 (Siddharth: "make it look broken from all sides"): the slope that stays up gets a real hole too. Its
+    # slab is built as four strips around the hole; the piece that fills the hole falls with __roof_fall.
+    # Hidden until broken (__roof_hole): a rafter across the hole, two ragged tiles at its top edge, and a tile
+    # slipped below it (lifted 28 degrees over a dark patch so its edge reads; v03's 16 degrees vanished on teal).
     sd = -fall_side
     e, r = line(sd)
     n = normal(sd)
     ang = sd * math.degrees(a)
-    hp = e.lerp(r, 0.52) + n * 0.0009
-    hp.y = length * 0.22
-    hole = tilted("roof_hole", (0.013, 0.011, 0.0012), (0, ang, 0), tuple(hp), "ink")
-    tile = bc.box("tile_slipped", (0.013, 0.011, 0.003), (0, 0, 0), col)
-    tp = e.lerp(r, 0.30) + n * 0.0026  # one edge lifted 16 degrees so it reads against the slope (flat it vanished)
-    tp.y = length * 0.22 + 0.004
-    put([tile], Matrix.Translation(tp) @ Matrix.Rotation(math.radians(28), 4, n) @ Matrix.Rotation(math.radians(ang), 4, "Y")
-        @ Matrix.Rotation(math.radians(16), 4, "Y"))
-    for o in (hole, tile):
+    u = (r - e).normalized()
+    t0, t1 = 0.32, 0.62
+    hw = 0.015  # wide enough to read as a hole, not a vent
+    yc = min(0.18 * length, length / 2 - gable_t - 0.002 - hw)
+
+    def piece(name, ta, tb, ya, yb, colr=col, depth=thick, lift=0.0):
+        c = e.lerp(r, (ta + tb) / 2) - n * (depth / 2) + n * lift
+        c.y = (ya + yb) / 2
+        o = tilted(name, (L * (tb - ta), yb - ya, depth), (0, ang, 0), tuple(c), colr)
         o["no_bevel"] = True
-    holes = [hole, tile]
+        return o
+
+    hf = full / 2
+    static += [piece("roof", 0.0, t0, -hf, hf), piece("roof", t1, 1.0, -hf, hf),
+               piece("roof", t0, t1, -hf, yc - hw), piece("roof", t0, t1, yc + hw, hf)]
+    fall.append(piece("roof", t0, t1, yc - hw, yc + hw))
+    holes = [stick("rafter_bare", e.lerp(r, t0 - 0.04) - n * (thick / 2) + Vector((0, yc - 0.007, 0)),
+                   e.lerp(r, t1 + 0.04) - n * (thick / 2) + Vector((0, yc - 0.007, 0)), 0.0035, "wood_dark")]  # off-centre
+    for dy, tilt in ((-0.0055, 22), (0.006, 14)):  # ragged tiles hanging over the hole's top edge
+        tl = bc.box("tile_ragged", (0.008, 0.007, 0.003), (0, 0, 0), col)
+        tl["no_bevel"] = True
+        tp = e.lerp(r, t1) - u * 0.002 + n * 0.0003
+        tp.y = yc + dy
+        put([tl], Matrix.Translation(tp) @ Matrix.Rotation(math.radians(ang), 4, "Y") @ Matrix.Rotation(math.radians(-sd * tilt), 4, "Y"))
+        holes.append(tl)
+    ts = 0.16  # slipped tile below the hole
+    holes.append(piece("tile_shadow", ts - 0.07, ts + 0.07, yc - 0.004, yc + 0.010, "ink", 0.0006, 0.0004))
+    tile = bc.box("tile_slipped", (0.013, 0.011, 0.003), (0, 0, 0), col)
+    tile["no_bevel"] = True
+    tp = e.lerp(r, ts) + n * 0.0036
+    tp.y = yc + 0.003
+    put([tile], Matrix.Translation(tp) @ Matrix.Rotation(math.radians(20), 4, n) @ Matrix.Rotation(math.radians(ang), 4, "Y")
+        @ Matrix.Rotation(math.radians(sd * 28), 4, "Y"))
+    holes.append(tile)
     put(static + fall + stubs + holes, Mrot)
     house.roof_hole += holes
     house.static += static
@@ -736,7 +760,7 @@ def cabin():
     # the chimney falls into the open left half of the attic, lying along the ridge, clear of the stump
     hs.land = (Vector((-0.008, y0 - 0.004)), Hh + 0.0012, 90)
     rubble_spread(hs, [(0.022, -0.029, 0.006, 3), (-0.014, -0.043, 0.0, 2), (-0.043, -0.004, 0.0, 2),
-                       (0.012, 0.0435, 0.0, 3), (-0.026, 0.0435, 0.0, 1)], roof_col, "wood_light", 2)
+                       (0.012, 0.0435, 0.0, 3), (-0.026, 0.0435, 0.0, 1), (0.043, 0.016, 0.0, 2)], roof_col, "wood_light", 2)
     # the cap slides onto the porch roof (14 degree slope, top face through p0)
     t14 = math.radians(14)
     p0 = Vector((0, (py0 + py1) / 2 - 0.002, 0.048)) + Vector((0, -math.sin(t14), math.cos(t14))) * 0.002
@@ -839,13 +863,24 @@ def pose(root, part, name, M):
 def build_final(kind, state="intact"):
     hs, dust = {"cottage": cottage, "cabin": cabin, "townhouse": townhouse}[kind]()
     name = FINAL[kind]
+    cap_land = rest(hs.chimney_cap, hs.cap_c, *hs.cap_rest)
+    # v04 (Siddharth): a grey chimney-brick chunk lands beside the cap so the pair reads as a fallen chimney
+    # (alone the cap read as a dark crate). Part of __rubble, so it appears when the house breaks.
+    pts = [cap_land @ (o.matrix_world @ v.co - hs.cap_c) for o in hs.chimney_cap for v in o.data.vertices]
+    lo_x, hi_x = min(p.x for p in pts), max(p.x for p in pts)
+    cy = (min(p.y for p in pts) + max(p.y for p in pts)) / 2
+    bx = hi_x + 0.0075 if hi_x + 0.015 < 0.0485 else lo_x - 0.0075
+    brick = bc.box("chimney_chunk", (0.012, 0.009, 0.008), (0, 0, 0), "stone")
+    brick["no_bevel"] = True
+    put([brick], rest([brick], Vector((0, 0, 0)), Vector((bx, cy)), hs.cap_rest[1],
+                      Matrix.Rotation(math.radians(35), 4, "Z") @ Matrix.Rotation(math.radians(8), 4, "X")))
+    hs.rubble.append(brick)
     pile_c = centre(hs.rubble)
     pile_c.z = 0.0
     raf_c = centre(hs.rafters)
     fall_c = centre(hs.roof_fall)
     corner_c = centre(hs.corner)
     chim_land = lay_down(hs.chimney, hs.chim, *hs.land)
-    cap_land = rest(hs.chimney_cap, hs.cap_c, *hs.cap_rest)
     hole_c = centre(hs.roof_hole)
     root = bc.assemble(name, [
         ("", hs.static, (0, 0, 0), None),
