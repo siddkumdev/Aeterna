@@ -172,7 +172,7 @@ What does apply to every tower and hut:
 - cap and accent colours are whatever matches that piece, because looks come first **[Decided]**;
 - each preview sheet includes a silhouette view (the model filled solid black) as a check that it is still easy to tell apart from the others at a glance; it is a check, not a target shape.
 
-Houses: same approach (redone from the v01 benchmark with Siddharth), with the decided points: 3 roof colours on 3 different shapes (cottage, log cabin, townhouse), intact and broken ("damaged but standing") states, no plinth.
+Houses: same approach (redone from the v01 benchmark with Siddharth), with the decided points: 3 roof colours on 3 different shapes (cottage, log cabin, townhouse), intact and broken ("half collapsed") states, no plinth.
 
 ## 9. Environment
 - **Island:** flat 12 x 12 grass top, bevelled rim, stone-strata sides, rounded corners. Underside appears only in the floating fallback. **[Decided flat; Proposed details]**

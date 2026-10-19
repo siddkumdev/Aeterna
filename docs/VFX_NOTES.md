@@ -43,11 +43,11 @@ Rules that apply to all VFX:
 ## World and other effects already on the asset list
 See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, time rewind, boss effects, rarity reveal, shutter close and more). Those come from the spec, not from Siddharth's VFX comments; move an item here when he adds direction to it.
 
-## Village houses (V01-V03: ew_village_cottage_v01, ew_village_cabin_v01, ew_village_townhouse_v01; awaiting approval)
+## Village houses (V01-V03: ew_village_cottage_v02, ew_village_cabin_v02, ew_village_townhouse_v02; awaiting approval)
 | Effect | What Siddharth asked for | Anchor | Asset list |
 |---|---|---|---|
 | Chimney smoke | Chimney socket for smoke (2026-10-19); smoke stops when the house is broken. Also the blocked-chimney help request (rubble pulled out of the socket). | `__smoke_anchor`, `__rubble_anchor` (children of `__chimney`) | X19, V12 |
 | Lit windows | Lit when standing, dark when broken (2026-10-19). Not VFX: the `__windows` glow part is switched off (extra `ew_broken = off`), dark glass sits behind it. | part `__windows` | V01-V03 |
-| Break: dust puff | "a animation to transition" into the broken state (2026-10-19): parts tumble (roof piece caves in, chimney top snaps and leans, door swings to hang off its top hinge, rubble and broken rafters grow from 0) with a dust puff. Parts tween to their `<part>_broken` markers. | `__dust_anchor` | X24 |
+| Break: dust puff | "a animation to transition" into the broken state (2026-10-19): HALF COLLAPSED (v02): the roof side and the knocked-out wall corner drop and shrink into the dust (they become the rubble), the chimney top tumbles into the breach, the door swings to hang off its top hinge, rubble heaps and snapped rafters grow from 0. Parts tween to their `<part>_broken` markers. Later: rising dust/smoke so a broken house reads from straight above (Siddharth, 2026-10-19). | `__dust_anchor` | X24 |
 | Repair at dawn | Same animation played backwards, like a rewind (2026-10-19), with a small sparkle. | `__dust_anchor` | X24 |
 | Lost lantern returned | The lantern hangs from the hook by the door (help request). | `__lantern_anchor` | V15 |
