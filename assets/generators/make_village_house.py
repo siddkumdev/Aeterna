@@ -336,7 +336,7 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
-FINAL = {"cottage": "ew_village_cottage_v04", "cabin": "ew_village_cabin_v04", "townhouse": "ew_village_townhouse_v04"}
+FINAL = {"cottage": "ew_village_cottage_v05", "cabin": "ew_village_cabin_v05", "townhouse": "ew_village_townhouse_v05"}
 TINY = 0.001  # scale of parts that are hidden (not yet appeared / already gone)
 
 
@@ -503,7 +503,7 @@ class House:
 
 
 def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.0045, axis="y", at=(0, 0),
-               fall_side=1, gable_t=0.004, n_rafters=5):
+               fall_side=1, gable_t=0.004, n_rafters=5, hole=(0.32, 0.62, 0.18), eave_notch=False):
     """Gable roof like roof() but hollow: thin gable end walls, a dark attic floor, a ridge beam, rafters under
     the fall side and a dark lining under the other side. The whole fall_side slab (local frame, ridge along Y)
     becomes __roof_fall; two snapped rafter stubs (__rafters) appear when it is gone."""
@@ -585,9 +585,15 @@ def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.004
     n = normal(sd)
     ang = sd * math.degrees(a)
     u = (r - e).normalized()
-    t0, t1 = 0.32, 0.62
+    # v05 (Siddharth): each house has its hole in its own place (hole = (t0, t1, centre as a fraction of the
+    # ridge length, sign = side)) so they do not look stamped, and its edge is stepped (two rows with different
+    # spans) so it reads as broken, not as a skylight
+    t0, t1, yfrac = hole
     hw = 0.015  # wide enough to read as a hole, not a vent
-    yc = min(0.18 * length, length / 2 - gable_t - 0.002 - hw)
+    lim = length / 2 - gable_t - 0.002 - hw
+    yc = max(-lim, min(lim, yfrac * length))
+    tm = (t0 + t1) / 2
+    rows = [(t0, tm, yc - hw, yc + 0.6 * hw), (tm, t1, yc - 0.55 * hw, yc + hw)]
 
     def piece(name, ta, tb, ya, yb, colr=col, depth=thick, lift=0.0):
         c = e.lerp(r, (ta + tb) / 2) - n * (depth / 2) + n * lift
@@ -597,19 +603,29 @@ def roof_final(house, span, length, h, z0, col, gable_col, oh=0.007, thick=0.004
         return o
 
     hf = full / 2
-    static += [piece("roof", 0.0, t0, -hf, hf), piece("roof", t1, 1.0, -hf, hf),
-               piece("roof", t0, t1, -hf, yc - hw), piece("roof", t0, t1, yc + hw, hf)]
-    fall.append(piece("roof", t0, t1, yc - hw, yc + hw))
+    static.append(piece("roof", t1, 1.0, -hf, hf))
+    if eave_notch:  # v05 cabin: a chunk of the eave below the hole goes too, so the break shows in the outline
+        # the back corner of the eave, the outermost point of the outline from the front-right camera (a notch
+        # mid-eave did not change the outline: the log wall sits right behind it)
+        te, ny0 = 0.30, hf - 0.025  # critic v05: bigger, so the outline step reads at a distance
+        static += [piece("roof", 0.0, te, -hf, ny0), piece("roof", te, t0, -hf, hf)]
+        fall.append(piece("roof", 0.0, te, ny0, hf))
+    else:
+        static.append(piece("roof", 0.0, t0, -hf, hf))
+    for ta, tb, ya, yb in rows:
+        static += [piece("roof", ta, tb, -hf, ya), piece("roof", ta, tb, yb, hf)]
+        fall.append(piece("roof", ta, tb, ya, yb))
     holes = [stick("rafter_bare", e.lerp(r, t0 - 0.04) - n * (thick / 2) + Vector((0, yc - 0.007, 0)),
                    e.lerp(r, t1 + 0.04) - n * (thick / 2) + Vector((0, yc - 0.007, 0)), 0.0035, "wood_dark")]  # off-centre
-    for dy, tilt in ((-0.0055, 22), (0.006, 14)):  # ragged tiles hanging over the hole's top edge
+    # ragged tiles hanging over the hole's top edge, and one over its bottom edge (v05)
+    for tt, dy, tilt, du in ((t1, -0.0055, 22, -0.002), (t1, 0.006, 14, -0.002), (t0, -0.006, -18, 0.002)):
         tl = bc.box("tile_ragged", (0.008, 0.007, 0.003), (0, 0, 0), col)
         tl["no_bevel"] = True
-        tp = e.lerp(r, t1) - u * 0.002 + n * 0.0003
+        tp = e.lerp(r, tt) + u * du + n * 0.0003
         tp.y = yc + dy
         put([tl], Matrix.Translation(tp) @ Matrix.Rotation(math.radians(ang), 4, "Y") @ Matrix.Rotation(math.radians(-sd * tilt), 4, "Y"))
         holes.append(tl)
-    ts = 0.16  # slipped tile below the hole
+    ts = max(0.10, t0 - 0.16)  # slipped tile below the hole
     holes.append(piece("tile_shadow", ts - 0.07, ts + 0.07, yc - 0.004, yc + 0.010, "ink", 0.0006, 0.0004))
     tile = bc.box("tile_slipped", (0.013, 0.011, 0.003), (0, 0, 0), col)
     tile["no_bevel"] = True
@@ -694,7 +710,7 @@ def cottage():
     hs.wall_box("walls", (W, D, Hh - 0.008), (0, 0, 0.008 + (Hh - 0.008) / 2), "wall_cream")
     hs.notch_lining(W / 2, -D / 2, Hh)
     # ridge along X: local side -1 is the front slope
-    roof_final(hs, D, W, RH, Hh, roof_col, "wall_cream", axis="x", fall_side=-1)
+    roof_final(hs, D, W, RH, Hh, roof_col, "wall_cream", axis="x", fall_side=-1, hole=(0.56, 0.88, 0.20))  # right under the ridge
     hs.split_gables()
     yf = -(D / 2 - 0.010)
     zb = roof_z(RH, D, D / 2 - 0.010, Hh) - 0.003
@@ -737,7 +753,8 @@ def cabin():
         for sx in (-1, 1):
             hs.wall_box("log", (0.006, D - 0.004, ch * 0.86), (sx * (W / 2 - 0.001), y0, z), "wood_light")
     hs.notch_lining(W / 2 - 0.001, y0 - D / 2 + 0.002, Hh)
-    roof_final(hs, W, D, RH, Hh, roof_col, "wood_dark", oh=0.007, at=(0, y0), fall_side=-1)
+    roof_final(hs, W, D, RH, Hh, roof_col, "wood_dark", oh=0.007, at=(0, y0), fall_side=-1, hole=(0.32, 0.62, 0.18),
+               eave_notch=True)
     hs.split_gables()
     py0, py1 = -0.037, y0 - D / 2
     hs.static.append(bc.box("deck", (W, py1 - py0, 0.006), (0, (py0 + py1) / 2, 0.003), "wood_light"))
@@ -759,8 +776,8 @@ def cabin():
     chimney_final(hs, cx, cy, 0.040, Hh + RH + 0.002, 0.013, "stone", roof_z(RH, W, abs(cx) - 0.0065, Hh), Hh)
     # the chimney falls into the open left half of the attic, lying along the ridge, clear of the stump
     hs.land = (Vector((-0.008, y0 - 0.004)), Hh + 0.0012, 90)
-    rubble_spread(hs, [(0.022, -0.029, 0.006, 3), (-0.014, -0.043, 0.0, 2), (-0.043, -0.004, 0.0, 2),
-                       (0.012, 0.0435, 0.0, 3), (-0.026, 0.0435, 0.0, 1), (0.043, 0.016, 0.0, 2)], roof_col, "wood_light", 2)
+    rubble_spread(hs, [(0.022, -0.029, 0.006, 3), (-0.014, -0.043, 0.0, 1), (-0.043, -0.004, 0.0, 2),
+                       (0.010, 0.0435, 0.0, 2), (0.043, 0.016, 0.0, 2)], roof_col, "wood_light", 2)  # v05: trimmed for the budget
     # the cap slides onto the porch roof (14 degree slope, top face through p0)
     t14 = math.radians(14)
     p0 = Vector((0, (py0 + py1) / 2 - 0.002, 0.048)) + Vector((0, -math.sin(t14), math.cos(t14))) * 0.002
@@ -782,7 +799,8 @@ def townhouse():
     hs.wall_box("upper", (W + 0.004, D + 2 * J, H2), (0, 0, H1 + 0.005 + H2 / 2), "wall_cream")
     zt = H1 + 0.005 + H2
     hs.notch_lining(W / 2 + 0.002, -(D / 2 + J), zt)
-    roof_final(hs, D + 2 * J, W + 0.004, RH, zt, roof_col, "wall_cream", axis="x", fall_side=-1)
+    roof_final(hs, D + 2 * J, W + 0.004, RH, zt, roof_col, "wall_cream", axis="x", fall_side=-1,
+               hole=(0.24, 0.54, -0.18))  # near the eave, other end
     hs.split_gables()
     timbers = []
     for sy in (-1, 1):

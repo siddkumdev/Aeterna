@@ -57,7 +57,7 @@
     },
     {
       "label": "Cottage (terracotta)",
-      "asset": "assets/export/village/ew_village_cottage_v04.glb",
+      "asset": "assets/export/village/ew_village_cottage_v05.glb",
       "cell": [
         2,
         2
@@ -70,7 +70,7 @@
     },
     {
       "label": "Log cabin (teal)",
-      "asset": "assets/export/village/ew_village_cabin_v04.glb",
+      "asset": "assets/export/village/ew_village_cabin_v05.glb",
       "cell": [
         5,
         2
@@ -83,7 +83,7 @@
     },
     {
       "label": "Townhouse (orange)",
-      "asset": "assets/export/village/ew_village_townhouse_v04.glb",
+      "asset": "assets/export/village/ew_village_townhouse_v05.glb",
       "cell": [
         8,
         2
