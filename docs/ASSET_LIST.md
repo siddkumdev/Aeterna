@@ -110,7 +110,7 @@ Roster changed: 4 towers plus the hut, no tiers.
 | D04 | P1 | model | Wind Crossbow Tower (was Longbow; name open) | 2 x 2. Low stone keep, railed timber deck, big crossbow on a turntable (__swivel). Pale-green wind VFX on the bolt. Lower damage, longer range, piercing. | 1-2k | DONE: ew_defense_crossbow_tower_v03 APPROVED by Siddharth 2026-10-18 (parts: swivel, string, bolt, prod) |
 | D05 | P1 | model | Airship (friendly) | 2 x 2. Moored balloon ship (ref1 shape): bone balloon with diamond net and red band, wide round dark hull, stern cabin, deck cannon turret (360 deg) firing a flaming cannonball; tethered to a stone-capped stake on a plank landing pad (ref2). Air targets only. Max 2. | 1-2k | DONE: ew_defense_airship_v01 APPROVED by Siddharth 2026-10-19 (parts: ship, flag, turret, barrel, tether). Open: barrel elevation limits (clear at every heading from +15 to +30 deg) |
 | D06 | | model | Anti-air option | RESOLVED: the Airship (D05) handles flyers; hands and Fire Tower help. | | REMOVED |
-| D07 | P0 | model | Watch Hut (barracks) | 2 x 2. Spawns troops. Closed/spawning door states. | 1-2k | EDIT |
+| D07 | P0 | model | Watch Hut (Guard spawner) | 2 x 2. Spawns Guards only (one spawning building per troop type, Siddharth 2026-10-19). Closed/spawning door states. Designed after the Guard character is final. | 1-2k | CHANGED |
 | D08 | P0 | model | Troop: Guard | Melee, fits 1 cell. | 1-2k | EDIT |
 | D09 | P1 | model | Troop: Slinger | Ranged, unlocked in loop 2. | 1-2k | EDIT |
 | D10 | P0 | anim | Troop animation set | Idle, walk, attack, hit, die, spawn via part tweens. | | KEEP |
@@ -124,6 +124,7 @@ Roster changed: 4 towers plus the hut, no tiers.
 | D18 | P1 | anim | Tower firing animations | Fire Tower recoil, Longbow draw and release, Brazier flame flare, Airship propeller and gun. | | EDIT |
 | D19 | | model | Damaged / destroyed tower state | REMOVED: enemies attack houses, not towers. House damage is the shuttered state (V01). | | REMOVED |
 | D20 | P1 | model | Airship projectile | NEW. | <100 | NEW |
+| D21 | P1 | model | Slinger spawning building (name open) | 2 x 2. Spawns Slingers (one spawning building per troop type, Siddharth 2026-10-19). Cost and unlock open. Designed after the Slinger character is final. | 1-2k | NEW |
 
 ## E Enemies
 Types and sizes: Grunt, Scout, Tunneler, Splitter, Wisp (the only flyer), Fog variant, boss "the Warden" (placeholder name). Faceted skeleton family (#24-27), no jewels, parts-based, tween-animated.

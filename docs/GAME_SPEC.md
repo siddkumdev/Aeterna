@@ -94,9 +94,10 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 
 ### 8. Hut and troops
+- **DECIDED (Siddharth, 2026-10-19): one spawning building per troop type**, not one hut for all troops. The Watch Hut spawns Guards only; Slingers get their own building. OPEN: the Slinger building's name, cost and look; whether it unlocks in loop 2 with the Slinger. Spawning buildings are designed only after the troop characters are final.
 - **Watch Hut** (cost 70): spawns a Guard every 8 s, up to 3 alive per hut.
 - **Guard:** melee, 30 HP, 4 damage per hit.
-- **Slinger:** ranged (2 cells), 2 damage per shot, 15 HP; unlocked in loop 2 (via loop unlock) and spawned alternately with Guards.
+- **Slinger:** ranged (2 cells), 2 damage per shot, 15 HP; unlocked in loop 2 (via loop unlock). ~~spawned alternately with Guards~~ (superseded 2026-10-19: spawned by its own building).
 - **Rally point:** point at the board with the index finger and pinch to plant one flag; all troops hold near it. Moving the flag is allowed any time. Troops fight on their own otherwise.
 
 ### 9. Enemies (5 + boss) and Foresight reveal
