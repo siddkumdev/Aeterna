@@ -46,10 +46,10 @@ Must end with `0 FAIL`.
 
 ## 8. How we work together
 - **Tracker:** the live asset tracker is a private claude.ai page owned by Siddharth; he shares it from the page's Share menu. Put your name as owner on an item before starting it.
-- **One owner per asset**, on its own branch: `git switch -c asset/<short>`; pull `main` before you start.
+- **One owner per asset.** Everyone works on `main` (no new branches unless really needed); `git pull` before you start.
 - **Never edit `.blend` or `.glb` by hand.** Change the generator in `assets/generators/` and regenerate; binary files cannot be merged.
 - **Logs are add-a-row** (`assets/ASSETS.md`, `art/decisions.md`, `docs/VFX_NOTES.md`, `docs/ASSET_LIST.md`). On a merge conflict keep both rows.
-- **Approval:** either of us can approve an asset (`approved by <name> (date)` in `ASSETS.md`); then merge the branch into `main` and push.
+- **Approval:** either of us can approve an asset (`approved by <name> (date)` in `ASSETS.md`); then push.
 - **GitHub stays current:** Claude commits and pushes after every change (skill `github-sync`), with no Claude co-author lines. Pull before you start.
 - **Claude:** project rules are in `CLAUDE.md`; workflows are skills in `.claude/skills/` (start an asset with "make-asset"). They come with the repo, so both Claudes behave the same.
 - The repo stays **private**: the moodboard contains other people's images.

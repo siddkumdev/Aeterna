@@ -23,7 +23,7 @@ Rules that apply to all VFX:
 | Bombs | The bomb models stay, but they need VFX: fuse sparks on the displayed bombs (since v04 the bomb models have no glow of their own, so the fuse VFX is their only light), and on thrown bombs an ember trail and an impact blast. | `__fuse_anchor_1..3` (each a child of its `__bomb_N` part), `__bomb_anchor` | X30 |
 | AoE blast | Blast ring covering the 1-cell radius where the bomb lands; reads from above. | landing point; `__pulse_anchor` for the range ring | X13-style |
 
-## Airship (D05, `ew_defense_airship_v01`, awaiting approval)
+## Airship (D05, `ew_defense_airship_v01`, approved)
 | Effect | What Siddharth asked for | Anchor | Asset list |
 |---|---|---|---|
 | Flaming cannonball | "A mix between a cannonball and a fireball" (2026-10-19): a dark cannonball wrapped in fire (orange/red), trail in flight, burst on hitting a flyer. | `__muzzle_anchor` (child of `__barrel`) | D20, X02, X27 |

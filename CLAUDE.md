@@ -22,9 +22,9 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 ## Sharing (git)
 - Private GitHub repo. Binaries (`.blend`, `.glb`, `.png`, `.jpg`) go through Git LFS (`.gitattributes`). Ignored: `local.env`, `_work/`, `*.blend1`, `godot/.godot/`.
 - Claim an asset in the tracker (owner) before working on it; one owner per asset at a time.
-- One branch per asset (`asset/<short>`), merged to `main` when approved. Pull before starting, push when done.
+- Work on `main`; no new branches unless really needed (Siddharth, 2026-10-19), e.g. a risky experiment that could break `main`, and only after asking. Pull before starting, push when done. Unapproved assets are fine on `main`: their status in `ASSETS.md` says "awaiting approval".
 - Never hand-edit `.blend` or `.glb`: change the generator and regenerate (binaries cannot be merged). Shared logs (`ASSETS.md`, `decisions.md`, `VFX_NOTES.md`, `ASSET_LIST.md`) are append-a-row files; on a merge conflict keep both rows.
-- After every addition or change, commit and push (skill: `github-sync`; standing instruction from Siddharth, 2026-10-19). Unapproved asset work goes on `asset/<short>`, everything else on `main`. Never force-push.
+- After every addition or change, commit and push (skill: `github-sync`; standing instruction from Siddharth, 2026-10-19). Everything goes on `main`. Never force-push.
 - Never credit Claude in git: no `Co-Authored-By: Claude` trailer and no "Generated with Claude Code" line in commits or PRs (Siddharth, 2026-10-19).
 
 ## Platform and tooling
@@ -64,7 +64,7 @@ _work/      scratch input (git-ignored)
 - Variant sheet: `python tools/make_variant_sheet.py <out.png> A=<a.blend> B=<b.blend> ...`
 - Asset-building workflow: the `make-asset` skill (ask the user first, variants, build, critic, show, version, log, done only on approval by Siddharth or his teammate).
 - Bring into Godot (copy, import, shared materials, anchors, check): `python tools/sync_to_godot.py assets/export/<category>/<file>.glb` (skill: godot-import; `--check` re-checks all). Headless Godot runs always need `--xr-mode off`.
-- GitHub sync (commit + push after every change, right branch, no Claude credit): skill `github-sync`.
+- GitHub sync (commit + push after every change, on `main`, no Claude credit): skill `github-sync`.
 - Tracker sync (regenerate + republish the live asset tracker, move built items' status forward): `python tools/sync_tracker.py` then the tracker-sync skill steps.
 - Generate headless: `blender -b -P assets/generators/make_<name>.py` (Blender = `BLENDER_EXE` from `local.env`)
 - Machine check: `python tools/doctor.py`
