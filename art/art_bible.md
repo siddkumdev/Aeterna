@@ -44,7 +44,7 @@ A cozy toy diorama on a real table: chunky, faceted low-poly pieces with soft be
 - **No textures other than the palette atlas.** No normal maps, no painted detail, no procedural materials. **[Decided]**
 - **Shading:** toon look in Godot: stepped light, warm rim light, cool shadow, outline pass to be tried and kept only if Siddharth likes it and the frame budget allows (12.6, PF11). **[Decided; outline Open]**
 - **Shadows:** fake blob contact shadows, no real-time shadows. Needed under flyers so height reads. **[Decided]** (PF10)
-- **Emissive:** only for windows, lanterns, fire, magic and the Wisp's glow. Windows lit when a house is open, dark when shuttered.
+- **Emissive:** only for windows, lanterns, fire, magic and the Wisp's glow. Windows lit when a house is standing, dark when it is broken (0 HP).
 
 ## 6. Colour **[Decided: palette approved]**
 Source of truth: `art/palette.json`, built into `art/palette_atlas.png` (8 x 8 grid, 64 swatch capacity, 19 used). Add a colour to `palette.json` first, then regenerate.
@@ -172,7 +172,7 @@ What does apply to every tower and hut:
 - cap and accent colours are whatever matches that piece, because looks come first **[Decided]**;
 - each preview sheet includes a silhouette view (the model filled solid black) as a check that it is still easy to tell apart from the others at a glance; it is a check, not a target shape.
 
-Houses: same approach (redone from the v01 benchmark with Siddharth), with the decided points: 3 roof colours, open and shuttered states, no plinth.
+Houses: same approach (redone from the v01 benchmark with Siddharth), with the decided points: 3 roof colours on 3 different shapes (cottage, log cabin, townhouse), intact and broken ("damaged but standing") states, no plinth.
 
 ## 9. Environment
 - **Island:** flat 12 x 12 grass top, bevelled rim, stone-strata sides, rounded corners. Underside appears only in the floating fallback. **[Decided flat; Proposed details]**

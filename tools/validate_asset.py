@@ -31,7 +31,7 @@ for o in bpy.context.scene.objects:
     cells = sorted({min(7, max(0, int((1 - l.uv[1]) * 8))) * 8 + min(7, max(0, int(l.uv[0] * 8)))
                     for l in me.uv_layers.active.data}) if me.uv_layers else []
     res.append(dict(name=o.name, parent=o.parent.name if o.parent else None, tris=len(me.loop_triangles), loc=list(o.location),
-                    rot=list(o.rotation_euler), scale=list(o.scale), min_z=min(zs),
+                    rot=list(o.rotation_euler), scale=list(o.scale), min_z=min(zs), starts_hidden=bool(o.get("ew_starts_hidden")),
                     materials=len(me.materials), modifiers=len(o.modifiers), cells=cells,
                     has_atlas=bool(me.uv_layers) and any(m and m.node_tree and any(n.type == "TEX_IMAGE" and n.image and n.image.name == "ew_palette_atlas" for n in m.node_tree.nodes) for m in me.materials)))
 print("VALIDATE_JSON" + json.dumps(res))
@@ -62,8 +62,11 @@ def main(blend):
                 bad.append("%s: part name must be %s__<part>" % (n, root))
             if not o["parent"] or not o["parent"].startswith(root):
                 bad.append("%s: part must be parented to the asset" % n)
-            if any(abs(v) > 1e-4 for v in o["rot"]) or any(abs(s - 1) > 1e-4 for s in o["scale"]):
+            hidden_ok = o.get("starts_hidden") and len(set(round(s, 6) for s in o["scale"])) == 1 and o["scale"][0] <= 0.01
+            if any(abs(v) > 1e-4 for v in o["rot"]) or (any(abs(s - 1) > 1e-4 for s in o["scale"]) and not hidden_ok):
                 bad.append("%s: part rotation/scale not applied" % n)
+            # a part tagged ew_starts_hidden (e.g. rubble that appears when a house breaks) may carry a tiny
+            # uniform scale: Godot grows it to its "<part>_broken" marker's scale
         else:
             if any(abs(v) > 1e-4 for v in o["loc"] + o["rot"]) or any(abs(s - 1) > 1e-4 for s in o["scale"]):
                 bad.append("%s: transforms not applied / object not at origin" % n)

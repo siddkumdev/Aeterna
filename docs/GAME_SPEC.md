@@ -35,7 +35,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 ### 2. What enemies attack
 - **Goal:** the 6 village houses. Ground enemies walk their path toward the nearest house.
 - **En route:** they attack any tower, hut or troop that blocks them or is in melee range; ranged enemies target the nearest of those.
-- **House state:** a house at 0 HP becomes "shuttered" (not destroyed; visibly closed up) and is repaired free in the next day. Cozy, no permanent loss.
+- **House state:** a house at 0 HP becomes "shuttered" (the game term; not destroyed) and is repaired free in the next day. Cozy, no permanent loss. **Look (Siddharth, 2026-10-19):** "damaged but standing" instead of closed shutters: part of the roof caves in, the chimney snaps and leans, the door hangs, windows go dark, rubble appears; parts tumble into that pose with a dust puff, and the dawn repair plays it backwards.
 - **Losing a night:** 3 or more of 6 houses shuttered.
 
 ### 3. Night rules

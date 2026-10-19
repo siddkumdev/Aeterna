@@ -27,7 +27,7 @@ Change column (what happened to the tracker item):
 8. **Flyers are countered by the Airship, the Fire Tower and the player's own hands** (answers D06). Verticality is flyers plus drop spells.
 9. **#29 is a villager** (answers V09).
 10. **Judges' first-run experience** is planned after the game is complete (U17).
-11. Enemies attack the **6 houses**. A house that falls is shuttered. The night is lost at 3 or more shuttered.
+11. Enemies attack the **6 houses**. A house that falls is shuttered (shown as damaged but standing, 2026-10-19). The night is lost at 3 or more shuttered.
 
 ---
 
@@ -80,9 +80,9 @@ Change column (what happened to the tracker item):
 ## V Village and villagers
 | ID | Pri | Kind | Asset | Notes | Budget | Change |
 |---|---|---|---|---|---|---|
-| V01 | P0 | model | House, terracotta roof | 2 x 2 cells, height 3-4. Two states: open (lit windows, emissive mask) and shuttered (closed doors, dark windows). The loss-state cue. BUILT as v01 but 3 x 2.6 cells, so REDO. | 1-2k | EDIT |
-| V02 | P0 | model | House, teal roof | Shares parts with V01. | 1-2k | EDIT |
-| V03 | P1 | model | House, orange roof | Shares parts with V01. | 1-2k | EDIT |
+| V01 | P0 | model | House, terracotta roof: Dormer Cottage | 2 x 2. Cream walls, steep roof with a front dormer, door canopy, swing shutters (moodboard #4). Intact + broken (damaged but standing) states via moving parts and _broken pose markers. BUILT: ew_village_cottage_v01 (1128 tris), awaiting approval | 1-2k | CHANGED |
+| V02 | P0 | model | House, teal roof: Log Cabin | 2 x 2. Log walls, big A-frame roof, porch on posts, roll-up shutters (moodboard #5). Intact + broken states. BUILT: ew_village_cabin_v01 (1744 tris), awaiting approval | 1-2k | CHANGED |
+| V03 | P1 | model | House, orange roof: Timber Townhouse | 2 x 2. Two storeys, half-timbered, jettied upper floor, teal flap shutters. Intact + broken states. BUILT: ew_village_townhouse_v01 (1268 tris), awaiting approval | 1-2k | CHANGED |
 | V04 | P2 | model | House D (cabin) | The spec has 6 houses in 3 roof colours, so a 4th design is a cut candidate. | 1-2k | EDIT |
 | V05 | P2 | model | Village hall / heart | Cut candidate; conflicts with "all buildings uniform 2 x 2". Decide if a landmark is wanted. | ~2k | EDIT |
 | V06 | P2 | model | Bakery | Cut candidate: the baker lives in a normal house (outfit and apron carry the identity). | 1-2k | EDIT |
@@ -265,7 +265,7 @@ Low overdraw on Quest. Hard-edged toon shapes with glow (#31, #33, #36).
 | X28 | P0 | vfx | Bomb tower brew | NEW: weird fire/lava-mix surface in the cauldron; bubbles and surges when it lobs a bomb. | | NEW |
 | X29 | P1 | vfx | Bomb tower rune band | NEW: ember swirl: sparks drift out of the 8 carved slots and circle the base (chosen). | | NEW |
 | X30 | P1 | vfx | Magic bomb fuse | NEW: spitting fuse sparks on displayed and thrown bombs, ember trail in flight, blast on impact. | | NEW |
-| X24 | P1 | vfx | Shutter close | NEW: house falls and shuttered state. | | NEW |
+| X24 | P1 | vfx | House break and repair | CHANGED (2026-10-19): dust puff as the house parts tumble into the broken pose; the dawn repair plays it backwards with a sparkle. At __dust_anchor. | | CHANGED |
 
 ## A Audio
 Music from MIDI rendered with a free soundfont, SFX synthesised, no voice recording. Siddharth judges every track. Log each licence.

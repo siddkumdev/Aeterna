@@ -20,11 +20,26 @@
       "label": "Airship",
       "asset": "assets/export/defense/ew_defense_airship_v01.glb",
       "tris": 1798
+    },
+    {
+      "label": "Cottage (terracotta)",
+      "asset": "assets/export/village/ew_village_cottage_v01.glb",
+      "tris": 1128
+    },
+    {
+      "label": "Log cabin (teal)",
+      "asset": "assets/export/village/ew_village_cabin_v01.glb",
+      "tris": 1744
+    },
+    {
+      "label": "Townhouse (orange)",
+      "asset": "assets/export/village/ew_village_townhouse_v01.glb",
+      "tris": 1268
     }
   ],
-  "tris": 6472,
-  "mesh_objects": 22,
-  "material_slots": 22,
+  "tris": 10612,
+  "mesh_objects": 43,
+  "material_slots": 43,
   "vfx_standins": 2,
   "engine": "BLENDER_EEVEE_NEXT"
 }

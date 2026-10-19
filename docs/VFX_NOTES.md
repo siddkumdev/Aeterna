@@ -43,8 +43,11 @@ Rules that apply to all VFX:
 ## World and other effects already on the asset list
 See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, time rewind, boss effects, rarity reveal, shutter close and more). Those come from the spec, not from Siddharth's VFX comments; move an item here when he adds direction to it.
 
-## Village houses (V01-V03, in design)
+## Village houses (V01-V03: ew_village_cottage_v01, ew_village_cabin_v01, ew_village_townhouse_v01; awaiting approval)
 | Effect | What Siddharth asked for | Anchor | Asset list |
 |---|---|---|---|
-| Chimney smoke | Chimney socket for smoke (2026-10-19); also the blocked-chimney help request (rubble pulled out of it). | `__smoke_anchor`, `__rubble_anchor` (planned, in the chimney's dark socket) | X19, V12 |
-| Lit windows | Windows lit when open, dark when shuttered (art bible); a separate glow part so Godot can dim it (2026-10-19). Not VFX: emissive part. | part `__windows` (planned) | V01-V03 |
+| Chimney smoke | Chimney socket for smoke (2026-10-19); smoke stops when the house is broken. Also the blocked-chimney help request (rubble pulled out of the socket). | `__smoke_anchor`, `__rubble_anchor` (children of `__chimney`) | X19, V12 |
+| Lit windows | Lit when standing, dark when broken (2026-10-19). Not VFX: the `__windows` glow part is switched off (extra `ew_broken = off`), dark glass sits behind it. | part `__windows` | V01-V03 |
+| Break: dust puff | "a animation to transition" into the broken state (2026-10-19): parts tumble (roof piece caves in, chimney top snaps and leans, door swings to hang off its top hinge, rubble and broken rafters grow from 0) with a dust puff. Parts tween to their `<part>_broken` markers. | `__dust_anchor` | X24 |
+| Repair at dawn | Same animation played backwards, like a rewind (2026-10-19), with a small sparkle. | `__dust_anchor` | X24 |
+| Lost lantern returned | The lantern hangs from the hook by the door (help request). | `__lantern_anchor` | V15 |

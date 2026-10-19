@@ -6,6 +6,11 @@ extends EditorScenePostImport
 ## 2. Turns every "__<name>_anchor" empty into a Marker3D in the group "ew_vfx_anchor", with the effect
 ##    size (meters, from the glTF extra "ew_size") as metadata "ew_size". VFX code finds them by group.
 ## 3. Tags moving parts (meshes named "..__<part>") with metadata "ew_part" = "<part>".
+## 4. Turns pose empties (glTF extra "ew_pose_of", e.g. "..__door_broken") into Marker3D nodes in the group
+##    "ew_pose" with metadata "ew_pose_of" = <part>: the part's target transform (same parent as the part).
+##    Houses tween each part to its "<part>_broken" marker when they break, and back on repair.
+## 5. Copies other glTF extras the game reads onto the node as metadata: "ew_starts_hidden" (part begins
+##    hidden, e.g. rubble), "ew_broken" ("off" = switch the part off when broken, e.g. lit windows).
 
 const PALETTE_PATH := "res://assets/palette/ew_palette.tres"
 const GLOW_PATH := "res://assets/palette/ew_palette_glow.tres"
@@ -33,10 +38,16 @@ func _walk(node: Node, root: Node) -> void:
 	if node == root or not n.contains("__"):
 		return
 	var short := n.get_slice("__", 1)
+	var extras: Dictionary = node.get_meta("extras", {}) if node.has_meta("extras") else {}
 	if short.contains("_anchor") and not (node is MeshInstance3D):
 		_make_anchor(node, root)
+	elif extras.has("ew_pose_of") and not (node is MeshInstance3D):
+		_make_pose(node, root, str(extras["ew_pose_of"]))
 	elif node is MeshInstance3D:
 		node.set_meta("ew_part", short)
+		for key in ["ew_starts_hidden", "ew_broken"]:
+			if extras.has(key):
+				node.set_meta(key, extras[key])
 
 
 func _swap_materials(mi: MeshInstance3D) -> void:
@@ -73,4 +84,20 @@ func _make_anchor(node: Node, root: Node) -> void:
 	parent.move_child(m, idx)
 	m.owner = root
 	m.add_to_group("ew_vfx_anchor", true)
+	node.free()
+
+
+func _make_pose(node: Node, root: Node, part: String) -> void:
+	var m := Marker3D.new()
+	m.name = node.name
+	m.transform = node.transform
+	m.gizmo_extents = 0.01
+	m.set_meta("ew_pose_of", part)
+	var parent := node.get_parent()
+	var idx := node.get_index()
+	parent.remove_child(node)
+	parent.add_child(m)
+	parent.move_child(m, idx)
+	m.owner = root
+	m.add_to_group("ew_pose", true)
 	node.free()

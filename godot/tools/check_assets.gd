@@ -51,6 +51,8 @@ func _check(cat: String, path: String) -> void:
 	var bad_mats := {}
 	var parts: Array[String] = []
 	var anchors: Array[String] = []
+	var poses: Array[String] = []
+	var pose_parts: Array[String] = []
 	for node in _all(scene):
 		var xf := _xform_to(node, scene)
 		if node is MeshInstance3D and node.mesh:
@@ -68,7 +70,10 @@ func _check(cat: String, path: String) -> void:
 			first = false
 			if node.has_meta("ew_part"):
 				parts.append(str(node.get_meta("ew_part")))
-		if node is Marker3D and node.is_in_group("ew_vfx_anchor"):
+		if node is Marker3D and node.is_in_group("ew_pose"):
+			poses.append(String(node.name).get_slice("__", 1))
+			pose_parts.append(str(node.get_meta("ew_pose_of", "")))
+		elif node is Marker3D and node.is_in_group("ew_vfx_anchor"):
 			var s := float(node.get_meta("ew_size", 0.0))
 			anchors.append("%s (%.4f m)" % [String(node.name).get_slice("__", 1), s])
 			if s <= 0.0:
@@ -85,6 +90,11 @@ func _check(cat: String, path: String) -> void:
 	print("   tris      %d / %d" % [tris, budget])
 	print("   parts     %s" % (", ".join(parts) if parts else "none (static)"))
 	print("   anchors   %s" % (", ".join(anchors) if anchors else "none"))
+	if poses:
+		print("   poses     %s" % ", ".join(poses))
+	for pp in pose_parts:
+		if not pp in parts:
+			_fail("pose marker for part '%s', but no such part" % pp)
 	if absf(aabb.position.y) > 0.002:
 		_fail("origin not on the ground: lowest point at y = %.4f m" % aabb.position.y)
 	if absf(aabb.get_center().x) > 0.01 or absf(aabb.get_center().z) > 0.01:

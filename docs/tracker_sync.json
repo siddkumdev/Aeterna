@@ -4,7 +4,10 @@
     "D01": "done",
     "D03": "done",
     "D04": "done",
-    "D05": "done"
+    "D05": "done",
+    "V01": "review",
+    "V02": "review",
+    "V03": "review"
   },
   "rank": {
     "todo": 0,
