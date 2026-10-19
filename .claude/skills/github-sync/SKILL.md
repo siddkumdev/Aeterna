@@ -19,7 +19,9 @@ Standing instruction from Siddharth (2026-10-19): **after every addition or chan
 3. Stage only the files belonging to this change (`git add <paths>`, not a blind `git add -A` when other work is pending).
 4. Check binaries go through LFS: `git lfs status` must list the staged `.blend`, `.glb`, `.png`, `.jpg` as LFS objects.
 5. Commit: one-line imperative summary (what changed, e.g. "Airship v01: critic fixes, Godot import, logs"), blank line, a short body with the why. **No co-author or Claude trailer.**
-6. `git push` (first push of a new branch: `git push -u origin <branch>`). Never force-push. If the push is rejected, pull and retry; never overwrite the teammate's work.
+6. `git push` (first push of a new branch: `git push -u origin <branch>`). If git has no stored GitHub login, a plain push hangs on a hidden login prompt; push with the GitHub CLI's login for that one command instead (changes no saved config):
+   `GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin <branch>`
+   (needs `gh auth status` to show you logged in). Never force-push. If the push is rejected, pull and retry; never overwrite the teammate's work.
 7. Check: `git log -1 --format='%an | %s%n%b'` shows the user as author and no Claude trailer; `git status` is clean for the committed paths.
 
 ## Report
