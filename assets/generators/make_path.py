@@ -176,6 +176,8 @@ def tile(variant, kind, seed):
         return tile2(variant, kind, seed)
     if variant in "IJK":
         return tile3(variant, kind, seed)
+    if variant == "L":
+        return tile4(kind, seed)
     rnd = random.Random(seed)
     pts = outline(kind, random.Random(1000 + len(kind)))  # same raggedness for every variant of one kind
     parts = []
@@ -541,8 +543,72 @@ def tile3(variant, kind, seed):
     return parts
 
 
+
+# ---- round 4 (L): variant I with the changes Siddharth asked for by saying yes to all of them (2026-10-20):
+# base I, softer wider grass skirt, bigger edge clusters, corner tiles that turn in a smooth quarter circle
+# (centre-line radius = half a cell), two proposed earth tones dirt_light / dirt_dark (palette proposal, not yet applied).
+
+def arc_pts(cx, cy, r, a0, a1, rnd, n=10, amp=0.0022):
+    """Points on an arc from angle a0 to a1 (degrees), radius wobbling gently, zero wobble at both ends."""
+    p1, p2 = rnd.uniform(0, 6.28), rnd.uniform(0, 6.28)
+    out = []
+    for i in range(n):
+        t = i / n
+        k = 0.0 if i == 0 else amp * (0.65 * math.sin(6.2832 * 1.1 * t + p1) + 0.35 * math.sin(6.2832 * 2.4 * t + p2)) * math.sin(math.pi * t) ** 0.6
+        a = math.radians(a0 + (a1 - a0) * t)
+        out.append((cx + (r + k) * math.cos(a), cy + (r + k) * math.sin(a)))
+    return out
+
+
+def outline4(kind, rnd):
+    if kind != "corner":
+        return outline3(kind, rnd)
+    w = W3
+    pts = arc_pts(H, H, H + w, -90, -180, rnd, 12)          # outer edge: (H,-w) round to (-w,H)
+    pts.append((-w, H))
+    pts += arc_pts(H, H, H - w, 180, 270, rnd, 4, 0.0004)    # inner edge: (w,H) round to (H,w)
+    pts.append((H, w))
+    set_sides(pts)
+    return pts
+
+
+def tile4(kind, seed):
+    rnd = random.Random(seed)
+    pts = outline4(kind, random.Random(2000 + len(kind)))
+    parts = [mound("path", pts, "dirt_light", 0.0016, slope=0.0032, crown=0.0006)]
+    ztop = 0.0016
+    parts.append(ring_flat("skirt", outset_pts(pts, 0.0110), outset_pts(pts, 0.0020), 0.0005, "leaf_green"))
+    placed = []
+    for _ in range(500):
+        if len(placed) >= 6:
+            break
+        pt = rand_inside(pts, rnd, 0.0060)
+        if not pt:
+            continue
+        r = rnd.uniform(0.0055, 0.0080)
+        if all(math.dist(pt, (qx, qy)) > r + qr + 0.0012 for qx, qy, qr in placed):
+            placed.append((pt[0], pt[1], r))
+            col = rnd.choice(("path_stone", "dirt_dark", "dirt_dark", "path_dirt"))
+            h = 0.0009 if col != "path_dirt" else 0.0004
+            parts.append(small("cobble", r, r * 0.88, h, pt[0], pt[1], ztop - 0.0004, col, 8, rnd.uniform(0, 45)))
+    ep = [p for p in edge_points(outset_pts(pts, 0.0012), 0.0105, 0.0016) if border_taper(*p, 0.008) >= 1.0]
+    rnd.shuffle(ep)
+    for x, y in ep[:3]:      # stone clusters: bigger, two or three stones
+        for j in range(rnd.choice((2, 3))):
+            r = rnd.uniform(0.0046, 0.0066)
+            parts.append(small("edge_stone", r, r * 0.68, rnd.uniform(0.0038, 0.0058),
+                               max(-0.0225, min(0.0225, x + rnd.uniform(-0.0035, 0.0035))),
+                               max(-0.0225, min(0.0225, y + rnd.uniform(-0.0035, 0.0035))), 0.0,
+                               rnd.choice(("stone", "path_stone", "stone", "stone_dark")), 6, rnd.uniform(0, 60)))
+    for x, y in ep[3:6]:     # grass tufts: bigger
+        parts += hump(x, y, 0.0052, 0.0066, rnd.choice(("leaf_green", "leaf_light")), rnd)
+    for x, y in ep[6:9]:     # flowers: bigger
+        parts.append(small("flower", 0.0028, 0.0010, 0.0060, x, y, 0.0, rnd.choice(("wall_cream", "leaf_yellow", "roof_terracotta")), 4, rnd.uniform(0, 70)))
+    return parts
+
+
 KINDS = ("straight", "corner", "t", "end")
-SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33}
+SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33, "L": 34}
 
 
 def build(variant, kind):

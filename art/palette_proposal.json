@@ -1,1 +1,1 @@
-{"reason":"Island grass was a muddy olive from the seat view; Siddharth OK 2026-10-20 (yes to all). grass is used by no exported asset, only island variants.","edit":{"grass":"88BE45"}}
+{"reason":"Path trail dirt in the reference screenshots is lighter and pinker than path_dirt, with darker and lighter cobble tones. Two new earth tones, appended at the end (nothing shifts).","add":{"dirt_light":"A98A72","dirt_dark":"7E6048"}}
