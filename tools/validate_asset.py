@@ -17,6 +17,8 @@ import ew_env  # noqa: E402  (local.env paths)
 BLENDER = ew_env.require("BLENDER_EXE")
 BUDGETS = {"world": 800, "village": 2000, "defense": 2000, "enemy": 2000, "boss": 6000,
            "portal": 2000, "vr": 800, "foresight": 800, "ui": 800, "vfx": 800}
+# per-asset budgets that differ from the category default (the 12 x 12 board is one big model: ASSET_LIST W01 says 1-2k)
+BUDGET_OVERRIDES = {"ew_world_island": 2000}
 NAME = re.compile(r"^ew_(world|village|defense|enemy|boss|portal|vr|foresight|ui|vfx)_[a-z0-9_]+_v\d{2}$")
 
 INNER = r'''
@@ -81,6 +83,9 @@ def main(blend):
         print("%s: %d tris, %d materials" % (n, o["tris"], o["materials"]))
     cat = root.split("_")[1] if root.startswith("ew_") else None
     budget = BUDGETS.get(cat)
+    for prefix, limit in BUDGET_OVERRIDES.items():
+        if root.startswith(prefix + "_v"):
+            budget = limit
     print("total: %d tris (budget %s)" % (total, budget))
     if budget and total > budget:
         bad.append("%s: %d tris in total > budget %d for '%s'" % (root, total, budget, cat))

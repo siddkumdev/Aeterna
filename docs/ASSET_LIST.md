@@ -52,7 +52,7 @@ Change column (what happened to the tracker item):
 ## W World and environment
 | ID | Pri | Kind | Asset | Notes | Budget | Change |
 |---|---|---|---|---|---|---|
-| W01 | P0 | model | Island base | 12 x 12 cells (0.6 m), flat grass top, bevelled rim, stone-strata sides. | 1-2k | EDIT |
+| W01 | P0 | model | Island base | 12 x 12 cells (0.6 m), flat grass top, bevelled rim, stone-strata sides. Variants A-D built 2026-10-20 (rich top dressing, underside later), awaiting Siddharth's pick. | 1-2k | EDIT |
 | W02 | P1 | model | Island underside / floating skirt | Rocky underside, shown only in the floating-board fallback (no table found) and when the board is tilted or spun. | 500-1k | EDIT |
 | W03 | P0 | shader | Placement grid overlay | CHANGED from "build plot pads". Placement is free on grid cells, so a grid shader that lights up only while placing replaces fixed pads. Valid/invalid states live in D12. | | CHANGED |
 | W04 | P0 | model | Path tiles | Straight, corner, T-junction, end-at-village (the "portal mouth" end is gone). 1 x 1 each. | 4 x ~100 | EDIT |
