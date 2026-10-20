@@ -360,7 +360,7 @@ def _lean_blade(name, x, y, r, h, ang, col):
     return o
 
 
-def lush_top(seed, n_big=5, n_frond=140, n_fern=9, n_bush=5, n_mush=4, n_stone=5, n_flower=6,
+def lush_top(seed, n_big=5, n_frond=140, frond_r=(0.032, 0.050), frond_h=(0.0042, 0.0058), n_fern=9, n_bush=5, n_mush=4, n_stone=5, n_flower=6,
              bush_cols=("leaf_green", "leaf_light", "leaf_light"), accent="roof_orange"):
     """The lush top: big soft light/dark areas, leaf clumps everywhere, and ferns, bushes, mushrooms, stones and
     flowers in the outer ring (they never stand where towers and paths go)."""
@@ -391,10 +391,10 @@ def lush_top(seed, n_big=5, n_frond=140, n_fern=9, n_bush=5, n_mush=4, n_stone=5
     placed = []
     for _ in range(n_frond):
         x, y = spot(0.014)
-        R = rnd.uniform(0.032, 0.050)
+        R = rnd.uniform(*frond_r)
         near = edge_dist(x, y) < 0.07
         col = rnd.choice(("leaf_green", "leaf_green", "leaf_light", "grass")) if near else             rnd.choice(("leaf_light", "leaf_light", "leaf_light", "grass", "grass", "leaf_green"))
-        parts.append(frond("frond", x, y, R, rnd.uniform(0.0042, 0.0058), col, rnd, 6))
+        parts.append(frond("frond", x, y, R, rnd.uniform(*frond_h), col, rnd, 6))
 
     solid = []
 
@@ -553,15 +553,33 @@ def fit(parts, margin=0.0008, shift=False):
     return parts
 
 
+def variant_i():
+    """I = E + G (Siddharth 2026-10-20: 'E and G I like the most'): E's three earth bands with stones in the sides, plus
+    G's boulders at the four corners. No fringe blades (critic: they read as stray spikes)."""
+    rnd = random.Random(21)
+    parts, zd0 = base_layers()
+    parts += earth_sides(zd0, heights=(0.022, 0.010, 0.022))
+    parts += embed_rocks([zd0 - 0.014, zd0 - 0.032, zd0 - 0.050], 12, rnd)
+    for cx, cy in ((1, 1), (-1, 1), (-1, -1), (1, -1)):  # corner boulders (G)
+        for k, (dx, dz, r) in enumerate(((0, 0.040, 0.020), (0.022, 0.020, 0.016))):
+            o = bc.cone("boulder", r, r * 0.7, 0.026, (cx * (HALF - 0.034 - dx), cy * (HALF - 0.034), dz),
+                        "stone" if k == 0 else "path_stone", 5, 20 + 30 * k)
+            o["no_bevel"] = True
+            parts.append(o)
+    return parts
+
+
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d, "E": variant_e, "F": variant_f, "G": variant_g,
-            "H": variant_h}
-SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9, "E": 31, "F": 32, "G": 33, "H": 34}
+            "H": variant_h, "I": variant_i, "J": variant_i}
+SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9, "E": 31, "F": 32, "G": 33, "H": 34, "I": 35, "J": 35}
+# J = I with fewer, bigger, taller tufts (to compare grass density)
+LUSH_ARGS = {"J": dict(n_frond=62, frond_r=(0.045, 0.068), frond_h=(0.0065, 0.0090))}
 
 
 def build(v, name="ew_world_island_v01"):
     parts = VARIANTS[v]()
     fit([p for p in parts if p.name.startswith(("rock", "boulder", "fringe"))], 0.0005, shift=True)
-    parts += fit(lush_top(SEEDS[v]) if v in "EFGH" else top_dressing(SEEDS[v]))
+    parts += fit(lush_top(SEEDS[v], **LUSH_ARGS.get(v, {})) if v in "EFGHIJ" else top_dressing(SEEDS[v]))
     return bc.assemble(name, [("", parts, (0, 0, 0), None)])
 
 
