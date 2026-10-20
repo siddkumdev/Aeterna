@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 import blender_common as bc  # noqa: E402
 import bmesh  # noqa: E402
+import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 HALF = 0.30          # half the board (6 cells)
@@ -264,6 +265,270 @@ def variant_d():
     return parts
 
 
+# ---------------------------------------------------------------- round 2 (E-H): lush Clash-style grass
+# Siddharth 2026-10-20 rejected A-D as too plain and sent two references (cube terraces with leafy grass, and a
+# mobile arena with painted leaf clumps): the grass must look lush. Original shapes only; no leaf cards, so the
+# leaf look is built from flat star-shaped clumps in several greens (laid in layers so nothing shares a height)
+# plus low 3D ferns and bushes in the outer ring.
+def perimeter(half, r, step, phase=0.0, segs=12):
+    """Points along the rounded-rectangle outline every `step` metres, with outward normals."""
+    pts = ring(half, half, r, segs)
+    out = []
+    n = len(pts)
+    seg_len = [math.dist(pts[i], pts[(i + 1) % n]) for i in range(n)]
+    total = sum(seg_len)
+    t = phase * step
+    while t < total:
+        acc = 0.0
+        for i in range(n):
+            if acc + seg_len[i] >= t:
+                f = (t - acc) / seg_len[i]
+                a, b = pts[i], pts[(i + 1) % n]
+                x, y = a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f
+                nx, ny = (b[1] - a[1]), -(b[0] - a[0])
+                ln = math.hypot(nx, ny) or 1.0
+                out.append((x, y, nx / ln, ny / ln))
+                break
+            acc += seg_len[i]
+        t += step
+    return out
+
+
+def star(name, x, y, R, z, col, rnd, n=5, rot=None, inner=0.5):
+    """Flat leaf-clump polygon: an n-pointed star with jittered points, single face, no thickness (faces up)."""
+    rot = rnd.uniform(0, 360) if rot is None else rot
+    bm = bmesh.new()
+    vs = []
+    for i in range(2 * n):
+        a = math.radians(rot) + math.pi * i / n
+        rr = R * rnd.uniform(0.85, 1.05) if i % 2 == 0 else R * inner * rnd.uniform(0.9, 1.1)
+        vs.append(bm.verts.new((x + rr * math.cos(a), y + rr * math.sin(a), z)))
+    bm.faces.new(vs)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0:  # faces up
+            f.normal_flip()
+    o = bc._new_obj(name, bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def frond(name, x, y, R, h, col, rnd, n=5):
+    """Raised leaf rosette: n pointed leaves whose tips rise h above the ground and whose centre stays low, so each
+    leaf has two facets that catch the light differently (faceted low-poly leaves, no leaf cards; 2n triangles)."""
+    z0 = HEIGHT
+    rot = rnd.uniform(0, 360)
+    bm = bmesh.new()
+    c = bm.verts.new((x, y, z0 + 0.0004))
+    inner, tips = [], []
+    for k in range(n):
+        a_t = math.radians(rot + 360 * k / n)
+        a_i = math.radians(rot + 360 * (k + 0.5) / n)
+        tips.append(bm.verts.new((x + R * rnd.uniform(0.9, 1.05) * math.cos(a_t), y + R * math.sin(a_t) * rnd.uniform(0.9, 1.05), z0 + h * rnd.uniform(0.8, 1.15))))
+        inner.append(bm.verts.new((x + 0.66 * R * math.cos(a_i), y + 0.66 * R * math.sin(a_i), z0 + 0.0014)))
+    for k in range(n):
+        bm.faces.new([c, inner[k - 1], tips[k]])
+        bm.faces.new([c, tips[k], inner[k]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    o = bc._new_obj(name, bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def _cone(name, rb, rt, h, x, y, z, col, segs):
+    o = bc.cone(name, rb, rt, h, (x, y, z + h / 2 - 0.0004), col, segs, random.uniform(0, 60))
+    o["no_bevel"] = True
+    return o
+
+
+def _lean_blade(name, x, y, r, h, ang, col):
+    """A thin pyramid leaning outward 28 degrees from (x, y)."""
+    o = bc.cone(name, r, 0.0, h, (0, 0, h / 2), col, 3)
+    o["no_bevel"] = True
+    o.rotation_euler = (0, math.radians(28), ang)
+    bpy.context.view_layer.update()
+    bc.apply_transforms(o)
+    for v in o.data.vertices:
+        v.co.x += x
+        v.co.y += y
+        v.co.z += HEIGHT - 0.0004
+    return o
+
+
+def lush_top(seed, n_big=5, n_frond=140, n_fern=9, n_bush=5, n_mush=4, n_stone=5, n_flower=6,
+             bush_cols=("leaf_green", "leaf_light", "leaf_light"), accent="roof_orange"):
+    """The lush top: big soft light/dark areas, leaf clumps everywhere, and ferns, bushes, mushrooms, stones and
+    flowers in the outer ring (they never stand where towers and paths go)."""
+    rnd = random.Random(seed)
+    parts = []
+    z0 = HEIGHT
+
+    def spot(margin=0.014, lo=0.0, hi=1.0):
+        while True:
+            x, y = rnd.uniform(-0.29, 0.29), rnd.uniform(-0.29, 0.29)
+            if inside(x, y, margin) and lo <= edge_dist(x, y) <= hi:
+                return x, y
+
+    # layer 1: big soft areas (light and dark), +0.4 mm; they do not overlap each other
+    big = []
+    k = tries = 0
+    while k < n_big and tries < 3000:
+        tries += 1
+        x, y = spot(0.02)
+        R = rnd.uniform(0.045, 0.07)
+        if all(math.dist((x, y), (bx, by)) > R + br + 0.004 for bx, by, br in big):
+            big.append((x, y, R))
+            parts.append(star("area", x, y, R, z0 + 0.0004, "leaf_light", rnd, 6, inner=0.78))
+            k += 1
+    # raised leaf rosettes everywhere (they may overlap: different heights, no flat tops to z-fight). Darker and
+    # yellower toward the rim, lighter in the middle. Their tips stay under 6 mm, below the path tiles
+    # (to be modelled 8 mm high) so paths and building bases cover them.
+    placed = []
+    for _ in range(n_frond):
+        x, y = spot(0.014)
+        R = rnd.uniform(0.032, 0.050)
+        near = edge_dist(x, y) < 0.07
+        col = rnd.choice(("leaf_green", "leaf_green", "leaf_light", "grass")) if near else             rnd.choice(("leaf_light", "leaf_light", "leaf_light", "grass", "grass", "leaf_green"))
+        parts.append(frond("frond", x, y, R, rnd.uniform(0.0042, 0.0058), col, rnd, 6))
+
+    solid = []
+
+    def ring_spot(lo=0.012, hi=0.052, clear=0.0):
+        for _ in range(500):
+            x, y = spot(0.010, lo, hi)
+            if all(math.dist((x, y), (qx, qy)) > qr + clear for qx, qy, qr in solid):
+                return x, y
+        return spot(0.010, lo, hi)
+
+    for _ in range(n_bush):  # bushes: two stacked facets, some with an autumn-orange top
+        x, y = ring_spot(0.022, 0.058, 0.022)
+        solid.append((x, y, 0.022))
+        c = rnd.choice(bush_cols)
+        parts.append(_cone("bush", 0.022, 0.017, 0.014, x, y, z0, c, 6))
+        top = accent if accent and rnd.random() < 0.35 else c
+        parts.append(_cone("bush", 0.017, 0.008, 0.014, x + rnd.uniform(-0.002, 0.002), y + rnd.uniform(-0.002, 0.002), z0 + 0.0135, top, 6))
+    for _ in range(n_fern):  # ferns: four leaning blades
+        x, y = ring_spot(0.012, 0.05, 0.008)
+        solid.append((x, y, 0.008))
+        for i in range(3):
+            a = math.radians(i * 120 + rnd.uniform(0, 40))
+            parts.append(_lean_blade("fern", x + 0.003 * math.cos(a), y + 0.003 * math.sin(a), 0.0035, 0.015, a,
+                                     "leaf_light" if i % 2 else "leaf_green"))
+    for _ in range(n_mush):  # mushrooms: cream stem, terracotta cap
+        x, y = ring_spot(0.014, 0.055, 0.008)
+        solid.append((x, y, 0.007))
+        parts.append(_cone("stem", 0.0038, 0.0034, 0.009, x, y, z0, "wall_cream", 5))
+        parts.append(_cone("cap", 0.0098, 0.0035, 0.007, x, y, z0 + 0.0085, "roof_terracotta", 6))
+    for _ in range(n_stone):
+        x, y = ring_spot(0.012, 0.054, 0.010)
+        solid.append((x, y, 0.009))
+        parts.append(_cone("stone", rnd.uniform(0.011, 0.016), rnd.uniform(0.006, 0.010), rnd.uniform(0.009, 0.014), x, y, z0,
+                           rnd.choice(("stone", "stone", "stone_dark", "path_stone")), 5))
+    for _ in range(n_flower):
+        x, y = ring_spot(0.012, 0.055, 0.006)
+        solid.append((x, y, 0.005))
+        parts.append(_cone("flower", 0.0058, 0.0020, 0.009, x, y, z0, rnd.choice(("wall_cream", "wall_cream", "roof_orange")), 4))
+    return parts
+
+
+def fringe(zlip, count_step=0.07, drop=0.012, col="leaf_green"):
+    """Grass blades hanging over the lip (tips down), every `count_step` m round the rim."""
+    parts = []
+    for x, y, nx, ny in perimeter(HALF - 0.004, RADIUS, count_step):
+        o = bc.cone("fringe", 0.0, 0.0065, drop, (x, y, zlip - drop / 2 + 0.002), col, 3)
+        o["no_bevel"] = True
+        parts.append(o)
+    return parts
+
+
+def embed_rocks(zs, count, rnd, cols=("stone", "stone_dark", "stone"), inset=0.004):
+    """Rocks half-buried in the earth sides at the given heights (round the rim, fitted inside the footprint)."""
+    parts = []
+    for x, y, nx, ny in perimeter(HALF - inset, RADIUS, 2.3 / count, 0.3):
+        r = rnd.uniform(0.012, 0.019)
+        o = bc.cone("rock", r, r * 0.65, rnd.uniform(0.008, 0.013), (x, y, rnd.choice(zs)), rnd.choice(cols), 4, rnd.uniform(0, 70))
+        o["no_bevel"] = True
+        parts.append(o)
+    return parts
+
+
+def earth_sides(zd0, tones=("path_dirt", "wood_light", "path_dirt"), heights=(0.020, 0.010, 0.020), foot="stone_dark", i0=0.003,
+                step=0.003):
+    """Brown earth under the grass: bands that step in a little, then a dark foot."""
+    parts = []
+    z = zd0
+    ins = i0
+    for col, h in zip(tones, heights):
+        parts.append(slab("earth", z - h, z, col, ins, ins + step, RADIUS))
+        z -= h
+        ins += step
+    parts.append(slab("foot", 0.0, z, foot, ins, ins + step, RADIUS))
+    for o in parts:
+        o["no_bevel"] = True  # the soft bevel on the grass lip stays; unbevelled earth bands save ~250 triangles
+    return parts
+
+
+def variant_e():
+    """E Earth cube (ref 1): thick brown earth in three bands, stones peeking out of it, grass fringe over the lip."""
+    rnd = random.Random(21)
+    parts, zd0 = base_layers()
+    parts += earth_sides(zd0, heights=(0.022, 0.010, 0.022))
+    parts += embed_rocks([zd0 - 0.014, zd0 - 0.032, zd0 - 0.050], 12, rnd)
+    return parts
+
+
+def variant_f():
+    """F Arena rim (ref 2): a ring of cut stone blocks under the grass lip like the arena border, earth below."""
+    rnd = random.Random(22)
+    parts, zd0 = base_layers()
+    parts.append(slab("curb", zd0 - 0.020, zd0, "path_stone", 0.003, 0.003, RADIUS))
+    parts[-1]["no_bevel"] = True
+    parts += joints(zd0 - 0.020, zd0, HALF - 0.003, 6, "stone_dark", 0.0035, 0.0016)
+    parts += earth_sides(zd0 - 0.020, ("path_dirt", "wood_light"), (0.026, 0.020), "stone_dark", 0.007, 0.003)
+    parts += embed_rocks([zd0 - 0.010], 10, rnd, ("stone", "stone", "path_stone"), 0.0035)
+    return parts
+
+
+def variant_g():
+    """G Mossy cliff: earth sides, longer fringe blades in two rows, big boulders bulging at the corners."""
+    rnd = random.Random(23)
+    parts, zd0 = base_layers()
+    parts += earth_sides(zd0, ("path_dirt", "wood_light", "path_dirt"), (0.026, 0.010, 0.022), "stone_dark", 0.004, 0.004)
+    for cx, cy in ((1, 1), (-1, 1), (-1, -1), (1, -1)):  # corner boulders
+        for k, (dx, dz, r) in enumerate(((0, 0.040, 0.020), (0.022, 0.020, 0.016))):
+            o = bc.cone("boulder", r, r * 0.7, 0.026, (cx * (HALF - 0.034 - dx), cy * (HALF - 0.034), dz),
+                        "stone" if k == 0 else "path_stone", 5, 20 + 30 * k)
+            o["no_bevel"] = True
+            parts.append(o)
+    parts += embed_rocks([zd0 - 0.020, zd0 - 0.040], 6, rnd)
+    return parts
+
+
+def variant_h():
+    """H Ruin arch: earth sides with a small stone archway set into the front, rocks, a light fringe."""
+    rnd = random.Random(24)
+    parts, zd0 = base_layers()
+    parts += earth_sides(zd0, heights=(0.024, 0.012, 0.020), i0=0.004)
+    ay = -0.2915  # front of the posts sits at -0.2995, inside the 0.6 m footprint
+    for sx in (-1, 1):  # arch: two posts, a lintel, a dark opening
+        post = bc.box("arch", (0.011, 0.012, 0.040), (sx * 0.030, ay - 0.002, zd0 - 0.034), "stone")
+        post["no_bevel"] = True
+        parts.append(post)
+    lintel = bc.box("arch", (0.072, 0.012, 0.011), (0, ay - 0.002, zd0 - 0.0095), "path_stone")
+    lintel["no_bevel"] = True
+    parts.append(lintel)
+    door = bc.box("opening", (0.049, 0.002, 0.034), (0, -0.2972, zd0 - 0.035), "ink")
+    door["no_bevel"] = True
+    parts.append(door)
+    parts += embed_rocks([zd0 - 0.016, zd0 - 0.034, zd0 - 0.050], 10, rnd)
+    return parts
+
+
 def fit(parts, margin=0.0008, shift=False):
     """Keep every part on the board: vertices outside the rounded 12 x 12 outline pull the part in, by shrinking it
     toward its centre in x/y (dressing) or sliding it inward (shift=True: the boulders of variant B).
@@ -288,14 +553,15 @@ def fit(parts, margin=0.0008, shift=False):
     return parts
 
 
-VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
-SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9}
+VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d, "E": variant_e, "F": variant_f, "G": variant_g,
+            "H": variant_h}
+SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9, "E": 31, "F": 32, "G": 33, "H": 34}
 
 
 def build(v, name="ew_world_island_v01"):
     parts = VARIANTS[v]()
-    fit([p for p in parts if p.name.startswith("rock")], 0.0005, shift=True)
-    parts += fit(top_dressing(SEEDS[v]))
+    fit([p for p in parts if p.name.startswith(("rock", "boulder", "fringe"))], 0.0005, shift=True)
+    parts += fit(lush_top(SEEDS[v]) if v in "EFGH" else top_dressing(SEEDS[v]))
     return bc.assemble(name, [("", parts, (0, 0, 0), None)])
 
 
