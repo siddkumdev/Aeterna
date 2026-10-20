@@ -171,6 +171,8 @@ def edge_points(pts, spacing, m_cell=0.004):
 
 
 def tile(variant, kind, seed):
+    if variant in "EFGH":
+        return tile2(variant, kind, seed)
     rnd = random.Random(seed)
     pts = outline(kind, random.Random(1000 + len(kind)))  # same raggedness for every variant of one kind
     parts = []
@@ -240,8 +242,164 @@ def tile(variant, kind, seed):
     return parts
 
 
+
+# ---- round 2 (E-H): LOWER paths. Siddharth 2026-10-20: A-D 'feel so plastic, like glued on top and not an actual
+# path; try a slightly lower path'. So: 2-3.5 mm tall instead of 8 mm, soft sloping flanks that sink into the
+# grass (no vertical walls, no chamfer), several earth tones, stones sunk into the ground. Joins stay fixed at the
+# cell border (outset and inset taper to zero there), so tiles still meet seamlessly.
+
+SLOPE = 0.0042       # how far the flank spreads out past the outline at the bottom
+SINK = -0.0008       # the flank starts below the grass (the island grass is a flat 6 mm layer, tips under 6 mm)
+
+
+def border_taper(x, y, full=0.009):
+    """0 at the cell border, 1 once `full` metres away from it (so the join profile is identical on both tiles)."""
+    d = H - max(abs(x), abs(y))
+    return max(0.0, min(1.0, d / full))
+
+
+def outset_pts(pts, d, taper=True):
+    """Move each point out (d > 0) or in (d < 0) along its normal, tapering to zero at the cell border."""
+    res = []
+    n = len(pts)
+    for i in range(n):
+        p0, p1, p2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+        tx, ty = p2[0] - p0[0], p2[1] - p0[1]
+        L = math.hypot(tx, ty) or 1
+        nx, ny = ty / L, -tx / L   # outward normal of a CCW polygon
+        k = d * (border_taper(*p1) if taper else 1.0)
+        res.append((p1[0] + nx * k, p1[1] + ny * k))
+    return res
+
+
+def mound(name, pts, col, z_top, slope=SLOPE, crown=0.0009):
+    """Low earth mound: bottom ring below the grass, a rounded shoulder, a flat crown. No vertical walls."""
+    rings = [(outset_pts(pts, slope), SINK), (outset_pts(pts, slope * 0.38), z_top * 0.55),
+             (outset_pts(pts, -crown), z_top)]
+    bm = bmesh.new()
+    rv = [[bm.verts.new((x, y, z)) for x, y in r] for r, z in rings]
+    n = len(pts)
+    for a in range(len(rings) - 1):
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new([rv[a][i], rv[a][j], rv[a + 1][j], rv[a + 1][i]])
+    bm.faces.new(rv[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="EAR_CLIP")
+    o = bc._new_obj(name, bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def flat_patch(name, x, y, r, z, col, rnd, n=7):
+    """Thin irregular polygon lying on the ground (a worn or dusty patch): n points, lifted 0.2 mm."""
+    bm = bmesh.new()
+    rot = rnd.uniform(0, 6.28)
+    vs = [bm.verts.new((x + r * rnd.uniform(0.7, 1.15) * math.cos(rot + 6.2832 * k / n),
+                        y + r * rnd.uniform(0.7, 1.15) * math.sin(rot + 6.2832 * k / n), z)) for k in range(n)]
+    bm.faces.new(vs)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    o = bc._new_obj(name, bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def rand_inside(pts, rnd, m, tries=200):
+    for _ in range(tries):
+        x, y = rnd.uniform(-H, H), rnd.uniform(-H, H)
+        if inside_ok(pts, x, y, m) and abs(x) < H - 0.003 and abs(y) < H - 0.003:
+            return x, y
+    return None
+
+
+def hump(x, y, r, h, col, rnd):
+    """A low faceted grass hump (two stacked layers) for lips and edges."""
+    ro = rnd.uniform(0, 60)
+    a = bc.cone("lip", r, r * 0.75, h * 0.55, (x, y, h * 0.275 + SINK), col, 6, ro)
+    b = bc.cone("lip", r * 0.75, r * 0.35, h * 0.55, (x, y, h * 0.55 + h * 0.275 + SINK), "leaf_light" if col != "leaf_light" else "grass", 6, ro + 30)
+    a["no_bevel"] = b["no_bevel"] = True
+    return [a, b]
+
+
+def tile2(variant, kind, seed):
+    rnd = random.Random(seed)
+    pts = outline(kind, random.Random(1000 + len(kind)))
+    parts = []
+    if variant == "E":     # worn earth trail: low soft mound, several earth tones, dust and dark patches, flat pebbles
+        parts.append(mound("path", pts, "path_dirt", 0.0030))
+        for col, cnt, r in (("path_stone", 2, 0.0090), ("wood_dark", 2, 0.0060)):
+            for _ in range(cnt):
+                pt = rand_inside(pts, rnd, 0.0035)
+                if pt:
+                    parts.append(flat_patch("patch", pt[0], pt[1], r * rnd.uniform(0.8, 1.2), 0.0032 + 0.0002 * rnd.random(), col, rnd))
+        for _ in range(3):
+            pt = rand_inside(pts, rnd, 0.005)
+            if pt:
+                parts.append(small("pebble", 0.0034, 0.0022, 0.0012, pt[0], pt[1], 0.0026, rnd.choice(("stone", "path_stone")), 5, rnd.uniform(0, 70)))
+        ep = edge_points(outset_pts(pts, SLOPE * 0.9), 0.012)
+        for x, y in rnd.sample(ep, min(4, len(ep))):
+            parts += hump(x, y, 0.0036, 0.0042, "leaf_green", rnd)
+    elif variant == "F":   # stepping stones set in a low dirt bed
+        parts.append(mound("path", pts, "path_dirt", 0.0020))
+        n = 0
+        placed = []
+        for _ in range(240):
+            if n >= (5 if kind != "straight" else 4):
+                break
+            pt = rand_inside(pts, rnd, 0.0065)
+            if pt and all(math.dist(pt, q) > 0.0125 for q in placed):
+                placed.append(pt)
+                r = rnd.uniform(0.0058, 0.0072)
+                parts.append(small("step", r, r * 0.82, 0.0022, pt[0], pt[1], 0.0014, rnd.choice(("path_stone", "path_stone", "stone")), 7, rnd.uniform(0, 60)))
+                n += 1
+        for _ in range(3):
+            pt = rand_inside(pts, rnd, 0.004)
+            if pt:
+                parts.append(flat_patch("patch", pt[0], pt[1], 0.005, 0.0022, rnd.choice(("wood_dark", "wood_light")), rnd))
+        ep = edge_points(outset_pts(pts, SLOPE * 0.9), 0.011)
+        for x, y in rnd.sample(ep, min(5, len(ep))):
+            parts += hump(x, y, 0.0036, 0.0042, rnd.choice(("leaf_green", "grass")), rnd)
+    elif variant == "G":   # sunken trail: the floor is below the grass, grassy lips run along both sides
+        parts.append(mound("path", pts, "path_dirt", 0.0010, slope=0.0030, crown=0.0006))
+        for col, cnt, r in (("wood_dark", 3, 0.0045), ("path_stone", 3, 0.0055)):
+            for _ in range(cnt):
+                pt = rand_inside(pts, rnd, 0.004)
+                if pt:
+                    parts.append(flat_patch("patch", pt[0], pt[1], r, 0.0012, col, rnd))
+        for x, y in edge_points(outset_pts(pts, 0.0040), 0.0075):
+            r = rnd.uniform(0.0034, 0.0046)
+            parts += hump(x, y, r, rnd.uniform(0.0040, 0.0056), rnd.choice(("leaf_green", "grass", "leaf_green")), rnd)
+        for _ in range(3):
+            pt = rand_inside(pts, rnd, 0.005)
+            if pt:
+                parts.append(small("pebble", 0.0030, 0.0018, 0.0012, pt[0], pt[1], 0.0008, rnd.choice(("stone", "path_stone")), 5, rnd.uniform(0, 70)))
+    elif variant == "H":   # cobbles sunk in earth: round stones of several sizes, dirt showing between
+        parts.append(mound("path", pts, "path_dirt", 0.0020))
+        placed = []
+        for _ in range(400):
+            if len(placed) >= (9 if kind == "straight" else 11):
+                break
+            pt = rand_inside(pts, rnd, 0.0050)
+            if not pt:
+                continue
+            r = rnd.uniform(0.0036, 0.0058)
+            if all(math.dist(pt, (qx, qy)) > r + qr + 0.0012 for qx, qy, qr in placed):
+                placed.append((pt[0], pt[1], r))
+                parts.append(small("cobble", r, r * 0.7, rnd.uniform(0.0018, 0.0026), pt[0], pt[1], 0.0010,
+                                   rnd.choice(("path_stone", "stone", "path_stone", "stone_dark")), 6, rnd.uniform(0, 60)))
+        ep = edge_points(outset_pts(pts, SLOPE * 0.9), 0.012)
+        for x, y in rnd.sample(ep, min(4, len(ep))):
+            parts += hump(x, y, 0.0036, 0.0042, "leaf_green", rnd)
+    return parts
+
+
 KINDS = ("straight", "corner", "t", "end")
-SEED = {"A": 11, "B": 12, "C": 13, "D": 14}
+SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24}
 
 
 def build(variant, kind):
