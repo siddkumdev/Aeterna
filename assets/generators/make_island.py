@@ -569,9 +569,90 @@ def variant_i():
     return parts
 
 
+def clumps(seed, n=15, n_small=34):
+    """Chunky bush clumps (user 2026-10-20: 'I with bush clumps'): a faceted dome of three stacked 7-sided layers,
+    dark leaf underside, mid body, light top. Big ones sit in the outer ring only; the playable centre gets a few
+    small low rosettes (tips under 6 mm, below the 8 mm path tiles)."""
+    rnd = random.Random(seed)
+    parts, placed = [], []
+    z0 = HEIGHT
+    tries = 0
+    while len(placed) < n and tries < 4000:
+        tries += 1
+        x, y = rnd.uniform(-0.29, 0.29), rnd.uniform(-0.29, 0.29)
+        R = rnd.uniform(0.022, 0.030)
+        d = edge_dist(x, y)
+        if not (inside(x, y, R * 0.6) and 0.016 <= d <= 0.056):
+            continue
+        if min(math.hypot(abs(x) - (HALF - 0.040), abs(y) - (HALF - 0.040)) for _ in (0,)) < 0.05 and abs(x) > 0.2 and abs(y) > 0.2:
+            continue
+        if any(math.dist((x, y), (px, py)) < R + pr + 0.002 for px, py, pr in placed):
+            continue
+        placed.append((x, y, R))
+        h = rnd.uniform(0.005, 0.007)
+        ro = rnd.uniform(0, 60)
+        parts.append(bc.cone("clump", R, R * 0.8, h, (x, y, z0 + h / 2 - 0.0004), "leaf_dark" if rnd.random() < 0.5 else "leaf_green", 7, ro))
+        parts.append(bc.cone("clump", R * 0.82, R * 0.55, h, (x, y, z0 + h * 1.5 - 0.0008), "leaf_green", 7, ro + 20))
+        parts.append(bc.cone("clump", R * 0.55, R * 0.18, h * 1.1, (x, y, z0 + h * 2.55 - 0.0012), "leaf_light", 7, ro + 40))
+    for p in parts:
+        p["no_bevel"] = True
+    for _ in range(n_small):
+        while True:
+            x, y = rnd.uniform(-0.29, 0.29), rnd.uniform(-0.29, 0.29)
+            if inside(x, y, 0.014) and edge_dist(x, y) > 0.05:
+                break
+        parts.append(frond("frond", x, y, rnd.uniform(0.020, 0.030), rnd.uniform(0.0035, 0.005),
+                           rnd.choice(("leaf_light", "leaf_light", "grass", "leaf_green")), rnd, 6))
+    # props in the outer ring: grey stones, mushrooms, flowers (no orange cones, no ferns)
+    solid = list(placed)
+    def free(lo, hi, clear):
+        for _ in range(600):
+            x, y = rnd.uniform(-0.29, 0.29), rnd.uniform(-0.29, 0.29)
+            if inside(x, y, 0.010) and lo <= edge_dist(x, y) <= hi and all(math.dist((x, y), (qx, qy)) > qr + clear for qx, qy, qr in solid):
+                return x, y
+        return None
+    for kind, cnt, rr in (("stone", 5, 0.014), ("mush", 4, 0.008), ("flower", 6, 0.006)):
+        for _ in range(cnt):
+            pt = free(0.012, 0.056, rr)
+            if not pt:
+                continue
+            x, y = pt
+            solid.append((x, y, rr))
+            if kind == "stone":
+                parts.append(_cone("stone", rnd.uniform(0.012, 0.017), rnd.uniform(0.008, 0.012), rnd.uniform(0.008, 0.012), x, y, z0,
+                                   rnd.choice(("stone", "stone", "path_stone")), 6))
+            elif kind == "mush":
+                parts.append(_cone("stem", 0.0038, 0.0034, 0.009, x, y, z0, "wall_cream", 5))
+                parts.append(_cone("cap", 0.0098, 0.0035, 0.007, x, y, z0 + 0.0085, "roof_terracotta", 6))
+            else:
+                parts.append(_cone("flower", 0.0058, 0.0020, 0.009, x, y, z0, rnd.choice(("wall_cream", "wall_cream", "leaf_yellow")), 4))
+    return parts
+
+
+def variant_k():
+    """K = I (E earth bands + G corner boulders) with bush clumps, grey chunky boulders in clusters of three,
+    flat half-sunk side stones, brighter grass colour (palette edit 2026-10-20)."""
+    rnd = random.Random(21)
+    parts, zd0 = base_layers()
+    parts += earth_sides(zd0, heights=(0.022, 0.012, 0.022))
+    zs = [zd0 - 0.014, zd0 - 0.034, zd0 - 0.054]
+    for x, y, nx, ny in perimeter(HALF - 0.004, RADIUS, 2.3 / 12, 0.3):  # flat, wide side stones
+        r = rnd.uniform(0.013, 0.019)
+        o = bc.cone("rock", r, r * 0.88, rnd.uniform(0.006, 0.009), (x, y, rnd.choice(zs)), rnd.choice(("stone", "stone_dark", "path_stone")), 6, rnd.uniform(0, 60))
+        o["no_bevel"] = True
+        parts.append(o)
+    for cx, cy in ((1, 1), (-1, 1), (-1, -1), (1, -1)):  # corner boulders on the grass: three chunky grey stones
+        for k, (dx, dy, r, h) in enumerate(((0.0, 0.0, 0.026, 0.026), (0.030, 0.004, 0.019, 0.019), (0.004, 0.030, 0.018, 0.017))):
+            o = bc.cone("boulder", r, r * 0.72, h, (cx * (HALF - 0.040 - dx), cy * (HALF - 0.040 - dy), HEIGHT + h / 2 - 0.001),
+                        ("stone", "path_stone", "stone_dark")[k], 6, 20 + 30 * k)
+            o["no_bevel"] = True
+            parts.append(o)
+    return parts
+
+
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d, "E": variant_e, "F": variant_f, "G": variant_g,
-            "H": variant_h, "I": variant_i, "J": variant_i}
-SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9, "E": 31, "F": 32, "G": 33, "H": 34, "I": 35, "J": 35}
+            "H": variant_h, "I": variant_i, "J": variant_i, "K": variant_k}
+SEEDS = {"A": 3, "B": 5, "C": 7, "D": 9, "E": 31, "F": 32, "G": 33, "H": 34, "I": 35, "J": 35, "K": 36}
 # J = I with fewer, bigger, taller tufts (to compare grass density)
 LUSH_ARGS = {"J": dict(n_frond=62, frond_r=(0.045, 0.068), frond_h=(0.0065, 0.0090))}
 
@@ -579,7 +660,7 @@ LUSH_ARGS = {"J": dict(n_frond=62, frond_r=(0.045, 0.068), frond_h=(0.0065, 0.00
 def build(v, name="ew_world_island_v01"):
     parts = VARIANTS[v]()
     fit([p for p in parts if p.name.startswith(("rock", "boulder", "fringe"))], 0.0005, shift=True)
-    parts += fit(lush_top(SEEDS[v], **LUSH_ARGS.get(v, {})) if v in "EFGHIJ" else top_dressing(SEEDS[v]))
+    parts += fit(clumps(SEEDS[v]) if v == "K" else lush_top(SEEDS[v], **LUSH_ARGS.get(v, {})) if v in "EFGHIJ" else top_dressing(SEEDS[v]))
     return bc.assemble(name, [("", parts, (0, 0, 0), None)])
 
 

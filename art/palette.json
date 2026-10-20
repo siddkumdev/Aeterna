@@ -1,5 +1,5 @@
 {
-  "_status": "Core palette APPROVED by Siddharth 2026-10-14 as the overall level vibe (he could not judge exact hex). Time-of-day strips sampled from moodboard #21 night, #22 dusk, #18 golden hour. 'materials' feed the palette atlas (max 64); atlas cell index = order in 'materials', so only APPEND new colours. 2026-10-17: additions from path_dirt onward, dawn_derived, day_derived and the 'lighting' presets APPROVED by Siddharth (jewel colours cut; hand tones added).",
+  "_status": "Core palette APPROVED by Siddharth 2026-10-14 as the overall level vibe (he could not judge exact hex). Time-of-day strips sampled from moodboard #21 night, #22 dusk, #18 golden hour. 'materials' feed the palette atlas (max 64); atlas cell index = order in 'materials', so only APPEND new colours. 2026-10-17: additions from path_dirt onward, dawn_derived, day_derived and the 'lighting' presets APPROVED by Siddharth (jewel colours cut; hand tones added). 2026-10-20: changed grass 7FA84A->88BE45, APPROVED by Siddharth (Island grass was a muddy olive from the seat view; Siddharth OK 2026-10-20 (yes to all). grass is used by no exported asset, only island variants.).",
   "time_of_day": {
     "night_21": [
       "5B2920",
@@ -58,7 +58,7 @@
     "wood_light": "C6924C",
     "stone": "8C9096",
     "stone_dark": "5B4F50",
-    "grass": "7FA84A",
+    "grass": "88BE45",
     "leaf_green": "5D8548",
     "leaf_light": "8DB85A",
     "leaf_dark": "224A2F",
