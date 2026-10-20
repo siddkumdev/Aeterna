@@ -764,5 +764,10 @@ if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     v = args[0] if args else "A"
     bc.clear_scene()
+    if v == "FINAL":  # approved by Siddharth 2026-10-20: variant L is ew_world_island_v01
+        obj = build("L", "ew_world_island_v01")
+        print("BLEND", bc.save_blend(obj, "island"))
+        print("EXPORT", bc.export_glb(obj, "world"))
+        sys.exit(0)
     obj = build(v)
     print("BLEND", bc.save_blend(obj, "island_" + v))

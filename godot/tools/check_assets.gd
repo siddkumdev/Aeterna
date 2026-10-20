@@ -85,6 +85,8 @@ func _check(cat: String, path: String) -> void:
 		_fail("no meshes")
 		return
 	var budget: int = BUDGET.get(cat, 2000)
+	if path.contains("ew_world_island"):
+		budget = 4000  # lush grass (Siddharth 2026-10-20), same override as tools/validate_asset.py
 	print("   size      %.1f x %.1f cells footprint, %.1f cells tall (%.3f x %.3f x %.3f m)"
 			% [aabb.size.x / CELL, aabb.size.z / CELL, aabb.size.y / CELL, aabb.size.x, aabb.size.z, aabb.size.y])
 	print("   tris      %d / %d" % [tris, budget])
