@@ -61,6 +61,7 @@ def outline(kind, rnd):
     pts = []
     for p, q, ragged in segs:
         pts += rag(p, q, rnd, 4 if ragged else 1, AMP if ragged else 0.0)
+    set_sides(pts)
     return pts
 
 
@@ -173,6 +174,8 @@ def edge_points(pts, spacing, m_cell=0.004):
 def tile(variant, kind, seed):
     if variant in "EFGH":
         return tile2(variant, kind, seed)
+    if variant in "IJK":
+        return tile3(variant, kind, seed)
     rnd = random.Random(seed)
     pts = outline(kind, random.Random(1000 + len(kind)))  # same raggedness for every variant of one kind
     parts = []
@@ -252,9 +255,19 @@ SLOPE = 0.0042       # how far the flank spreads out past the outline at the bot
 SINK = -0.0008       # the flank starts below the grass (the island grass is a flat 6 mm layer, tips under 6 mm)
 
 
+ACTIVE_SIDES = [(1, 0), (-1, 0), (0, 1), (0, -1)]   # the cell borders the current tile touches (set per outline)
+
+
+def set_sides(pts):
+    global ACTIVE_SIDES
+    ACTIVE_SIDES = [sd for sd in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    if any(abs(sd[0] * x + sd[1] * y - H) < 1e-9 for x, y in pts)]
+
+
 def border_taper(x, y, full=0.009):
-    """0 at the cell border, 1 once `full` metres away from it (so the join profile is identical on both tiles)."""
-    d = H - max(abs(x), abs(y))
+    """0 at a cell border the tile touches, 1 once `full` metres away from it (so the join profile is identical on
+    both tiles). Only borders that carry a join count, not the lateral ones."""
+    d = min([H - (sd[0] * x + sd[1] * y) for sd in ACTIVE_SIDES] or [1.0])
     return max(0.0, min(1.0, d / full))
 
 
@@ -398,8 +411,138 @@ def tile2(variant, kind, seed):
     return parts
 
 
+
+# ---- round 3 (I-K): 'I want it to look like this' (Siddharth 2026-10-20, two top-down painted forest-trail
+# screenshots). What the references have: a WIDE, winding trail that is almost flush with the ground, soft
+# organic edges (long gentle meanders, not jitter), subtle large rounded cobble shapes painted into the earth
+# (not 3D stones), a darker green grass skirt where grass meets the trail, and small clusters of chunky stones,
+# flowers and tufts along the edge. Style and shape language only: nothing copied.
+
+W3 = 0.0215          # half the trail width at the joins (the trail is 0.043 m wide, 86% of a cell)
+
+
+def smooth_edge(a, b, rnd, n=8, amp=0.0036):
+    """Like rag() but a long gentle meander (two slow waves) instead of jitter; zero at both ends."""
+    ax, ay = a
+    bx, by = b
+    dx, dy = bx - ax, by - ay
+    L = math.hypot(dx, dy)
+    nx, ny = dy / L, -dx / L
+    p1, p2 = rnd.uniform(0, 6.28), rnd.uniform(0, 6.28)
+    f1, f2 = rnd.uniform(0.9, 1.4), rnd.uniform(2.0, 3.0)
+    pts = []
+    for i in range(n):
+        t = i / n
+        k = 0.0 if i == 0 else amp * (0.65 * math.sin(6.2832 * f1 * t + p1) + 0.35 * math.sin(6.2832 * f2 * t + p2)) * math.sin(math.pi * t) ** 0.6
+        pts.append((ax + dx * t + nx * k, ay + dy * t + ny * k))
+    return pts
+
+
+def outline3(kind, rnd):
+    w = W3
+    n = 8
+    if kind == "straight":
+        segs = [((-H, -w), (H, -w), 1), ((H, -w), (H, w), 0), ((H, w), (-H, w), 1), ((-H, w), (-H, -w), 0)]
+    elif kind == "corner":
+        segs = [((-w, -w), (H, -w), 1), ((H, -w), (H, w), 0), ((H, w), (w, w), 1), ((w, w), (w, H), 1),
+                ((w, H), (-w, H), 0), ((-w, H), (-w, -w), 1)]
+    elif kind == "t":
+        segs = [((-H, -w), (H, -w), 1), ((H, -w), (H, w), 0), ((H, w), (w, w), 1), ((w, w), (w, H), 1),
+                ((w, H), (-w, H), 0), ((-w, H), (-w, w), 1), ((-w, w), (-H, w), 1), ((-H, w), (-H, -w), 0)]
+    elif kind == "end":   # trail opens into a rounded apron at -x, in front of the house
+        a = 0.0248
+        segs = [((-0.017, -a), (-0.002, -a), 1), ((-0.002, -a), (-0.002, -w), 0), ((-0.002, -w), (H, -w), 1),
+                ((H, -w), (H, w), 0), ((H, w), (-0.002, w), 1), ((-0.002, w), (-0.002, a), 0),
+                ((-0.002, a), (-0.017, a), 1), ((-0.017, a), (-0.0235, 0.0185), 0),
+                ((-0.0235, 0.0185), (-0.0235, -0.0185), 0), ((-0.0235, -0.0185), (-0.017, -a), 0)]
+    else:
+        raise ValueError(kind)
+    pts = []
+    for p, q, ragged in segs:
+        if ragged:
+            pts += smooth_edge(p, q, rnd, 4 if math.hypot(q[0] - p[0], q[1] - p[1]) < 0.02 else n)
+        else:
+            pts.append(p)
+    set_sides(pts)
+    return pts
+
+
+def ring_flat(name, outer, inner, z, col):
+    """Flat ragged ring between two same-length outlines (the darker grass skirt around the trail)."""
+    bm = bmesh.new()
+    vo = [bm.verts.new((x, y, z)) for x, y in outer]
+    vi = [bm.verts.new((x, y, z)) for x, y in inner]
+    n = len(outer)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new([vi[i], vi[j], vo[j], vo[i]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        if f.normal.z < 0:
+            f.normal_flip()
+    o = bc._new_obj(name, bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def far_from_border(x, y, m=0.007):
+    return abs(x) < H - m and abs(y) < H - m
+
+
+def tile3(variant, kind, seed):
+    rnd = random.Random(seed)
+    pts = outline3(kind, random.Random(2000 + len(kind)))
+    parts = [mound("path", pts, "path_dirt", 0.0016, slope=0.0030, crown=0.0006)]
+    ztop = 0.0016
+    # darker grass skirt hugging the trail (flat, 0.5 mm, pinches to nothing at the cell border)
+    parts.append(ring_flat("skirt", outset_pts(pts, 0.0075), outset_pts(pts, 0.0020), 0.0005, "leaf_green"))
+    # cobble shapes painted into the earth: big, rounded, low
+    placed = []
+    cob_cols = {"I": ("path_stone", "path_dirt", "path_dirt"), "J": ("path_stone", "path_stone", "stone", "path_dirt"),
+                "K": ("path_dirt", "path_dirt", "path_stone")}[variant]
+    want = {"I": 7, "J": 8, "K": 4}[variant]
+    for _ in range(500):
+        if len(placed) >= want:
+            break
+        pt = rand_inside(pts, rnd, 0.0055)
+        if not pt:
+            continue
+        r = rnd.uniform(0.0050, 0.0075)
+        if all(math.dist(pt, (qx, qy)) > r + qr + 0.0010 for qx, qy, qr in placed):
+            placed.append((pt[0], pt[1], r))
+            col = rnd.choice(cob_cols)
+            if variant == "K":
+                parts.append(flat_patch("worn", pt[0], pt[1], r, ztop + 0.0002 * rnd.random() + 0.0001, col, rnd, 8))
+            else:
+                h = rnd.uniform(0.0007, 0.0012) if col != "path_dirt" else 0.0004
+                o = small("cobble", r, r * 0.86, h, pt[0], pt[1], ztop - 0.0004, col, 8, rnd.uniform(0, 45))
+                parts.append(o)
+    if variant == "K":   # sandy trail: a few scratch-like pebbles
+        for _ in range(8):
+            pt = rand_inside(pts, rnd, 0.004)
+            if pt:
+                parts.append(small("pebble", rnd.uniform(0.0016, 0.0024), 0.0010, 0.0010, pt[0], pt[1], ztop - 0.0003,
+                                   rnd.choice(("path_stone", "stone", "path_stone")), 5, rnd.uniform(0, 70)))
+    # edge dressing outside the trail: stone clusters, tufts, flowers (never near a cell border)
+    ep = [p for p in edge_points(outset_pts(pts, 0.0012), 0.0095, 0.0016) if border_taper(*p, 0.008) >= 1.0]
+    rnd.shuffle(ep)
+    k = 0
+    for x, y in ep[:3]:      # stone clusters of two or three
+        for j in range(rnd.choice((2, 3))):
+            r = rnd.uniform(0.0034, 0.0052)
+            parts.append(small("edge_stone", r, r * 0.68, rnd.uniform(0.0028, 0.0046),
+                               max(-0.0225, min(0.0225, x + rnd.uniform(-0.0035, 0.0035))), max(-0.0225, min(0.0225, y + rnd.uniform(-0.0035, 0.0035))), 0.0,
+                               rnd.choice(("stone", "path_stone", "stone", "stone_dark")), 6, rnd.uniform(0, 60)))
+    for x, y in ep[3:7]:     # grass tufts
+        parts += hump(x, y, 0.0038, 0.0050, rnd.choice(("leaf_green", "leaf_light")), rnd)
+    for x, y in ep[7:10]:    # tiny flowers
+        parts.append(small("flower", 0.0020, 0.0008, 0.0042, x, y, 0.0, rnd.choice(("wall_cream", "leaf_yellow", "roof_terracotta")), 4, rnd.uniform(0, 70)))
+    return parts
+
+
 KINDS = ("straight", "corner", "t", "end")
-SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24}
+SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33}
 
 
 def build(variant, kind):
