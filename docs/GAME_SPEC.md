@@ -55,6 +55,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - Start: 100 trust per loop (loop 1 night 1).
 - **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
 - **Dawn income:** +5 trust per standing house.
+- **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
 - **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 70, Watch Hut 70.
 - **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
 - Fate Coin can modify income (see 17).
