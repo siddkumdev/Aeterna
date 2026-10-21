@@ -5,6 +5,7 @@ Parts: root = gold frame + handle; __glass = the crystal (Godot puts the Foresig
 Anchors: __lens_anchor (glass centre, Foresight glow), __grip_anchor (where the hand holds it).
 Colours: rarity_gold metal, crystal_blue glass and gems (blue = Foresight only; no purple, that is the Warden).
 Run: blender --factory-startup -b -P assets/generators/make_crystal_lens.py -- <A|B|C|D>
+Final (Siddharth 2026-10-21: B, whole glass, cracks by shader): ... -- FINAL B_WHOLE v01
 """
 import math
 import os
@@ -161,8 +162,9 @@ def lens_A():
     return hp + frame + crest + neck, glass, (0, 0, cz), (0, 0, 0.050)
 
 
-def lens_B():
-    """Tall oval mirror (images 1 + 2): ornate crest on top, shorter thicker handle, a few big cracks."""
+def lens_B(whole=False):
+    """Tall oval mirror (images 1 + 2): ornate crest on top, shorter thicker handle, a few big cracks.
+    whole=True (the final): one uncracked oval glass; the cracks are drawn by the Foresight shader and fade as the tier rises."""
     hp, top = turned_handle(0.085, 0.0100)
     rx, rz, rxi, rzi = 0.042, 0.058, 0.034, 0.050
     cz = top + rz - 0.007
@@ -172,7 +174,12 @@ def lens_B():
              gem((0, -0.0060, cz + rz + 0.0040), 0.0048)]
     side = [scroll((-rx - 0.0010, 0, cz), 0.0050), scroll((rx + 0.0010, 0, cz), 0.0050)]
     neck = [gem((0, -0.0140, top - 0.0030))]
-    glass = cracked_glass(cz, rxi, rzi, 4, 5, seed=11, centre=(-0.008, -0.018), r1=0.55, tilt=4.0)
+    if whole:
+        n = 16
+        gx, gz = rxi + 0.0010, rzi + 0.0010  # edge tucked 1 mm into the frame: no coplanar walls to flicker through a see-through shader
+        glass = [slab("glass", [(gx * math.cos(2 * math.pi * i / n), gz * math.sin(2 * math.pi * i / n)) for i in range(n)], cz, -0.0015, 0.0030, GLASS)]
+    else:
+        glass = cracked_glass(cz, rxi, rzi, 4, 5, seed=11, centre=(-0.008, -0.018), r1=0.55, tilt=4.0)
     return hp + frame + crest + side + neck, glass, (0, 0, cz), (0, 0, 0.042)
 
 
@@ -237,7 +244,7 @@ def lens_D():
     return hp + frame + pts + neck, glass, (0, 0, cz), (0, 0, 0.050)
 
 
-VARIANTS = {"A": lens_A, "B": lens_B, "C": lens_C, "D": lens_D}
+VARIANTS = {"A": lens_A, "B": lens_B, "C": lens_C, "D": lens_D, "B_WHOLE": lambda: lens_B(True)}
 
 
 def tris(objs):
