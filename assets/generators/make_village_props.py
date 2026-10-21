@@ -107,9 +107,11 @@ def crate_stack():
 
 def sacks():
     p = []
-    for (x, y, r, rz) in ((-0.0085, 0.0, 0.0090, 0), (0.0085, 0.002, 0.0085, 0), (0.0, -0.0085, 0.0082, 0)):
-        p.append(sack_blob("sack", r, (x, y, r * 1.05), "wall_cream"))
-        p.append(nb(cyl("sack_tie", r * 0.28, 0.0035, (x, y, r * 1.05 + r * 1.0), "path_dirt", 6, r * 0.18)))
+    for (x, y, r, h) in ((-0.0090, 0.0, 0.0085, 0.0210), (0.0085, 0.0020, 0.0082, 0.0190), (0.0, -0.0095, 0.0078, 0.0140)):
+        p.append(nb(cyl("sack", r, h * 0.62, (x, y, 0.0), "path_stone", 8, r * 1.12)))
+        p.append(nb(cyl("sack", r * 1.12, h * 0.30, (x, y, h * 0.62), "path_stone", 8, r * 0.60)))
+        p.append(nb(cyl("sack_tie", r * 0.62, 0.0016, (x, y, h * 0.90), "path_dirt", 8)))
+        p.append(nb(cyl("sack_top", r * 0.60, h * 0.12, (x, y, h * 0.90), "path_stone", 8, r * 0.30)))
     return p
 
 
@@ -118,13 +120,13 @@ def bench():
          box("back", (0.040, 0.0030, 0.0090), (0, 0.0050, 0.0205), "wood_light")]
     for sx in (-1, 1):
         p.append(box("leg", (0.0036, 0.0125, 0.0126), (sx * 0.0165, 0, 0.0063), "wood_dark"))
-        p.append(box("arm", (0.0030, 0.0030, 0.0100), (sx * 0.0190, 0.0050, 0.0182), "wood_dark"))
+        p.append(box("arm", (0.0030, 0.0036, 0.0100), (sx * 0.0215, 0.0040, 0.0180), "wood_dark"))
     return p
 
 
 def table_stool():
     p = [cyl("top", 0.0150, 0.0034, (0, 0, 0.0150), "wood_light", 10),
-         cyl("post", 0.0034, 0.0150, (0, 0, 0.0), "wood_dark", 6)]
+         cyl("post", 0.0048, 0.0150, (0, 0, 0.0), "wood_dark", 6)]
     for a in (0, 120, 240):
         r = math.radians(a)
         p.append(box("foot", (0.0090, 0.0026, 0.0026), (0.0045 * math.cos(r), 0.0045 * math.sin(r), 0.0013), "wood_dark", a))
@@ -141,10 +143,10 @@ def flower_pots():
         p.append(nb(cyl("pot", 0.0050, h, (x, y, 0.0), col, 8, 0.0064)))
         p.append(nb(cyl("pot_rim", 0.0068, 0.0016, (x, y, h), col, 8)))
         p.append(nb(cyl("soil", 0.0054, 0.0006, (x, y, h + 0.0016), "path_dirt", 8)))
-        p.append(sack_blob("leaves", 0.0052, (x, y, h + 0.0058), rnd_choice(x, ("leaf_green", "leaf_light", "leaf_green")), (1.1, 1.1, 0.8)))
+        p.append(sack_blob("leaves", 0.0052, (x, y, h + 0.0058), "leaf_light", (1.15, 1.15, 0.65)))
         for k in range(3):
             a = math.radians(k * 120 + 30)
-            p.append(nb(cyl("flower", 0.0016, 0.0020, (x + 0.0028 * math.cos(a), y + 0.0028 * math.sin(a), h + 0.0078),
+            p.append(nb(cyl("flower", 0.0022, 0.0026, (x + 0.0028 * math.cos(a), y + 0.0028 * math.sin(a), h + 0.0078),
                             ("wall_cream", "leaf_yellow", "roof_terracotta")[k], 5, 0.0009)))
     return p
 
@@ -154,16 +156,14 @@ def rnd_choice(seed, opts):
 
 
 def haystack():
-    p = [nb(cyl("hay", 0.0150, 0.0130, (0, 0, 0), "leaf_yellow", 10, 0.0118)),
-         nb(cyl("hay", 0.0118, 0.0100, (0, 0, 0.0130), "leaf_yellow", 10, 0.0070)),
-         nb(cyl("hay", 0.0070, 0.0080, (0, 0, 0.0230), "leaf_yellow", 10, 0.0022)),
-         nb(cyl("band", 0.0152, 0.0018, (0, 0, 0.0060), "path_dirt", 10, 0.0152)),
-         nb(cyl("band", 0.0121, 0.0016, (0, 0, 0.0170), "path_dirt", 10, 0.0121))]
-    # a pitchfork stuck in the side
-    p.append(tbox("fork_handle", (0.0020, 0.0020, 0.0280), (0.0150, -0.0050, 0.0150), "wood_light", 0, 14, 0))
-    p.append(tbox("fork_head", (0.0080, 0.0018, 0.0026), (0.0200, -0.0050, 0.0295), "stone_dark", 0, 14, 0))
-    for dx in (-0.0030, 0.0, 0.0030):
-        p.append(tbox("fork_tine", (0.0014, 0.0014, 0.0050), (0.0200 + dx, -0.0050, 0.0322), "stone_dark", 0, 14, 0))
+    p = [nb(cyl("hay", 0.0165, 0.0120, (0, 0, 0), "path_stone", 10, 0.0140)),
+         nb(cyl("hay", 0.0140, 0.0100, (0, 0, 0.0120), "path_stone", 10, 0.0075)),
+         nb(cyl("hay", 0.0075, 0.0080, (0, 0, 0.0220), "leaf_yellow", 10, 0.0020)),
+         nb(cyl("band", 0.0143, 0.0016, (0, 0, 0.0108), "path_dirt", 10, 0.0143))]
+    p.append(tbox("fork_handle", (0.0028, 0.0028, 0.0280), (0.0150, -0.0070, 0.0150), "wood_light", 0, 14, 0))
+    p.append(tbox("fork_head", (0.0090, 0.0024, 0.0034), (0.0205, -0.0070, 0.0300), "stone_dark", 0, 14, 0))
+    for dx in (-0.0034, 0.0, 0.0034):
+        p.append(tbox("fork_tine", (0.0020, 0.0020, 0.0058), (0.0205 + dx, -0.0070, 0.0338), "stone_dark", 0, 14, 0))
     return [nb(q) for q in p]
 
 
@@ -179,7 +179,7 @@ def well():
         p.append(box("post", (0.0030, 0.0030, 0.0300), (sx * 0.0125, 0.0, 0.0145 + 0.0130), "wood_dark"))
     p.append(box("beam", (0.0300, 0.0026, 0.0026), (0, 0, 0.0420), "wood_dark"))
     p.append(nb(bc.gable("roof", 0.0360, 0.0270, 0.0105, (0, 0, 0.0420), "roof_terracotta")))
-    p.append(nb(cyl("bucket", 0.0030, 0.0042, (0.0, 0.0, 0.0300), "wood_light", 6, 0.0036)))
+    p.append(nb(cyl("bucket", 0.0042, 0.0060, (0.0, 0.0, 0.0268), "wood_light", 6, 0.0050)))
     p.append(box("rope", (0.0010, 0.0010, 0.0090), (0.0, 0.0, 0.0345), "path_dirt"))
     return p
 
@@ -187,12 +187,12 @@ def well():
 def clothesline():
     p = []
     for sx in (-1, 1):
-        p.append(box("post", (0.0032, 0.0032, 0.0300), (sx * 0.0230, 0, 0.0150), "wood_dark"))
-        p.append(box("arm", (0.0100, 0.0022, 0.0022), (sx * 0.0230 - sx * 0.0030, 0, 0.0292), "wood_dark"))
-    p.append(box("line", (0.0480, 0.0013, 0.0013), (0, 0, 0.0290), "path_dirt"))
-    cloths = (("wall_cream", -0.0140, 0.0100, 0.0120), ("roof_terracotta", -0.0010, 0.0090, 0.0090), ("leaf_light", 0.0110, 0.0100, 0.0115))
+        p.append(box("post", (0.0040, 0.0040, 0.0300), (sx * 0.0230, 0, 0.0150), "wood_light"))
+        p.append(box("arm", (0.0100, 0.0030, 0.0030), (sx * 0.0230 - sx * 0.0030, 0, 0.0290), "wood_light"))
+    p.append(box("line", (0.0480, 0.0022, 0.0022), (0, 0, 0.0290), "path_dirt"))
+    cloths = (("wall_cream", -0.0150, 0.0105, 0.0150), ("roof_terracotta", -0.0010, 0.0100, 0.0125), ("leaf_light", 0.0135, 0.0105, 0.0145))
     for col, x, w, h in cloths:
-        p.append(tbox("cloth", (w, 0.0014, h), (x, 0.0, 0.0290 - h / 2), col, 0, 0, 0))
+        p.append(tbox("cloth", (w, 0.0020, h), (x, 0.0, 0.0278 - h / 2), col, 0, 0, 0))
     return [nb(q) for q in p]
 
 
@@ -217,56 +217,52 @@ def market_stall():
 # --------------------------------------------------------------------- props: fences and signs
 def fence_straight():
     p = []
-    for sx in (-1, 1):
-        p.append(box("post", (0.0032, 0.0032, 0.0170), (sx * 0.0218, 0, 0.0085), "wood_dark"))
-    p.append(box("post", (0.0032, 0.0032, 0.0170), (0, 0, 0.0085), "wood_dark"))
-    p.append(box("rail", (0.0500, 0.0020, 0.0028), (0, 0, 0.0128), "wood_light"))
-    p.append(box("rail", (0.0500, 0.0020, 0.0028), (0, 0, 0.0070), "wood_light"))
+    for sx in (-1, 0, 1):
+        p.append(box("post", (0.0040, 0.0040, 0.0180), (sx * 0.0218, 0, 0.0090), "wood_light"))
+    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0120), "path_stone"))
+    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0058), "path_stone"))
     return p
 
 
 def fence_corner():
-    p = [box("post", (0.0034, 0.0034, 0.0180), (0, 0, 0.0090), "wood_dark")]
-    p.append(box("post", (0.0032, 0.0032, 0.0170), (0.0250, 0, 0.0085), "wood_dark"))
-    p.append(box("post", (0.0032, 0.0032, 0.0170), (0, 0.0250, 0.0085), "wood_dark"))
-    for z in (0.0128, 0.0070):
-        p.append(box("rail", (0.0250, 0.0020, 0.0028), (0.0125, 0, z), "wood_light"))
-        p.append(box("rail", (0.0020, 0.0250, 0.0028), (0, 0.0125, z), "wood_light"))
+    p = [box("post", (0.0044, 0.0044, 0.0190), (0, 0, 0.0095), "wood_light")]
+    p.append(box("post", (0.0040, 0.0040, 0.0180), (0.0250, 0, 0.0090), "wood_light"))
+    p.append(box("post", (0.0040, 0.0040, 0.0180), (0, 0.0250, 0.0090), "wood_light"))
+    for z in (0.0120, 0.0058):
+        p.append(box("rail", (0.0250, 0.0030, 0.0042), (0.0125, 0, z), "path_stone"))
+        p.append(box("rail", (0.0030, 0.0250, 0.0042), (0, 0.0125, z), "path_stone"))
     return p
 
 
 def fence_gate():
     p = []
     for sx in (-1, 1):
-        p.append(box("post", (0.0040, 0.0040, 0.0230), (sx * 0.0170, 0, 0.0115), "wood_dark"))
-    p.append(box("gate_top", (0.0300, 0.0020, 0.0026), (0, 0, 0.0150), "wood_light"))
-    p.append(box("gate_bot", (0.0300, 0.0020, 0.0026), (0, 0, 0.0055), "wood_light"))
-    p.append(tbox("gate_brace", (0.0360, 0.0016, 0.0024), (0, 0, 0.0102), "wood_light", 0, 18, 0))
-    p.append(box("gate_stile", (0.0026, 0.0020, 0.0125), (-0.0140, 0, 0.0102), "wood_light"))
-    p.append(box("gate_stile", (0.0026, 0.0020, 0.0125), (0.0140, 0, 0.0102), "wood_light"))
-    for sx in (-1, 1):
-        p.append(nb(cyl("cap", 0.0030, 0.0018, (sx * 0.0170, 0, 0.0230), "wood_light", 6, 0.0022)))
+        p.append(box("post", (0.0050, 0.0050, 0.0240), (sx * 0.0170, 0, 0.0120), "wood_light"))
+        p.append(nb(cyl("cap", 0.0034, 0.0020, (sx * 0.0170, 0, 0.0240), "wood_dark", 6, 0.0024)))
+    p.append(box("gate_top", (0.0300, 0.0026, 0.0040), (0, 0, 0.0150), "path_stone"))
+    p.append(box("gate_bot", (0.0300, 0.0026, 0.0040), (0, 0, 0.0052), "path_stone"))
+    p.append(tbox("gate_brace", (0.0350, 0.0024, 0.0036), (0, 0, 0.0101), "path_stone", 0, 20, 0))
     return p
 
 
 def signpost():
-    p = [box("post", (0.0034, 0.0034, 0.0320), (0, 0, 0.0160), "wood_dark"),
-         nb(cyl("cap", 0.0030, 0.0018, (0, 0, 0.0320), "wood_dark", 6, 0.0018))]
-    for z, a, col in ((0.0270, 12, "wood_light"), (0.0195, -10, "roof_terracotta")):
-        p.append(tbox("board", (0.0150, 0.0016, 0.0054), (0.0070 * math.cos(math.radians(a)) * (1 if a > 0 else -1), 0.0030, z), col, 0, 0, a))
+    p = [box("post", (0.0042, 0.0042, 0.0330), (0, 0, 0.0165), "wood_light"),
+         nb(cyl("cap", 0.0034, 0.0022, (0, 0, 0.0330), "wood_dark", 6, 0.0022))]
+    p.append(tbox("board", (0.0170, 0.0026, 0.0066), (0.0085, 0.0034, 0.0276), "path_stone", 0, 0, 10))
+    p.append(tbox("board", (0.0170, 0.0026, 0.0066), (-0.0085, -0.0034, 0.0196), "roof_terracotta", 0, 0, -10))
     return p
 
 
 def notice_board():
     p = []
     for sx in (-1, 1):
-        p.append(box("post", (0.0032, 0.0032, 0.0300), (sx * 0.0140, 0, 0.0150), "wood_dark"))
+        p.append(box("post", (0.0040, 0.0040, 0.0300), (sx * 0.0140, 0, 0.0150), "wood_light"))
     p.append(box("board", (0.0310, 0.0022, 0.0200), (0, -0.0006, 0.0200), "wood_light"))
     p.append(box("frame_top", (0.0330, 0.0026, 0.0020), (0, -0.0006, 0.0310), "wood_dark"))
     p.append(box("frame_bot", (0.0330, 0.0026, 0.0020), (0, -0.0006, 0.0100), "wood_dark"))
     for x, z, w, h, col in ((-0.0090, 0.0225, 0.0090, 0.0100, "wall_cream"), (0.0060, 0.0245, 0.0080, 0.0070, "wall_cream"),
                             (0.0050, 0.0160, 0.0100, 0.0085, "roof_terracotta"), (-0.0085, 0.0140, 0.0075, 0.0065, "wall_cream")):
-        p.append(box("paper", (w, 0.0008, h), (x, -0.0021, z), col))
+        p.append(box("paper", (w + 0.0006, 0.0014, h + 0.0006), (x, -0.0026, z), col))
     p.append(nb(bc.gable("roof", 0.0400, 0.0100, 0.0050, (0, 0, 0.0320), "roof_terracotta")))
     return p
 
@@ -276,7 +272,7 @@ def stone_wall():
     rnd = random.Random(7)
     x = -0.0250
     row = 0
-    cols = ("stone", "path_stone", "stone", "stone_dark")
+    cols = ("path_stone", "stone", "path_stone", "stone")
     for lvl, z0 in enumerate((0.0, 0.0062)):
         x = -0.0250 + (0.0 if lvl == 0 else 0.0055)
         while x < 0.0250 - 0.0030:
@@ -293,19 +289,19 @@ def stone_wall():
 
 def footbridge():
     p = []
-    n = 9
+    n = 6
     L = 0.0480
     for i in range(n):
         t = (i + 0.5) / n
         x = -L / 2 + L * t
         z = 0.0100 * (1 - (2 * t - 1) ** 2) + 0.0040
         slope = math.degrees(math.atan(0.0100 * -2 * (2 * t - 1) * 2 / L))
-        p.append(tbox("plank", (L / n - 0.0006, 0.0200, 0.0026), (x, 0.0, z), "wood_light", 0, -slope, 0))
+        p.append(tbox("plank", (L / n - 0.0012, 0.0200, 0.0034), (x, 0.0, z), "wood_light", 0, -slope, 0))
     for sy in (-1, 1):
         for t in (0.04, 0.5, 0.96):
             x = -L / 2 + L * t
             z = 0.0100 * (1 - (2 * t - 1) ** 2) + 0.0040
-            p.append(box("post", (0.0028, 0.0028, 0.0110), (x, sy * 0.0105, z + 0.0055), "wood_dark"))
+            p.append(box("post", (0.0036, 0.0036, 0.0130), (x, sy * 0.0105, z + 0.0050), "wood_light"))
         for k in range(4):
             t0, t1 = k / 4, (k + 1) / 4
             def hz(t):
@@ -313,9 +309,9 @@ def footbridge():
             x0, x1 = -L / 2 + L * t0, -L / 2 + L * t1
             dx, dz = x1 - x0, hz(t1) - hz(t0)
             ang = math.degrees(math.atan2(dz, dx))
-            p.append(tbox("rail", (math.hypot(dx, dz) + 0.0010, 0.0020, 0.0022), ((x0 + x1) / 2, sy * 0.0105, (hz(t0) + hz(t1)) / 2), "wood_light", 0, -ang, 0))
+            p.append(tbox("rail", (math.hypot(dx, dz) + 0.0010, 0.0030, 0.0032), ((x0 + x1) / 2, sy * 0.0105, (hz(t0) + hz(t1)) / 2), "wood_light", 0, -ang, 0))
     for sx in (-1, 1):
-        p.append(nb(box("abutment", (0.0040, 0.0230, 0.0050), (sx * 0.0250, 0.0, 0.0025), "stone")))
+        p.append(nb(box("abutment", (0.0060, 0.0240, 0.0070), (sx * 0.0245, 0.0, 0.0035), "stone")))
     return p
 
 
@@ -323,8 +319,8 @@ def footbridge():
 def bucket():
     p = [nb(cyl("bucket", 0.0056, 0.0085, (0, 0, 0), "wood_light", 8, 0.0068)),
          nb(cyl("hoop", 0.0062, 0.0014, (0, 0, 0.0024), "stone_dark", 8)),
-         nb(cyl("water", 0.0060, 0.0004, (0, 0, 0.0082), "ink", 8))]
-    p.append(tbox("handle", (0.0128, 0.0010, 0.0010), (0, 0, 0.0108), "stone_dark", 0, 0, 0))
+         nb(cyl("water", 0.0060, 0.0004, (0, 0, 0.0082), "stone_dark", 8))]
+    p.append(tbox("handle", (0.0136, 0.0024, 0.0024), (0, 0, 0.0122), "wood_dark", 0, 0, 0))
     return p
 
 
@@ -349,18 +345,24 @@ def pumpkins():
 def basket():
     p = [nb(cyl("basket", 0.0064, 0.0075, (0, 0, 0), "wood_light", 8, 0.0078)),
          nb(cyl("basket_band", 0.0070, 0.0014, (0, 0, 0.0030), "wood_dark", 8))]
+    p.append(nb(cyl("basket_lip", 0.0082, 0.0014, (0, 0, 0.0066), "wood_dark", 8)))
+    p.append(box("handle", (0.0024, 0.0130, 0.0024), (0.0, 0.0, 0.0158), "wood_dark"))
+    p.append(box("handle", (0.0024, 0.0024, 0.0090), (0.0, -0.0058, 0.0116), "wood_dark"))
+    p.append(box("handle", (0.0024, 0.0024, 0.0090), (0.0, 0.0058, 0.0116), "wood_dark"))
     for (x, y, col) in ((-0.0020, 0.0010, "leaf_green"), (0.0025, -0.0015, "roof_terracotta"), (0.0005, 0.0030, "leaf_light")):
-        p.append(sack_blob("fruit", 0.0028, (x, y, 0.0090), col, (1, 1, 0.95)))
+        p.append(sack_blob("fruit", 0.0036, (x, y, 0.0092), col, (1, 1, 0.95)))
     return p
 
 
 def tools_leaning():
-    p = [tbox("shovel_handle", (0.0020, 0.0020, 0.0300), (-0.0060, 0.0, 0.0171), "wood_light", 0, 12, 0),
-         tbox("shovel_blade", (0.0070, 0.0014, 0.0090), (-0.0098, 0.0, 0.0051), "stone_dark", 0, 12, 0),
-         tbox("fork_handle", (0.0020, 0.0020, 0.0320), (0.0060, 0.0, 0.0160), "wood_light", 0, -10, 0),
-         tbox("fork_head", (0.0080, 0.0014, 0.0022), (0.0100, 0.0, 0.0272), "stone_dark", 0, -10, 0)]
+    p = [tbox("shovel_handle", (0.0034, 0.0034, 0.0300), (-0.0060, 0.0, 0.0171), "wood_light", 0, 12, 0),
+         tbox("shovel_blade", (0.0092, 0.0024, 0.0110), (-0.0098, 0.0, 0.0051), "stone_dark", 0, 12, 0),
+         tbox("fork_handle", (0.0034, 0.0034, 0.0320), (0.0060, 0.0, 0.0160), "wood_light", 0, -10, 0),
+         tbox("fork_head", (0.0100, 0.0024, 0.0032), (0.0100, 0.0, 0.0272), "stone_dark", 0, -10, 0)]
     for dx in (-0.0026, 0.0, 0.0026):
-        p.append(tbox("fork_tine", (0.0012, 0.0012, 0.0040), (0.0100 + dx + 0.0008, 0.0, 0.0300), "stone_dark", 0, -10, 0))
+        p.append(tbox("fork_tine", (0.0020, 0.0020, 0.0054), (0.0100 + dx * 1.2 + 0.0008, 0.0, 0.0306), "stone_dark", 0, -10, 0))
+    for q in p:
+        q.location.z += 0.0013
     return [nb(q) for q in p]
 
 
