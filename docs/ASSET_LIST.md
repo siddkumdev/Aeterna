@@ -171,7 +171,7 @@ Spells are cooldown-only and fit in a 4-spell pool.
 |---|---|---|---|---|---|---|
 | I01 | P1 | model | Fate Coin | Model, flick physics, 6 glyph faces (one per outcome). | <300 | EDIT |
 | I02 | P1 | vfx | Coin result effect | Landing glow with glyph, by outcome. | | KEEP |
-| I03 | P0 | model | Crystal Lens | Hand-held lens (handle plus crystal, glowing) for Foresight. MODEL BUILT 2026-10-21: ew_foresight_crystal_lens_v01 (548 tris), variant B tall oval gold hand mirror, whole glass part (cracks + purple binding are shader/VFX, fade per tier); awaiting approval. | <500 | EDIT |
+| I03 | P0 | model | Crystal Lens | Hand-held lens (handle plus crystal, glowing) for Foresight. MODEL BUILT 2026-10-21: ew_foresight_crystal_lens_v01 (548 tris), variant B tall oval gold hand mirror, whole glass part (cracks + purple binding are shader/VFX, fade per tier); APPROVED by Siddharth 2026-10-21 (548 tris accepted over the <500 target). | <500 | EDIT |
 | I04 | P0 | shader | Foresight blur-to-sharp lens shader | Sharper each loop; cheap, no full-screen post effects. | | KEEP |
 | I05 | P1 | model | Mend Vial | One bottle, liquid shader, tilt to pour. Cooldown 20 s. | <400 | CHANGED |
 | I06 | P1 | model | Fire Orb | Thrown. Cooldown 8 s. | <200 | KEEP |
