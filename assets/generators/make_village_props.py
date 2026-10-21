@@ -147,7 +147,7 @@ def flower_pots():
         for k in range(3):
             a = math.radians(k * 120 + 30)
             p.append(nb(cyl("flower", 0.0022, 0.0026, (x + 0.0028 * math.cos(a), y + 0.0028 * math.sin(a), h + 0.0078),
-                            ("wall_cream", "leaf_yellow", "roof_terracotta")[k], 5, 0.0009)))
+                            ("roof_orange", "roof_orange", "wall_cream")[k], 5, 0.0009)))
     return p
 
 
@@ -156,10 +156,10 @@ def rnd_choice(seed, opts):
 
 
 def haystack():
-    p = [nb(cyl("hay", 0.0165, 0.0120, (0, 0, 0), "path_stone", 10, 0.0140)),
-         nb(cyl("hay", 0.0140, 0.0100, (0, 0, 0.0120), "path_stone", 10, 0.0075)),
+    p = [nb(cyl("hay", 0.0165, 0.0120, (0, 0, 0), "leaf_yellow", 10, 0.0140)),
+         nb(cyl("hay", 0.0140, 0.0100, (0, 0, 0.0120), "leaf_yellow", 10, 0.0075)),
          nb(cyl("hay", 0.0075, 0.0080, (0, 0, 0.0220), "leaf_yellow", 10, 0.0020)),
-         nb(cyl("band", 0.0143, 0.0016, (0, 0, 0.0108), "path_dirt", 10, 0.0143))]
+         nb(cyl("band", 0.0143, 0.0016, (0, 0, 0.0108), "wood_light", 10, 0.0143))]
     p.append(tbox("fork_handle", (0.0028, 0.0028, 0.0280), (0.0150, -0.0070, 0.0150), "wood_light", 0, 14, 0))
     p.append(tbox("fork_head", (0.0090, 0.0024, 0.0034), (0.0205, -0.0070, 0.0300), "stone_dark", 0, 14, 0))
     for dx in (-0.0034, 0.0, 0.0034):
@@ -219,8 +219,8 @@ def fence_straight():
     p = []
     for sx in (-1, 0, 1):
         p.append(box("post", (0.0040, 0.0040, 0.0180), (sx * 0.0218, 0, 0.0090), "wood_light"))
-    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0120), "path_stone"))
-    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0058), "path_stone"))
+    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0120), "wood_mid"))
+    p.append(box("rail", (0.0500, 0.0030, 0.0042), (0, 0, 0.0058), "wood_mid"))
     return p
 
 
@@ -229,8 +229,8 @@ def fence_corner():
     p.append(box("post", (0.0040, 0.0040, 0.0180), (0.0250, 0, 0.0090), "wood_light"))
     p.append(box("post", (0.0040, 0.0040, 0.0180), (0, 0.0250, 0.0090), "wood_light"))
     for z in (0.0120, 0.0058):
-        p.append(box("rail", (0.0250, 0.0030, 0.0042), (0.0125, 0, z), "path_stone"))
-        p.append(box("rail", (0.0030, 0.0250, 0.0042), (0, 0.0125, z), "path_stone"))
+        p.append(box("rail", (0.0250, 0.0030, 0.0042), (0.0125, 0, z), "wood_mid"))
+        p.append(box("rail", (0.0030, 0.0250, 0.0042), (0, 0.0125, z), "wood_mid"))
     return p
 
 
@@ -239,16 +239,16 @@ def fence_gate():
     for sx in (-1, 1):
         p.append(box("post", (0.0050, 0.0050, 0.0240), (sx * 0.0170, 0, 0.0120), "wood_light"))
         p.append(nb(cyl("cap", 0.0034, 0.0020, (sx * 0.0170, 0, 0.0240), "wood_dark", 6, 0.0024)))
-    p.append(box("gate_top", (0.0300, 0.0026, 0.0040), (0, 0, 0.0150), "path_stone"))
-    p.append(box("gate_bot", (0.0300, 0.0026, 0.0040), (0, 0, 0.0052), "path_stone"))
-    p.append(tbox("gate_brace", (0.0350, 0.0024, 0.0036), (0, 0, 0.0101), "path_stone", 0, 20, 0))
+    p.append(box("gate_top", (0.0300, 0.0026, 0.0040), (0, 0, 0.0150), "wood_mid"))
+    p.append(box("gate_bot", (0.0300, 0.0026, 0.0040), (0, 0, 0.0052), "wood_mid"))
+    p.append(tbox("gate_brace", (0.0350, 0.0024, 0.0036), (0, 0, 0.0101), "wood_mid", 0, 20, 0))
     return p
 
 
 def signpost():
     p = [box("post", (0.0042, 0.0042, 0.0330), (0, 0, 0.0165), "wood_light"),
          nb(cyl("cap", 0.0034, 0.0022, (0, 0, 0.0330), "wood_dark", 6, 0.0022))]
-    p.append(tbox("board", (0.0170, 0.0026, 0.0066), (0.0085, 0.0034, 0.0276), "path_stone", 0, 0, 10))
+    p.append(tbox("board", (0.0170, 0.0026, 0.0066), (0.0085, 0.0034, 0.0276), "wood_mid", 0, 0, 10))
     p.append(tbox("board", (0.0170, 0.0026, 0.0066), (-0.0085, -0.0034, 0.0196), "roof_terracotta", 0, 0, -10))
     return p
 
@@ -289,14 +289,14 @@ def stone_wall():
 
 def footbridge():
     p = []
-    n = 6
+    n = 4
     L = 0.0480
     for i in range(n):
         t = (i + 0.5) / n
         x = -L / 2 + L * t
         z = 0.0100 * (1 - (2 * t - 1) ** 2) + 0.0040
         slope = math.degrees(math.atan(0.0100 * -2 * (2 * t - 1) * 2 / L))
-        p.append(tbox("plank", (L / n - 0.0012, 0.0200, 0.0034), (x, 0.0, z), "wood_light", 0, -slope, 0))
+        p.append(tbox("plank", (L / n + 0.0016, 0.0200, 0.0040), (x, 0.0, z), "wood_mid", 0, -slope, 0))
     for sy in (-1, 1):
         for t in (0.04, 0.5, 0.96):
             x = -L / 2 + L * t
