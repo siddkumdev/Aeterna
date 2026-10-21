@@ -56,8 +56,8 @@ Change column (what happened to the tracker item):
 | W02 | P1 | model | Island underside / floating skirt | Rocky underside, shown only in the floating-board fallback (no table found) and when the board is tilted or spun. | 500-1k | EDIT |
 | W03 | P0 | shader | Placement grid overlay | CHANGED from "build plot pads". Placement is free on grid cells, so a grid shader that lights up only while placing replaces fixed pads. Valid/invalid states live in D12. | | CHANGED |
 | W04 | P0 | model | Path tiles | Straight, corner, T-junction, end-at-village (the "portal mouth" end is gone). 1 x 1 each. BUILT 2026-10-21: ew_world_path_{straight,corner,t,end}_v02 (variant M = calmer round-3 look, 543-676 tris, APPROVED by Siddharth 2026-10-21) plus cosmetic village pieces ew_world_path_{cross,doorstep,plaza,stones}_v01 (264-1182 tris, APPROVED by Siddharth 2026-10-21). | 4 x ~100 | DONE |
-| W05 | P0 | model | Trees: pine, round, cube | Pine and round are BUILT (rescale to 1 x 1). Cube tree (#23, #30) still to do. | 200-500 each | EDIT |
-| W06 | P1 | model | Trees: corrupted, tall pine, birch | Corrupted tree (twisted, dark) hints at the forest turning and supports the Foggy Night look. | 200-500 each | KEEP |
+| W05 | P0 | model | Trees: pine family | CHANGED 2026-10-21 (Siddharth): every tree is a variant of the pine, no round or cube trees. BUILT: pine_v02, pine_young, pine_layered (awaiting approval). | 200-500 each | EDIT |
+| W06 | P1 | model | Trees: corrupted, tall pine | Birch dropped (all trees are pines). BUILT: pine_corrupted (twisted, dark; hints at the forest turning, supports Foggy Night) and pine_tall (awaiting approval). | 200-500 each | KEEP |
 | W07 | P1 | model | Bushes (x2) | 1 x 1. | 100-300 | KEEP |
 | W08 | P1 | model | Rocks (x3) | 1 x 1. | 100-300 | KEEP |
 | W09 | P2 | model | Stump and log | 1 x 1. | 100-200 | KEEP |
@@ -73,7 +73,7 @@ Change column (what happened to the tracker item):
 | W19 | P2 | model | Sun, moon, stars | Only useful for the floating fallback and title. Cut candidate. | <200 | EDIT |
 | W20 | P2 | model | Low-poly clouds (x3) | Airspace dressing around the flyers. | 100-300 | KEEP |
 | W21 | P1 | vfx | Fireflies and ambient motes | Night, low overdraw. | | EDIT |
-| W22 | P0 | model | Forest ring backdrop | Dense low-detail treeline at the island edge. This is where enemies come from. | ~1k | KEEP |
+| W22 | P0 | model | Forest ring backdrop | Dense low-detail treeline at the island edge. This is where enemies come from. BUILT as 3 tree-line clumps (2 x 1 cells; mix, dark, low; 520-1176 tris), placed procedurally in Godot (awaiting approval). | ~1k | KEEP |
 | W23 | P1 | vfx | Forest spawn marker | NEW: subtle glow or disturbed trees at each of the 3 spawn points (replaces the portals). 1 x 1. | <200 | NEW |
 | W24 | P1 | model | Village bell post | NEW: pinch to end the day early. 1 x 1. | 200-400 | NEW |
 

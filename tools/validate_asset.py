@@ -18,7 +18,7 @@ BLENDER = ew_env.require("BLENDER_EXE")
 BUDGETS = {"world": 800, "village": 2000, "defense": 2000, "enemy": 2000, "boss": 6000,
            "portal": 2000, "vr": 800, "foresight": 800, "ui": 800, "vfx": 800}
 # per-asset budgets that differ from the category default (the 12 x 12 board is one big model: ASSET_LIST W01 says 1-2k)
-BUDGET_OVERRIDES = {"ew_world_island": 4000, "ew_world_path_plaza": 1500}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
+BUDGET_OVERRIDES = {"ew_world_island": 4000, "ew_world_path_plaza": 1500, "ew_world_forest_clump_mix": 1200, "ew_world_forest_clump_dark": 1200, "ew_world_forest_clump_low": 1200}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
 NAME = re.compile(r"^ew_(world|village|defense|enemy|boss|portal|vr|foresight|ui|vfx)_[a-z0-9_]+_v\d{2}$")
 
 INNER = r'''

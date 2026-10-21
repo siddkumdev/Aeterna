@@ -74,7 +74,7 @@ def cube_B(s=1.0, ox=0.0, oy=0.0, dark=False):
 # ------------------------------------------------------------------ C: layered slabs / shingles (#23 tall pines)
 def pine_C(s=1.0, ox=0.0, oy=0.0, dark=False):
     cols = ("leaf_dark", "leaf_green", "leaf_light") if not dark else ("leaf_dark", "leaf_dark", "leaf_green")
-    p = [trunk(s, 0.030, r=0.0070, col="wood_mid", ox=ox, oy=oy)]
+    p = [trunk(s, 0.030, r=0.0085, col="wood_mid", ox=ox, oy=oy)]
     for k, (r, z) in enumerate(((0.028, 0.018), (0.024, 0.036), (0.020, 0.054), (0.016, 0.072), (0.011, 0.090))):
         p.append(bc.cone("tier", r * s, r * 0.35 * s, 0.024 * s, (ox, oy, (z + 0.012) * s), cols[k % 3], 6, 30 * (k % 2)))
     p.append(bc.cone("tip", 0.007 * s, 0.0, 0.014 * s, (ox, oy, 0.110 * s), cols[2], 6))
@@ -176,6 +176,104 @@ def build_set(style):
     bc.save_blend(obj, "trees_" + style)
 
 
+# ------------------------------------------------------------------ FINAL: the pine family (Siddharth 2026-10-21: A and C, every tree a pine)
+def pine_layered(s=1.0, ox=0.0, oy=0.0, dark=False, tiers=4, slim=1.0):
+    """C-style layered pine (shingle tiers, alternating dark/mid/light). tiers 4 = layered, 5 = tall."""
+    cols = ("leaf_dark", "leaf_green", "leaf_light") if not dark else ("leaf_dark", "leaf_dark", "leaf_green")
+    spec = ((0.028, 0.018), (0.024, 0.036), (0.020, 0.054), (0.016, 0.072), (0.011, 0.090))
+    if tiers == 4:
+        spec = ((0.028, 0.016), (0.023, 0.034), (0.018, 0.052), (0.013, 0.070))
+    p = [trunk(s, 0.030 if tiers == 5 else 0.024, r=0.0085, col="wood_mid", ox=ox, oy=oy)]
+    for k, (r, z) in enumerate(spec):
+        p.append(bc.cone("tier", r * slim * s, r * 0.35 * slim * s, 0.024 * s, (ox, oy, (z + 0.012) * s), cols[k % 3], 6, 30 * (k % 2)))
+    ztop = spec[-1][1] + 0.024
+    p.append(bc.cone("tip", 0.007 * s, 0.0, 0.014 * s, (ox, oy, (ztop + 0.002) * s), cols[2], 6))
+    return p
+
+
+def pine_young(s=1.0, ox=0.0, oy=0.0, dark=False):
+    """Sapling: two light tiers on a thin trunk."""
+    p = [trunk(s, 0.014, r=0.0050, ox=ox, oy=oy)]
+    for r, h, z, c in ((0.022, 0.030, 0.010, "leaf_light"), (0.015, 0.028, 0.030, "leaf_green")):
+        p.append(sharp(bc.cone("tier", r * s, 0.0, h * s, (ox, oy, (z + h / 2) * s), c, 7)))
+    return p
+
+
+def pine_corrupted(s=1.0, ox=0.0, oy=0.0, dark=True):
+    """Twisted dead-looking pine: leaning, slightly rotated tiers in one dark family (leaf_dark with warm wood_dark dead tiers)."""
+    p = [bc.cone("trunk", 0.0100 * s, 0.0070 * s, 0.050 * s, (ox, oy, 0.025 * s), "wood_dark", 6)]
+    for k, (r, h, z, c, dx, rot) in enumerate(((0.028, 0.034, 0.016, "leaf_dark", 0.000, 0), (0.023, 0.032, 0.036, "wood_dark", 0.004, 22),
+                                                (0.018, 0.030, 0.056, "leaf_dark", 0.009, 40), (0.012, 0.026, 0.074, "wood_dark", 0.015, 60))):
+        p.append(sharp(bc.cone("tier", r * s, 0.0, h * s, (ox + dx * s, oy, (z + h / 2) * s), c, 5, rot)))
+    return p
+
+
+def clump_mix():
+    p = pine_A(1.25, -0.030, 0.004) + pine_layered(1.0, 0.002, -0.006, tiers=4) + pine_A(1.05, 0.030, 0.006)
+    p += pine_young(0.8, -0.012, 0.016) + [bc.blob("bush", 0.013, (0.014, -0.014, 0.008), "leaf_green", 1, (1, 1, 0.75))]
+    p += [bc.blob("bush", 0.011, (-0.038, -0.012, 0.007), "leaf_dark", 1, (1, 1, 0.75))]
+    return p
+
+
+def clump_dark():
+    """Dark spawn-side clump: leaf_dark tones concentrate here (art bible forest ring)."""
+    p = pine_layered(1.25, -0.028, 0.004, dark=True, tiers=5, slim=0.82) + pine_A(1.1, 0.004, -0.007, dark=True)
+    p += pine_layered(1.0, 0.030, 0.006, dark=True, tiers=4) + pine_corrupted(0.85, -0.008, 0.016)
+    p += [bc.blob("bush", 0.012, (0.016, -0.014, 0.007), "leaf_dark", 1, (1, 1, 0.75))]
+    return p
+
+
+def clump_low():
+    """Sparse edge clump: young pines and bushes, lets the ring thin out."""
+    p = pine_young(1.2, -0.028, 0.002) + pine_A(0.9, 0.003, -0.006) + pine_young(1.0, 0.030, 0.008)
+    p += [bc.blob("bush", 0.013, (-0.012, -0.014, 0.008), "leaf_green", 1, (1, 1, 0.75)),
+          bc.blob("bush", 0.011, (0.020, -0.014, 0.007), "leaf_dark", 1, (1, 1, 0.75))]
+    return p
+
+
+FINAL = {  # short name: (version, parts builder, footprint, placement hint)
+    "pine": ("v02", lambda: pine_A(), "1x1", "scatter"),
+    "pine_young": ("v01", lambda: pine_young(), "1x1", "scatter"),
+    "pine_layered": ("v01", lambda: pine_layered(tiers=4), "1x1", "forest_edge"),
+    "pine_tall": ("v01", lambda: pine_layered(tiers=5, slim=0.82), "1x1", "forest_edge"),
+    "pine_corrupted": ("v01", lambda: pine_corrupted(), "1x1", "forest_edge"),
+    "forest_clump_mix": ("v01", clump_mix, "2x1", "forest_ring"),
+    "forest_clump_dark": ("v01", clump_dark, "2x1", "forest_ring"),
+    "forest_clump_low": ("v01", clump_low, "2x1", "forest_ring"),
+}
+
+
+def build_final(short):
+    ver, builder, foot, hint = FINAL[short]
+    bc.clear_scene()
+    cat = "tree" if short.startswith("pine") else ""
+    name = "ew_world_%s_%s" % (("tree_" + short) if cat else short, ver)
+    obj = finish(builder(), name)
+    obj["ew_footprint"], obj["ew_front"], obj["ew_place"] = foot, "-Y", hint
+    h = max(v.co.z for v in obj.data.vertices)
+    w = max(abs(v.co.x) for v in obj.data.vertices) * 2
+    print("%s: %d tris, %.1f cells tall, %.1f cells wide" % (name, tris(obj), h / 0.05, w / 0.05))
+    bc.save_blend(obj, "tree_" + short if cat else short)
+    print("EXPORT", bc.export_glb(obj, "world"))
+
+
+def build_family_set():
+    """Preview row of every final piece (singles then clumps)."""
+    bc.clear_scene()
+    x = 0.0
+    for short, (ver, builder, foot, hint) in FINAL.items():
+        obj = finish(builder(), "ew_world_%s_%s" % (short, ver))
+        wide = foot == "2x1"
+        obj.location.x = x + (0.05 if wide else 0.0)
+        x += 0.14 if wide else 0.075
+    bc.save_blend(obj, "trees_family")
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    build_set(args[0] if args else "A")
+    if args and args[0] == "FINAL":
+        build_final(args[1])
+    elif args and args[0] == "FAMILY":
+        build_family_set()
+    else:
+        build_set(args[0] if args else "A")

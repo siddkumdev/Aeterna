@@ -12,7 +12,10 @@
     "W04": "done",
     "W13": "done",
     "W10": "done",
-    "W14": "done"
+    "W14": "done",
+    "W05": "review",
+    "W06": "review",
+    "W22": "review"
   },
   "rank": {
     "todo": 0,
