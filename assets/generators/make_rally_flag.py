@@ -30,10 +30,10 @@ def stepped_pennant(x0, z, length, step_h, cols, thick=0.003, n=3):
 
 def build_A():
     """Banner on a pole: stone mound, wood pole, cream pennant with a terracotta stripe."""
-    base = mound() + [bc.cone("pole", 0.0032, 0.0028, 0.108, (0, 0, 0.062), "wood_light", 6),
+    base = mound() + [bc.cone("pole", 0.0044, 0.0038, 0.108, (0, 0, 0.062), "wood_light", 6),
                       bc.cone("finial", 0.0042, 0.0042, 0.005, (0, 0, 0.118), "wood_dark", 6)]
     cloth = [bc.box("cloth", (0.034, 0.003, 0.014), (0.019, 0, 0.101), "wall_cream"),
-             bc.box("cloth", (0.034, 0.0034, 0.0045), (0.019, 0, 0.101), "roof_terracotta"),
+             bc.box("cloth", (0.034, 0.0034, 0.0066), (0.019, 0, 0.099), "roof_terracotta"),
              bc.box("cloth", (0.024, 0.003, 0.010), (0.014, 0, 0.0895 + 0.0), "wall_cream"),
              bc.box("cloth", (0.014, 0.003, 0.007), (0.009, 0, 0.0815), "wall_cream")]
     return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", cloth, (0.0, 0, 0.101), "")])
@@ -70,8 +70,6 @@ def build_D():
     """Tall pole on a tripod of leaning stakes, big stepped pennant in teal and cream."""
     base = mound(0.019, 0.006) + [bc.cone("pole", 0.0034, 0.0028, 0.128, (0, 0, 0.070), "wood_light", 6),
                                   bc.cone("cap", 0.0045, 0.0, 0.009, (0, 0, 0.1335), "wood_dark", 6)]
-    for k, (x, y) in enumerate(((0.014, 0.0), (-0.007, 0.012), (-0.007, -0.012))):
-        base.append(bc.cone("stake", 0.0030, 0.0020, 0.030, (x * 0.7, y * 0.7, 0.019), "wood_dark", 5, 30 * k))
     cloth = stepped_pennant(0.0, 0.126, 0.040, 0.0085, ("roof_teal", "wall_cream"), n=4)
     return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", cloth, (0.0, 0, 0.126), "")])
 

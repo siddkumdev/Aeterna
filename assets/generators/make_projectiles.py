@@ -26,14 +26,14 @@ def fireball_B():
     """Comet: round rock head and two shrinking tail lumps behind it (built along +Z, then laid down so travel is +Y)."""
     return [bc.blob("head", 0.0085, (0, 0, 0.0230), "stone_dark", 1),
             bc.blob("tail", 0.0068, (0, 0, 0.0130), "wood_dark", 1),
-            bc.blob("tail", 0.0045, (0, 0, 0.0055), "ink", 1)]
+            bc.blob("tail", 0.0045, (0, 0, 0.0055), "wood_dark", 1)]
 
 
 def fireball_C():
     """Jagged cluster: three spikes of different heights."""
     return [bc.cone("spike", 0.0060, 0.0, 0.0170, (0, 0, 0.0085), "stone_dark", 5, 10),
             bc.cone("spike", 0.0050, 0.0, 0.0130, (0.0065, 0.0020, 0.0065), "wood_dark", 5, 40),
-            bc.cone("spike", 0.0048, 0.0, 0.0115, (-0.0058, 0.0035, 0.0058), "ink", 5, 70),
+            bc.cone("spike", 0.0048, 0.0, 0.0115, (-0.0058, 0.0035, 0.0058), "wood_dark", 5, 70),
             bc.cone("base", 0.0090, 0.0075, 0.0040, (0.0005, 0.0010, 0.0020), "stone_dark", 6)]
 
 
@@ -47,11 +47,11 @@ def fireball_D():
 def bolt_A():
     """Straight bolt: wood shaft, dark pyramid head, three cream fins."""
     p = [bc.box("shaft", (0.0036, 0.0036, 0.036), (0, 0, 0.018), "wood_light"),
-         bc.cone("head", 0.0042, 0.0, 0.010, (0, 0, 0.041), "stone_dark", 4, 45)]
+         bc.cone("head", 0.0054, 0.0, 0.012, (0, 0, 0.042), "stone_dark", 4, 45)]
     for k in range(3):
         th = k * 120
         a = math.radians(th)
-        p.append(bc.box("fin", (0.0014, 0.0075, 0.0100), (-0.0040 * math.sin(a), 0.0040 * math.cos(a), 0.0060), "wall_cream", th))
+        p.append(bc.box("fin", (0.0026, 0.0075, 0.0100), (-0.0040 * math.sin(a), 0.0040 * math.cos(a), 0.0060), "wall_cream", th))
     return p
 
 
@@ -84,7 +84,7 @@ def bolt_D():
 def cannon_A():
     """Smooth iron ball with a belt."""
     return [bc.blob("ball", 0.0090, (0, 0, 0.0090), "stone_dark", 2),
-            bc.cone("band", 0.0093, 0.0093, 0.0022, (0, 0, 0.0090), "ink", 8)]
+            bc.cone("band", 0.0093, 0.0093, 0.0024, (0, 0, 0.0090), "wood_dark", 8)]
 
 
 def cannon_B():
@@ -97,7 +97,7 @@ def cannon_C():
     """Fuse ball: round shell with a wood fuse stub and cap (VFX fuse sparks at the anchor)."""
     return [bc.blob("ball", 0.0090, (0, 0, 0.0090), "stone_dark", 1),
             bc.cone("stub", 0.0024, 0.0018, 0.0050, (0, 0, 0.0190), "wood_light", 5),
-            bc.cone("collar", 0.0040, 0.0040, 0.0018, (0, 0, 0.0170), "ink", 6)]
+            bc.cone("collar", 0.0040, 0.0040, 0.0018, (0, 0, 0.0170), "wood_dark", 6)]
 
 
 def cannon_D():
