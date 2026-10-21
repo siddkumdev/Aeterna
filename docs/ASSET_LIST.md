@@ -118,12 +118,12 @@ Roster changed: 4 towers plus the hut, no tiers.
 | D12 | P0 | shader | Placement ghost and range ring | Translucent material, green valid, red invalid, per-type ghost silhouettes. Basic version exists in code. | | EDIT, BUILT |
 | D13 | P0 | anim | Build pop animation | Scale bounce, scaffold and dust ring. | | KEEP |
 | D14 | P2 | vfx | Sell / remove effect | Only if tower selling is accepted (open). Upgrade effect is gone. | | EDIT |
-| D15 | P0 | model | Projectile: fireball | For the Fire Tower. Replaces the arrow. | <100 | CHANGED |
-| D16 | P1 | model | Projectile: Longbow bolt | Piercing. | <100 | CHANGED |
+| D15 | P0 | model | Projectile: fireball | For the Fire Tower. Replaces the arrow. BUILT 2026-10-21: ew_defense_fireball_v01 (dark ember-rock core, fire is VFX at __fire_anchor, 40 tris), APPROVED by Siddharth 2026-10-21. | <100 | CHANGED |
+| D16 | P1 | model | Projectile: Longbow bolt | Piercing. BUILT 2026-10-21: ew_defense_wind_bolt_v01 (wood shaft, dark head, cream fins, wind is VFX at __wind_anchor, 54 tris), APPROVED by Siddharth 2026-10-21. | <100 | CHANGED |
 | D17 | | vfx | Heal pulse orb | REMOVED as a tower effect; healing is the Mend Vial (see I05, X03). | | REMOVED |
 | D18 | P1 | anim | Tower firing animations | Fire Tower recoil, Longbow draw and release, Brazier flame flare, Airship propeller and gun. | | EDIT |
 | D19 | | model | Damaged / destroyed tower state | REMOVED: enemies attack houses, not towers. House damage is the shuttered state (V01). | | REMOVED |
-| D20 | P1 | model | Airship projectile | NEW. | <100 | NEW |
+| D20 | P1 | model | Airship projectile | NEW. BUILT 2026-10-21: ew_defense_cannonball_v01 (dark iron ball with belt, fire is VFX at __fire_anchor, 108 tris), APPROVED by Siddharth 2026-10-21. | <100 | NEW |
 | D21 | P1 | model | Slinger spawning building (name open) | 2 x 2. Spawns Slingers (one spawning building per troop type, Siddharth 2026-10-19). Cost and unlock open. Designed after the Slinger character is final. | 1-2k | NEW |
 
 ## E Enemies

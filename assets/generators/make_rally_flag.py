@@ -77,6 +77,53 @@ def build_D():
 BUILDERS = {"A": build_A, "B": build_B, "C": build_C, "D": build_D}
 
 
+# ------------------------------------------------------------------ round 2: mixes of A, B and D (Siddharth 2026-10-21: "mix and give me variants")
+def pole(h, r=0.0044, col="wood_light"):
+    return bc.cone("pole", r, r * 0.86, h, (0, 0, h / 2 + 0.003), col, 6)
+
+
+def build_E():
+    """A's cream pennant with the wide terracotta stripe on D's taller pole, A's dark finial."""
+    base = mound(0.019, 0.006) + [pole(0.124), bc.cone("finial", 0.0056, 0.0056, 0.006, (0, 0, 0.1315), "wood_dark", 6)]
+    dz = 0.0125
+    cloth = [bc.box("cloth", (0.034, 0.003, 0.014), (0.019, 0, 0.101 + dz), "wall_cream"),
+             bc.box("cloth", (0.034, 0.0034, 0.0066), (0.019, 0, 0.099 + dz), "roof_terracotta"),
+             bc.box("cloth", (0.024, 0.003, 0.010), (0.014, 0, 0.0895 + dz), "wall_cream"),
+             bc.box("cloth", (0.014, 0.003, 0.007), (0.009, 0, 0.0815 + dz), "wall_cream")]
+    return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", cloth, (0, 0, 0.1135), "")])
+
+
+def build_F():
+    """B's hanging banner with a light pole (no more dark gap), a third stripe and a stepped swallowtail."""
+    base = mound(0.017, 0.006) + [pole(0.118, r=0.0054, col="wood_mid"), bc.box("bar", (0.046, 0.0045, 0.0045), (0, 0, 0.1215), "wood_dark"),
+                                  bc.cone("cap", 0.0040, 0.0, 0.007, (0, 0, 0.1275), "wood_dark", 6)]
+    cloth = [bc.box("cloth", (0.028, 0.0034, 0.044), (0, -0.0040, 0.097), "wall_cream"),
+             bc.box("cloth", (0.028, 0.0038, 0.008), (0, -0.0040, 0.110), "roof_terracotta"),
+             bc.box("cloth", (0.028, 0.0038, 0.008), (0, -0.0040, 0.094), "roof_terracotta"),
+             bc.box("cloth", (0.010, 0.0034, 0.008), (-0.009, -0.0040, 0.071), "wall_cream"),
+             bc.box("cloth", (0.010, 0.0034, 0.008), (0.009, -0.0040, 0.071), "wall_cream")]
+    return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", cloth, (0, -0.004, 0.119), "")])
+
+
+def build_G():
+    """D's teal and cream stepped pennant hung from B's crossbar on a light pole."""
+    base = mound(0.019, 0.006) + [pole(0.128), bc.box("bar", (0.046, 0.0045, 0.0045), (0.0215, 0, 0.1285), "wood_dark"),
+                                  bc.cone("finial", 0.0058, 0.0058, 0.005, (0, 0, 0.1335), "wood_dark", 6)]
+    cloth = stepped_pennant(0.0045, 0.1262, 0.040, 0.0095, ("roof_teal", "wall_cream"), n=4)
+    return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", cloth, (0.0, 0, 0.1262), "")])
+
+
+def build_H():
+    """Two stacked stepped pennants on one tall pole: A's cream and terracotta above, D's teal below."""
+    base = mound(0.019, 0.006) + [pole(0.130), bc.cone("cap", 0.0048, 0.0048, 0.006, (0, 0, 0.1345), "wood_dark", 6)]
+    top = stepped_pennant(0.0, 0.1265, 0.034, 0.0090, ("wall_cream", "roof_terracotta"), n=3)
+    low = stepped_pennant(0.0, 0.0995, 0.030, 0.0100, ("roof_teal", "wall_cream"), n=2)
+    return bc.assemble("ew_defense_rally_flag_v01", [("", base, (0, 0, 0), None), ("cloth", top + low, (0.0, 0, 0.1265), "")])
+
+
+BUILDERS.update({"E": build_E, "F": build_F, "G": build_G, "H": build_H})
+
+
 def finish(root):
     bc.anchor(root, "ring_anchor", (0, 0, 0.001), size=RING)
     root["ew_footprint"], root["ew_front"], root["ew_place"] = "1x1", "-Y", "board"
