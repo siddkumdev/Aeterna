@@ -85,6 +85,8 @@ func _check(cat: String, path: String) -> void:
 		_fail("no meshes")
 		return
 	var budget: int = BUDGET.get(cat, 2000)
+	if path.contains("ew_world_path_plaza"):
+		budget = 1500  # 2 x 2 village square, same override as tools/validate_asset.py
 	if path.contains("ew_world_island"):
 		budget = 4000  # lush grass (Siddharth 2026-10-20), same override as tools/validate_asset.py
 	print("   size      %.1f x %.1f cells footprint, %.1f cells tall (%.3f x %.3f x %.3f m)"
@@ -105,7 +107,8 @@ func _check(cat: String, path: String) -> void:
 		_fail("over budget: %d > %d triangles" % [tris, budget])
 	if not bad_mats.is_empty():
 		_fail("surfaces not using the shared materials: %s" % ", ".join(bad_mats.keys()))
-	if aabb.size.y < 0.005 or aabb.size.y > 1.0:
+	var min_h := 0.002 if path.contains("ew_world_path") else 0.005  # path tiles are flat decor, 2-8 mm
+	if aabb.size.y < min_h or aabb.size.y > 1.0:
 		_fail("height %.3f m looks wrong (upside down or wrong scale?)" % aabb.size.y)
 
 

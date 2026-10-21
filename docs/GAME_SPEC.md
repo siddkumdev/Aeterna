@@ -29,11 +29,11 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Terrain:** FLAT for the competition build (cheapest, most comfortable). Elevation is a later option.
 - **Grid:** 12 x 12 cells; towers, huts and houses snap to whole cells (large ghost preview). Villagers, troops and enemies move continuously but their speeds, ranges and positions are measured in cells.
 - **Layout:** village in the centre ring (6 houses), forest ring around the edge, river optional (decoration).
-- **Paths:** 3 ground paths from 3 forest spawn points, all in the front 180 degrees so the player never turns to see ground enemies, converging on the village.
+- **Paths:** the path tiles are purely cosmetic (Siddharth 2026-10-21): they only make the village look better and have no gameplay effect. Ground enemies and troops find their own optimal route, respecting terrain and obstacles (pathfinding). The 3 forest spawn points are all in the front 180 degrees so the player never turns to see ground enemies; routes converge on the village.
 - **Spawning:** everything comes from the forest on the map. Ground enemies and the boss emerge at the 3 forest spawn points (optionally with a small glowing rift at the tree line, purely visual). Flyers rise out of the tree line above a spawn point. NO real-wall portals: nothing depends on the player's room. (Siddharth's decision; the earlier wall-portal idea came from the handoff's VR-fit analysis and is dropped.)
 
 ### 2. What enemies attack
-- **Goal:** the 6 village houses. Ground enemies walk their path toward the nearest house.
+- **Goal:** the 6 village houses. Ground enemies find the optimal route to the nearest house around terrain and obstacles (the cosmetic path tiles do not matter).
 - **En route:** they attack any tower, hut or troop that blocks them or is in melee range; ranged enemies target the nearest of those.
 - **House state:** a house at 0 HP becomes "shuttered" (the game term; not destroyed) and is repaired free in the next day. Cozy, no permanent loss. **Look (Siddharth, 2026-10-19):** "half collapsed" instead of closed shutters: one whole roof side falls in (rafters left, some snapped), a wall corner is knocked out, the chimney topples, the door hangs, windows go dark, a big rubble pile spreads round the house; parts tumble into that pose with a dust puff, and the dawn repair plays it backwards.
 - **Losing a night:** 3 or more of 6 houses shuttered.
@@ -88,7 +88,7 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 |---|---|---|---|---|---|
 | Fire Tower | shoots a fireball at one target; good range, **no AoE** | 5 cells | 14 per fireball, 1 shot per 1.5 s | 60 | the reliable heavy hitter |
 | Blast Brazier | **good AoE, short range, lower damage** | 2 cells | 4 per pulse to all within 1 cell, 1 pulse per second | 50 | holds a choke point near the village |
-| Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on straight paths |
+| Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on long straight approaches (piercing line) |
 | Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 70 | max 2; floats 2 cells above the board |
 - No Barricade, Light Tower or Healing Shrine in this roster. Healing is done by the Mend Vial spell instead.
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
@@ -104,7 +104,7 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 Speed in cells per second, HP in points. Looks follow the faceted skeleton family (#24-27), no jewel accents; types come from #10, #13-15, #36, #42.
 | Enemy | Behaviour | Speed | HP | Revealed at Foresight tier |
 |---|---|---|---|---|
-| Grunt | walks path, melee | 0.4 | 20 | 1 (silhouette) |
+| Grunt | walks its optimal route, melee | 0.4 | 20 | 1 (silhouette) |
 | Scout | fast, ignores towers, rushes houses | 0.8 | 10 | 2 (type) |
 | Flyer (Wisp, see 10) | straight line over walls | 1.2 | 8 | 1 (direction of its spawn point) |
 | Tunneler | goes underground, pops up mid-village | 0.4 | 30 | 3 (path) |

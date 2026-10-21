@@ -55,7 +55,7 @@ Change column (what happened to the tracker item):
 | W01 | P0 | model | Island base | 12 x 12 cells (0.6 m), flat grass top, bevelled rim, stone-strata sides. DONE: ew_world_island_v01 (variant L) approved by Siddharth 2026-10-20, 2564 tris (budget raised to 4000). Underside later (W02). | 4k | DONE |
 | W02 | P1 | model | Island underside / floating skirt | Rocky underside, shown only in the floating-board fallback (no table found) and when the board is tilted or spun. | 500-1k | EDIT |
 | W03 | P0 | shader | Placement grid overlay | CHANGED from "build plot pads". Placement is free on grid cells, so a grid shader that lights up only while placing replaces fixed pads. Valid/invalid states live in D12. | | CHANGED |
-| W04 | P0 | model | Path tiles | Straight, corner, T-junction, end-at-village (the "portal mouth" end is gone). 1 x 1 each. | 4 x ~100 | EDIT BUILT 2026-10-21: ew_world_path_{straight,corner,t,end}_v02 (variant M = calmer round-3 look, 543-676 tris, awaiting Siddharth). |
+| W04 | P0 | model | Path tiles | Straight, corner, T-junction, end-at-village (the "portal mouth" end is gone). 1 x 1 each. | 4 x ~100 | EDIT BUILT 2026-10-21: ew_world_path_{straight,corner,t,end}_v02 (variant M = calmer round-3 look, 543-676 tris, awaiting Siddharth) plus cosmetic village pieces ew_world_path_{cross,doorstep,plaza,stones}_v01 (264-1182 tris, awaiting Siddharth). |
 | W05 | P0 | model | Trees: pine, round, cube | Pine and round are BUILT (rescale to 1 x 1). Cube tree (#23, #30) still to do. | 200-500 each | EDIT |
 | W06 | P1 | model | Trees: corrupted, tall pine, birch | Corrupted tree (twisted, dark) hints at the forest turning and supports the Foggy Night look. | 200-500 each | KEEP |
 | W07 | P1 | model | Bushes (x2) | 1 x 1. | 100-300 | KEEP |

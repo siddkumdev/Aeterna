@@ -168,10 +168,12 @@ def edge_points(pts, spacing, m_cell=0.004):
         for s in range(k):
             t = (s + 0.5) / k
             out.append((x1 + (x2 - x1) * t, y1 + (y2 - y1) * t))
-    return [(x, y) for x, y in out if abs(x) < H - m_cell and abs(y) < H - m_cell]
+    return [(x, y) for x, y in out if abs(x) < EXT - m_cell and abs(y) < EXT - m_cell]
 
 
 def tile(variant, kind, seed):
+    if kind in KINDS2:
+        return tile5(kind, seed)
     if variant in "EFGH":
         return tile2(variant, kind, seed)
     if variant in "IJKM":
@@ -326,8 +328,8 @@ def flat_patch(name, x, y, r, z, col, rnd, n=7):
 
 def rand_inside(pts, rnd, m, tries=200):
     for _ in range(tries):
-        x, y = rnd.uniform(-H, H), rnd.uniform(-H, H)
-        if inside_ok(pts, x, y, m) and abs(x) < H - 0.003 and abs(y) < H - 0.003:
+        x, y = rnd.uniform(-EXT, EXT), rnd.uniform(-EXT, EXT)
+        if inside_ok(pts, x, y, m) and abs(x) < EXT - 0.003 and abs(y) < EXT - 0.003:
             return x, y
     return None
 
@@ -607,6 +609,114 @@ def tile4(kind, seed):
     return parts
 
 
+
+# ---- round 6: village pieces beyond the four lane tiles (Siddharth 2026-10-21: paths are cosmetic, 'get a bit
+# creative'). Same look as v02 (variant M). cross = 4-way crossroads; doorstep = stone landing in front of a house
+# door (door side is +y; the house door faces -Y, so rotate 180 when placing); plaza = round 2 x 2 village square;
+# stones = a row of stepping stones for a footpath across the grass.
+
+EXT = H   # half-extent of the tile (0.05 for the plaza)
+
+
+def outline5(kind, rnd):
+    global EXT
+    EXT = 0.05 if kind == "plaza" else H
+    w = W3
+    if kind == "cross":
+        segs = [((-w, -H), (w, -H), 0), ((w, -H), (w, -w), 1), ((w, -w), (H, -w), 1), ((H, -w), (H, w), 0),
+                ((H, w), (w, w), 1), ((w, w), (w, H), 1), ((w, H), (-w, H), 0), ((-w, H), (-w, w), 1),
+                ((-w, w), (-H, w), 1), ((-H, w), (-H, -w), 0), ((-H, -w), (-w, -w), 1), ((-w, -w), (-w, -H), 1)]
+        pts = []
+        for p, q, ragged in segs:
+            pts += smooth_edge(p, q, rnd, 4) if ragged else [p]
+        set_sides(pts)
+        return pts
+    if kind == "doorstep":   # rounded landing, 0.036 x 0.028; free standing
+        hx, hy = 0.019, 0.0145
+        pts = []
+        for i in range(24):
+            a = 6.2832 * i / 24
+            c, s_ = math.cos(a), math.sin(a)
+            k = 1.0 + 0.07 * math.sin(3 * a + rnd.uniform(0, 6)) * 0.6
+            # superellipse: flat sides, round corners
+            x = hx * math.copysign(abs(c) ** 0.55, c) * k
+            y = hy * math.copysign(abs(s_) ** 0.55, s_) * k
+            pts.append((x, y))
+        set_sides(pts)
+        return pts
+    if kind == "plaza":      # round square, radius about 0.044, gentle wobble
+        pts = arc_pts(0.0, 0.0, 0.0445, 0, 360, rnd, 40, 0.0032)
+        set_sides(pts)
+        return pts
+    return outline4(kind, rnd)
+
+
+def tile5(kind, seed):
+    rnd = random.Random(seed)
+    if kind == "stones":     # stepping stones: no earth, big flat stones with grass tufts between
+        global EXT
+        EXT = H
+        parts = []
+        xs = [-0.0165, 0.0, 0.0165]
+        for i, x in enumerate(xs):
+            r = rnd.uniform(0.0068, 0.0082)
+            y = rnd.uniform(-0.004, 0.004)
+            parts.append(small("step", r, r * 0.8, 0.0034, x, y, 0.0, rnd.choice(("path_stone", "path_stone", "stone")), 7, rnd.uniform(0, 60)))
+            parts.append(ring_flat("skirt", [(x + (r + 0.0035) * math.cos(a), y + (r + 0.0035) * math.sin(a)) for a in [6.2832 * k / 12 for k in range(12)]],
+                                   [(x + (r * 0.9) * math.cos(a), y + (r * 0.9) * math.sin(a)) for a in [6.2832 * k / 12 for k in range(12)]], 0.0005, "leaf_green"))
+        for x, y in ((-0.0085, 0.011), (0.0085, -0.011), (0.0, 0.0125)):
+            parts += hump(x, y, 0.0040, 0.0052, rnd.choice(("leaf_green", "leaf_light")), rnd)
+        return parts
+    pts = outline5(kind, random.Random(2000 + len(kind)))
+    ext = EXT
+    parts = [mound("path", pts, "path_dirt", 0.0016, slope=0.0030, crown=0.0006)]
+    ztop = 0.0016
+    parts.append(ring_flat("skirt", outset_pts(pts, 0.0075), outset_pts(pts, 0.0020), 0.0005, "leaf_green"))
+    placed = []
+    if kind == "plaza":      # a ring of pale stones and a round stone in the middle
+        parts.append(small("hub", 0.0150, 0.0135, 0.0012, 0.0, 0.0, ztop - 0.0004, "path_stone", 10, 0))
+        placed.append((0.0, 0.0, 0.0150))
+        for k in range(7):
+            a = 6.2832 * k / 7 + 0.2
+            r = rnd.uniform(0.0058, 0.0072)
+            x, y = 0.0295 * math.cos(a), 0.0295 * math.sin(a)
+            parts.append(small("cobble", r, r * 0.86, 0.0010, x, y, ztop - 0.0004, "path_stone", 8, rnd.uniform(0, 45)))
+            placed.append((x, y, r))
+    if kind == "doorstep":   # a raised stone step on the +y side, two flat slabs in front
+        parts.append(bc.box("step", (0.020, 0.0065, 0.0042), (0.0, 0.0115, 0.0018 + 0.0021), "path_stone"))
+        parts[-1]["no_bevel"] = True
+        placed.append((0.0, 0.0115, 0.0115))
+    want = {"cross": 7, "doorstep": 3, "plaza": 8}.get(kind, 7)
+    for _ in range(600):
+        if len(placed) >= want + (10 if kind == "plaza" else (1 if kind == "doorstep" else 0)):
+            break
+        pt = rand_inside(pts, rnd, 0.0055)
+        if not pt:
+            continue
+        r = rnd.uniform(0.0050, 0.0075)
+        if all(math.dist(pt, (qx, qy)) > r + qr + 0.0010 for qx, qy, qr in placed):
+            placed.append((pt[0], pt[1], r))
+            col = rnd.choice(("path_stone", "path_dirt", "path_dirt"))
+            h = rnd.uniform(0.0007, 0.0012) if col != "path_dirt" else 0.0004
+            parts.append(small("cobble", r, r * 0.86, h, pt[0], pt[1], ztop - 0.0004, col, 8, rnd.uniform(0, 45)))
+    ep = [p for p in edge_points(outset_pts(pts, 0.0012), 0.0095, 0.0016) if border_taper(*p, 0.008) >= 1.0]
+    rnd.shuffle(ep)
+    nclust, ntuft, nflow = (3, 4, 3) if kind != "plaza" else (4, 5, 4)
+    lim = ext - 0.0025
+    for x, y in ep[:nclust]:
+        for j in range(rnd.choice((2, 3))):
+            r = rnd.uniform(0.0034, 0.0052)
+            parts.append(small("edge_stone", r, r * 0.68, rnd.uniform(0.0028, 0.0046),
+                               max(-lim, min(lim, x + rnd.uniform(-0.0035, 0.0035))), max(-lim, min(lim, y + rnd.uniform(-0.0035, 0.0035))), 0.0,
+                               rnd.choice(("stone", "path_stone", "stone", "stone_dark")), 6, rnd.uniform(0, 60)))
+    for x, y in ep[nclust:nclust + ntuft]:
+        parts += hump(x, y, 0.0038, 0.0050, rnd.choice(("leaf_green", "leaf_light")), rnd)
+    for x, y in ep[nclust + ntuft:nclust + ntuft + nflow]:
+        parts.append(small("flower", 0.0020, 0.0008, 0.0042, x, y, 0.0, rnd.choice(("wall_cream", "leaf_yellow", "roof_terracotta")), 4, rnd.uniform(0, 70)))
+    return parts
+
+
+KINDS2 = ("cross", "doorstep", "plaza", "stones")
 KINDS = ("straight", "corner", "t", "end")
 SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33, "L": 34, "M": 31}
 
@@ -624,7 +734,7 @@ if __name__ == "__main__":
         var = args[2] if len(args) > 2 else "L"
         ver = args[3] if len(args) > 3 else "v01"
         bc.clear_scene()
-        parts = tile4(kind, SEED["L"] + KINDS.index(kind)) if var == "L" else tile(var, kind, SEED[var] + KINDS.index(kind))
+        parts = tile4(kind, SEED["L"] + KINDS.index(kind)) if var == "L" and kind in KINDS else tile(var, kind, SEED[var] + (KINDS + KINDS2).index(kind))
         obj = bc.assemble("ew_world_path_%s_%s" % (kind, ver), [("", parts, (0, 0, 0), None)])
         print("BLEND", bc.save_blend(obj, "path_%s_%s" % (kind, ver)))
         print("EXPORT", bc.export_glb(obj, "world"))
