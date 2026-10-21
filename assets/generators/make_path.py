@@ -619,6 +619,14 @@ def build(variant, kind):
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     v = args[0] if args else "A"
+    if v == "FINAL":   # variant L, chosen by Siddharth 2026-10-21 ('After'): ew_world_path_<kind>_v01, one blend + glb each
+        kind = args[1]
+        bc.clear_scene()
+        parts = tile4(kind, SEED["L"] + KINDS.index(kind))
+        obj = bc.assemble("ew_world_path_%s_v01" % kind, [("", parts, (0, 0, 0), None)])
+        print("BLEND", bc.save_blend(obj, "path_" + kind))
+        print("EXPORT", bc.export_glb(obj, "world"))
+        sys.exit(0)
     bc.clear_scene()
     objs = []
     for i, k in enumerate(KINDS):

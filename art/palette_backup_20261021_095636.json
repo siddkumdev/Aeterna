@@ -86,9 +86,7 @@
     "ghost_invalid": "E5484D",
     "rarity_gold": "F2B630",
     "hand_brown": "C8A07A",
-    "hand_dark_brown": "7E5A3E",
-    "dirt_light": "A98A72",
-    "dirt_dark": "7E6048"
+    "hand_dark_brown": "7E5A3E"
   },
   "style": {
     "bevel_width_m": 0.004,

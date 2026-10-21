@@ -1,0 +1,45 @@
+{
+  "layout": "layout_mock.json",
+  "assets": [
+    {
+      "label": "Fire Tower",
+      "asset": "assets/export/defense/ew_defense_fire_tower_v07.glb",
+      "tris": 1664
+    },
+    {
+      "label": "Bomb tower (Tipping Cauldron)",
+      "asset": "assets/export/defense/ew_defense_bomb_tower_v06.glb",
+      "tris": 1564
+    },
+    {
+      "label": "Wind crossbow tower",
+      "asset": "assets/export/defense/ew_defense_crossbow_tower_v03.glb",
+      "tris": 1446
+    },
+    {
+      "label": "Airship",
+      "asset": "assets/export/defense/ew_defense_airship_v01.glb",
+      "tris": 1798
+    },
+    {
+      "label": "Cottage (terracotta)",
+      "asset": "assets/export/village/ew_village_cottage_v05.glb",
+      "tris": 1700
+    },
+    {
+      "label": "Log cabin (teal)",
+      "asset": "assets/export/village/ew_village_cabin_v05.glb",
+      "tris": 1964
+    },
+    {
+      "label": "Townhouse (orange)",
+      "asset": "assets/export/village/ew_village_townhouse_v05.glb",
+      "tris": 1796
+    }
+  ],
+  "tris": 11932,
+  "mesh_objects": 52,
+  "material_slots": 52,
+  "vfx_standins": 2,
+  "engine": "BLENDER_EEVEE_NEXT"
+}
