@@ -91,11 +91,11 @@ Change column (what happened to the tracker item):
 | V09 | P1 | model | Villager variants (x5) | Five villagers incl. the baker; swappable hair/hat/apron. RESOLVED: #29 is a villager and sets the proportions. | 1-2k each | EDIT |
 | V10 | P0 | anim | Villager animation set | Idle, walk, wave, cheer, hide (run into house), point at request. Hide and idle first. | | EDIT |
 | V11 | P2 | model | Animals (chicken, cat, dog) | | 300-600 | KEEP |
-| V12 | P0 | model | Help request: blocked chimney | Rubble prop plus smoke puff. At least one request needed for the trust loop. | 300-600 | KEEP |
-| V13 | P1 | model | Help request: stuck bird | Parts-based bird with perch, carryable. | 300-600 | KEEP |
-| V14 | P1 | model | Help request: stuck cart | Renamed from "broken wheel" to match the spec. | 300-600 | EDIT |
-| V15 | P1 | model | Help request: lost lantern | Carryable. Raised from P2: it is one of the 4 request kinds. The "sprout" idea is dropped. | 300-600 | EDIT |
-| V16 | P0 | ui | Help-request marker | Floating "!" readable from a distance. | | KEEP |
+| V12 | P0 | model | Help request: blocked chimney | Rubble prop plus smoke puff. At least one request needed for the trust loop. BUILT 2026-10-21: ew_village_chimney_rubble_v01 (300 tris), APPROVED by Siddharth 2026-10-21. | 300-600 | KEEP |
+| V13 | P1 | model | Help request: stuck bird | Parts-based bird with perch, carryable. BUILT 2026-10-21: ew_village_songbird_v01 (206 tris, wing parts), APPROVED by Siddharth 2026-10-21. | 300-600 | KEEP |
+| V14 | P1 | model | Help request: stuck cart | Renamed from "broken wheel" to match the spec. BUILT 2026-10-21: ew_village_handcart_v01 (324 tris, wheel and rut parts), APPROVED by Siddharth 2026-10-21. | 300-600 | EDIT |
+| V15 | P1 | model | Help request: lost lantern | Carryable. Raised from P2: it is one of the 4 request kinds. The "sprout" idea is dropped. BUILT 2026-10-21: ew_village_lantern_v01 (732 tris), APPROVED by Siddharth 2026-10-21. | 300-600 | EDIT |
+| V16 | P0 | ui | Help-request marker | Floating "!" readable from a distance. BUILT 2026-10-21 as a 3D model: ew_ui_help_marker_v01 (88 tris), APPROVED by Siddharth 2026-10-21. | | KEEP |
 | V17 | P0 | model | Trust token and collect animation | Heart or star flying into the meter. | <200 | KEEP |
 | V18 | | ui | Dialogue bubble mesh | MERGED into U06. | | REMOVED |
 | V19 | P2 | ui | Emote set | Heart, ?, !, zzz. | | KEEP |
