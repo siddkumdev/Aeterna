@@ -11,7 +11,10 @@ import bmesh
 import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 import blender_common as bc  # noqa: E402
+import make_village_props as vp  # noqa: E402  (tcyl)
 
 
 def outline(n, width, fat=1.0):
@@ -100,9 +103,38 @@ def build(letter, ver="v01"):
     return obj
 
 
+def lift_all(parts, dz, dy=0.0):
+    for o in parts:
+        for v in o.data.vertices:
+            v.co.z += dz
+            v.co.y += dy
+    return parts
+
+
+def build_coin(ver="v01", heart_col="trust_blue"):
+    """Trust coin (currency): gold coin, big chamfered heart (variant B shape) raised on the front. Heart colour trust_blue."""
+    bc.clear_scene()
+    name = "ew_village_trust_coin_%s" % ver
+    coin = [vp.tcyl("coin", 0.0150, 0.0040, (0, 0, 0.0150), "rarity_gold", 12, 90, 0, 0),
+            vp.tcyl("rim", 0.0158, 0.0030, (0, 0.0004, 0.0150), "fire_yellow", 12, 90, 0, 0)]
+    heart = [loft("heart", heart_col, outline(10, 0.0190), [(0.80, 0.0028), (1.0, 0.0009), (1.0, -0.0009), (0.80, -0.0028)])]
+    lift_all(heart, 0.0058, -0.0048)
+    obj = bc.finish(coin + heart, name, do_bevel=False)
+    bc.anchor(obj, "sparkle_anchor", (0, 0, 0.0150), size=0.034)
+    obj["ew_footprint"], obj["ew_front"], obj["ew_place"] = "1x1", "-Y", "token"
+    d = obj.dimensions
+    print("%s: %d tris, %.1f x %.1f x %.1f mm" % (name, tris(obj), d.x * 1000, d.y * 1000, d.z * 1000))
+    return obj
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    if args and args[0] == "FINAL":
+    if args and args[0] == "COIN":
+        obj = build_coin(args[1])
+        bc.save_blend(obj, "help_trust_coin")
+        if len(args) > 2 and args[2] == "EXPORT":
+            print("EXPORT", bc.export_glb(obj, "village"))
+    elif args and args[0] == "FINAL":
         obj = build(args[1], args[2])
         bc.save_blend(obj, "help_heart")
         print("EXPORT", bc.export_glb(obj, "village"))

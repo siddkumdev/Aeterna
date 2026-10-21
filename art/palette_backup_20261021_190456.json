@@ -1,0 +1,140 @@
+{
+  "_status": "Core palette APPROVED by Siddharth 2026-10-14 as the overall level vibe (he could not judge exact hex). Time-of-day strips sampled from moodboard #21 night, #22 dusk, #18 golden hour. 'materials' feed the palette atlas (max 64); atlas cell index = order in 'materials', so only APPEND new colours. 2026-10-17: additions from path_dirt onward, dawn_derived, day_derived and the 'lighting' presets APPROVED by Siddharth (jewel colours cut; hand tones added). 2026-10-20: changed grass 7FA84A->88BE45, APPROVED by Siddharth (Island grass was a muddy olive from the seat view; Siddharth OK 2026-10-20 (yes to all). grass is used by no exported asset, only island variants.). 2026-10-21: added dirt_light, dirt_dark, APPROVED by Siddharth (Path trail dirt in the reference screenshots is lighter and pinker than path_dirt, with darker and lighter cobble tones. Two new earth tones, appended at the end (nothing shifts).). 2026-10-21: added wood_mid, APPROVED by Siddharth (mid-wood tone for fences, signposts, posts (props critic round 2; Siddharth OK 2026-10-21)).",
+  "time_of_day": {
+    "night_21": [
+      "5B2920",
+      "B04F31",
+      "F6A45D",
+      "F5E568",
+      "5D8548",
+      "224A2F",
+      "406988",
+      "203C52",
+      "111C30",
+      "C6924C"
+    ],
+    "dusk_22": [
+      "FBE2A0",
+      "F0B396",
+      "DA8990",
+      "9C3EB0",
+      "56359D",
+      "1F1049"
+    ],
+    "golden_hour_18": [
+      "13120D",
+      "3B351B",
+      "494627",
+      "3D4536",
+      "978539",
+      "DACF5C",
+      "EEEF91",
+      "584827",
+      "A24428"
+    ],
+    "dawn_derived": [
+      "FFF0C8",
+      "F8CDB4",
+      "EBA8AE",
+      "B8C6E6",
+      "FFD9B0",
+      "7E86B8"
+    ],
+    "day_derived": [
+      "FFF8E6",
+      "D6EBF5",
+      "A9D46A",
+      "FFE7A3",
+      "7FB3D5",
+      "4F7FA6"
+    ]
+  },
+  "materials": {
+    "wall_cream": "F4E4B8",
+    "roof_terracotta": "B04F31",
+    "roof_orange": "E09B4E",
+    "roof_teal": "2F8F8A",
+    "wood_dark": "5B2920",
+    "wood_light": "C6924C",
+    "stone": "8C9096",
+    "stone_dark": "5B4F50",
+    "grass": "88BE45",
+    "leaf_green": "5D8548",
+    "leaf_light": "8DB85A",
+    "leaf_dark": "224A2F",
+    "leaf_yellow": "DACF5C",
+    "water": "406988",
+    "bone": "EFE3C4",
+    "crystal_blue": "3FB7D9",
+    "crystal_purple": "9C3EB0",
+    "lantern_glow": "F6A45D",
+    "ink": "111C30",
+    "path_dirt": "9C7A50",
+    "path_stone": "C2B49A",
+    "wisp_glow": "FF5FA8",
+    "fog": "C9C6DA",
+    "skin_light": "F2C9A0",
+    "skin_mid": "C98E62",
+    "skin_dark": "8A5A3C",
+    "hair_dark": "2B2220",
+    "hair_brown": "6B4228",
+    "hair_blonde": "E2C26B",
+    "fire_red": "E8452C",
+    "fire_yellow": "FFD45A",
+    "heal_green": "7FE08A",
+    "ghost_valid": "5FD068",
+    "ghost_invalid": "E5484D",
+    "rarity_gold": "F2B630",
+    "hand_brown": "C8A07A",
+    "hand_dark_brown": "7E5A3E",
+    "dirt_light": "A98A72",
+    "dirt_dark": "7E6048",
+    "wood_mid": "9A6538"
+  },
+  "style": {
+    "bevel_width_m": 0.004,
+    "bevel_segments": 1
+  },
+  "lighting": {
+    "_note": "Board-only lighting presets (passthrough shows the real room). key = sun/moon colour, ambient = sky/shadow fill, rim = edge light from behind, energy = key strength; optional key_elev/key_az (degrees, sun height and direction; az 0 = from the front) rim_scale and ambient_strength (default 0.9). Day and golden_hour retuned 2026-10-17 toward Siddharth's warm sunlit reference image (lighting mood only).",
+    "dawn": {
+      "key": "FFD9B0",
+      "ambient": "7E86B8",
+      "rim": "F8CDB4",
+      "energy": 0.7
+    },
+    "day": {
+      "key": "FFD898",
+      "ambient": "86B4BC",
+      "rim": "FFD07A",
+      "energy": 1.35,
+      "key_elev": 45,
+      "key_az": -35,
+      "rim_scale": 0.9,
+      "ambient_strength": 0.5
+    },
+    "golden_hour": {
+      "key": "FFB45A",
+      "ambient": "6F9FA6",
+      "rim": "FFA43A",
+      "energy": 1.5,
+      "key_elev": 24,
+      "key_az": -50,
+      "rim_scale": 1.8,
+      "ambient_strength": 0.4
+    },
+    "dusk": {
+      "key": "F0B396",
+      "ambient": "56359D",
+      "rim": "DA8990",
+      "energy": 0.55
+    },
+    "night": {
+      "key": "8FB0D8",
+      "ambient": "203C52",
+      "rim": "406988",
+      "energy": 0.35,
+      "note": "windows and lanterns carry the scene at night"
+    }
+  }
+}
