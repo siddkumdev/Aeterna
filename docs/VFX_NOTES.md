@@ -56,3 +56,9 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | Fireball flames and trail | Fireball = dark core model wrapped in fire (orange/red), trail in flight, impact burst (Siddharth 2026-10-21: dark core with VFX sockets). | `__fire_anchor` on the fireball core | D15, X02 |
 | Wind bolt streaks | Pale-green wind streaks around the crossbow bolt, kept whiter than heal_green (2026-10-18 rule); pierce flash on hit. | `__wind_anchor` on the bolt | D16, X22 |
 | Cannonball fire | Airship cannonball: dark iron ball wrapped in fire (orange/red), trail, burst on a flyer (2026-10-19 notes, 2026-10-21 dark-core decision). | `__fire_anchor` on the cannonball | D20, X02 |
+
+## Crystal Lens (I03, variant B picked 2026-10-21; glass is the separate part `__glass`, shards with open cracks)
+| Effect | What Siddharth asked for | Anchor | Asset list |
+|---|---|---|---|
+| Purple binding magic | "The cracked mirror pieces should be held together with some purple magic VFX" (Siddharth 2026-10-21). Purple threads/glow along the cracks between the shards. NOTE: purple is otherwise the Warden's colour and he chose "no Warden link in the model"; this is his explicit exception for the lens VFX (flagged to him 2026-10-21). | along the cracks of `__glass`; centre `__lens_anchor` | I03, I04 |
+| Cracks heal as Foresight grows | "As the foresight skill evolves the cracks reduce" (Siddharth 2026-10-21): fewer/narrower cracks at each Foresight tier, so the lens looks more whole as Foresight sharpens. Godot work; the model may need one glass version per tier (open, see decisions). | `__glass` | I03, I04 |

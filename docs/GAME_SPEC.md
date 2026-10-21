@@ -147,6 +147,7 @@ Cooldown only; no mana or resource cost.
 - **Optional:** cup a hand like a spyglass if hand detection proves reliable.
 - **Tier visuals:** tier 1 blurry silhouettes + the compass direction of each group; tier 2 adds type icons + counts; tier 3 adds exact path ribbons; tier 4 adds timing markers; tier 5 (late) "rewrite": close one forest spawn point or swap one enemy type.
 - Holding the lens costs nothing, but one hand is occupied while looking.
+- **Lens look per tier (Siddharth 2026-10-21, Godot):** the lens is a cracked hand mirror (I03 variant B); purple magic holds the shards together (VFX), and the cracks reduce as the Foresight tier rises.
 
 ### 14. Menus and interaction (hands only)
 - **Build menu:** turn the left palm up to open a radial wheel (#37) with the tower and hut cards; pinch-grab a card to pull the 3D model out; drag onto the board, preview ghost snaps to the grid, release to place, throw off the island to cancel.
