@@ -116,7 +116,7 @@ def build_coin(ver="v01", heart_col="trust_blue"):
     bc.clear_scene()
     name = "ew_village_trust_coin_%s" % ver
     coin = [vp.tcyl("coin", 0.0150, 0.0040, (0, 0, 0.0150), "rarity_gold", 12, 90, 0, 0),
-            vp.tcyl("rim", 0.0158, 0.0030, (0, 0.0004, 0.0150), "wood_dark", 12, 90, 0, 0)]
+            vp.tcyl("rim", 0.0158, 0.0030, (0, 0.0004, 0.0150), "wood_light", 12, 90, 0, 0)]
     heart = [loft("heart", heart_col, outline(10, 0.0190), [(0.80, 0.0028), (1.0, 0.0009), (1.0, -0.0009), (0.80, -0.0028)])]
     lift_all(heart, 0.0058, -0.0048)
     obj = bc.finish(coin + heart, name, do_bevel=False)
