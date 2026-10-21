@@ -137,6 +137,7 @@ def clump(style):
     return p
 
 
+WIDE = 1.35  # Siddharth 2026-10-21: v01 pines were too lean; every part is widened about its own axis (positions stay put)
 TALL = 1.35  # vertical stretch: trees must stand a little above the 2.4-2.8 cell houses (forest ring)
 
 
@@ -146,6 +147,13 @@ def finish(parts, name):
         zs = [v.co for v in p.data.vertices]
         if not (p.name.startswith("tip") or p.get("sharp")):
             bc.bevel(p, 0.0016, 1)
+    for p in parts:
+        vs = p.data.vertices
+        cx = (min(v.co.x for v in vs) + max(v.co.x for v in vs)) / 2
+        cy = (min(v.co.y for v in vs) + max(v.co.y for v in vs)) / 2
+        for v in vs:
+            v.co.x = cx + (v.co.x - cx) * WIDE
+            v.co.y = cy + (v.co.y - cy) * WIDE
     obj = bc.join(parts, name)
     obj.name = obj.data.name = name
     obj.scale.z = TALL
@@ -217,7 +225,7 @@ def clump_mix():
 
 def clump_dark():
     """Dark spawn-side clump: leaf_dark tones concentrate here (art bible forest ring)."""
-    p = pine_layered(1.25, -0.028, 0.004, dark=True, tiers=5, slim=0.82) + pine_A(1.1, 0.004, -0.007, dark=True)
+    p = pine_layered(1.25, -0.028, 0.004, dark=True, tiers=5, slim=1.0) + pine_A(1.1, 0.004, -0.007, dark=True)
     p += pine_layered(1.0, 0.030, 0.006, dark=True, tiers=4) + pine_corrupted(0.85, -0.008, 0.016)
     p += [bc.blob("bush", 0.012, (0.016, -0.014, 0.007), "leaf_dark", 1, (1, 1, 0.75))]
     return p
@@ -232,14 +240,14 @@ def clump_low():
 
 
 FINAL = {  # short name: (version, parts builder, footprint, placement hint)
-    "pine": ("v02", lambda: pine_A(), "1x1", "scatter"),
-    "pine_young": ("v01", lambda: pine_young(), "1x1", "scatter"),
-    "pine_layered": ("v01", lambda: pine_layered(tiers=4), "1x1", "forest_edge"),
-    "pine_tall": ("v01", lambda: pine_layered(tiers=5, slim=0.82), "1x1", "forest_edge"),
-    "pine_corrupted": ("v01", lambda: pine_corrupted(), "1x1", "forest_edge"),
-    "forest_clump_mix": ("v01", clump_mix, "2x1", "forest_ring"),
-    "forest_clump_dark": ("v01", clump_dark, "2x1", "forest_ring"),
-    "forest_clump_low": ("v01", clump_low, "2x1", "forest_ring"),
+    "pine": ("v03", lambda: pine_A(), "1x1", "scatter"),
+    "pine_young": ("v02", lambda: pine_young(), "1x1", "scatter"),
+    "pine_layered": ("v02", lambda: pine_layered(tiers=4), "1x1", "forest_edge"),
+    "pine_tall": ("v02", lambda: pine_layered(tiers=5, slim=1.0), "1x1", "forest_edge"),
+    "pine_corrupted": ("v02", lambda: pine_corrupted(), "1x1", "forest_edge"),
+    "forest_clump_mix": ("v02", clump_mix, "2x1", "forest_ring"),
+    "forest_clump_dark": ("v02", clump_dark, "2x1", "forest_ring"),
+    "forest_clump_low": ("v02", clump_low, "2x1", "forest_ring"),
 }
 
 
