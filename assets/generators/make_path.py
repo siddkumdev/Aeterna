@@ -174,7 +174,7 @@ def edge_points(pts, spacing, m_cell=0.004):
 def tile(variant, kind, seed):
     if variant in "EFGH":
         return tile2(variant, kind, seed)
-    if variant in "IJK":
+    if variant in "IJKM":
         return tile3(variant, kind, seed)
     if variant == "L":
         return tile4(kind, seed)
@@ -494,16 +494,16 @@ def far_from_border(x, y, m=0.007):
 
 def tile3(variant, kind, seed):
     rnd = random.Random(seed)
-    pts = outline3(kind, random.Random(2000 + len(kind)))
+    pts = (outline4 if variant == "M" else outline3)(kind, random.Random(2000 + len(kind)))
     parts = [mound("path", pts, "path_dirt", 0.0016, slope=0.0030, crown=0.0006)]
     ztop = 0.0016
     # darker grass skirt hugging the trail (flat, 0.5 mm, pinches to nothing at the cell border)
     parts.append(ring_flat("skirt", outset_pts(pts, 0.0075), outset_pts(pts, 0.0020), 0.0005, "leaf_green"))
     # cobble shapes painted into the earth: big, rounded, low
     placed = []
-    cob_cols = {"I": ("path_stone", "path_dirt", "path_dirt"), "J": ("path_stone", "path_stone", "stone", "path_dirt"),
+    cob_cols = {"I": ("path_stone", "path_dirt", "path_dirt"), "M": ("path_stone", "path_dirt", "path_dirt"), "J": ("path_stone", "path_stone", "stone", "path_dirt"),
                 "K": ("path_dirt", "path_dirt", "path_stone")}[variant]
-    want = {"I": 7, "J": 8, "K": 4}[variant]
+    want = {"I": 7, "J": 8, "K": 4, "M": 7}[variant]
     for _ in range(500):
         if len(placed) >= want:
             break
@@ -608,7 +608,7 @@ def tile4(kind, seed):
 
 
 KINDS = ("straight", "corner", "t", "end")
-SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33, "L": 34}
+SEED = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 21, "F": 22, "G": 23, "H": 24, "I": 31, "J": 32, "K": 33, "L": 34, "M": 31}
 
 
 def build(variant, kind):
@@ -619,12 +619,14 @@ def build(variant, kind):
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     v = args[0] if args else "A"
-    if v == "FINAL":   # variant L, chosen by Siddharth 2026-10-21 ('After'): ew_world_path_<kind>_v01, one blend + glb each
+    if v == "FINAL":   # python make_path.py -- FINAL <kind> [variant L] [version v01]; v01 = L ('After'), v02 = M (calmer, 2026-10-21)
         kind = args[1]
+        var = args[2] if len(args) > 2 else "L"
+        ver = args[3] if len(args) > 3 else "v01"
         bc.clear_scene()
-        parts = tile4(kind, SEED["L"] + KINDS.index(kind))
-        obj = bc.assemble("ew_world_path_%s_v01" % kind, [("", parts, (0, 0, 0), None)])
-        print("BLEND", bc.save_blend(obj, "path_" + kind))
+        parts = tile4(kind, SEED["L"] + KINDS.index(kind)) if var == "L" else tile(var, kind, SEED[var] + KINDS.index(kind))
+        obj = bc.assemble("ew_world_path_%s_%s" % (kind, ver), [("", parts, (0, 0, 0), None)])
+        print("BLEND", bc.save_blend(obj, "path_%s_%s" % (kind, ver)))
         print("EXPORT", bc.export_glb(obj, "world"))
         sys.exit(0)
     bc.clear_scene()
