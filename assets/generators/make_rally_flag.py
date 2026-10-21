@@ -1,4 +1,4 @@
-"""Rally flag (D11). Original design. Run: blender --factory-startup -b -P assets/generators/make_rally_flag.py -- <A|B|C|D>
+"""Rally flag (D11). Original design. Run: blender --factory-startup -b -P assets/generators/make_rally_flag.py -- <A-H>
 
 The ring is VFX (Siddharth 2026-10-21): a Godot shader/particle ring at __ring_anchor, not a model.
 Root = pole + base; child __cloth pivots at the pole so Godot can sway it with a tween. 1 x 1 cell footprint.
@@ -135,13 +135,14 @@ if __name__ == "__main__":
     v = args[0] if args else "A"
     bc.clear_scene()
     if v == "FINAL":
-        letter, ver = args[1], args[2]
+        letter, short, ver = args[1], args[2], args[3]
         root = BUILDERS[letter]()
-        root.name = root.name.replace("_v01", "_" + ver)
+        new = "rally_flag_%s_%s" % (short, ver)
+        root.name = root.name.replace("rally_flag_v01", new)
         for ch in root.children_recursive:
-            ch.name = ch.name.replace("_v01", "_" + ver)
+            ch.name = ch.name.replace("rally_flag_v01", new)
         finish(root)
-        bc.save_blend(root, "rally_flag")
+        bc.save_blend(root, "rally_flag_" + short)
         print("EXPORT", bc.export_glb(root, "defense"))
     else:
         root = BUILDERS[v]()

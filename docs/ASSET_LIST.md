@@ -114,7 +114,7 @@ Roster changed: 4 towers plus the hut, no tiers.
 | D08 | P0 | model | Troop: Guard | Melee, fits 1 cell. | 1-2k | EDIT |
 | D09 | P1 | model | Troop: Slinger | Ranged, unlocked in loop 2. | 1-2k | EDIT |
 | D10 | P0 | anim | Troop animation set | Idle, walk, attack, hit, die, spawn via part tweens. | | KEEP |
-| D11 | P0 | model | Rally flag and rally ring | Planted by point and pinch. Flag <200 tris, ring is a ground marker. | <200 | EDIT |
+| D11 | P0 | model | Rally flag and rally ring | Planted by point and pinch. The ring is a VFX ring at __ring_anchor, not a model (Siddharth 2026-10-21). BUILT 2026-10-21: two flags kept, ew_defense_rally_flag_banner_v01 (288 tris) and ew_defense_rally_flag_pennant_v01 (300 tris), both awaiting Siddharth; he picks which ships later. Open: final pick, and the tris budget (list said <200). | <200 | EDIT |
 | D12 | P0 | shader | Placement ghost and range ring | Translucent material, green valid, red invalid, per-type ghost silhouettes. Basic version exists in code. | | EDIT, BUILT |
 | D13 | P0 | anim | Build pop animation | Scale bounce, scaffold and dust ring. | | KEEP |
 | D14 | P2 | vfx | Sell / remove effect | Only if tower selling is accepted (open). Upgrade effect is gone. | | EDIT |
