@@ -69,7 +69,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 ### 6a. Wave generation (Siddharth: "somewhat procedurally generated"; rules below are PROPOSED)
 What is fixed: the number of loops (2, loop 3 only if built), 5 nights + 1 boss night per loop, and when each enemy type first appears. What is generated: which enemies come each night, how many, from which of the 3 spawn points, and when.
 - **Seed:** each run gets a random seed; the generator is deterministic from it, so a run can be replayed and bugs reproduced.
-- **Threat budget per night:** each enemy costs threat points (proposal: Grunt 1, Scout 1, Wisp 2, Splitter 3, Tunneler 3, Fog variant 3). Night n of loop 1 gets a budget that grows each night (proposal: 6, 9, 12, 16, 20). Loop 2 budgets are 40% higher (whether this replaces or adds to the "+40% enemy HP" idea in 16 is deferred; Siddharth will decide later).
+- **Threat budget per night:** each enemy costs threat points (proposal: Grunt 1, Scout 1, Wisp 2, Splitter 3, Tunneler 3, Fog variant 3). Night n of loop 1 gets a budget that grows each night (was 6, 9, 12, 16, 20; 2026-10-22 harder: **8, 14, 22, 32, 44**, plus enemy HP +25% per night; Scouts unlock night 2, Splitters night 3). Loop 2 budgets are 40% higher (whether this replaces or adds to the "+40% enemy HP" idea in 16 is deferred; Siddharth will decide later).
 - **Spending the budget:** the generator buys enemies only from the types unlocked so far, splits them into 3 groups, gives each group a spawn point and a start time inside the night. Group sizes grow through the night.
 - **Guard rails (so it stays fair and cozy):**
   - a new enemy type always appears first in a small group, alone, so the player can learn it;

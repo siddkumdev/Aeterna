@@ -1,51 +1,116 @@
 class_name Enemy
 extends Node3D
-## Grunt, stand-in body (the real model comes with the character kit): a dark ink capsule with two ember
-## eyes. Walks cell to cell along its route to the nearest standing house, then hits it (2 HP/s).
-## Ticked by Game.step(), never by _process, so the headless tests can run a night frame by frame.
+## One enemy, stand-in body (real models come with the character kit): dark ink shapes with ember eyes.
+##   grunt     capsule
+##   scout     small, thin, with a pointed hood; twice as fast
+##   splitter  squat body under a wide mushroom cap; splits into 2 splitlings when it dies
+##   splitling a small capsule
+## Walks cell to cell along its route to the nearest standing house, slightly off the centre line (its own
+## `offset`, so a crowd spreads out), then hits the house. Ticked by Game.step(), never by _process, so the
+## headless tests can run a night frame by frame.
 
 signal died(enemy: Enemy)
 
-const RADIUS := 0.012
-const HEIGHT := 0.045
+const INK := Color(0.118, 0.102, 0.133)
 
 var game  # Game
-var hp := GameConfig.GRUNT_HP
+var kind := "grunt"
+var stats: Dictionary
+var hp := 20.0
 var cell := Vector2i.ZERO
 var path: Array[Vector2i] = []
 var target_house := -1
 var attacking := false
 var alive := true
+var offset := Vector3.ZERO  # board-local, within GameConfig.SPREAD cells of the cell centre
+var height := 0.045
 
-var _mat: StandardMaterial3D
+var _mats: Array[StandardMaterial3D] = []
 var _flash := 0.0
 
 
-func _init() -> void:
-	var body := MeshInstance3D.new()
+func setup(enemy_kind: String, night: int, rng: RandomNumberGenerator) -> void:
+	## night is 0-based; HP grows by HP_RAMP_PER_NIGHT each night.
+	kind = enemy_kind
+	stats = GameConfig.ENEMIES[kind]
+	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night)
+	var s := GameConfig.SPREAD * GameConfig.CELL
+	offset = Vector3(rng.randf_range(-s, s), 0.0, rng.randf_range(-s, s))
+	match kind:
+		"scout":
+			height = 0.036
+			_capsule(0.008, 0.03)
+			_cone(0.009, 0.014, 0.034)
+			_eyes(0.0035, 0.024, 0.007)
+		"splitter":
+			height = 0.05
+			_capsule(0.013, 0.034)
+			_cap(0.024, 0.014, 0.036)
+			_eyes(0.006, 0.024, 0.012)
+		"splitling":
+			height = 0.026
+			_capsule(0.008, 0.024)
+			_eyes(0.003, 0.017, 0.0072)
+		_:
+			_capsule(0.012, 0.045)
+			_eyes(0.0045, 0.032, 0.0102)
+
+
+func _capsule(r: float, h: float) -> void:
+	var m := MeshInstance3D.new()
 	var cm := CapsuleMesh.new()
-	cm.radius = RADIUS
-	cm.height = HEIGHT
-	body.mesh = cm
-	body.position.y = HEIGHT / 2.0
-	_mat = ModelUtil.flat_material(Color8(0x1E, 0x1A, 0x22))
-	body.material_override = _mat
-	add_child(body)
+	cm.radius = r
+	cm.height = h
+	m.mesh = cm
+	m.position.y = h / 2.0
+	_paint(m)
+
+
+func _cone(r: float, h: float, y: float) -> void:
+	var m := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.0
+	cm.bottom_radius = r
+	cm.height = h
+	m.mesh = cm
+	m.position.y = y + h / 2.0
+	_paint(m)
+
+
+func _cap(r: float, h: float, y: float) -> void:
+	var m := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = h * 2.0
+	sm.is_hemisphere = true
+	m.mesh = sm
+	m.position.y = y
+	_paint(m)
+
+
+func _paint(m: MeshInstance3D) -> void:
+	var mat := ModelUtil.flat_material(INK)
+	m.material_override = mat
+	_mats.append(mat)
+	add_child(m)
+
+
+func _eyes(spread: float, y: float, z: float) -> void:
 	var eye_mat := ModelUtil.flat_material(Color8(0xFF, 0x8A, 0x2A), true)
 	for side in [-1, 1]:
 		var eye := MeshInstance3D.new()
 		var em := SphereMesh.new()
-		em.radius = 0.0028
-		em.height = 0.0056
+		em.radius = spread * 0.6
+		em.height = spread * 1.2
 		eye.mesh = em
 		eye.material_override = eye_mat
-		eye.position = Vector3(side * 0.0045, HEIGHT * 0.72, RADIUS * 0.85)
+		eye.position = Vector3(side * spread, y, z)
 		add_child(eye)
 
 
-func spawn_at(spawn_cell: Vector2i) -> void:
+func spawn_at(spawn_cell: Vector2i, at := Vector3.INF) -> void:
 	cell = spawn_cell
-	position = NavGrid.cell_centre(cell)
+	position = NavGrid.cell_centre(cell) + offset if at == Vector3.INF else at
 	_reroute()
 
 
@@ -68,21 +133,22 @@ func step(delta: float) -> void:
 	if _flash > 0.0:
 		_flash -= delta
 		if _flash <= 0.0:
-			_mat.albedo_color = Color8(0x1E, 0x1A, 0x22)
+			for m in _mats:
+				m.albedo_color = INK
 	if target_house == -1 or game.houses[target_house].is_shuttered:
 		_reroute()
 		if target_house == -1:
 			return  # nothing left to reach: stands still until the night ends
 	if attacking:
-		game.houses[target_house].damage(GameConfig.GRUNT_DPS * delta)
+		game.houses[target_house].damage(stats["dps"] * delta)
 		return
 	if path.is_empty():
 		attacking = true
 		_face(NavGrid.footprint_centre(game.houses[target_house].cell, GameConfig.TOWER_SIZE))
 		return
-	var goal := NavGrid.cell_centre(path[0])
+	var goal := NavGrid.cell_centre(path[0]) + offset
 	var to := goal - position
-	var stride := GameConfig.GRUNT_SPEED * GameConfig.CELL * delta
+	var stride: float = stats["speed"] * GameConfig.CELL * delta
 	_face(goal)
 	if to.length() <= stride:
 		position = goal
@@ -102,7 +168,8 @@ func take_damage(amount: float) -> void:
 	if not alive:
 		return
 	hp -= amount
-	_mat.albedo_color = Color8(0xFF, 0xE6, 0xC8)
+	for m in _mats:
+		m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
 	_flash = 0.08
 	if hp <= 0.0:
 		alive = false
@@ -111,4 +178,4 @@ func take_damage(amount: float) -> void:
 
 
 func chest() -> Vector3:
-	return global_position + Vector3(0, HEIGHT * 0.55, 0)
+	return global_position + Vector3(0, height * 0.55, 0)

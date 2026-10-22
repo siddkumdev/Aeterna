@@ -42,7 +42,8 @@ var selected := ""  # tower kind being placed, "" = none
 var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are debug only
 var last_message := ""
 
-var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i}], sorted by time
+var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i, "kind": String}], sorted by time
+var _rng := RandomNumberGenerator.new()  # seeded per night: cluster sizes, gap cells, walking offsets
 var _towers_root: Node3D
 var _enemies_root: Node3D
 var _grid_lines: MeshInstance3D
@@ -124,10 +125,20 @@ func start_night() -> bool:
 		return false
 	night_time = 0.0
 	_spawn_queue.clear()
+	_rng.seed = run_seed * 31 + night
 	for g in WavePlan.groups_for(night, run_seed):
+		# a group leaves the forest in clusters of 2-3 that come out together, each from a random cell of the gap
 		var gap: Array = GameConfig.SPAWNS[g["spawn"]]
-		for i in range(g["count"]):
-			_spawn_queue.append({"t": g["time"] + i * GameConfig.IN_GROUP_GAP, "cell": gap[i % gap.size()]})
+		var list: Array = g["enemies"]
+		var i := 0
+		var t: float = g["time"]
+		while i < list.size():
+			var n := mini(_rng.randi_range(GameConfig.CLUSTER_SIZE.x, GameConfig.CLUSTER_SIZE.y), list.size() - i)
+			for j in range(n):
+				var c: Vector2i = gap[_rng.randi_range(0, gap.size() - 1)]
+				_spawn_queue.append({"t": t + _rng.randf_range(0.0, 0.4), "cell": c, "kind": list[i + j]})
+			i += n
+			t += GameConfig.CLUSTER_GAP
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
 	_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
 	return true
@@ -178,7 +189,8 @@ func step(delta: float) -> void:
 		return
 	night_time += delta
 	while not _spawn_queue.is_empty() and _spawn_queue[0]["t"] <= night_time:
-		_spawn(_spawn_queue.pop_front()["cell"])
+		var ev: Dictionary = _spawn_queue.pop_front()
+		_spawn(ev["cell"], ev["kind"])
 	for e in enemies.duplicate():
 		if is_instance_valid(e):
 			e.step(delta)
@@ -197,13 +209,23 @@ func step(delta: float) -> void:
 		_refresh_hud()
 
 
-func _spawn(cell: Vector2i) -> void:
+func _spawn(cell: Vector2i, kind: String, at := Vector3.INF) -> Enemy:
 	var e := Enemy.new()
 	e.game = self
+	e.setup(kind, night, _rng)
 	_enemies_root.add_child(e)
-	e.spawn_at(cell)
-	e.died.connect(func(en): enemies.erase(en))
+	e.spawn_at(cell, at)
+	e.died.connect(_on_enemy_died)
 	enemies.append(e)
+	return e
+
+
+func _on_enemy_died(e: Enemy) -> void:
+	enemies.erase(e)
+	if e.stats.has("splits_into") and phase == Phase.NIGHT:
+		for i in range(e.stats["split_count"]):
+			var side := Vector3(GameConfig.CELL * 0.3 * (1 if i == 0 else -1), 0, 0).rotated(Vector3.UP, e.rotation.y)
+			_spawn(e.cell, e.stats["splits_into"], e.position + side)
 
 
 func _on_house_shuttered(_h: House) -> void:
@@ -488,7 +510,7 @@ func _refresh_hud() -> void:
 	var phase_name: String = ["Day", "Night", "Lost", "Done"][phase]
 	var t := "%s %d   |   Trust %d   |   Houses %d/%d" % [phase_name, night + 1, trust, standing_houses().size(), houses.size()]
 	if phase == Phase.NIGHT:
-		t += "   |   Grunts %d" % (enemies.size() + _spawn_queue.size())
+		t += "   |   Enemies %d" % (enemies.size() + _spawn_queue.size())
 	if speed > 2.0:
 		t += "   |   DEBUG x%d" % int(speed)
 	elif speed > 1.0:

@@ -23,9 +23,10 @@ func _initialize() -> void:
 	g.try_build("brazier", Vector2i(19, 9))
 	g.set_process(true)
 	g.speed = 0.0  # the shot steps the night by hand below
+	g.night = 2  # night 3: Grunts, Scouts and the first Splitter
 	g.start_night()
 	var t := 0.0
-	while t < 22.0:
+	while t < 19.0:
 		g.step(0.05)
 		t += 0.05
 	await _settle()

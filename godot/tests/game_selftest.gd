@@ -26,12 +26,31 @@ func _waves() -> void:
 		var g := WavePlan.groups_for(n, 1)
 		var total := 0
 		var edges := {}
+		var kinds := {}
+		var max_share := 0
 		for x in g:
-			total += x["count"]
+			var t := WavePlan.threat_of(x["enemies"])
+			total += t
+			max_share = maxi(max_share, t)
 			edges[x["spawn"]] = true
-		check("night %d: group sizes add up to the budget (%d)" % [n + 1, total], total == GameConfig.NIGHT_BUDGETS[n])
+			for k in x["enemies"]:
+				kinds[k] = true
+				check("night %d: %s is unlocked" % [n + 1, k], GameConfig.ENEMIES[k]["unlock"] <= n + 1) if GameConfig.ENEMIES[k]["unlock"] > n + 1 else null
+		check("night %d: threat adds up to the budget (%d)" % [n + 1, total], total == GameConfig.NIGHT_BUDGETS[n])
 		check("night %d: one group from each spawn" % (n + 1), edges.size() == 3)
+		check("night %d: no spawn gets more than half the budget" % (n + 1), max_share * 2 <= GameConfig.NIGHT_BUDGETS[n] + 2)
+		for k in GameConfig.WAVE_TYPES:
+			if GameConfig.ENEMIES[k]["unlock"] == n + 1 and n > 0:
+				check("night %d: new type %s opens the night alone" % [n + 1, k], g[0]["enemies"].all(func(e): return e == k))
+		print("      night %d: %s" % [n + 1, str(g.map(func(x): return "%s %s" % [x["spawn"], _count(x["enemies"])]))])
 	check("same seed, same plan", str(WavePlan.groups_for(2, 5)) == str(WavePlan.groups_for(2, 5)))
+
+
+func _count(list: Array) -> String:
+	var c := {}
+	for k in list:
+		c[k] = c.get(k, 0) + 1
+	return str(c)
 
 
 func _nav() -> void:
@@ -42,10 +61,10 @@ func _nav() -> void:
 		check("route from %s reaches a house" % k, not r.is_empty())
 	check("cannot build on a house", not nav.can_build(GameConfig.HOUSE_CELLS[0], Vector2i(2, 2), all))
 	check("cannot build on the forest ring", not nav.can_build(Vector2i(0, 2), Vector2i(2, 2), all))
-	check("cannot build on a spawn gap", not nav.can_build(Vector2i(11, 0), Vector2i(2, 2), all))
+	check("cannot build on a spawn gap", not nav.can_build(Vector2i(10, 0), Vector2i(2, 2), all))
 	check("can build on open ground", nav.can_build(Vector2i(1, 1), Vector2i(2, 2), all))
 	# Plug the north gap: the cells just inside it. Building there must be refused.
-	check("cannot seal a spawn off", not nav.can_build(Vector2i(11, 1), Vector2i(2, 2), all))
+	check("cannot seal a spawn off", _seals_north(nav, all))
 	nav.add_tower(Vector2i(1, 1), Vector2i(2, 2))
 	check("tower cells are blocked", not nav.can_build(Vector2i(2, 2), Vector2i(2, 2), all))
 	var r := nav.route(GameConfig.SPAWNS["west"][0], all)
@@ -54,6 +73,15 @@ func _nav() -> void:
 		if nav.kind.get(c, "") in ["tower", "house", "forest"]:
 			crosses = true
 	check("routes avoid towers, houses and forest", not r.is_empty() and not crosses)
+
+
+func _seals_north(nav: NavGrid, all: Array[int]) -> bool:
+	## The north gap is 4 cells wide: one 2x2 tower inside it is fine, the second that closes it is refused.
+	var first := nav.can_build(Vector2i(10, 1), Vector2i(2, 2), all)
+	nav.add_tower(Vector2i(10, 1), Vector2i(2, 2))
+	var second := nav.can_build(Vector2i(12, 1), Vector2i(2, 2), all)
+	nav.clear_towers()
+	return first and not second
 
 
 func _make_game() -> Game:
@@ -116,6 +144,13 @@ func _nights() -> void:
 	check("bot run ends (lost or loop complete)", g.phase == Game.Phase.LOST or g.phase == Game.Phase.DONE)
 	check("new run resets", (func(): g.new_run(2); return g.phase == Game.Phase.DAY and g.towers.is_empty() and g.trust == GameConfig.START_TRUST and g.standing_houses().size() == 6).call())
 
+	# Balance read (2026-10-22, Siddharth: "too easy, 3 towers won"). Target: three towers alone fall by
+	# night 3; a player who keeps building near the village can still go far.
+	var three := await _bot(false)
+	var keeps := await _bot(true)
+	check("balance: 3 towers alone fall by night 3", three <= 3)
+	print("      balance: 3 towers only reached night %d; keep-building bot reached night %d (6 = all held)" % [three, keeps])
+
 	# 3) Speed: the same defended night at x1, x2 (player) and x10 (debug), driven the way a frame does it.
 	var results := []
 	for spd in [1.0, 2.0, 10.0]:
@@ -138,3 +173,34 @@ func _nights() -> void:
 	check("x2 night ends in about half the frames", absf(float(results[1][1]) / results[0][1] - 0.5) < 0.05)
 	check("x10 night ends in about a tenth of the frames", absf(float(results[2][1]) / results[0][1] - 0.1) < 0.03)
 	check("same outcome at x1, x2 and x10", results[0][2] == results[1][2] and results[0][2] == results[2][2] and results[0][3] == results[2][3])
+
+
+func _bot(keep_building: bool) -> int:
+	## Plays a run: 3 towers on day 1 near the village (fire centre, longbow north, brazier west), then either
+	## nothing more or every day spends all trust on spots round the village. Returns the night it lost on,
+	## or 6 when all 5 nights held.
+	var g := await _make_game()
+	var spots: Array[Vector2i] = [Vector2i(11, 11), Vector2i(11, 4), Vector2i(5, 11), Vector2i(17, 11), Vector2i(11, 18),
+		Vector2i(14, 5), Vector2i(8, 5), Vector2i(5, 15), Vector2i(17, 15), Vector2i(5, 7), Vector2i(17, 7), Vector2i(14, 17)]
+	var order := ["fire", "crossbow", "brazier"]
+	var k := 0
+	var first := true
+	while g.phase == Game.Phase.DAY:
+		if first or keep_building:
+			var built := true
+			while built and (keep_building or k < 3):
+				built = false
+				for s in spots:
+					if g.try_build(order[k % 3], s):
+						k += 1
+						built = true
+						break
+		first = false
+		var n := g.night + 1
+		await _play_night(g)
+		print("        %s night %d: towers %d, %s" % ["keep" if keep_building else "three", n, g.towers.size(), g.last_message])
+		if g.phase == Game.Phase.LOST:
+			g.queue_free()
+			return n
+	g.queue_free()
+	return 6

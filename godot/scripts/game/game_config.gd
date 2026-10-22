@@ -25,24 +25,38 @@ const HOUSE_SCENES: Array[String] = [
 ]
 
 # Forest spawn points (decided 2026-10-22: north, east, west; the south edge faces the player).
-# Each is the pair of edge cells left open in the forest ring.
+# Each is the row of edge cells left open in the forest ring: 4 cells wide (2026-10-22, Siddharth: wide gaps,
+# so enemies come out spread across the gap instead of in single file).
 const SPAWNS := {
-	"north": [Vector2i(11, 0), Vector2i(12, 0)],
-	"east": [Vector2i(23, 11), Vector2i(23, 12)],
-	"west": [Vector2i(0, 11), Vector2i(0, 12)],
+	"north": [Vector2i(10, 0), Vector2i(11, 0), Vector2i(12, 0), Vector2i(13, 0)],
+	"east": [Vector2i(23, 10), Vector2i(23, 11), Vector2i(23, 12), Vector2i(23, 13)],
+	"west": [Vector2i(0, 10), Vector2i(0, 11), Vector2i(0, 12), Vector2i(0, 13)],
 }
 
-# Grunt (spec 9 + 2026-10-22: 2 damage per second in melee; cannot damage towers in this slice)
-const GRUNT_HP := 20.0
-const GRUNT_SPEED := 0.4  # cells per second
-const GRUNT_DPS := 2.0
-const GRUNT_THREAT := 1
+# Enemies (spec 9; speeds in cells/s). None can damage towers in this slice. dps (damage per second to a
+# house) is only given for the Grunt (2, decided 2026-10-22); the others reuse it as a STAND-IN.
+# unlock = first night (1-based) the type can appear. threat = cost against the night budget (spec 6a).
+# weight = how often the wave plan picks it among unlocked types (slice choice: mostly Grunts).
+const ENEMIES := {
+	"grunt": {"name": "Grunt", "hp": 20.0, "speed": 0.4, "dps": 2.0, "threat": 1, "unlock": 1, "weight": 5},
+	"scout": {"name": "Scout", "hp": 10.0, "speed": 0.8, "dps": 2.0, "threat": 1, "unlock": 2, "weight": 3},
+	"splitter": {"name": "Splitter", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "weight": 2,
+		"splits_into": "splitling", "split_count": 2},
+	# the two small pieces a Splitter leaves (spec: 2 x 8 HP); never bought by the wave plan
+	"splitling": {"name": "Splitling", "hp": 8.0, "speed": 0.4, "dps": 1.0, "threat": 0, "unlock": 99, "weight": 0},
+}
+const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter"]  # what the wave plan may buy
+# Enemy HP grows each night (2026-10-22, Siddharth: ramp per night): night n has x(1 + HP_RAMP * (n - 1)).
+const HP_RAMP_PER_NIGHT := 0.25
 
-# Waves (spec 6a + 2026-10-22): threat budget per night, 3 groups (one per spawn), a new group every 12 s
-const NIGHT_BUDGETS: Array[int] = [6, 9, 12, 16, 20]
+# Waves (spec 6a; 2026-10-22: harder, budgets ramp up). Threat budget per night, 3 groups (one per spawn),
+# a new group every 12 s. Each group leaves the forest in clusters of 2-3 that come out together.
+const NIGHT_BUDGETS: Array[int] = [8, 14, 22, 32, 44]
 const GROUP_INTERVAL := 12.0
 const FIRST_GROUP_DELAY := 3.0
-const IN_GROUP_GAP := 1.0  # seconds between enemies of one group, so they do not stack (slice choice)
+const CLUSTER_SIZE := Vector2i(2, 3)
+const CLUSTER_GAP := 2.5  # seconds between clusters of one group
+const SPREAD := 0.3  # each enemy walks up to this many cells off the centre line, so a crowd does not form a queue
 
 # Towers (spec 7). The Airship attacks air only and there are no flyers in this slice, so it is left out.
 const TOWERS := {
