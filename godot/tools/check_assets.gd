@@ -89,6 +89,8 @@ func _check(cat: String, path: String) -> void:
 		budget = 1500  # 2 x 2 village square, same override as tools/validate_asset.py
 	if path.contains("ew_world_forest_clump"):
 		budget = 1200  # forest ring clumps (W22, ~1k each), same override as tools/validate_asset.py
+	if path.contains("ew_vfx_rewind_hourglass"):
+		budget = 1000  # rewind hourglass hero prop (X11, asset list <1k), same override as tools/validate_asset.py
 	if path.contains("ew_world_island"):
 		budget = 4000  # lush grass (Siddharth 2026-10-20), same override as tools/validate_asset.py
 	print("   size      %.1f x %.1f cells footprint, %.1f cells tall (%.3f x %.3f x %.3f m)"
