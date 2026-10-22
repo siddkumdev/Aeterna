@@ -1,0 +1,106 @@
+class_name Projectile
+extends Node3D
+## One shot (spec 7). Ticked by Game.step().
+##   single: fireball homes on its target and hits only it.
+##   splash: cannonball is lobbed at where the target stood and hits every enemy within `splash` cells.
+##   pierce: wind bolt flies straight for the tower's range and hits every enemy it passes within
+##           `pierce_width` cells, each once.
+
+var game  # Game
+var kind := "single"
+var damage := 0.0
+var speed := 1.0  # m/s
+var target: Enemy
+var splash := 0.0  # m
+var width := 0.0  # m
+var done := false
+
+var _from := Vector3.ZERO
+var _to := Vector3.ZERO
+var _t := 0.0
+var _flight := 1.0
+var _left := 0.0
+var _dir := Vector3.ZERO
+var _hit := {}
+
+
+func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float) -> void:
+	kind = cfg["kind"]
+	damage = cfg["damage"]
+	speed = cfg["shot_speed"] * GameConfig.CELL
+	splash = cfg.get("splash", 0.0) * GameConfig.CELL
+	width = cfg.get("pierce_width", 0.0) * GameConfig.CELL
+	target = enemy
+	_from = from
+	global_position = from
+	_to = enemy.chest()
+	if kind == "splash":
+		_to = enemy.global_position
+		_flight = maxf(0.05, _from.distance_to(_to) / speed)
+	elif kind == "pierce":
+		_dir = _to - _from
+		_dir.y = 0.0
+		_dir = _dir.normalized()
+		_left = reach
+		look_at(global_position + _dir, Vector3.UP, true)
+	var res = load(cfg["shot"])
+	if res:
+		add_child(res.instantiate())
+
+
+func step(delta: float) -> void:
+	if done:
+		return
+	match kind:
+		"single":
+			if is_instance_valid(target) and target.alive:
+				_to = target.chest()
+			var to := _to - global_position
+			var stride := speed * delta
+			if to.length() <= stride:
+				if is_instance_valid(target) and target.alive:
+					target.take_damage(damage)
+				_finish()
+			else:
+				global_position += to.normalized() * stride
+		"splash":
+			_t += delta / _flight
+			var p := _from.lerp(_to, minf(_t, 1.0))
+			p.y += 4.0 * (0.03 + _from.distance_to(_to) * 0.25) * _t * (1.0 - _t)
+			global_position = p
+			if _t >= 1.0:
+				for e in game.enemies.duplicate():
+					if is_instance_valid(e) and e.alive and _flat(e.global_position - _to) <= splash:
+						e.take_damage(damage)
+				_finish()
+		"pierce":
+			var stride := minf(speed * delta, _left)
+			var a := global_position
+			var b := a + _dir * stride
+			for e in game.enemies.duplicate():
+				if is_instance_valid(e) and e.alive and not _hit.has(e) and _seg_dist(e.global_position, a, b) <= width:
+					_hit[e] = true
+					e.take_damage(damage)
+			global_position = b
+			_left -= stride
+			if _left <= 0.0:
+				_finish()
+
+
+func _finish() -> void:
+	done = true
+	queue_free()
+
+
+static func _flat(v: Vector3) -> float:
+	return Vector2(v.x, v.z).length()
+
+
+static func _seg_dist(p: Vector3, a: Vector3, b: Vector3) -> float:
+	## Distance on the board plane from p to the segment a-b.
+	var p2 := Vector2(p.x, p.z)
+	var a2 := Vector2(a.x, a.z)
+	var b2 := Vector2(b.x, b.z)
+	var ab := b2 - a2
+	var t := 0.0 if ab.length_squared() == 0.0 else clampf((p2 - a2).dot(ab) / ab.length_squared(), 0.0, 1.0)
+	return p2.distance_to(a2 + ab * t)
