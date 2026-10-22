@@ -76,7 +76,21 @@ func _initialize() -> void:
 	g._refresh_ui()
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_cards.png")
-	print("saved ", prefix, "_day / _night / _air / _boss / _cards .png")
+	# Foresight (step 3): the lens reveal of the coming night at tiers 1, 3 and 5 (desktop look: every gap)
+	g.set_process(false)  # keep the desktop L key from putting the lens down
+	for lp in [0, 2, 4]:
+		g.new_run(1)
+		g.loop = lp
+		g.night = 2
+		g._start_loop("Foresight tier %d" % (lp + 1))
+		g.night = 2
+		g.try_build("fire", Vector2i(11, 11))
+		g._lens.transform = g._lens_rest.translated(Vector3(0, 0.12, -0.03))
+		g.set_lens(true)
+		g._refresh_ui()
+		await _settle()
+		root.get_viewport().get_texture().get_image().save_png(prefix + "_foresight_t%d.png" % (lp + 1))
+	print("saved ", prefix, "_day / _night / _air / _boss / _cards / _foresight_t1/t3/t5 .png")
 	quit()
 
 

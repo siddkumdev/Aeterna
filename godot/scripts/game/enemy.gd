@@ -51,7 +51,7 @@ var _surface := Vector2i.ZERO  # where a Tunneler comes up
 
 
 func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator) -> void:
-	## night and loop are 0-based; HP grows by HP_RAMP_PER_NIGHT each night and by LOOP2_HP in loop 2.
+	## night and loop are 0-based; HP grows by HP_RAMP_PER_NIGHT each night and by LOOP_HP_STEP each loop.
 	kind = enemy_kind
 	stats = GameConfig.ENEMIES[kind]
 	is_boss = stats.get("boss", false)
@@ -60,7 +60,7 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 	colour = MIST if stats.get("hidden", false) else INK
 	_body = Node3D.new()
 	add_child(_body)
-	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night) * (GameConfig.LOOP2_HP if loop >= 1 else 1.0)
+	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night) * (1.0 + GameConfig.LOOP_HP_STEP * loop)
 	var s := GameConfig.SPREAD * GameConfig.CELL
 	offset = Vector3(rng.randf_range(-s, s), 0.0, rng.randf_range(-s, s))
 	match kind:
@@ -194,35 +194,13 @@ func targetable(air: bool, ground: bool) -> bool:
 	return alive and not underground and (air if flying else ground)
 
 
-func _nearest_house() -> int:
-	## Straight-line nearest standing house (flyers and Tunnelers do not follow the ground routes).
-	var best := -1
-	var best_d := INF
-	for i in game.standing_houses():
-		var d := _flat(_house_point(i) - position)
-		if d < best_d:
-			best_d = d
-			best = i
-	return best
-
-
-func _house_point(i: int) -> Vector3:
-	return NavGrid.footprint_centre(game.houses[i].cell, GameConfig.TOWER_SIZE)
-
-
 func _reroute() -> void:
 	attacking = false
 	if flying or underground:
-		target_house = _nearest_house()
+		target_house = game.nearest_house_to(position)
 		path = []
 		if underground and target_house != -1:
-			# comes up on the free cell next to that house closest to where it is now
-			var best_d := INF
-			for c in game.nav.goals_of(target_house):
-				var d := _flat(NavGrid.cell_centre(c) - position)
-				if d < best_d:
-					best_d = d
-					_surface = c
+			_surface = game.surface_cell(target_house, position)  # the free cell by that house nearest to it
 		return
 	var r: Dictionary = game.nav.route(cell, game.standing_houses())
 	if r.is_empty():
@@ -282,7 +260,7 @@ func _move_straight(stride: float) -> void:
 	## Flyers head for a point fly_height cells over the house; a Tunneler for its surfacing cell.
 	var goal: Vector3
 	if flying:
-		goal = _house_point(target_house) + offset + Vector3(0, stats["fly_height"] * GameConfig.CELL, 0)
+		goal = game.house_point(target_house) + offset + Vector3(0, stats["fly_height"] * GameConfig.CELL, 0)
 	else:
 		goal = NavGrid.cell_centre(_surface) + offset
 	var to := goal - position
@@ -305,10 +283,6 @@ func _pop_up() -> void:
 	_body.visible = true
 	_mound.visible = false
 	_reroute()
-
-
-static func _flat(v: Vector3) -> float:
-	return Vector2(v.x, v.z).length()
 
 
 func _face(p: Vector3) -> void:

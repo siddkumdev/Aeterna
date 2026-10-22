@@ -15,10 +15,22 @@ const NIGHT_CLEAR_TRUST_PER_NIGHT := 10
 # Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
 const NIGHTS_PER_LOOP := 6
 const BOSS_NIGHT := 5  # 0-based: the 6th night
-const LOOPS_PER_RUN := 2
-# Loop 2 (spec 16): +40% enemy HP and one extra group per night
-const LOOP2_HP := 1.4
-const LOOP2_EXTRA_GROUPS := 1
+const LOOPS_PER_RUN := 5  # 2026-10-22 (Siddharth): 5 loops for M1, so Foresight reaches tier 5 (tier = loop)
+# Each loop after the first (spec 16 for loop 2: +40% enemy HP and one extra group per night; Claude's stand-in
+# for loops 3-5: the same step again each loop). Loop n (0-based) = HP x(1 + 0.4 n), n extra groups per night.
+const LOOP_HP_STEP := 0.4
+const EXTRA_GROUPS_PER_LOOP := 1
+
+# Foresight (spec 13): the Crystal Lens shows the coming night during the day. Tier = loop number (1-5,
+# Siddharth 2026-10-22). 1 blurry silhouettes + the direction of each group; 2 adds type icons + counts;
+# 3 adds path ribbons (and where Tunnelers come up); 4 adds timing; 5 adds the rewrite (close one spawn for
+# the night: its groups come from the next open edge instead). The Fog variant is never shown.
+const FORESIGHT_TIERS := 5
+const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Foresight only
+const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
+const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
+const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
+const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle of where the head looks (gaps are ~32 deg apart from the seat)
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
 const BUILT_SYSTEMS: Array[String] = ["airship"]
 

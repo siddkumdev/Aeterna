@@ -9,7 +9,9 @@ extends Node3D
 ##
 ## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
-## Debug builds only: F5 toggles x5 and F6 toggles x10 (for testing, not part of the game).
+## Debug builds only: F5 toggles x5, F6 x10 and F7 x50 (for testing, not part of the game).
+## Foresight: hold L to look through the Crystal Lens during the day (in VR: grab the lens on the table's right
+## corner and hold it up; it shows the groups you look toward).
 ##
 ## Everything moving is ticked from step(), so tests/game_selftest.gd can play whole nights headless.
 
@@ -48,6 +50,14 @@ var selected := ""  # tower kind being placed, "" = none
 var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are debug only
 var last_message := ""
 
+var foresight: Foresight
+var closed_spawn := ""  # Foresight tier 5 rewrite: the gap closed for the coming night
+
+var _lens: Node3D  # the Crystal Lens model (spec 13)
+var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
+var _lens_grip := Vector3.ZERO  # the grip anchor in the lens model's own space
+var _lens_hand: GameHand  # the hand holding it, or null
+var _xr_cam: XRCamera3D
 var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
 var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
 var _hourglass: Node3D
@@ -88,7 +98,12 @@ func _ready() -> void:
 	shots_root = _child(board, "Shots")
 	_build_houses()
 	_build_ghost()
+	foresight = Foresight.new()
+	foresight.name = "Foresight"
+	foresight.game = self
+	board.add_child(foresight)
 	_build_ui()
+	_build_lens()
 	if with_rig:
 		_build_rig()
 	new_run(run_seed)
@@ -126,6 +141,7 @@ func _start_loop(message: String) -> void:
 	var pockets := card("deep_pockets")
 	trust = GameConfig.START_TRUST + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
 	night = 0
+	closed_spawn = ""
 	_set_phase(Phase.DAY, message)
 
 
@@ -139,6 +155,8 @@ func _set_phase(p: int, message: String) -> void:
 	last_message = message
 	if p != Phase.DAY:
 		select("")
+	if foresight and foresight.showing:
+		set_lens(false)  # the lens only reads the coming night; it goes blank when the day ends
 	_set_light(NIGHT_LIGHT if p == Phase.NIGHT else DAY_LIGHT)
 	_refresh_ui()
 	phase_changed.emit(p)
@@ -151,7 +169,7 @@ func start_night() -> bool:
 	_spawn_queue.clear()
 	_rng.seed = run_seed * 31 + night
 	_held_tonight = false
-	for g in WavePlan.groups_for(night, run_seed, loop):
+	for g in night_plan():
 		# a group leaves the forest in clusters of 2-3 that come out together, each from a random cell of the gap
 		var gap: Array = GameConfig.SPAWNS[g["spawn"]]
 		var list: Array = g["enemies"]
@@ -164,16 +182,73 @@ func start_night() -> bool:
 				_spawn_queue.append({"t": t + _rng.randf_range(0.0, 0.4), "cell": c, "kind": list[i + j]})
 			i += n
 			t += GameConfig.CLUSTER_GAP
-	if night == GameConfig.BOSS_NIGHT:
-		var edges: Array = GameConfig.SPAWNS.keys()
-		var gap: Array = GameConfig.SPAWNS[edges[_rng.randi_range(0, edges.size() - 1)]]
-		_spawn_queue.append({"t": GameConfig.BOSS_DELAY, "cell": gap[gap.size() / 2], "kind": "boss"})
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
 	if night == GameConfig.BOSS_NIGHT:
 		_set_phase(Phase.NIGHT, "Boss night. The Warden comes (placeholder).")
 	else:
 		_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
 	return true
+
+
+func night_plan() -> Array[Dictionary]:
+	## The coming night's groups (WavePlan), with a Foresight rewrite applied (a closed spawn's groups come
+	## from the next edge instead) and, on the boss night, the boss as its own group. What Foresight reveals.
+	var plan := WavePlan.groups_for(night, run_seed, loop)
+	if night == GameConfig.BOSS_NIGHT:
+		var edges: Array = GameConfig.SPAWNS.keys()
+		var r := RandomNumberGenerator.new()
+		r.seed = run_seed * 131 + loop * 7 + night
+		plan.append({"time": GameConfig.BOSS_DELAY, "spawn": edges[r.randi_range(0, edges.size() - 1)], "enemies": ["boss"]})
+	if closed_spawn != "":
+		var keys: Array = GameConfig.SPAWNS.keys()
+		for g in plan:
+			if g["spawn"] == closed_spawn:
+				g["spawn"] = keys[(keys.find(closed_spawn) + 1) % keys.size()]
+	return plan
+
+
+func foresight_tier() -> int:
+	return mini(loop + 1, GameConfig.FORESIGHT_TIERS)
+
+
+func close_spawn(spawn: String) -> bool:
+	## Foresight tier 5 rewrite: close one forest gap for the coming night, once per night.
+	if phase != Phase.DAY or foresight_tier() < GameConfig.FORESIGHT_TIERS or closed_spawn != "" or not GameConfig.SPAWNS.has(spawn):
+		return false
+	closed_spawn = spawn
+	last_message = "The lens rewrites the night: the %s path is closed. Its enemies take the next one." % spawn
+	if foresight.showing:
+		foresight.refresh()
+	_refresh_ui()
+	return true
+
+
+func nearest_house_to(p: Vector3) -> int:
+	## Straight-line nearest standing house (flyers and Tunnelers do not follow the ground routes).
+	var best := -1
+	var best_d := INF
+	for i in standing_houses():
+		var d := Vector2(house_point(i).x - p.x, house_point(i).z - p.z).length()
+		if d < best_d:
+			best_d = d
+			best = i
+	return best
+
+
+func house_point(i: int) -> Vector3:
+	return NavGrid.footprint_centre(houses[i].cell, GameConfig.TOWER_SIZE)
+
+
+func surface_cell(house: int, p: Vector3) -> Vector2i:
+	## Where a Tunneler heading for `house` from `p` comes up: the free cell next to the house closest to p.
+	var best := Vector2i(-1, -1)
+	var best_d := INF
+	for c in nav.goals_of(house):
+		var d := Vector2(NavGrid.cell_centre(c).x - p.x, NavGrid.cell_centre(c).z - p.z).length()
+		if d < best_d:
+			best_d = d
+			best = c
+	return best
 
 
 func _end_night() -> void:
@@ -190,7 +265,8 @@ func _end_night() -> void:
 		_end_loop(true)
 		return
 	night += 1
-	var next := "Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
+	closed_spawn = ""
+	var next :="Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
 	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d trust. %s" % [standing, income, next])
 
 
@@ -383,6 +459,8 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
 	if trust < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
 		select("")
+	if foresight.showing:
+		foresight.refresh()  # a new tower can change the routes the lens draws
 	_update_ghost()
 	_refresh_ui()
 	return true
@@ -513,6 +591,9 @@ func _press_button(id: String) -> void:
 	if id.begins_with("card"):
 		choose_card(int(id.substr(4)))
 		return
+	if id.begins_with("close_"):
+		close_spawn(id.substr(6))
+		return
 	match id:
 		"night":
 			start_night()
@@ -546,6 +627,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F6:
 				if OS.is_debug_build():
 					set_speed(1.0 if speed == 10.0 else 10.0)
+			KEY_F7:
+				if OS.is_debug_build():
+					set_speed(1.0 if speed == 50.0 else 50.0)
 			KEY_R:
 				new_run(run_seed + 1)
 	elif event is InputEventMouseButton and event.pressed and _camera and not _xr:
@@ -562,6 +646,7 @@ func _process(delta: float) -> void:
 		left -= MAX_TICK
 	if not with_rig:
 		return
+	_update_lens()
 	if _xr:
 		if _active_hand:
 			_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
@@ -636,8 +721,107 @@ func _build_ui() -> void:
 		_hourglass.scale = Vector3.ONE * 2.0
 		_hourglass.visible = false
 		ui.add_child(_hourglass)
+	_build_close_signs(ui)
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
+
+
+func _build_close_signs(ui: Node3D) -> void:
+	## Foresight tier 5: one sign inside each forest gap, "Close this path tonight". Shown only while the lens
+	## is up at tier 5 and no gap has been closed tonight.
+	for spawn in GameConfig.SPAWNS:
+		var gap: Array = GameConfig.SPAWNS[spawn]
+		var centre := (NavGrid.cell_centre(gap[0]) + NavGrid.cell_centre(gap[gap.size() - 1])) / 2.0
+		var inward := (-centre * Vector3(1, 0, 1)).normalized()
+		var node := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.15, 0.065, 0.006)
+		node.mesh = bm
+		var mat := ModelUtil.flat_material(GameConfig.FORESIGHT_COLOUR.darkened(0.35))
+		node.material_override = mat
+		node.position = centre + inward * 3.0 * GameConfig.CELL + Vector3(0, 0.035, 0)
+		node.basis = Basis.looking_at(Vector3(0, 0, HALF + 0.3) - node.position * Vector3(1, 0, 1), Vector3.UP, true)
+		ui.add_child(node)
+		var label := Label3D.new()
+		label.text = "Close this\npath tonight"
+		label.font_size = 56
+		label.pixel_size = 0.0004
+		label.outline_size = 8
+		label.modulate = Color8(0xEA, 0xFA, 0xFF)
+		label.outline_modulate = Color8(0x10, 0x2A, 0x3A)
+		label.position = Vector3(0, 0, 0.0035)
+		node.add_child(label)
+		_buttons["close_" + spawn] = {"node": node, "mat": mat, "label": label, "hover": false, "box": AABB(-bm.size / 2.0, bm.size)}
+
+
+func foresight_signs(_on: bool) -> void:
+	_refresh_buttons()
+
+
+func _build_lens() -> void:
+	## The Crystal Lens rests on the table's right corner, past the signs (stand-in for "belt side").
+	var res = load(GameConfig.LENS_SCENE)
+	if res == null:
+		return
+	_lens = res.instantiate()
+	board.add_child(_lens)
+	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5), Vector3(HALF - 0.08, 0.012, HALF + 0.07))
+	_lens.transform = _lens_rest
+	for n in ModelUtil.walk(_lens):
+		if n is Marker3D and str(n.name).ends_with("grip_anchor"):
+			_lens_grip = ModelUtil.xform_to(n, _lens).origin
+
+
+func lens_grip_position() -> Vector3:
+	return _lens.global_transform * _lens_grip if _lens else Vector3.INF
+
+
+func hand_pressed(h: GameHand) -> void:
+	## A pinch or grasp near the lens grip picks the lens up; anywhere else it presses what the ray points at.
+	if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= GameConfig.LENS_GRAB_REACH:
+		_lens_hand = h
+		return
+	_active_hand = h
+	_press(h.ray_origin(), h.ray_dir())
+
+
+func hand_released(h: GameHand) -> void:
+	if h == _lens_hand:
+		_lens_hand = null
+		_lens.transform = _lens_rest
+		set_lens(false)
+
+
+func _update_lens() -> void:
+	if _lens == null:
+		return
+	if _lens_hand:
+		# the grip in the hand, the glass standing up out of the fist
+		var xf := _lens_hand.global_transform * Transform3D(Basis(Vector3.RIGHT, -PI / 2.0), Vector3.ZERO)
+		_lens.global_transform = xf * Transform3D(Basis.IDENTITY, -_lens_grip)
+		var up := _lens.global_position.y > board.global_position.y + GameConfig.LENS_RAISE
+		if up and _xr_cam:
+			set_lens(true, _xr_cam.global_position, -_xr_cam.global_transform.basis.z)
+		else:
+			set_lens(false)
+	elif not _xr:
+		var held := Input.is_key_pressed(KEY_L) and phase == Phase.DAY
+		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)) if held else _lens_rest
+		set_lens(held)
+
+
+func set_lens(up: bool, eye := Vector3.INF, look := Vector3.ZERO) -> void:
+	## Looking through the lens (or not). Only during the day; gaze-aimed when an eye and look are given.
+	if up and phase == Phase.DAY:
+		if not foresight.showing:
+			foresight.tier = foresight_tier()
+			foresight.refresh()
+		foresight.show_seen(eye, look)
+	elif foresight.showing:
+		foresight.hide_all()
+	else:
+		return
+	_refresh_buttons()
 
 
 func _make_label(parent: Node3D, pos: Vector3, size: int) -> Label3D:
@@ -668,6 +852,10 @@ func _refresh_hud() -> void:
 	if phase == Phase.CARDS or phase == Phase.DONE:
 		n = phase_name
 	var t := "Loop %d   |   %s   |   Trust %d   |   Houses %d/%d" % [loop + 1, n, trust, standing_houses().size(), houses.size()]
+	if phase == Phase.DAY:
+		t += "   |   Foresight %d" % foresight_tier()
+		if closed_spawn != "":
+			t += " (%s closed)" % closed_spawn
 	if phase == Phase.NIGHT:
 		t += "   |   Enemies %d" % (enemies.size() + _spawn_queue.size())
 	if speed > 2.0:
@@ -693,6 +881,10 @@ func _refresh_buttons() -> void:
 				b["node"].visible = phase == Phase.NIGHT
 				b["label"].text = "Speed x2" if speed == 2.0 else "Speed x1"
 				c = Color8(0xF0, 0xB0, 0x4A) if speed == 2.0 else c
+			"close_north", "close_east", "close_west":
+				b["node"].visible = day and foresight.showing and foresight_tier() >= GameConfig.FORESIGHT_TIERS \
+					and closed_spawn == "" and id.substr(6) in foresight.seen_spawns()
+				c = GameConfig.FORESIGHT_COLOUR.darkened(0.35)
 			"card0", "card1", "card2":
 				var i := int(id.substr(4))
 				b["node"].visible = phase == Phase.CARDS and i < offers.size()
@@ -769,14 +961,14 @@ func _build_rig() -> void:
 	var cam := XRCamera3D.new()
 	cam.position = Vector3(0, 1.2, 0)  # seated eye height
 	origin.add_child(cam)
+	_xr_cam = cam
 	for hand in ["left_hand", "right_hand"]:
 		var c := GameHand.new()
 		c.tracker = hand
 		c.pose = &"aim"
 		c.name = hand
 		origin.add_child(c)
-		c.pressed.connect(func(h: GameHand):
-			_active_hand = h
-			_press(h.ray_origin(), h.ray_dir()))
+		c.pressed.connect(hand_pressed)
+		c.released.connect(hand_released)
 		_hands.append(c)
 	_active_hand = _hands[1]

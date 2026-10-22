@@ -64,7 +64,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Loop 1:** 5 nights, then a boss night (night 6). Night count is fixed; what spawns each night is generated (see 6a).
 - **Day:** about 4-5 requests to complete; the player can end the day early by ringing the village bell (pinch the bell).
 - **Between phases:** short dusk (the forest stirs, villagers hide) and dawn (summary) beats, no input needed.
-- Loop 2 repeats the structure with the changes in 16 (vertical slice may stop after loop 2).
+- Loop 2 repeats the structure with the changes in 16. **2026-10-22 (Siddharth): a run is 5 loops for M1.** Loops 3-5 repeat the loop-2 step again each loop (stand-in: enemy HP x(1 + 0.4 x (loop - 1)), one more extra group per night each loop).
 
 ### 6a. Wave generation (Siddharth: "somewhat procedurally generated"; rules below are PROPOSED)
 What is fixed: the number of loops (2, loop 3 only if built), 5 nights + 1 boss night per loop, and when each enemy type first appears. What is generated: which enemies come each night, how many, from which of the 3 spawn points, and when.
@@ -145,7 +145,7 @@ Cooldown only; no mana or resource cost.
 ### 13. Foresight gesture
 - **Primary:** grab a crystal lens (always on the player's belt-side) and hold it up to look through toward the forest edge. Gaze-aimed.
 - **Optional:** cup a hand like a spyglass if hand detection proves reliable.
-- **Tier visuals:** tier 1 blurry silhouettes + the compass direction of each group; tier 2 adds type icons + counts; tier 3 adds exact path ribbons; tier 4 adds timing markers; tier 5 (late) "rewrite": close one forest spawn point or swap one enemy type.
+- **Tier visuals:** tier 1 blurry silhouettes + the compass direction of each group; tier 2 adds type icons + counts; tier 3 adds exact path ribbons; tier 4 adds timing markers; tier 5 (late) "rewrite": close one forest spawn point or swap one enemy type. **Tier = loop number (Siddharth 2026-10-22), so loop 5 reaches tier 5.** Built (M1 stand-in): the tier-5 rewrite is "close one gap for the coming night, once per night; its groups use the next edge"; swapping a type is not built.
 - Holding the lens costs nothing, but one hand is occupied while looking.
 - **Lens look per tier (Siddharth 2026-10-21, Godot):** the lens is a cracked hand mirror (I03 variant B); purple magic holds the shards together (VFX), and the cracks reduce as the Foresight tier rises.
 
@@ -165,7 +165,7 @@ Cooldown only; no mana or resource cost.
 - **Persists:** chosen abilities, Foresight tier, tower/troop unlocks, villager memories, loop count.
 - **Beating the boss:** the game shows 3 ability cards drawn from the pool; keep 1. (Confirmed by Siddharth.)
 - **Losing a night:** shows 1 card; keep it (no choice).
-- **Run length: FIXED RUN (Siddharth, for the hackathon).** A run is loop 1 and loop 2 (loop 3 only if built), then it ends. So a player earns about 1 to 3 cards per run; the pool of 14 is sized for variety across replays, not to be collected in one run.
+- **Run length: FIXED RUN (Siddharth, for the hackathon).** A run is 5 loops (2026-10-22; was loop 1 and loop 2), then it ends. So a player earns about 1 to 3 cards per run; the pool of 14 is sized for variety across replays, not to be collected in one run.
 - **Ability cards with rarity, PROPOSED (revision 4).** Siddharth's direction: most cards are tower/troop upgrades (towers have no tiers, so these ARE the upgrades), a few are overall upgrades, and each card rolls a rarity that scales its effect.
 - **Rarity roll:** each of the 3 offered cards rolls its own rarity: Common 70%, Rare 25%, Legendary 5%. (Odds confirmed by Siddharth.) Rarity shows on the card frame and with a reveal effect.
 - **Duplicates:** a card you already own can be offered again only at a higher rarity than the one you hold; taking it upgrades your copy (it does not stack on top).

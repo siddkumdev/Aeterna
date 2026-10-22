@@ -19,6 +19,7 @@ func _initialize() -> void:
 	await _nights()
 	await _cards()
 	await _step2()
+	await _foresight()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -48,6 +49,9 @@ func _waves() -> void:
 			check("night %d: new type %s opens alone in group %d" % [n + 1, k, i + 1], not g[i]["enemies"].is_empty() and g[i]["enemies"].all(func(e): return e == k))
 		print("      night %d: %s" % [n + 1, str(g.map(func(x): return "%s %s" % [x["spawn"], _count(x["enemies"])]))])
 	check("same seed, same plan", str(WavePlan.groups_for(2, 5)) == str(WavePlan.groups_for(2, 5)))
+	for lp in range(2, GameConfig.LOOPS_PER_RUN):
+		var gl := WavePlan.groups_for(3, 1, lp)
+		check("loop %d: %d groups (3 + %d extra)" % [lp + 1, gl.size(), lp], gl.size() == 3 + lp)
 	# flyers never more than a third of a night; Tunnelers and the Fog variant only in loop 2, from their night
 	var air_bad := 0
 	var loop1_bad := 0
@@ -181,7 +185,7 @@ func _nights() -> void:
 
 	# 3) Speed: the same defended night at x1, x2 (player) and x10 (debug), driven the way a frame does it.
 	var results := []
-	for spd in [1.0, 2.0, 10.0]:
+	for spd in [1.0, 2.0, 10.0, 50.0]:
 		var gs := await _make_game()
 		gs.try_build("fire", Vector2i(11, 11))
 		gs.try_build("crossbow", Vector2i(9, 3))
@@ -200,7 +204,8 @@ func _nights() -> void:
 		await process_frame
 	check("x2 night ends in about half the frames", absf(float(results[1][1]) / results[0][1] - 0.5) < 0.05)
 	check("x10 night ends in about a tenth of the frames", absf(float(results[2][1]) / results[0][1] - 0.1) < 0.03)
-	check("same outcome at x1, x2 and x10", results[0][2] == results[1][2] and results[0][2] == results[2][2] and results[0][3] == results[2][3])
+	check("x50 night ends in about a fiftieth of the frames", absf(float(results[3][1]) / results[0][1] - 0.02) < 0.01)
+	check("same outcome at x1, x2, x10 and x50", results.all(func(r): return r[2] == results[0][2] and r[3] == results[0][3]))
 
 
 func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
@@ -391,5 +396,142 @@ func _step2() -> void:
 	var hit2 := is_instance_valid(g2) and g2.hp < hp0
 	check("Twin Cannons Legendary + Long Mooring: both ground targets hit, half damage (3 per shell)",
 		hit1 and hit2 and is_equal_approx(fposmod(hp0 - g1.hp, 3.0), 0.0))
+	g.queue_free()
+	await process_frame
+
+
+func _foresight() -> void:
+	var g := await _make_game()
+	check("a run is 5 loops", GameConfig.LOOPS_PER_RUN == 5)
+	var tiers := []
+	for lp in range(5):
+		g.loop = lp
+		tiers.append(g.foresight_tier())
+	check("Foresight tier = loop number (1..5)", tiers == [1, 2, 3, 4, 5])
+
+	# what each tier reveals, on loop 2's night 3 (Fog variants can come) of several seeds
+	var fog_seen := 0
+	var fog_planned := 0
+	var ok1 := true
+	var ok2 := true
+	var ok3 := true
+	var ok4 := true
+	for sd in range(1, 11):
+		g.run_seed = sd
+		g.loop = 1
+		g.night = 2
+		var plan := g.night_plan()
+		for grp in plan:
+			fog_planned += grp["enemies"].count("fog")
+		var r1 := Foresight.reveal(1, plan, g)
+		var r2 := Foresight.reveal(2, plan, g)
+		var r3 := Foresight.reveal(3, plan, g)
+		var r4 := Foresight.reveal(4, plan, g)
+		for i in r1.size():
+			var shown := 0
+			for k in r2[i]["types"]:
+				shown += r2[i]["types"][k]
+				if k == "fog":
+					fog_seen += 1
+			ok1 = ok1 and not r1[i].has("types") and r1[i]["silhouettes"].size() == ceili(shown / 2.0)
+			ok2 = ok2 and r2[i]["silhouettes"].size() == shown
+			ok3 = ok3 and r3[i].has("paths") and not (r3[i]["paths"].is_empty() and r3[i]["surface"].is_empty()) and not r2[i].has("paths")
+			ok4 = ok4 and r4[i].has("time") and not r3[i].has("time")
+	check("tier 1: silhouettes only, about half as many as are coming", ok1)
+	check("tier 2: one silhouette each plus type counts", ok2)
+	check("tier 3: path ribbons for every group", ok3)
+	check("tier 4: departure times", ok4)
+	check("the Fog variant never shows (%d planned)" % fog_planned, fog_seen == 0 and fog_planned > 0)
+
+	# tier 3: the ring drawn for a Tunneler is where it really comes up
+	g.run_seed = 1
+	g.loop = 2
+	g.night = 0
+	var gap: Array = GameConfig.SPAWNS["east"]
+	var mid: Vector2i = gap[gap.size() / 2]
+	var fake := [{"time": 3.0, "spawn": "east", "enemies": ["tunneler"]}]
+	var predicted: Vector2i = Foresight.reveal(3, fake, g)[0]["surface"][0]
+	g.start_night()
+	g._spawn_queue.clear()
+	var tu: Enemy = g._spawn(mid, "tunneler")
+	var t := 0.0
+	while tu.underground and t < 120.0:
+		g.step(0.05)
+		t += 0.05
+	check("tier 3 ring = where the Tunneler comes up %s" % str(predicted), tu.cell == predicted)
+	g.queue_free()
+	await process_frame
+
+	# the lens: day only, gaze-aimed
+	g = await _make_game()
+	g.set_lens(true)
+	check("lens up in the day shows the coming night", g.foresight.showing and not g.foresight.seen_spawns().is_empty())
+	var eye := g.board.to_global(Vector3(0, 0.45, GameConfig.SIZE * GameConfig.CELL / 2.0 + 0.25))
+	var north := g.board.to_global(NavGrid.cell_centre(GameConfig.SPAWNS["north"][1]))
+	g.set_lens(true, eye, north - eye)
+	var seen := g.foresight.seen_spawns()
+	var plan_edges := {}
+	for grp in g.night_plan():
+		plan_edges[grp["spawn"]] = true
+	check("gaze-aimed: looking north shows only north %s" % str(seen), seen == ["north"] or (not plan_edges.has("north") and seen.is_empty()))
+	g.set_lens(false)
+	check("lens down hides it", not g.foresight.showing and not g.foresight.visible)
+	g.set_lens(true)
+	g.start_night()
+	check("the night starting blanks the lens", not g.foresight.showing)
+	g.set_lens(true)
+	check("no reveal during the night", not g.foresight.showing)
+	g.queue_free()
+	await process_frame
+
+	# the grab: a hand pinching at the lens grip holds it; held up high, the reveal shows; letting go puts it back
+	g = await _make_game()
+	var cam := XRCamera3D.new()
+	root.add_child(cam)
+	cam.global_position = g.board.to_global(Vector3(0, 0.45, 0.85))
+	cam.look_at(g.board.global_position)
+	g._xr_cam = cam
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	var rest := g._lens.global_position
+	hand.global_position = g.lens_grip_position()
+	g.hand_pressed(hand)
+	check("a pinch at the grip picks the lens up", g._lens_hand == hand)
+	g._update_lens()
+	check("held low (on the table): no reveal", not g.foresight.showing)
+	hand.global_position = cam.global_position + Vector3(0, -0.05, -0.15)
+	g._update_lens()
+	check("held up to the eye: the reveal shows", g.foresight.showing and g._lens.global_position.distance_to(rest) > 0.2)
+	g.hand_released(hand)
+	check("let go: the lens goes back and the reveal hides", not g.foresight.showing and g._lens.global_position.distance_to(rest) < 0.001)
+	hand.global_position = g.lens_grip_position() + Vector3(0.3, 0, 0)
+	g.hand_pressed(hand)
+	check("a pinch away from the lens does not pick it up", g._lens_hand == null)
+	hand.queue_free()
+	cam.queue_free()
+	g.queue_free()
+	await process_frame
+
+	# tier 5 rewrite: close one gap for the night
+	g = await _make_game()
+	check("no rewrite below tier 5", not g.close_spawn("north"))
+	g.loop = 4
+	var before := g.night_plan()
+	var from_north := before.filter(func(x): return x["spawn"] == "north").size()
+	g.set_lens(true)
+	check("tier 5: lens up shows a close sign at each gap with enemies", ["north", "east", "west"].any(func(k): return g._buttons["close_" + k]["node"].visible))
+	g.set_lens(false)
+	check("tier 5: closing the north gap works once", g.close_spawn("north") and not g.close_spawn("east"))
+	var after := g.night_plan()
+	check("its groups come from the next edge, none from the north (%d moved)" % from_north,
+		after.all(func(x): return x["spawn"] != "north") and after.size() == before.size())
+	g.set_lens(true)
+	check("the close signs hide once a gap is closed", not g._buttons["close_east"]["node"].visible)
+	g.set_lens(false)
+	g.start_night()
+	g._clear_night()
+	g._end_night()  # the night cleared
+	check("next day the gap is open again", g.closed_spawn == "" and (g.phase != Game.Phase.DAY or g.night_plan().size() > 0))
 	g.queue_free()
 	await process_frame

@@ -4,6 +4,7 @@ extends XRController3D
 ## presses whatever the ray points at (a button or a board cell). Same action map as the spike's HandInput.
 
 signal pressed(hand: GameHand)
+signal released(hand: GameHand)  # the last held pinch/grasp let go
 
 const PRESS_ACTIONS := ["trigger_click", "grip_click", "select_button"]
 
@@ -16,7 +17,11 @@ func _ready() -> void:
 			if _down.is_empty():
 				pressed.emit(self)
 			_down[action] = true)
-	button_released.connect(func(action: String): _down.erase(action))
+	button_released.connect(func(action: String):
+		if _down.has(action):
+			_down.erase(action)
+			if _down.is_empty():
+				released.emit(self))
 	var tip := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	sm.radius = 0.008

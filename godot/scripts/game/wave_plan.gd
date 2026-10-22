@@ -9,8 +9,9 @@ extends RefCounted
 ##   - Guard rail: flyers never more than GameConfig.FLYER_SHARE of the night's threat.
 ##   - The rest is split into 3 groups growing 2 : 3 : 4 (so no spawn gets more than half the budget), one
 ##     group per spawn edge in a seeded order.
-##   - Loop 2 (spec 16) adds one extra group per night (worth a third more threat), from the edge that had the
-##     smallest group. The new-type guard only applies in loop 1 (by loop 2 the player knows every type).
+##   - Each loop after the first adds one more extra group per night (spec 16 for loop 2; loop 5 has 4), each
+##     worth a third of the budget, from the edges in turn starting with the one that had the smallest group.
+##     The new-type guard only applies in loop 1 (by loop 2 the player knows every type).
 ##   - The boss night (GameConfig.BOSS_NIGHT) is escort groups only; Game adds the boss itself.
 
 
@@ -28,8 +29,9 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 			unlocked.append(k)
 			if u == night + 1 and u > 1 and loop == 0:
 				fresh.append(k)
-	var extra := budget / 3 if loop >= 1 else 0
-	var air := {"left": int((budget + extra * GameConfig.LOOP2_EXTRA_GROUPS) * GameConfig.FLYER_SHARE)}
+	var extra := budget / 3  # each extra group (loops 2+) is worth a third of the budget
+	var n_extra := loop * GameConfig.EXTRA_GROUPS_PER_LOOP
+	var air := {"left": int((budget + extra * n_extra) * GameConfig.FLYER_SHARE)}
 	var shares := [2, 3, 4]
 	var budgets: Array[int] = []
 	var left := budget
@@ -55,11 +57,10 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 	var out: Array[Dictionary] = []
 	for g in range(3):
 		out.append({"time": GameConfig.FIRST_GROUP_DELAY + g * GameConfig.GROUP_INTERVAL, "spawn": spawns[g], "enemies": groups[g]})
-	if loop >= 1:
-		for x in range(GameConfig.LOOP2_EXTRA_GROUPS):
-			# worth a third of the night's budget, from the edge whose group was smallest (the first)
-			out.append({"time": GameConfig.FIRST_GROUP_DELAY + (3 + x) * GameConfig.GROUP_INTERVAL, "spawn": spawns[0],
-				"enemies": _buy(extra, unlocked, rng, false, air)})
+	for x in range(n_extra):
+		# worth a third of the night's budget each, starting from the edge whose group was smallest (the first)
+		out.append({"time": GameConfig.FIRST_GROUP_DELAY + (3 + x) * GameConfig.GROUP_INTERVAL, "spawn": spawns[x % 3],
+			"enemies": _buy(extra, unlocked, rng, false, air)})
 	return out
 
 
