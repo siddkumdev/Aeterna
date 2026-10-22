@@ -6,7 +6,8 @@ extends Node3D
 ## the desktop with the mouse when OpenXR is not running.
 ##
 ## Desktop keys: 1 / 2 / 3 pick a tower, left click builds, Esc or right click cancels, Enter or Space
-## starts the night, Tab toggles x3 speed, R restarts the run.
+## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
+## Debug builds only: F5 toggles x5 and F6 toggles x10 (for testing, not part of the game).
 ##
 ## Everything moving is ticked from step(), so tests/game_selftest.gd can play whole nights headless.
 
@@ -18,6 +19,7 @@ enum Phase { DAY, NIGHT, LOST, DONE }
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 # Lighting presets from art/art_bible.md (key colour, ambient colour, energy)
+const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
 const DAY_LIGHT := [Color("FFEBC8"), Color("9DBBD0"), 0.8]
 const NIGHT_LIGHT := [Color("8FB0D8"), Color("203C52"), 0.35]
 
@@ -37,7 +39,7 @@ var night := 0  # 0-based
 var phase := Phase.DAY
 var night_time := 0.0
 var selected := ""  # tower kind being placed, "" = none
-var speed := 1.0
+var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are debug only
 var last_message := ""
 
 var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i}], sorted by time
@@ -163,6 +165,11 @@ func standing_houses() -> Array[int]:
 		if not h.is_shuttered:
 			out.append(h.index)
 	return out
+
+
+func set_speed(s: float) -> void:
+	speed = s
+	_refresh_ui()
 
 
 func step(delta: float) -> void:
@@ -365,6 +372,8 @@ func _press_button(id: String) -> void:
 			start_night()
 		"restart":
 			new_run(run_seed + 1)
+		"speed":
+			set_speed(1.0 if speed == 2.0 else 2.0)
 		_:
 			select("" if selected == id else id)
 
@@ -381,8 +390,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 				start_night()
 			KEY_TAB:
-				speed = 3.0 if speed == 1.0 else 1.0
-				_refresh_hud()
+				set_speed(1.0 if speed == 2.0 else 2.0)
+			KEY_F5:
+				if OS.is_debug_build():
+					set_speed(1.0 if speed == 5.0 else 5.0)
+			KEY_F6:
+				if OS.is_debug_build():
+					set_speed(1.0 if speed == 10.0 else 10.0)
 			KEY_R:
 				new_run(run_seed + 1)
 	elif event is InputEventMouseButton and event.pressed and _camera and not _xr:
@@ -393,7 +407,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	step(delta * speed)
+	var left := delta * speed
+	while left > 0.0:
+		step(minf(left, MAX_TICK))
+		left -= MAX_TICK
 	if not with_rig:
 		return
 	if _xr:
@@ -413,6 +430,7 @@ func _build_ui() -> void:
 		specs.append([k, "%s\n%d trust" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
 	specs.append(["night", "Start night"])
 	specs.append(["restart", "New run"])
+	specs.append(["speed", "Speed x1"])
 	var w := 0.14
 	var gap := 0.016
 	var x0 := -(4 * w + 3 * gap) / 2.0 + w / 2.0
@@ -425,7 +443,8 @@ func _build_ui() -> void:
 		node.mesh = bm
 		var mat := ModelUtil.flat_material(Color8(0xC8, 0x8A, 0x4E))
 		node.material_override = mat
-		var slot := 3 if id == "restart" else i  # New run takes Start night's place once the run is over
+		# New run (after the run) and the speed sign (during a night) take Start night's place
+		var slot := 3 if id == "restart" or id == "speed" else i
 		node.position = Vector3(x0 + slot * (w + gap), 0.0, HALF + 0.045)
 		node.rotation_degrees.x = -50
 		ui.add_child(node)
@@ -470,8 +489,10 @@ func _refresh_hud() -> void:
 	var t := "%s %d   |   Trust %d   |   Houses %d/%d" % [phase_name, night + 1, trust, standing_houses().size(), houses.size()]
 	if phase == Phase.NIGHT:
 		t += "   |   Grunts %d" % (enemies.size() + _spawn_queue.size())
-	if speed > 1.0:
-		t += "   |   x%d" % int(speed)
+	if speed > 2.0:
+		t += "   |   DEBUG x%d" % int(speed)
+	elif speed > 1.0:
+		t += "   |   x2"
 	_hud.text = t
 	_msg.text = last_message
 
@@ -487,6 +508,10 @@ func _refresh_buttons() -> void:
 				c = Color8(0x5E, 0x4A, 0x7A) if day else c
 			"restart":
 				b["node"].visible = phase == Phase.LOST or phase == Phase.DONE
+			"speed":
+				b["node"].visible = phase == Phase.NIGHT
+				b["label"].text = "Speed x2" if speed == 2.0 else "Speed x1"
+				c = Color8(0xF0, 0xB0, 0x4A) if speed == 2.0 else c
 			_:
 				b["node"].visible = true
 				if not day or trust < GameConfig.TOWERS[id]["cost"]:

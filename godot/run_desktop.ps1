@@ -1,7 +1,7 @@
 # Run the game on the desktop (no headset, no simulator): mouse and keys, OpenXR off.
 # Usage:  powershell -File godot\run_desktop.ps1
 # Keys: 1 / 2 / 3 pick a tower, left click builds, Esc or right click cancels, Enter or Space starts the
-# night, Tab toggles x3 speed, R starts a new run. Paths come from local.env (GODOT_EXE).
+# night, Tab toggles x2 speed, R starts a new run. Debug builds: F5 = x5, F6 = x10. Paths: local.env (GODOT_EXE).
 $project = Split-Path -Parent $MyInvocation.MyCommand.Path
 $envFile = Join-Path (Split-Path -Parent $project) 'local.env'
 $godot = $null

@@ -115,3 +115,26 @@ func _nights() -> void:
 		print("      bot night %d: towers %d, result %s, trust now %d, %s" % [n, g.towers.size(), Game.Phase.keys()[g.phase], g.trust, g.last_message])
 	check("bot run ends (lost or loop complete)", g.phase == Game.Phase.LOST or g.phase == Game.Phase.DONE)
 	check("new run resets", (func(): g.new_run(2); return g.phase == Game.Phase.DAY and g.towers.is_empty() and g.trust == GameConfig.START_TRUST and g.standing_houses().size() == 6).call())
+
+	# 3) Speed: the same defended night at x1, x2 (player) and x10 (debug), driven the way a frame does it.
+	var results := []
+	for spd in [1.0, 2.0, 10.0]:
+		var gs := await _make_game()
+		gs.try_build("fire", Vector2i(11, 11))
+		gs.try_build("crossbow", Vector2i(9, 3))
+		gs.try_build("brazier", Vector2i(3, 9))
+		gs.set_speed(spd)
+		gs.start_night()
+		var frames := 0
+		while gs.phase == Game.Phase.NIGHT and frames < 60 * 600:
+			gs._process(1.0 / 60.0)
+			frames += 1
+			if frames % 120 == 0:
+				await process_frame
+		results.append([spd, frames, gs.standing_houses().size(), Game.Phase.keys()[gs.phase]])
+		print("      speed x%d: night took %d frames, houses standing %d, %s" % [int(spd), frames, gs.standing_houses().size(), Game.Phase.keys()[gs.phase]])
+		gs.queue_free()
+		await process_frame
+	check("x2 night ends in about half the frames", absf(float(results[1][1]) / results[0][1] - 0.5) < 0.05)
+	check("x10 night ends in about a tenth of the frames", absf(float(results[2][1]) / results[0][1] - 0.1) < 0.03)
+	check("same outcome at x1, x2 and x10", results[0][2] == results[1][2] and results[0][2] == results[2][2] and results[0][3] == results[2][3])
