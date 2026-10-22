@@ -77,7 +77,7 @@ func _play_night(g: Game) -> void:
 func _nights() -> void:
 	# 1) No towers: Grunts must reach the houses and hurt them.
 	var g := await _make_game()
-	check("starts in day with 100 trust", g.phase == Game.Phase.DAY and g.trust == 100)
+	check("starts in day with the start trust", g.phase == Game.Phase.DAY and g.trust == GameConfig.START_TRUST)
 	g.trust = 10
 	check("unaffordable tower refused", not g.try_build("fire", Vector2i(1, 1)) and g.towers.is_empty())
 	g.trust = GameConfig.START_TRUST
@@ -97,7 +97,7 @@ func _nights() -> void:
 		Vector2i(19, 9), Vector2i(19, 13), Vector2i(9, 19), Vector2i(13, 19), Vector2i(14, 11), Vector2i(8, 11), Vector2i(11, 8)]
 	var order := ["fire", "crossbow", "brazier"]
 	var k := 0
-	check("build costs trust", g.try_build("fire", Vector2i(11, 11)) and g.trust == 40)
+	check("build costs trust", g.try_build("fire", Vector2i(11, 11)) and g.trust == GameConfig.START_TRUST - 60)
 	while g.phase == Game.Phase.DAY:
 		var built := true
 		while built:
@@ -114,4 +114,4 @@ func _nights() -> void:
 			hp.append(int(h.hp))
 		print("      bot night %d: towers %d, result %s, trust now %d, %s" % [n, g.towers.size(), Game.Phase.keys()[g.phase], g.trust, g.last_message])
 	check("bot run ends (lost or loop complete)", g.phase == Game.Phase.LOST or g.phase == Game.Phase.DONE)
-	check("new run resets", (func(): g.new_run(2); return g.phase == Game.Phase.DAY and g.towers.is_empty() and g.trust == 100 and g.standing_houses().size() == 6).call())
+	check("new run resets", (func(): g.new_run(2); return g.phase == Game.Phase.DAY and g.towers.is_empty() and g.trust == GameConfig.START_TRUST and g.standing_houses().size() == 6).call())

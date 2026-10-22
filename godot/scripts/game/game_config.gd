@@ -7,17 +7,17 @@ const CELL := 0.05
 const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 x 12)
 
 # Economy (spec 5)
-const START_TRUST := 100
+const START_TRUST := 200  # 2026-10-22 (Siddharth): 100 was too low; 200 = three towers before night 1
 const DAWN_TRUST_PER_HOUSE := 5
 const NIGHT_CLEAR_TRUST := 0  # spec: paid on top of dawn income, amount still OPEN (Siddharth decides); 0 until then
 
 # Houses (decided 2026-10-22: 60 HP). A night is lost at 3 or more shuttered houses (spec 2).
 const HOUSE_HP := 60.0
 const HOUSES_LOST_AT := 3
-# Six 2x2 houses spread in a loose ring (radius about 5.5 cells) round an open centre, so towers fit
-# between them as well as out by the forest (Siddharth 2026-10-22). Top-left cells. Fixed for the slice;
-# procedural later.
-const HOUSE_CELLS: Array[Vector2i] = [Vector2i(11, 5), Vector2i(16, 8), Vector2i(16, 14), Vector2i(11, 16), Vector2i(6, 14), Vector2i(6, 8)]
+# Six 2x2 houses in a tight ring (radius about 3.5 cells; Siddharth 2026-10-22: 5.5 felt too far apart)
+# round a small open centre that still fits one tower; 1 to 2 cells between neighbours. Top-left cells.
+# Fixed for the slice; procedural later.
+const HOUSE_CELLS: Array[Vector2i] = [Vector2i(11, 7), Vector2i(14, 9), Vector2i(14, 13), Vector2i(11, 15), Vector2i(8, 13), Vector2i(8, 9)]
 const HOUSE_SCENES: Array[String] = [
 	"res://assets/village/ew_village_cottage_v05.glb",
 	"res://assets/village/ew_village_cabin_v05.glb",

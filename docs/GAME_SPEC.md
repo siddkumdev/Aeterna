@@ -52,7 +52,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Upgrades:** none per tower in the competition build; progression comes from loop unlocks (see 15).
 
 ### 5. Economy (trust)
-- Start: 100 trust per loop (loop 1 night 1).
+- Start: 200 trust per loop (loop 1 night 1). (Was 100; raised 2026-10-22 by Siddharth.)
 - **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
 - **Dawn income:** +5 trust per standing house.
 - **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
