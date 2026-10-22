@@ -56,7 +56,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
 - **Dawn income:** +5 trust per standing house.
 - **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
-- **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 70, Watch Hut 70.
+- **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now), Watch Hut 70.
 - **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
 - Fate Coin can modify income (see 17).
 
@@ -91,7 +91,7 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 | Fire Tower | shoots a fireball at one target; good range, **no AoE** | 5 cells | 14 per fireball, 1 shot per 1.5 s | 60 | the reliable heavy hitter |
 | Blast Brazier | **good AoE, short range, lower damage** | 2 cells | 4 per pulse to all within 1 cell, 1 pulse per second | 50 | holds a choke point near the village |
 | Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on long straight approaches (piercing line) |
-| Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 70 | max 2; floats 2 cells above the board |
+| Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 35 (was 70) | max 2; floats 2 cells above the board |
 - No Barricade, Light Tower or Healing Shrine in this roster. Healing is done by the Mend Vial spell instead.
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 

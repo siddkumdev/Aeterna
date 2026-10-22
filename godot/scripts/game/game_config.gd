@@ -105,9 +105,10 @@ const TOWERS := {
 		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v03.glb", "turn_part": "swivel",
 		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0,
 	},
-	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot)
+	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot).
+	# cost 35 = half the spec's 70 (Siddharth 2026-10-22: "for now")
 	"airship": {
-		"name": "Airship", "cost": 70, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
+		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
 		"max": 2, "scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
 	},
