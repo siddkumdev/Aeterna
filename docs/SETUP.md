@@ -1,4 +1,4 @@
-# Setting up Endless Watch on a new PC
+# Setting up Aeterna on a new PC
 
 Everything the two of us need to work from the same project. Windows 11.
 

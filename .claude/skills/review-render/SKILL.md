@@ -1,6 +1,6 @@
 ---
 name: review-render
-description: Review a rendered preview sheet of an Endless Watch asset (or compare two versions) against the moodboard before presenting it. Use when asked to check how an asset looks.
+description: Review a rendered preview sheet of an Aeterna asset (or compare two versions) against the moodboard before presenting it. Use when asked to check how an asset looks.
 ---
 
 # review-render

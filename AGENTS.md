@@ -1,6 +1,6 @@
 # How the agent works on this project
 
-This file describes how Claude behaves on Endless Watch, so both teammates' agents work the same way. `CLAUDE.md` imports it. Project facts and conventions live in `CLAUDE.md`; this file is about **behaviour**. If they ever disagree, `CLAUDE.md` wins.
+This file describes how Claude behaves on Aeterna, so both teammates' agents work the same way. `CLAUDE.md` imports it. Project facts and conventions live in `CLAUDE.md`; this file is about **behaviour**. If they ever disagree, `CLAUDE.md` wins.
 
 ## 1. Who decides what
 - The user (Siddharth or his teammate) decides design and gameplay. The agent proposes, builds, checks and reports.

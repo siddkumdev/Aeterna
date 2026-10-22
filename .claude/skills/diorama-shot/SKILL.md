@@ -1,6 +1,6 @@
 ---
 name: diorama-shot
-description: Render the real Endless Watch assets together on the 12 x 12 board (player's seated view, top-down, a close-up of each asset) in all five lighting presets, with the whole board's triangle and draw-call totals against the Quest budget. Use after an asset version is built (before showing Siddharth), when asked how assets look together, or to check the board budget.
+description: Render the real Aeterna assets together on the 12 x 12 board (player's seated view, top-down, a close-up of each asset) in all five lighting presets, with the whole board's triangle and draw-call totals against the Quest budget. Use after an asset version is built (before showing Siddharth), when asked how assets look together, or to check the board budget.
 ---
 
 # diorama-shot

@@ -1,9 +1,9 @@
 ---
 name: endless-watch-art-style
-description: Style rules for every Endless Watch 3D asset. Load before modelling, texturing, or reviewing any asset so shapes, palette and budgets stay consistent.
+description: Style rules for every Aeterna 3D asset. Load before modelling, texturing, or reviewing any asset so shapes, palette and budgets stay consistent.
 ---
 
-# Endless Watch art style
+# Aeterna art style
 
 Authoritative sources, in order: `art/art_bible.md` (locked, Siddharth-approved; may not exist yet) > `art/decisions.md` > this file (draft) > the moodboard (`art/moodboard/board_*/BOARD.md`).
 

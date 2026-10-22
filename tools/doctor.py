@@ -1,4 +1,4 @@
-"""Check that this machine can run the Endless Watch pipeline. Prints OK / FIX per item; exit 1 on any FIX.
+"""Check that this machine can run the Aeterna pipeline. Prints OK / FIX per item; exit 1 on any FIX.
 
     python tools/doctor.py
 

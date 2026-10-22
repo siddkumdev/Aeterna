@@ -1,6 +1,6 @@
 ---
 name: tracker-sync
-description: Regenerate and republish Siddharth's live asset tracker (claude.ai artifact "Endless Watch Assets") from docs/ASSET_LIST.md and assets/ASSETS.md, adding build badges and moving built items' shared status forward (never backwards). Run after every asset round (make-asset log step), whenever ASSET_LIST.md or ASSETS.md changes, or when asked to sync/update the tracker.
+description: Regenerate and republish Siddharth's live asset tracker (claude.ai artifact "Aeterna Assets") from docs/ASSET_LIST.md and assets/ASSETS.md, adding build badges and moving built items' shared status forward (never backwards). Run after every asset round (make-asset log step), whenever ASSET_LIST.md or ASSETS.md changes, or when asked to sync/update the tracker.
 ---
 
 # tracker-sync

@@ -1,4 +1,4 @@
-# Endless Watch art bible
+# Aeterna art bible
 
 **Status: v1 (2026-10-17).** Siddharth approved all general rules on 2026-10-17. The bible is locked only after the first real assets are reviewed with him, because some calls need a near-finished build (section 12). Tags: **[Decided]** = Siddharth's decision or approval; **[Open]** = needs real assets to decide.
 

@@ -1,6 +1,6 @@
 @tool
 extends EditorScenePostImport
-## Runs on every Endless Watch .glb import (tools/sync_to_godot.py sets it in each .import file).
+## Runs on every Aeterna .glb import (tools/sync_to_godot.py sets it in each .import file).
 ## 1. Swaps the glTF materials for the two shared materials (one palette atlas for the whole game):
 ##    "ew_palette" -> res://assets/palette/ew_palette.tres, "ew_palette_glow" -> ew_palette_glow.tres.
 ## 2. Turns every "__<name>_anchor" empty into a Marker3D in the group "ew_vfx_anchor", with the effect

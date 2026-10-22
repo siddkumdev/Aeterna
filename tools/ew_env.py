@@ -1,4 +1,4 @@
-"""Machine-specific paths for the Endless Watch tools.
+"""Machine-specific paths for the Aeterna tools.
 
 Each person keeps their own `local.env` at the repo root (git-ignored; copy `local.env.example`).
 Lines are KEY=VALUE; `#` starts a comment. A variable already set in the environment wins.

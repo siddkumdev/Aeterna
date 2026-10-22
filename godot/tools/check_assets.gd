@@ -1,5 +1,5 @@
 extends SceneTree
-## Headless check of every imported Endless Watch model in res://assets/<category>/.
+## Headless check of every imported Aeterna model in res://assets/<category>/.
 ##   Godot_v4.7.2-stable_win64_console.exe --headless --path godot -s res://tools/check_assets.gd
 ## Optional user args after "--": only check files whose name contains one of them.
 ## Per model: loads, origin on the ground, size in cells, triangles vs budget, every surface uses one

@@ -1,4 +1,4 @@
-# Endless Watch: game spec (PROPOSED draft by Claude, Siddharth edits)
+# Aeterna: game spec (PROPOSED draft by Claude, Siddharth edits)
 
 Status: every item below is PROPOSED, not decided. Numbers are starting values to tune in play, not facts. Item numbers match `docs/DESIGN_SPECS_TODO.md`. Edit anything; whatever you change becomes DECIDED and I build from it.
 
@@ -224,7 +224,7 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 - **Why the forest turned:** the village's ancestors took a piece of the Heartwood; the Warden's grief corrupts the forest.
 - **Time loop:** the same crystal powers the player's Foresight and the rewind.
 - **Reveal:** loop 1 it is just a monster; loop 2 its crystal matches the player's lens; later loops hint at making peace. (Fully optional beyond loop 2.)
-- **Title:** Endless Watch is a working title, not final (Siddharth).
+- **Title:** Aeterna (final name, Siddharth 2026-10-22; "Endless Watch" was the working title, kept only in file names such as the `ew_` asset prefix and `docs/Endless Watch Assets.html`).
 
 ### 20. First minutes, wordless tutorial (in order)
 1. Flick the Fate Coin. 2. Raise the lens and look at the forest edge (silhouettes). 3. Palm-up menu, pull a tower, place it on the glowing grid. 4. Help one villager (grab the stuck bird). 5. Dusk: the forest stirs and the first enemies appear at the tree line. 6. Night: cast a spell and swat a Wisp. 7. Dawn summary. About 6 icon hints, no spoken words.

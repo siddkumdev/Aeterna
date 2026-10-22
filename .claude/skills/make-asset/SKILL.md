@@ -1,6 +1,6 @@
 ---
 name: make-asset
-description: The asset-building workflow for Endless Watch. Takes ANY 3D asset (towers, huts, houses, enemies, villagers, props) from questions to Siddharth, through design variants he picks and mixes, to the real Blender model with moving parts and VFX anchors, renders, critic review, validation, export and logging, until Siddharth approves it. Use whenever asked to design, model, build or revise an asset ("asset building").
+description: The asset-building workflow for Aeterna. Takes ANY 3D asset (towers, huts, houses, enemies, villagers, props) from questions to Siddharth, through design variants he picks and mixes, to the real Blender model with moving parts and VFX anchors, renders, critic review, validation, export and logging, until Siddharth approves it. Use whenever asked to design, model, build or revise an asset ("asset building").
 ---
 
 # make-asset: the asset-building workflow

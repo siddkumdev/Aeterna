@@ -1,6 +1,6 @@
 ---
 name: godot-import
-description: Bring exported Endless Watch .glb assets into the Godot project (godot/): copy, import headless with the shared palette + glow materials, turn VFX anchors into Marker3D nodes, tag moving parts, run the automatic check and render an in-engine preview. Use when an asset is exported and should appear in Godot, or to re-check what is already imported.
+description: Bring exported Aeterna .glb assets into the Godot project (godot/): copy, import headless with the shared palette + glow materials, turn VFX anchors into Marker3D nodes, tag moving parts, run the automatic check and render an in-engine preview. Use when an asset is exported and should appear in Godot, or to re-check what is already imported.
 ---
 
 # godot-import

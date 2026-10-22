@@ -75,7 +75,7 @@ def main(args):
         base = os.path.basename(g)
         m = re.match(r"ew_([a-z]+)_.+_v\d+\.glb$", base)
         if not m:
-            sys.exit("not an Endless Watch export name: " + base)
+            sys.exit("not an Aeterna export name: " + base)
         copy_with_import(os.path.abspath(g), os.path.join(GODOT_PROJECT, "assets", m.group(1), base), GLB_IMPORT)
         names.append(os.path.splitext(base)[0])
     r = subprocess.run([GODOT, "--headless", "--xr-mode", "off", "--path", GODOT_PROJECT, "--import"], capture_output=True, text=True, timeout=600)

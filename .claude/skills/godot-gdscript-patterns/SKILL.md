@@ -3,7 +3,7 @@ name: godot-gdscript-patterns
 description: Master Godot 4 GDScript patterns including signals, scenes, state machines, and optimization. Use when building Godot games, implementing game systems, or learning GDScript best practices.
 ---
 
-> **Endless Watch project note (added 2026-10-22, read first).** Third-party skill, copied unchanged except for this note
+> **Aeterna project note (added 2026-10-22, read first).** Third-party skill, copied unchanged except for this note
 > (source: github.com/wshobson/agents plugins/game-development/skills/godot-gdscript-patterns, licence: MIT, see LICENSE). It is general Godot 4 guidance: examples are mostly 2D; our game is 3D VR
 > (OpenXR, hand tracking, Quest). `CLAUDE.md` and `AGENTS.md` always win: the user decides design and gameplay, so never
 > "correct" a user's choice from this skill; raise a concern as an option instead. Known caveats in Godot 4.7: signals are

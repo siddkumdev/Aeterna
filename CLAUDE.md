@@ -1,4 +1,4 @@
-# Endless Watch: project conventions
+# Aeterna: project conventions
 
 @AGENTS.md
 

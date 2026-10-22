@@ -1,4 +1,4 @@
-# Endless Watch: asset list (tracker-aligned)
+# Aeterna: asset list (tracker-aligned)
 
 This merges two lists: Siddharth's tracker (`Endless Watch Assets.html`, 238 items, ids PF01 to S11) and the earlier `ASSET_LIST.md`, then applies every decision made since the tracker was written. Ids from the tracker are kept so the tracker's saved progress still lines up. No time estimates anywhere.
 

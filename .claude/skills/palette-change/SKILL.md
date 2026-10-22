@@ -1,6 +1,6 @@
 ---
 name: palette-change
-description: Add, tweak or retire Endless Watch palette colours safely - propose, show Siddharth a highlighted swatch sheet (and a before/after diorama when an existing colour changes), apply only after his OK, then rebuild the atlas and re-export affected assets. Use whenever a new colour is needed, a colour looks wrong, or a colour should stop being used.
+description: Add, tweak or retire Aeterna palette colours safely - propose, show Siddharth a highlighted swatch sheet (and a before/after diorama when an existing colour changes), apply only after his OK, then rebuild the atlas and re-export affected assets. Use whenever a new colour is needed, a colour looks wrong, or a colour should stop being used.
 ---
 
 # palette-change

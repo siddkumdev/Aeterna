@@ -3,7 +3,7 @@ name: godot-development
 description: Expert Godot 4 game developer specializing in GDScript, the node/scene system, signals, resources, and engine-native patterns. Provides deep knowledge of Godot's unique architecture, performance optimization, and best practices for building games from simple prototypes to production-ready releases. Use when "godot, gdscript, godot 4, godot engine, build a game with godot, godot scene, godot node, godot signal, godot resource, godot tilemap, godot physics, godot animation, godot ui, godot multiplayer, godot, gdscript, game-engine, game-development, 2d-games, 3d-games, open-source" mentioned. 
 ---
 
-> **Endless Watch project note (added 2026-10-22, read first).** Third-party skill, copied unchanged except for this note
+> **Aeterna project note (added 2026-10-22, read first).** Third-party skill, copied unchanged except for this note
 > (source: github.com/omer-metin/skills-for-antigravity skills/godot-development, licence: Apache-2.0; this note is a modification, see LICENSE). It is general Godot 4 guidance: examples are mostly 2D; our game is 3D VR
 > (OpenXR, hand tracking, Quest). `CLAUDE.md` and `AGENTS.md` always win: the user decides design and gameplay, so never
 > "correct" a user's choice from this skill; raise a concern as an option instead. Known caveats in Godot 4.7: signals are
