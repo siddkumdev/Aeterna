@@ -147,7 +147,36 @@ def hg_D():
     return p
 
 
-VARIANTS = {"A": hg_A, "B": hg_B, "C": hg_C, "D": hg_D}
+def hg_E():
+    """A, symmetric (Siddharth 2026-10-22, critic idea): no top knob, so the prop reads the same after the flip."""
+    keep = []
+    for o in hg_A():
+        if o.name.startswith("knob"):
+            bpy.data.objects.remove(o, do_unlink=True)
+        else:
+            keep.append(o)
+    return keep
+
+
+def hg_F():
+    """D, symmetric with no extra blue (Siddharth 2026-10-22, critic ideas): the same wide step on both caps, dark diamond
+    insets above and below on every post (wood_dark, not blue: the sand is the only blue), no front gem."""
+    p = caps(0.046, Z0) + [vp.cyl("step", 0.050, 0.004, (0, 0, 0), GOLD, 12),
+                           vp.cyl("step", 0.050, 0.004, (0, 0, Z0 * 2 + GH - 0.004), GOLD, 12)]
+    for a in (45, 135, 225, 315):
+        ar = math.radians(a)
+        x, y = 0.042 * math.cos(ar), 0.042 * math.sin(ar)
+        p.append(vp.cyl("post", 0.0034, GH, (x, y, Z0), GOLD, 6))
+        for z in (Z0 + 0.034, Z0 + GH - 0.034):
+            p.append(vp.tbox("inset", (0.0060, 0.0060, 0.0060), (x * 1.06, y * 1.06, z), DARK, 45, 0, a))  # turned about the outward axis: the diamond faces out
+    for z in (0.030, 0.100):
+        r = glass_r(z) + 0.0015
+        p.append(lathe("band", [(r, z - 0.0025), (r + 0.0045, z - 0.0025), (r + 0.0045, z + 0.0025), (r, z + 0.0025), (r, z - 0.0025)],
+                       GOLD, 12, cap_bottom=False, cap_top=False))  # 4.5 mm deep so the ring reaches into the posts
+    return p
+
+
+VARIANTS = {"A": hg_A, "B": hg_B, "C": hg_C, "D": hg_D, "E": hg_E, "F": hg_F}
 
 
 def tris(objs):
