@@ -8,7 +8,10 @@ signal shuttered(house: House)
 
 var index := 0
 var cell := Vector2i.ZERO
+var max_hp := GameConfig.HOUSE_HP  # raised by the Sturdy Homes card
 var hp := GameConfig.HOUSE_HP
+## Asked once when the house would be shuttered; returning true keeps it at 1 HP (Sturdy Homes, Legendary)
+var hold_check: Callable
 var is_shuttered := false
 
 var _parts := {}  # part -> MeshInstance3D
@@ -58,6 +61,8 @@ func damage(amount: float) -> void:
 	if is_shuttered:
 		return
 	hp = maxf(0.0, hp - amount)
+	if hp <= 0.0 and hold_check.is_valid() and hold_check.call(self):
+		hp = 1.0
 	_update_bar()
 	if hp <= 0.0:
 		is_shuttered = true
@@ -66,7 +71,7 @@ func damage(amount: float) -> void:
 
 
 func repair() -> void:
-	hp = GameConfig.HOUSE_HP
+	hp = max_hp
 	_update_bar()
 	if is_shuttered:
 		is_shuttered = false
@@ -74,7 +79,7 @@ func repair() -> void:
 
 
 func _update_bar() -> void:
-	var f := hp / GameConfig.HOUSE_HP
+	var f := hp / max_hp
 	_bar.visible = f < 1.0 and not is_shuttered
 	_bar_fill.scale.x = maxf(f, 0.001)
 	_bar_fill.position.x = -BAR_W * (1.0 - f) / 2.0

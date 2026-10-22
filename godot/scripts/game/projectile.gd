@@ -14,6 +14,7 @@ var target: Enemy
 var splash := 0.0  # m
 var width := 0.0  # m
 var done := false
+var mods := {}  # card extras from the tower: damage, scale, burn, burn_spreads, knockback, patch, slow
 
 var _from := Vector3.ZERO
 var _to := Vector3.ZERO
@@ -24,9 +25,10 @@ var _dir := Vector3.ZERO
 var _hit := {}
 
 
-func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float) -> void:
+func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mods := {}) -> void:
 	kind = cfg["kind"]
-	damage = cfg["damage"]
+	mods = shot_mods
+	damage = mods.get("damage", cfg["damage"])
 	speed = cfg["shot_speed"] * GameConfig.CELL
 	splash = cfg.get("splash", 0.0) * GameConfig.CELL
 	width = cfg.get("pierce_width", 0.0) * GameConfig.CELL
@@ -45,7 +47,9 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float) -> void:
 		look_at(global_position + _dir, Vector3.UP, true)
 	var res = load(cfg["shot"])
 	if res:
-		add_child(res.instantiate())
+		var m: Node3D = res.instantiate()
+		m.scale = Vector3.ONE * mods.get("scale", 1.0)
+		add_child(m)
 
 
 func step(delta: float) -> void:
@@ -59,7 +63,7 @@ func step(delta: float) -> void:
 			var stride := speed * delta
 			if to.length() <= stride:
 				if is_instance_valid(target) and target.alive:
-					target.take_damage(damage)
+					_hit_enemy(target)
 				_finish()
 			else:
 				global_position += to.normalized() * stride
@@ -69,9 +73,14 @@ func step(delta: float) -> void:
 			p.y += 4.0 * (0.03 + _from.distance_to(_to) * 0.25) * _t * (1.0 - _t)
 			global_position = p
 			if _t >= 1.0:
+				var centre: Vector3 = game.board.to_local(_to)
 				for e in game.enemies.duplicate():
 					if is_instance_valid(e) and e.alive and _flat(e.global_position - _to) <= splash:
-						e.take_damage(damage)
+						_hit_enemy(e)
+						if mods.get("knockback", false) and is_instance_valid(e) and e.alive:
+							e.knockback(centre)
+				if mods.get("patch", false):
+					game.add_patch(centre, splash, 2.0, 2.0)  # Hot Coals Legendary: 2 damage/s for 2 s
 				_finish()
 		"pierce":
 			var stride := minf(speed * delta, _left)
@@ -80,11 +89,19 @@ func step(delta: float) -> void:
 			for e in game.enemies.duplicate():
 				if is_instance_valid(e) and e.alive and not _hit.has(e) and _seg_dist(e.global_position, a, b) <= width:
 					_hit[e] = true
-					e.take_damage(damage)
+					_hit_enemy(e)
 			global_position = b
 			_left -= stride
 			if _left <= 0.0:
 				_finish()
+
+
+func _hit_enemy(e: Enemy) -> void:
+	if mods.has("burn"):
+		e.ignite(mods["burn"], 3.0, mods.get("burn_spreads", false))  # Ember Shot: burn for 3 s
+	if mods.get("slow", false):
+		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
+	e.take_damage(damage)
 
 
 func _finish() -> void:

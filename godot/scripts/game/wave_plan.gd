@@ -7,20 +7,24 @@ extends RefCounted
 ##     can learn it.
 ##   - The rest is split into 3 groups growing 2 : 3 : 4 (so no spawn gets more than half the budget), one
 ##     group per spawn edge in a seeded order.
+##   - Loop 2 (spec 16) adds one extra group per night (worth a third more threat), from the edge that had the
+##     smallest group. The new-type guard only applies in loop 1 (by loop 2 the player knows every type).
+##   - The boss night (GameConfig.BOSS_NIGHT) is escort groups only; Game adds the boss itself.
 
 
-static func groups_for(night: int, rng_seed: int) -> Array[Dictionary]:
-	## night is 0-based. Returns [{"time": s, "spawn": "north"|..., "enemies": Array[String]}] in spawn order.
+static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary]:
+	## night and loop are 0-based. Returns [{"time": s, "spawn": "north"|..., "enemies": Array[String]}] in
+	## spawn order.
 	var budget: int = GameConfig.NIGHT_BUDGETS[clampi(night, 0, GameConfig.NIGHT_BUDGETS.size() - 1)]
 	var rng := RandomNumberGenerator.new()
-	rng.seed = rng_seed + night * 7919
+	rng.seed = rng_seed + night * 7919 + loop * 104729
 	var unlocked: Array[String] = []
 	var fresh := ""  # the type that unlocks tonight, if any
 	for k in GameConfig.WAVE_TYPES:
 		var u: int = GameConfig.ENEMIES[k]["unlock"]
 		if u <= night + 1:
 			unlocked.append(k)
-		if u == night + 1 and u > 1:
+		if u == night + 1 and u > 1 and loop == 0:
 			fresh = k
 	var shares := [2, 3, 4]
 	var budgets: Array[int] = []
@@ -46,6 +50,11 @@ static func groups_for(night: int, rng_seed: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for g in range(3):
 		out.append({"time": GameConfig.FIRST_GROUP_DELAY + g * GameConfig.GROUP_INTERVAL, "spawn": spawns[g], "enemies": groups[g]})
+	if loop >= 1:
+		for x in range(GameConfig.LOOP2_EXTRA_GROUPS):
+			# worth a third of the night's budget, from the edge whose group was smallest (the first)
+			out.append({"time": GameConfig.FIRST_GROUP_DELAY + (3 + x) * GameConfig.GROUP_INTERVAL, "spawn": spawns[0],
+				"enemies": _buy(budget / 3, unlocked, rng, false)})
 	return out
 
 

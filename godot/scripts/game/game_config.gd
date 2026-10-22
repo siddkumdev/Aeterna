@@ -9,7 +9,18 @@ const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 
 # Economy (spec 5)
 const START_TRUST := 200  # 2026-10-22 (Siddharth): 100 was too low; 200 = three towers before night 1
 const DAWN_TRUST_PER_HOUSE := 5
-const NIGHT_CLEAR_TRUST := 0  # spec: paid on top of dawn income, amount still OPEN (Siddharth decides); 0 until then
+# Clearing a night pays 10 x the night number on top of dawn income (Siddharth 2026-10-22): night 1 = 10 ... boss night = 60
+const NIGHT_CLEAR_TRUST_PER_NIGHT := 10
+
+# Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
+const NIGHTS_PER_LOOP := 6
+const BOSS_NIGHT := 5  # 0-based: the 6th night
+const LOOPS_PER_RUN := 2
+# Loop 2 (spec 16): +40% enemy HP and one extra group per night
+const LOOP2_HP := 1.4
+const LOOP2_EXTRA_GROUPS := 1
+# Systems that exist in the build; cards for anything else are not offered (Cards.available)
+const BUILT_SYSTEMS: Array[String] = []
 
 # Houses (decided 2026-10-22: 60 HP). A night is lost at 3 or more shuttered houses (spec 2).
 const HOUSE_HP := 60.0
@@ -43,6 +54,10 @@ const ENEMIES := {
 	"splitter": {"name": "Splitter", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "weight": 2,
 		"splits_into": "splitling", "split_count": 2},
 	# the two small pieces a Splitter leaves (spec: 2 x 8 HP); never bought by the wave plan
+	# PLACEHOLDER boss (spec E11: a scaled-up Grunt so the loop is testable; the real Warden comes later).
+	# Stats are Claude's stand-ins (the spec gives none); it walks to the houses like a Grunt, 2.5x the size.
+	"boss": {"name": "Warden (placeholder)", "hp": 200.0, "speed": 0.25, "dps": 6.0, "threat": 0, "unlock": 99, "weight": 0,
+		"boss": true},
 	"splitling": {"name": "Splitling", "hp": 8.0, "speed": 0.4, "dps": 1.0, "threat": 0, "unlock": 99, "weight": 0},
 }
 const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter"]  # what the wave plan may buy
@@ -51,11 +66,12 @@ const HP_RAMP_PER_NIGHT := 0.25
 
 # Waves (spec 6a; 2026-10-22: harder, budgets ramp up). Threat budget per night, 3 groups (one per spawn),
 # a new group every 12 s. Each group leaves the forest in clusters of 2-3 that come out together.
-const NIGHT_BUDGETS: Array[int] = [8, 14, 22, 32, 44]
+const NIGHT_BUDGETS: Array[int] = [8, 14, 22, 32, 44, 30]  # the 6th = the boss night's escort groups
 const GROUP_INTERVAL := 12.0
 const FIRST_GROUP_DELAY := 3.0
 const CLUSTER_SIZE := Vector2i(2, 3)
 const CLUSTER_GAP := 2.5  # seconds between clusters of one group
+const BOSS_DELAY := 15.0  # the placeholder boss leaves the forest after the first escort group
 const SPREAD := 0.3  # each enemy walks up to this many cells off the centre line, so a crowd does not form a queue
 
 # Towers (spec 7). The Airship attacks air only and there are no flyers in this slice, so it is left out.

@@ -5,6 +5,7 @@ extends Node3D
 ##   scout     small, thin, with a pointed hood; twice as fast
 ##   splitter  squat body under a wide mushroom cap; splits into 2 splitlings when it dies
 ##   splitling a small capsule
+##   boss      PLACEHOLDER Warden: a Grunt 2.5x the size (spec E11); immune to knockback
 ## Walks cell to cell along its route to the nearest standing house, slightly off the centre line (its own
 ## `offset`, so a crowd spreads out), then hits the house. Ticked by Game.step(), never by _process, so the
 ## headless tests can run a night frame by frame.
@@ -24,16 +25,24 @@ var attacking := false
 var alive := true
 var offset := Vector3.ZERO  # board-local, within GameConfig.SPREAD cells of the cell centre
 var height := 0.045
+var is_boss := false
+# status effects from cards: burning (Ember Shot, Hot Coals patches) and slowed (Heavy Bolts Legendary)
+var burn_dps := 0.0
+var burn_left := 0.0
+var burn_spreads := false
+var slow_left := 0.0
+var slow_factor := 1.0
 
 var _mats: Array[StandardMaterial3D] = []
 var _flash := 0.0
 
 
-func setup(enemy_kind: String, night: int, rng: RandomNumberGenerator) -> void:
-	## night is 0-based; HP grows by HP_RAMP_PER_NIGHT each night.
+func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator) -> void:
+	## night and loop are 0-based; HP grows by HP_RAMP_PER_NIGHT each night and by LOOP2_HP in loop 2.
 	kind = enemy_kind
 	stats = GameConfig.ENEMIES[kind]
-	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night)
+	is_boss = stats.get("boss", false)
+	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night) * (GameConfig.LOOP2_HP if loop >= 1 else 1.0)
 	var s := GameConfig.SPREAD * GameConfig.CELL
 	offset = Vector3(rng.randf_range(-s, s), 0.0, rng.randf_range(-s, s))
 	match kind:
@@ -51,6 +60,10 @@ func setup(enemy_kind: String, night: int, rng: RandomNumberGenerator) -> void:
 			height = 0.026
 			_capsule(0.008, 0.024)
 			_eyes(0.003, 0.017, 0.0072)
+		"boss":
+			height = 0.112
+			_capsule(0.03, 0.112)
+			_eyes(0.011, 0.08, 0.026)
 		_:
 			_capsule(0.012, 0.045)
 			_eyes(0.0045, 0.032, 0.0102)
@@ -135,6 +148,15 @@ func step(delta: float) -> void:
 		if _flash <= 0.0:
 			for m in _mats:
 				m.albedo_color = INK
+	if burn_left > 0.0:
+		burn_left -= delta
+		take_damage(burn_dps * delta, false)
+		if not alive:
+			return
+	if slow_left > 0.0:
+		slow_left -= delta
+		if slow_left <= 0.0:
+			slow_factor = 1.0
 	if target_house == -1 or game.houses[target_house].is_shuttered:
 		_reroute()
 		if target_house == -1:
@@ -148,7 +170,7 @@ func step(delta: float) -> void:
 		return
 	var goal := NavGrid.cell_centre(path[0]) + offset
 	var to := goal - position
-	var stride: float = stats["speed"] * GameConfig.CELL * delta
+	var stride: float = stats["speed"] * slow_factor * GameConfig.CELL * delta
 	_face(goal)
 	if to.length() <= stride:
 		position = goal
@@ -164,13 +186,14 @@ func _face(p: Vector3) -> void:
 		rotation.y = atan2(d.x, d.z)
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, flash := true) -> void:
 	if not alive:
 		return
 	hp -= amount
-	for m in _mats:
-		m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
-	_flash = 0.08
+	if flash:
+		for m in _mats:
+			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
+		_flash = 0.08
 	if hp <= 0.0:
 		alive = false
 		died.emit(self)
@@ -179,3 +202,33 @@ func take_damage(amount: float) -> void:
 
 func chest() -> Vector3:
 	return global_position + Vector3(0, height * 0.55, 0)
+
+
+func ignite(dps: float, seconds: float, spreads: bool) -> void:
+	## Burning does not stack: the stronger burn wins and the timer refreshes.
+	burn_dps = maxf(burn_dps, dps)
+	burn_left = maxf(burn_left, seconds)
+	burn_spreads = burn_spreads or spreads
+
+
+func slow(factor: float, seconds: float) -> void:
+	slow_factor = minf(slow_factor, factor)
+	slow_left = maxf(slow_left, seconds)
+
+
+func knockback(from: Vector3) -> void:
+	## Pushed 1 cell away from `from` (board-local), if that cell can be walked; then re-plans its route.
+	if is_boss or not alive:
+		return
+	var d := position - from
+	d.y = 0.0
+	if d.length() < 0.0001:
+		return
+	var step := Vector2i(roundi(d.normalized().x), roundi(d.normalized().z))
+	var c := cell + step
+	if not game.nav.astar.is_in_boundsv(c) or game.nav.astar.is_point_solid(c):
+		return
+	cell = c
+	position = NavGrid.cell_centre(c) + offset
+	_reroute()
+

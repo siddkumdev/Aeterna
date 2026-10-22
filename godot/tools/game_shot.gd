@@ -31,7 +31,24 @@ func _initialize() -> void:
 		t += 0.05
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_night.png")
-	print("saved ", prefix, "_day.png and _night.png")
+	# boss night: the placeholder Warden walking in with its escorts
+	g._clear_night()
+	g.night = GameConfig.BOSS_NIGHT
+	g.phase = Game.Phase.DAY
+	g.start_night()
+	t = 0.0
+	while t < GameConfig.BOSS_DELAY + 14.0:
+		g.step(0.05)
+		t += 0.05
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_boss.png")
+	# the cards offered after beating the boss (cards for every tower, so one shows each rarity colour)
+	g._end_loop(true)
+	g.offers = [{"id": "quick_fuse", "rarity": 0}, {"id": "hot_coals", "rarity": 1}, {"id": "ember_shot", "rarity": 2}]
+	g._refresh_ui()
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_cards.png")
+	print("saved ", prefix, "_day / _night / _boss / _cards .png")
 	quit()
 
 

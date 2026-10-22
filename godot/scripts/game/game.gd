@@ -1,11 +1,13 @@
 class_name Game
 extends Node3D
-## First playable slice (scope decided 2026-10-22): Day = spend trust on towers, Night = Grunts walk
-## from the forest gaps to the houses, Dawn = income and repairs. Five nights, then "loop complete"
-## (no boss, spells, Foresight or villagers yet). Runs in the Meta XR Simulator (hand rays, pinch) or on
-## the desktop with the mouse when OpenXR is not running.
+## The game loop (spec 6 + 15). Day = spend trust on towers; Night = enemies walk from the forest gaps to
+## the houses; Dawn = income (+5 per standing house, +10 x night for clearing it) and repairs. A loop is
+## 5 nights + a boss night (placeholder boss for now). Beating the boss offers 3 ability cards (keep 1);
+## losing a night offers 1 Common card. Either way the hourglass turns: loop 2 starts, harder, with trust,
+## towers and damage reset but cards kept. A run is loop 1 + loop 2. Runs in the Meta XR Simulator (hand
+## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
-## Desktop keys: 1 / 2 / 3 pick a tower, left click builds, Esc or right click cancels, Enter or Space
+## Desktop keys: 1 / 2 / 3 pick a tower (or a card when cards are offered), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
 ## Debug builds only: F5 toggles x5 and F6 toggles x10 (for testing, not part of the game).
 ##
@@ -13,7 +15,7 @@ extends Node3D
 
 signal phase_changed(phase: int)
 
-enum Phase { DAY, NIGHT, LOST, DONE }
+enum Phase { DAY, NIGHT, CARDS, DONE }
 
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const BOARD_POS := Vector3(0, 0.75, -0.85)
@@ -35,13 +37,20 @@ var enemies: Array[Enemy] = []
 var shots: Array[Projectile] = []
 var shots_root: Node3D
 var trust := GameConfig.START_TRUST
-var night := 0  # 0-based
+var night := 0  # 0-based, within the loop; GameConfig.BOSS_NIGHT is the boss night
+var loop := 0  # 0-based; a run is GameConfig.LOOPS_PER_RUN loops
+var cards := {}  # ability cards held: id -> rarity (0 Common, 1 Rare, 2 Legendary); kept through the loop
+var offers: Array[Dictionary] = []  # cards on the table during Phase.CARDS
+var loop_won := false  # how the current loop ended (beat the boss, or lost a night)
 var phase := Phase.DAY
 var night_time := 0.0
 var selected := ""  # tower kind being placed, "" = none
 var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are debug only
 var last_message := ""
 
+var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
+var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
+var _hourglass: Node3D
 var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i, "kind": String}], sorted by time
 var _rng := RandomNumberGenerator.new()  # seeded per night: cluster sizes, gap cells, walking offsets
 var _towers_root: Node3D
@@ -96,18 +105,33 @@ func _child(parent: Node, n: String) -> Node3D:
 
 func new_run(rng_seed: int) -> void:
 	run_seed = rng_seed
+	loop = 0
+	cards = {}
+	offers = []
+	speed = 1.0
+	_start_loop("Day 1. Spend trust on towers, then start the night.")
+
+
+func _start_loop(message: String) -> void:
+	## Everything the time loop resets (spec 15): night counter, trust, towers, village damage.
 	for t in towers:
 		t.queue_free()
 	towers.clear()
 	_clear_night()
 	nav = NavGrid.new()
+	var sturdy := card("sturdy_homes")
 	for h in houses:
+		h.max_hp = GameConfig.HOUSE_HP * (1.0 + (Cards.value("sturdy_homes", sturdy) / 100.0 if sturdy >= 0 else 0.0))
 		h.repair()
-	trust = GameConfig.START_TRUST
+	var pockets := card("deep_pockets")
+	trust = GameConfig.START_TRUST + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
 	night = 0
-	speed = 1.0
-	Engine.time_scale = 1.0
-	_set_phase(Phase.DAY, "Day 1. Spend trust on towers, then start the night.")
+	_set_phase(Phase.DAY, message)
+
+
+func card(id: String) -> int:
+	## Rarity of a held card, or -1 when it is not held.
+	return cards.get(id, -1)
 
 
 func _set_phase(p: int, message: String) -> void:
@@ -126,7 +150,8 @@ func start_night() -> bool:
 	night_time = 0.0
 	_spawn_queue.clear()
 	_rng.seed = run_seed * 31 + night
-	for g in WavePlan.groups_for(night, run_seed):
+	_held_tonight = false
+	for g in WavePlan.groups_for(night, run_seed, loop):
 		# a group leaves the forest in clusters of 2-3 that come out together, each from a random cell of the gap
 		var gap: Array = GameConfig.SPAWNS[g["spawn"]]
 		var list: Array = g["enemies"]
@@ -139,23 +164,82 @@ func start_night() -> bool:
 				_spawn_queue.append({"t": t + _rng.randf_range(0.0, 0.4), "cell": c, "kind": list[i + j]})
 			i += n
 			t += GameConfig.CLUSTER_GAP
+	if night == GameConfig.BOSS_NIGHT:
+		var edges: Array = GameConfig.SPAWNS.keys()
+		var gap: Array = GameConfig.SPAWNS[edges[_rng.randi_range(0, edges.size() - 1)]]
+		_spawn_queue.append({"t": GameConfig.BOSS_DELAY, "cell": gap[gap.size() / 2], "kind": "boss"})
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
-	_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
+	if night == GameConfig.BOSS_NIGHT:
+		_set_phase(Phase.NIGHT, "Boss night. The Warden comes (placeholder).")
+	else:
+		_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
 	return true
 
 
 func _end_night() -> void:
+	## The night was cleared: every enemy spawned and defeated with fewer than 3 houses shuttered.
 	var standing := standing_houses().size()
-	var income := standing * GameConfig.DAWN_TRUST_PER_HOUSE + GameConfig.NIGHT_CLEAR_TRUST
+	var income := standing * GameConfig.DAWN_TRUST_PER_HOUSE + GameConfig.NIGHT_CLEAR_TRUST_PER_NIGHT * (night + 1)
+	if card("deep_pockets") == 2 and standing == houses.size():
+		income += 5  # Deep Pockets Legendary: no house shuttered tonight
 	trust += income
 	for h in houses:
 		h.repair()
 	_clear_night()
+	if night == GameConfig.BOSS_NIGHT:
+		_end_loop(true)
+		return
 	night += 1
-	if night >= GameConfig.NIGHT_BUDGETS.size():
-		_set_phase(Phase.DONE, "Dawn. All %d nights held: loop complete (the boss is not in this slice). R = new run." % night)
-	else:
-		_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d trust. Day %d." % [standing, income, night + 1])
+	var next := "Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
+	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d trust. %s" % [standing, income, next])
+
+
+func _end_loop(won: bool) -> void:
+	## Beat the boss: 3 cards, keep 1. Lost a night: 1 Common card. The last loop of the run offers none.
+	loop_won = won
+	_clear_night()
+	if loop + 1 >= GameConfig.LOOPS_PER_RUN:
+		var how := "The Warden falls. Run complete!" if won else "Night %d of loop %d lost. Run over." % [night + 1, loop + 1]
+		_set_phase(Phase.DONE, how + " New run = R or the sign.")
+		return
+	_rng.seed = run_seed * 977 + loop
+	offers = Cards.offers(cards, 3 if won else 1, _rng, not won)
+	if offers.is_empty():
+		_rewind()
+		return
+	var head := "The Warden falls! Choose 1 card to keep." if won else "Night %d lost. The hourglass gives you a card." % (night + 1)
+	_set_phase(Phase.CARDS, head)
+
+
+func choose_card(i: int) -> bool:
+	if phase != Phase.CARDS or i < 0 or i >= offers.size():
+		return false
+	var o: Dictionary = offers[i]
+	cards[o["id"]] = o["rarity"]  # a duplicate is only offered at a higher rarity, so this upgrades it
+	offers = []
+	_rewind()
+	return true
+
+
+func _rewind() -> void:
+	loop += 1
+	_play_hourglass()
+	var kept := ", ".join(cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]))
+	_start_loop("The hourglass turns. Loop %d: enemies are tougher. Cards kept: %s" % [loop + 1, kept if kept != "" else "none"])
+
+
+func _play_hourglass() -> void:
+	## STAND-IN for the rewind effect (VFX come later): the hourglass model rises over the board, turns, hides.
+	if _hourglass == null or not is_inside_tree():
+		return
+	_hourglass.visible = true
+	_hourglass.position = Vector3(0, 0.05, 0)
+	_hourglass.rotation = Vector3.ZERO
+	var tw := create_tween()
+	tw.tween_property(_hourglass, "position:y", 0.3, 0.8).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_hourglass, "rotation:z", PI, 0.9).set_trans(Tween.TRANS_BACK)
+	tw.tween_interval(0.4)
+	tw.tween_callback(func(): _hourglass.visible = false)
 
 
 func _clear_night() -> void:
@@ -168,6 +252,7 @@ func _clear_night() -> void:
 			s.queue_free()
 	shots.clear()
 	_spawn_queue.clear()
+	_patches.clear()
 
 
 func standing_houses() -> Array[int]:
@@ -196,6 +281,12 @@ func step(delta: float) -> void:
 			e.step(delta)
 	for t in towers:
 		t.step(delta)
+	for pt in _patches:
+		pt["left"] -= delta
+		for e in enemies.duplicate():
+			if is_instance_valid(e) and e.alive and Vector2(e.position.x - pt["pos"].x, e.position.z - pt["pos"].z).length() <= pt["r"]:
+				e.take_damage(pt["dps"] * delta, false)
+	_patches = _patches.filter(func(pt): return pt["left"] > 0.0)
 	for s in shots.duplicate():
 		if is_instance_valid(s) and not s.done:
 			s.step(delta)
@@ -212,7 +303,7 @@ func step(delta: float) -> void:
 func _spawn(cell: Vector2i, kind: String, at := Vector3.INF) -> Enemy:
 	var e := Enemy.new()
 	e.game = self
-	e.setup(kind, night, _rng)
+	e.setup(kind, night, loop, _rng)
 	_enemies_root.add_child(e)
 	e.spawn_at(cell, at)
 	e.died.connect(_on_enemy_died)
@@ -220,8 +311,22 @@ func _spawn(cell: Vector2i, kind: String, at := Vector3.INF) -> Enemy:
 	return e
 
 
+func add_patch(pos: Vector3, radius: float, dps: float, seconds: float) -> void:
+	_patches.append({"pos": pos, "r": radius, "dps": dps, "left": seconds})
+
+
 func _on_enemy_died(e: Enemy) -> void:
 	enemies.erase(e)
+	if e.burn_left > 0.0 and e.burn_spreads:
+		# Ember Shot Legendary: the burn passes to the nearest enemy within 1 cell
+		var best: Enemy = null
+		var best_d := GameConfig.CELL
+		for o in enemies:
+			if is_instance_valid(o) and o.alive and o.position.distance_to(e.position) <= best_d:
+				best_d = o.position.distance_to(e.position)
+				best = o
+		if best:
+			best.ignite(e.burn_dps, 3.0, true)
 	if e.stats.has("splits_into") and phase == Phase.NIGHT:
 		for i in range(e.stats["split_count"]):
 			var side := Vector3(GameConfig.CELL * 0.3 * (1 if i == 0 else -1), 0, 0).rotated(Vector3.UP, e.rotation.y)
@@ -231,7 +336,15 @@ func _on_enemy_died(e: Enemy) -> void:
 func _on_house_shuttered(_h: House) -> void:
 	var down := houses.size() - standing_houses().size()
 	if down >= GameConfig.HOUSES_LOST_AT and phase == Phase.NIGHT:
-		_set_phase(Phase.LOST, "Night %d lost: %d houses shuttered. R = new run." % [night + 1, down])
+		_end_loop(false)
+
+
+func _hold_check(_h: House) -> bool:
+	## Sturdy Homes Legendary: once per night, the first house that would be shuttered holds at 1 HP.
+	if card("sturdy_homes") == 2 and not _held_tonight:
+		_held_tonight = true
+		return true
+	return false
 
 
 # ---------------------------------------------------------------- building
@@ -286,6 +399,7 @@ func _build_houses() -> void:
 		h.rotation.y = (PI / 2.0 if d.x > 0 else -PI / 2.0) if absf(d.x) > absf(d.y) else (0.0 if d.y > 0 else PI)
 		h.setup(scenes[i % scenes.size()], i, c)
 		h.shuttered.connect(_on_house_shuttered)
+		h.hold_check = _hold_check
 		houses.append(h)
 
 
@@ -389,6 +503,9 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 
 
 func _press_button(id: String) -> void:
+	if id.begins_with("card"):
+		choose_card(int(id.substr(4)))
+		return
 	match id:
 		"night":
 			start_night()
@@ -406,7 +523,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_1, KEY_2, KEY_3:
-				_press_button(GameConfig.TOWER_ORDER[event.keycode - KEY_1])
+				if phase == Phase.CARDS:
+					choose_card(event.keycode - KEY_1)
+				else:
+					_press_button(GameConfig.TOWER_ORDER[event.keycode - KEY_1])
 			KEY_ESCAPE:
 				select("")
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
@@ -480,6 +600,34 @@ func _build_ui() -> void:
 		label.position = Vector3(0, 0, 0.0045)
 		node.add_child(label)
 		_buttons[id] = {"node": node, "mat": mat, "label": label, "hover": false, "box": AABB(-bm.size / 2.0, bm.size)}
+	for i in range(3):
+		# a card stands over the board, leaning back toward the player; filled in when offered
+		var node := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.3, 0.27, 0.01)
+		node.mesh = bm
+		var mat := ModelUtil.flat_material(Color8(0xE6, 0xD8, 0xBC))
+		node.material_override = mat
+		node.position = Vector3((i - 1) * 0.33, 0.22, 0.05)
+		node.rotation_degrees.x = -35
+		ui.add_child(node)
+		var label := Label3D.new()
+		label.font_size = 34
+		label.pixel_size = 0.00045
+		label.outline_size = 8
+		label.width = 600.0
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.modulate = Color8(0x2A, 0x1E, 0x16)
+		label.outline_modulate = Color8(0xFF, 0xF1, 0xDA)
+		label.position = Vector3(0, 0, 0.0056)
+		node.add_child(label)
+		_buttons["card%d" % i] = {"node": node, "mat": mat, "label": label, "hover": false, "box": AABB(-bm.size / 2.0, bm.size)}
+	var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v01.glb")
+	if hg:
+		_hourglass = hg.instantiate()
+		_hourglass.scale = Vector3.ONE * 2.0
+		_hourglass.visible = false
+		ui.add_child(_hourglass)
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
 
@@ -507,8 +655,11 @@ func _refresh_ui() -> void:
 func _refresh_hud() -> void:
 	if _hud == null:
 		return
-	var phase_name: String = ["Day", "Night", "Lost", "Done"][phase]
-	var t := "%s %d   |   Trust %d   |   Houses %d/%d" % [phase_name, night + 1, trust, standing_houses().size(), houses.size()]
+	var phase_name: String = ["Day", "Night", "Cards", "Run over"][phase]
+	var n := "Boss night" if night == GameConfig.BOSS_NIGHT else "%s %d" % [phase_name, night + 1]
+	if phase == Phase.CARDS or phase == Phase.DONE:
+		n = phase_name
+	var t := "Loop %d   |   %s   |   Trust %d   |   Houses %d/%d" % [loop + 1, n, trust, standing_houses().size(), houses.size()]
 	if phase == Phase.NIGHT:
 		t += "   |   Enemies %d" % (enemies.size() + _spawn_queue.size())
 	if speed > 2.0:
@@ -529,13 +680,21 @@ func _refresh_buttons() -> void:
 				b["node"].visible = day
 				c = Color8(0x5E, 0x4A, 0x7A) if day else c
 			"restart":
-				b["node"].visible = phase == Phase.LOST or phase == Phase.DONE
+				b["node"].visible = phase == Phase.DONE
 			"speed":
 				b["node"].visible = phase == Phase.NIGHT
 				b["label"].text = "Speed x2" if speed == 2.0 else "Speed x1"
 				c = Color8(0xF0, 0xB0, 0x4A) if speed == 2.0 else c
+			"card0", "card1", "card2":
+				var i := int(id.substr(4))
+				b["node"].visible = phase == Phase.CARDS and i < offers.size()
+				if b["node"].visible:
+					var o: Dictionary = offers[i]
+					var hint := "[ keep ]" if offers.size() == 1 else "[ %d ]" % (i + 1)
+					b["label"].text = Cards.describe(o["id"], o["rarity"]) + "\n\n" + hint
+					c = [Color8(0xE6, 0xD8, 0xBC), Color8(0xF0, 0xA4, 0x50), Color8(0xE0, 0x50, 0x3A)][o["rarity"]]
 			_:
-				b["node"].visible = true
+				b["node"].visible = phase != Phase.CARDS
 				if not day or trust < GameConfig.TOWERS[id]["cost"]:
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == id:
