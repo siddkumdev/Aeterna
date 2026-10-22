@@ -62,3 +62,8 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 |---|---|---|---|
 | Purple binding magic | "The cracked mirror pieces should be held together with some purple magic VFX" (Siddharth 2026-10-21). Purple threads/glow along the cracks between the shards. NOTE: purple is otherwise the Warden's colour and he chose "no Warden link in the model"; this is his explicit exception for the lens VFX (flagged to him 2026-10-21). | along the cracks of `__glass`; centre `__lens_anchor` | I03, I04 |
 | Cracks heal as Foresight grows | "As the foresight skill evolves the cracks reduce" (Siddharth 2026-10-21): fewer/narrower cracks at each Foresight tier, so the lens looks more whole as Foresight sharpens. Godot work. DECIDED 2026-10-21: shader only; the model has one whole glass and the Foresight lens shader (I04) draws the cracks and fades them per tier. | `__glass` | I03, I04 |
+
+## Rewind hourglass (X11, `ew_vfx_rewind_hourglass_v01`; parts __glass, __sand_top, __sand_bottom)
+| Effect | What Siddharth asked for | Anchor | Asset list |
+|---|---|---|---|
+| Rewind sequence | Rises over the board only for the rewind, flips, the sand runs upward, then it fades (Siddharth 2026-10-22). Crystal-blue sand (same crystal as Foresight). Glass needs a transparent material. | root flips; __sand_top / __sand_bottom scale; `__stream_anchor` (upward sand stream at the neck); `__glow_anchor` (centre glow). Note: __sand_bottom pivots on the glass floor (Z0 + 3 mm), so scaling it grows the pile from the floor. | X10, X11, X12 |

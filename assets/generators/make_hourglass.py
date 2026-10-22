@@ -61,7 +61,7 @@ def glass():
 
 
 def sand():
-    bottom = lathe("sand", [(0.025, 0.007), (0.031, 0.018), (0.018, 0.030), (0.004, 0.036)], SAND, 10)
+    bottom = lathe("sand", [(0.023, 0.003), (0.031, 0.018), (0.018, 0.030), (0.004, 0.036)], SAND, 10)
     top = lathe("sand", [(0.005, 0.067), (0.012, 0.074), (0.026, 0.086), (0.029, 0.094)], SAND, 10)
     return top, bottom
 
@@ -192,7 +192,7 @@ def build(letter, ver="v01"):
     root = bc.assemble(name, [("", frame, (0, 0, 0), None, False),  # unbevelled: 1k budget for the whole hourglass
                               ("glass", glass(), neck, "", False),
                               ("sand_top", [top], (0, 0, Z0 + 0.067), "", False),
-                              ("sand_bottom", [bottom], (0, 0, Z0 + 0.007), "", False)])
+                              ("sand_bottom", [bottom], (0, 0, Z0 + 0.003), "", False)])
     bc.anchor(root, "stream_anchor", neck, size=0.012)
     bc.anchor(root, "glow_anchor", neck, size=0.16)
     root["ew_place"] = "board_event"
