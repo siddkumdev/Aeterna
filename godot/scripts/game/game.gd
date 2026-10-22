@@ -14,7 +14,9 @@ signal phase_changed(phase: int)
 
 enum Phase { DAY, NIGHT, LOST, DONE }
 
-const BOARD_POS := Vector3(0, 0.75, -0.55)  # table height, in front of a seated player (as in the spike)
+# Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
+const BOARD_POS := Vector3(0, 0.75, -0.85)
+const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 # Lighting presets from art/art_bible.md (key colour, ambient colour, energy)
 const DAY_LIGHT := [Color("FFEBC8"), Color("9DBBD0"), 0.8]
 const NIGHT_LIGHT := [Color("8FB0D8"), Color("203C52"), 0.35]
@@ -411,25 +413,25 @@ func _build_ui() -> void:
 		specs.append([k, "%s\n%d trust" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
 	specs.append(["night", "Start night"])
 	specs.append(["restart", "New run"])
-	var w := 0.1
-	var gap := 0.012
+	var w := 0.14
+	var gap := 0.016
 	var x0 := -(4 * w + 3 * gap) / 2.0 + w / 2.0
 	for i in specs.size():
 		var id: String = specs[i][0]
 		# a small sign leaning back toward the player, in front of the island's south edge
 		var node := MeshInstance3D.new()
 		var bm := BoxMesh.new()
-		bm.size = Vector3(w, 0.05, 0.008)
+		bm.size = Vector3(w, 0.065, 0.008)
 		node.mesh = bm
 		var mat := ModelUtil.flat_material(Color8(0xC8, 0x8A, 0x4E))
 		node.material_override = mat
 		var slot := 3 if id == "restart" else i  # New run takes Start night's place once the run is over
-		node.position = Vector3(x0 + slot * (w + gap), 0.0, 0.345)
+		node.position = Vector3(x0 + slot * (w + gap), 0.0, HALF + 0.045)
 		node.rotation_degrees.x = -50
 		ui.add_child(node)
 		var label := Label3D.new()
 		label.text = specs[i][1]
-		label.font_size = 36
+		label.font_size = 48
 		label.pixel_size = 0.00042
 		label.outline_size = 8
 		label.modulate = Color8(0x2A, 0x1E, 0x16)
@@ -437,8 +439,8 @@ func _build_ui() -> void:
 		label.position = Vector3(0, 0, 0.0045)
 		node.add_child(label)
 		_buttons[id] = {"node": node, "mat": mat, "label": label, "hover": false, "box": AABB(-bm.size / 2.0, bm.size)}
-	_hud = _make_label(ui, Vector3(0, 0.26, -0.33), 56)
-	_msg = _make_label(ui, Vector3(0, 0.225, -0.33), 40)
+	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
+	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
 
 
 func _make_label(parent: Node3D, pos: Vector3, size: int) -> Label3D:
@@ -542,10 +544,11 @@ func _init_xr() -> bool:
 func _build_rig() -> void:
 	if not _xr:
 		_camera = Camera3D.new()
-		_camera.fov = 62.0
+		_camera.fov = 50.0
 		add_child(_camera)
-		_camera.position = Vector3(0, 1.2, 0.05)
-		_camera.look_at(BOARD_POS + Vector3(0, 0.03, 0.02))
+		# above and behind a seated player's head, so the whole 1.2 m board and the signs fit on screen
+		_camera.position = Vector3(0, 1.75, 0.25)
+		_camera.rotation_degrees.x = -47.0
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)

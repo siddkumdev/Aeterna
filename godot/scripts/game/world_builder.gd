@@ -13,11 +13,15 @@ const CLUMPS: Array[String] = [
 ]
 const LOW_CLUMP := "res://assets/world/ew_world_forest_clump_low_v02.glb"
 const ISLAND_HEIGHT := 0.115  # measured: the island's top surface is 0.115 m above its base
+const ISLAND_CELLS := 12  # the approved island v01 is built for 12 x 12 cells (0.6 m)
 
 
 static func build_island(board: Node3D) -> void:
 	var island: Node3D = load(ISLAND).instantiate()
 	island.position.y = -ISLAND_HEIGHT
+	# STAND-IN: the board grew to 24 x 24; stretch v01 across it (height unchanged) until a 1.2 m island is built
+	var s := float(GameConfig.SIZE) / ISLAND_CELLS
+	island.scale = Vector3(s, 1.0, s)
 	board.add_child(island)
 
 

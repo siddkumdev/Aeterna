@@ -1,6 +1,6 @@
 class_name NavGrid
 extends RefCounted
-## The 12 x 12 grid as the enemies see it: which cells can be walked, and the route from a spawn to a house.
+## The board grid (GameConfig.SIZE square) as the enemies see it: which cells can be walked, and the route from a spawn to a house.
 ## Enemies walk around towers and houses (spec 2; towers cannot be damaged in this slice). The forest ring
 ## on the edge cells is not walkable except at the three spawn gaps. Pure logic, no nodes: tested headless.
 

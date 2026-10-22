@@ -4,7 +4,7 @@ Status: every item below is PROPOSED, not decided. Numbers are starting values t
 
 Revision 2 (Siddharth's feedback applied): no moving towers, no mana (cooldowns only), new 4-tower roster, flat island confirmed, ability choice confirmed.
 
-**Everything is grid-based (Siddharth's rule).** The unit of measure is the CELL. 1 cell = 5 cm in the real world; the board is 12 x 12 cells. All gameplay distances, ranges, radii, speeds, heights and model footprints below are in cells (or cells per second). Real-world units (cm, m/s) appear only where they describe the player's body or hand input, and are marked "real".
+**Everything is grid-based (Siddharth's rule).** The unit of measure is the CELL. 1 cell = 5 cm in the real world; the board is 24 x 24 cells (1.2 m; was 12 x 12 until 2026-10-22, Siddharth: "way too small"). All gameplay distances, ranges, radii, speeds, heights and model footprints below are in cells (or cells per second). Real-world units (cm, m/s) appear only where they describe the player's body or hand input, and are marked "real".
 
 ### Grid and footprints (Siddharth: all buildings are one uniform size)
 | Thing | Footprint (cells) | Height (cells) |
@@ -22,12 +22,12 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 ## A. Core rules
 
 ### 1. Board
-- **Size:** 12 x 12 cells island, centred in front of the player.
+- **Size:** 24 x 24 cells island (1.2 m; was 12 x 12), centred in front of the player.
 - **Placement (Siddharth's decision):** passthrough on, and the board sits on the player's real table when one is found, at the table's surface height. The room is otherwise ignored by gameplay.
 - **No table found (fallback):** the board floats at a comfortable seated height and viewing angle instead: centre 9-11 cells (real 45-55 cm) from the eyes and 3-5 cells below eye level, flat or tilted slightly toward the player (tilt angle tunable). Same rules, same grid.
 - **Both cases must work in every room:** the fallback is the safe default, so the game never depends on detection succeeding.
 - **Terrain:** FLAT for the competition build (cheapest, most comfortable). Elevation is a later option.
-- **Grid:** 12 x 12 cells; towers, huts and houses snap to whole cells (large ghost preview). Villagers, troops and enemies move continuously but their speeds, ranges and positions are measured in cells.
+- **Grid:** 24 x 24 cells; towers, huts and houses snap to whole cells (large ghost preview). Villagers, troops and enemies move continuously but their speeds, ranges and positions are measured in cells.
 - **Layout:** village in the centre ring (6 houses), forest ring around the edge, river optional (decoration).
 - **Forest look (Siddharth 2026-10-21):** the forest ring and tree scatter are generated procedurally in Godot and must look natural, not fake: irregular spacing, random rotation and scale per instance, mixed clump and tree variants, density thinning toward the village, no visible grid or repeating pattern.
 - **Paths:** the path tiles are purely cosmetic (Siddharth 2026-10-21): they only make the village look better and have no gameplay effect. Ground enemies and troops find their own optimal route, respecting terrain and obstacles (pathfinding). The 3 forest spawn points are all in the front 180 degrees so the player never turns to see ground enemies; routes converge on the village.

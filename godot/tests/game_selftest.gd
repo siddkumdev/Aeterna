@@ -42,13 +42,13 @@ func _nav() -> void:
 		check("route from %s reaches a house" % k, not r.is_empty())
 	check("cannot build on a house", not nav.can_build(GameConfig.HOUSE_CELLS[0], Vector2i(2, 2), all))
 	check("cannot build on the forest ring", not nav.can_build(Vector2i(0, 2), Vector2i(2, 2), all))
-	check("cannot build on a spawn gap", not nav.can_build(Vector2i(5, 0), Vector2i(2, 2), all))
+	check("cannot build on a spawn gap", not nav.can_build(Vector2i(11, 0), Vector2i(2, 2), all))
 	check("can build on open ground", nav.can_build(Vector2i(1, 1), Vector2i(2, 2), all))
 	# Plug the north gap: the cells just inside it. Building there must be refused.
-	check("cannot seal a spawn off", not nav.can_build(Vector2i(5, 1), Vector2i(2, 2), all))
+	check("cannot seal a spawn off", not nav.can_build(Vector2i(11, 1), Vector2i(2, 2), all))
 	nav.add_tower(Vector2i(1, 1), Vector2i(2, 2))
 	check("tower cells are blocked", not nav.can_build(Vector2i(2, 2), Vector2i(2, 2), all))
-	var r := nav.route(Vector2i(0, 5), all)
+	var r := nav.route(GameConfig.SPAWNS["west"][0], all)
 	var crosses := false
 	for c in r.get("path", []):
 		if nav.kind.get(c, "") in ["tower", "house", "forest"]:
@@ -93,11 +93,11 @@ func _nights() -> void:
 
 	# 2) Bot: every day spend all trust, cycling fire / brazier / crossbow on spots near the gaps.
 	g = await _make_game()
-	var spots: Array[Vector2i] = [Vector2i(5, 5), Vector2i(5, 1), Vector2i(1, 3), Vector2i(9, 3), Vector2i(3, 1), Vector2i(7, 1),
-		Vector2i(1, 7), Vector2i(9, 7), Vector2i(1, 9), Vector2i(9, 9), Vector2i(5, 5), Vector2i(3, 10), Vector2i(7, 10)]
+	var spots: Array[Vector2i] = [Vector2i(11, 11), Vector2i(9, 3), Vector2i(13, 3), Vector2i(3, 9), Vector2i(3, 13),
+		Vector2i(19, 9), Vector2i(19, 13), Vector2i(9, 19), Vector2i(13, 19), Vector2i(14, 11), Vector2i(8, 11), Vector2i(11, 8)]
 	var order := ["fire", "crossbow", "brazier"]
 	var k := 0
-	check("build costs trust", g.try_build("fire", Vector2i(5, 5)) and g.trust == 40)
+	check("build costs trust", g.try_build("fire", Vector2i(11, 11)) and g.trust == 40)
 	while g.phase == Game.Phase.DAY:
 		var built := true
 		while built:

@@ -17,7 +17,7 @@ A cozy toy diorama on a real table: chunky, faceted low-poly pieces with soft be
 5. **Cheap on Quest.** Budgets and flat shading come before detail. **[Decided]**
 
 ## 3. Scale and grid **[Decided]**
-- 1 cell = 5 cm = 0.05 m. Board = 12 x 12 cells = 0.6 m.
+- 1 cell = 5 cm = 0.05 m. Board = 24 x 24 cells = 1.2 m (was 12 x 12 = 0.6 m until 2026-10-22).
 - Buildings (houses, towers, huts, friendly Airship) are all **2 x 2 cells** footprint. Height about 3 to 4 cells is a guideline, not a hard rule (Siddharth, 2026-10-18): a squat tower is fine when its role suits it.
 - Trees, props, villagers, troops, most enemies fit **1 x 1 cell**. Boss 3 x 3 and 5 cells tall.
 - Models are authored in metres (glTF), so N cells = N x 0.05 m. Origin at the base centre, +Y up, transforms applied.

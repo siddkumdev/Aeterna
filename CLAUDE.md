@@ -46,7 +46,7 @@ _work/      scratch input (git-ignored)
 
 ## Asset conventions
 - Name: `ew_<category>_<name>_v<NN>` (categories: world, village, defense, enemy, portal, vr, foresight, ui, vfx).
-- Grid-based everything (decided): 1 cell = 5 cm = 0.05 m; the board is 12 x 12 cells. Gameplay measures (ranges, radii, speeds, heights, footprints) are in cells, models are sized to whole-cell footprints (see `docs/GAME_SPEC.md`). Blender/glTF units stay meters, so a footprint of N cells = N x 0.05 m.
+- Grid-based everything (decided): 1 cell = 5 cm = 0.05 m; the board is 24 x 24 cells = 1.2 m (was 12 x 12 until 2026-10-22; the island v01 model is still 12 x 12 and is stretched in Godot until a 24 x 24 island exists). Gameplay measures (ranges, radii, speeds, heights, footprints) are in cells, models are sized to whole-cell footprints (see `docs/GAME_SPEC.md`). Blender/glTF units stay meters, so a footprint of N cells = N x 0.05 m.
 - +Y up on export (glTF), origin at the base of the model, transforms applied, no leftover modifiers.
 - Export `.glb` to `assets/export/<category>/`. One generator per asset: `assets/generators/make_<name>.py` with `build(params, seed)`, reading `art/palette.json`.
 - No skinned rigs: characters are separate parts animated in Godot.

@@ -4,7 +4,7 @@ extends RefCounted
 ## decisions of 2026-10-22 in art/decisions.md. Distances and speeds are in CELLS (1 cell = 0.05 m).
 
 const CELL := 0.05
-const SIZE := 12
+const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 x 12)
 
 # Economy (spec 5)
 const START_TRUST := 100
@@ -14,8 +14,10 @@ const NIGHT_CLEAR_TRUST := 0  # spec: paid on top of dawn income, amount still O
 # Houses (decided 2026-10-22: 60 HP). A night is lost at 3 or more shuttered houses (spec 2).
 const HOUSE_HP := 60.0
 const HOUSES_LOST_AT := 3
-# Six 2x2 houses in a ring round an open centre (top-left cells). Fixed for the slice; procedural later.
-const HOUSE_CELLS: Array[Vector2i] = [Vector2i(3, 4), Vector2i(5, 3), Vector2i(7, 4), Vector2i(3, 7), Vector2i(5, 8), Vector2i(7, 7)]
+# Six 2x2 houses spread in a loose ring (radius about 5.5 cells) round an open centre, so towers fit
+# between them as well as out by the forest (Siddharth 2026-10-22). Top-left cells. Fixed for the slice;
+# procedural later.
+const HOUSE_CELLS: Array[Vector2i] = [Vector2i(11, 5), Vector2i(16, 8), Vector2i(16, 14), Vector2i(11, 16), Vector2i(6, 14), Vector2i(6, 8)]
 const HOUSE_SCENES: Array[String] = [
 	"res://assets/village/ew_village_cottage_v05.glb",
 	"res://assets/village/ew_village_cabin_v05.glb",
@@ -25,9 +27,9 @@ const HOUSE_SCENES: Array[String] = [
 # Forest spawn points (decided 2026-10-22: north, east, west; the south edge faces the player).
 # Each is the pair of edge cells left open in the forest ring.
 const SPAWNS := {
-	"north": [Vector2i(5, 0), Vector2i(6, 0)],
-	"east": [Vector2i(11, 5), Vector2i(11, 6)],
-	"west": [Vector2i(0, 5), Vector2i(0, 6)],
+	"north": [Vector2i(11, 0), Vector2i(12, 0)],
+	"east": [Vector2i(23, 11), Vector2i(23, 12)],
+	"west": [Vector2i(0, 11), Vector2i(0, 12)],
 }
 
 # Grunt (spec 9 + 2026-10-22: 2 damage per second in melee; cannot damage towers in this slice)
