@@ -1,7 +1,8 @@
 extends SceneTree
 ## Screenshots of the slice in desktop mode (needs a window, not --headless):
 ##   <godot console> --xr-mode off --path godot -s res://tools/game_shot.gd -- OUT_PREFIX
-## Writes OUT_PREFIX_day.png (build ghost shown) and OUT_PREFIX_night.png (a night under way).
+## Writes OUT_PREFIX_day.png (build ghost shown), _night.png (a night under way), _air.png (Wisps, Airships,
+## a Tunneler mound, Fog variants), _boss.png and _cards.png.
 
 
 func _initialize() -> void:
@@ -31,7 +32,34 @@ func _initialize() -> void:
 		t += 0.05
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_night.png")
+	# air and underground (step 2): Wisps flying in at the Airships, a Tunneler's mound, Fog variants walking
+	g._clear_night()
+	g.phase = Game.Phase.DAY
+	g.trust = 200
+	g.try_build("airship", Vector2i(14, 5))
+	g.try_build("airship", Vector2i(5, 14))
+	g.loop = 1
+	g.night = 2
+	g.start_night()
+	g._spawn_queue.clear()
+	for i in 3:
+		g._spawn(GameConfig.SPAWNS["north"][i], "wisp")
+	for i in 2:
+		g._spawn(GameConfig.SPAWNS["west"][i + 1], "wisp")
+		g._spawn(GameConfig.SPAWNS["west"][i * 2], "fog")
+	g._spawn(GameConfig.SPAWNS["east"][1], "tunneler")
+	g._spawn(GameConfig.SPAWNS["east"][3], "tunneler")
+	t = 0.0
+	while t < 4.0:
+		g.step(0.05)
+		t += 0.05
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_air.png")
 	# boss night: the placeholder Warden walking in with its escorts
+	for tw in g.towers.filter(func(x): return x.kind == "airship"):
+		tw.queue_free()
+		g.towers.erase(tw)
+	g.loop = 0
 	g._clear_night()
 	g.night = GameConfig.BOSS_NIGHT
 	g.phase = Game.Phase.DAY
@@ -48,7 +76,7 @@ func _initialize() -> void:
 	g._refresh_ui()
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_cards.png")
-	print("saved ", prefix, "_day / _night / _boss / _cards .png")
+	print("saved ", prefix, "_day / _night / _air / _boss / _cards .png")
 	quit()
 
 

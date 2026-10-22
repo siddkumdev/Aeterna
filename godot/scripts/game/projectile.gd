@@ -48,7 +48,7 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 	var res = load(cfg["shot"])
 	if res:
 		var m: Node3D = res.instantiate()
-		m.scale = Vector3.ONE * mods.get("scale", 1.0)
+		m.scale = Vector3.ONE * mods.get("scale", 1.0) * cfg.get("shot_scale", 1.0)
 		add_child(m)
 
 
@@ -62,7 +62,7 @@ func step(delta: float) -> void:
 			var to := _to - global_position
 			var stride := speed * delta
 			if to.length() <= stride:
-				if is_instance_valid(target) and target.alive:
+				if is_instance_valid(target) and target.targetable(mods.get("air", false), mods.get("ground", true)):
 					_hit_enemy(target)
 				_finish()
 			else:
@@ -75,7 +75,7 @@ func step(delta: float) -> void:
 			if _t >= 1.0:
 				var centre: Vector3 = game.board.to_local(_to)
 				for e in game.enemies.duplicate():
-					if is_instance_valid(e) and e.alive and _flat(e.global_position - _to) <= splash:
+					if is_instance_valid(e) and _can_hit(e) and _flat(e.global_position - _to) <= splash:
 						_hit_enemy(e)
 						if mods.get("knockback", false) and is_instance_valid(e) and e.alive:
 							e.knockback(centre)
@@ -87,7 +87,7 @@ func step(delta: float) -> void:
 			var a := global_position
 			var b := a + _dir * stride
 			for e in game.enemies.duplicate():
-				if is_instance_valid(e) and e.alive and not _hit.has(e) and _seg_dist(e.global_position, a, b) <= width:
+				if is_instance_valid(e) and _can_hit(e) and not _hit.has(e) and _seg_dist(e.global_position, a, b) <= width:
 					_hit[e] = true
 					_hit_enemy(e)
 			global_position = b
@@ -96,12 +96,19 @@ func step(delta: float) -> void:
 				_finish()
 
 
+func _can_hit(e: Enemy) -> bool:
+	return e.targetable(mods.get("air", false), mods.get("ground", true))
+
+
 func _hit_enemy(e: Enemy) -> void:
+	var dmg := damage
+	if not e.flying:
+		dmg *= mods.get("ground_mult", 1.0)
 	if mods.has("burn"):
 		e.ignite(mods["burn"], 3.0, mods.get("burn_spreads", false))  # Ember Shot: burn for 3 s
 	if mods.get("slow", false):
 		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
-	e.take_damage(damage)
+	e.take_damage(dmg)
 
 
 func _finish() -> void:

@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_nav()
 	await _nights()
 	await _cards()
+	await _step2()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -40,11 +41,37 @@ func _waves() -> void:
 		check("night %d: threat adds up to the budget (%d)" % [n + 1, total], total == GameConfig.NIGHT_BUDGETS[n])
 		check("night %d: one group from each spawn" % (n + 1), edges.size() == 3)
 		check("night %d: no spawn gets more than half the budget" % (n + 1), max_share * 2 <= GameConfig.NIGHT_BUDGETS[n] + 2)
-		for k in GameConfig.WAVE_TYPES:
-			if GameConfig.ENEMIES[k]["unlock"] == n + 1 and n > 0:
-				check("night %d: new type %s opens the night alone" % [n + 1, k], g[0]["enemies"].all(func(e): return e == k))
+		var fresh := GameConfig.WAVE_TYPES.filter(func(k): return GameConfig.ENEMIES[k]["unlock"] == n + 1 and n > 0 \
+			and GameConfig.ENEMIES[k].get("unlock_loop", 0) == 0)
+		for i in fresh.size():
+			var k: String = fresh[i]
+			check("night %d: new type %s opens alone in group %d" % [n + 1, k, i + 1], not g[i]["enemies"].is_empty() and g[i]["enemies"].all(func(e): return e == k))
 		print("      night %d: %s" % [n + 1, str(g.map(func(x): return "%s %s" % [x["spawn"], _count(x["enemies"])]))])
 	check("same seed, same plan", str(WavePlan.groups_for(2, 5)) == str(WavePlan.groups_for(2, 5)))
+	# flyers never more than a third of a night; Tunnelers and the Fog variant only in loop 2, from their night
+	var air_bad := 0
+	var loop1_bad := 0
+	var seen := {}
+	for sd in range(1, 41):
+		for lp in range(2):
+			for n in range(GameConfig.NIGHTS_PER_LOOP):
+				var all_threat := 0
+				var air := 0
+				for x in WavePlan.groups_for(n, sd, lp):
+					all_threat += WavePlan.threat_of(x["enemies"])
+					for k in x["enemies"]:
+						if GameConfig.ENEMIES[k].get("flying", false):
+							air += GameConfig.ENEMIES[k]["threat"]
+						if lp == 0 and GameConfig.ENEMIES[k].get("unlock_loop", 0) > 0:
+							loop1_bad += 1
+						if not seen.has("%s L%d" % [k, lp]) or seen["%s L%d" % [k, lp]] > n + 1:
+							seen["%s L%d" % [k, lp]] = n + 1
+				if air * 3 > all_threat + 1:
+					air_bad += 1
+	check("flyers never more than a third of a night's threat (40 seeds, both loops)", air_bad == 0)
+	check("no Tunneler or Fog variant in loop 1", loop1_bad == 0)
+	check("Wisps from night 2", seen.get("wisp L0", 0) == 2)
+	check("loop 2: Tunnelers from night 2, Fog from night 3", seen.get("tunneler L1", 0) == 2 and seen.get("fog L1", 0) == 3)
 	# loop 2: one extra group, a third more threat, and still no edge with more than half of it
 	for n in range(5):
 		var g2 := WavePlan.groups_for(n, 1, 1)
@@ -183,7 +210,7 @@ func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
 	var g := await _make_game()
 	var spots: Array[Vector2i] = [Vector2i(11, 11), Vector2i(11, 4), Vector2i(5, 11), Vector2i(17, 11), Vector2i(11, 18),
 		Vector2i(14, 5), Vector2i(8, 5), Vector2i(5, 15), Vector2i(17, 15), Vector2i(5, 7), Vector2i(17, 7), Vector2i(14, 17)]
-	var order := ["fire", "crossbow", "brazier"]
+	var order := ["fire", "crossbow", "brazier", "airship"]
 	var out := {"lost_on": 7, "loops": 1, "log": []}
 	while g.phase != Game.Phase.DONE:
 		if g.phase == Game.Phase.CARDS:
@@ -198,10 +225,13 @@ func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
 			var built := true
 			while built and (keep_building or k < 3):
 				built = false
-				for s in spots:
-					if g.try_build(order[(k + g.towers.size()) % 3], s):
-						k += 1
-						built = true
+				for o in range(order.size()):
+					for s in spots:
+						if g.try_build(order[(k + g.towers.size() + o) % (order.size() if keep_building else 3)], s):
+							k += 1
+							built = true
+							break
+					if built:
 						break
 		var label := "L%d N%d" % [g.loop + 1, g.night + 1]
 		var was_loop := g.loop
@@ -259,5 +289,107 @@ func _cards() -> void:
 	check("Quick Fuse Legendary: 40% faster and every 5th shot", is_equal_approx(f.interval, 1.5 / 1.4) and f.every_nth == 5)
 	check("Hot Coals Rare: 6 damage per pulse, no patch", is_equal_approx(b.damage, 6.0) and not b.shot_mods.get("patch", false))
 	check("Long Draw Common: range 7 cells", is_equal_approx(c.reach, 7 * GameConfig.CELL) and not c.hits_air)
+	g.queue_free()
+	await process_frame
+
+
+func _night_with(g: Game, kind: String, spawn_cell: Vector2i, seconds: float) -> Enemy:
+	## Starts a night with no planned waves and puts one enemy of `kind` at a spawn cell; plays `seconds`.
+	g.start_night()
+	g._spawn_queue.clear()
+	var e: Enemy = g._spawn(spawn_cell, kind)
+	var t := 0.0
+	while t < seconds and is_instance_valid(e) and e.alive:
+		g.step(0.05)
+		t += 0.05
+	return e
+
+
+func _step2() -> void:
+	var north: Vector2i = GameConfig.SPAWNS["north"][1]
+	# Wisp vs ground towers: a Fire Tower right beside the north gap never shoots it; it flies to a house
+	var g := await _make_game()
+	g.try_build("fire", Vector2i(11, 3))
+	var w := await _night_with(g, "wisp", north, 25.0)
+	var fire: Tower = g.towers[0]
+	check("Wisp flies above the board", is_instance_valid(w) and w.position.y > 3.0 * GameConfig.CELL)
+	check("ground towers never shoot a Wisp", fire.shots_fired == 0)
+	var hurt := g.houses.filter(func(h): return h.hp < h.max_hp).size()
+	check("the Wisp reaches a house and hurts it", is_instance_valid(w) and w.attacking and hurt == 1)
+	g.queue_free()
+	await process_frame
+
+	# Airship: shoots the Wisp down, ignores ground enemies; at most 2
+	g = await _make_game()
+	g.trust = 1000
+	check("Airship builds", g.try_build("airship", Vector2i(11, 3)))
+	check("second Airship builds", g.try_build("airship", Vector2i(4, 4)))
+	check("a third Airship is refused (max 2)", not g.try_build("airship", Vector2i(17, 4)) and g.at_max("airship"))
+	w = await _night_with(g, "wisp", north, 25.0)
+	check("the Airship shoots a Wisp down", not is_instance_valid(w) or not w.alive)
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+	g.try_build("airship", Vector2i(11, 3))
+	var gr := await _night_with(g, "grunt", north, 15.0)
+	check("the Airship never shoots ground enemies", is_instance_valid(gr) and gr.hp == gr.stats["hp"] * 1.0)
+	g.queue_free()
+	await process_frame
+
+	# Tunneler: cannot be hit underground, comes up next to a house, then towers can hit it
+	g = await _make_game()
+	g.trust = 1000
+	g.try_build("brazier", Vector2i(11, 2))  # right where it leaves the forest
+	g.start_night()
+	g._spawn_queue.clear()
+	var tu: Enemy = g._spawn(north, "tunneler")
+	var full: float = tu.hp
+	var was_under := true
+	for i in range(200):  # 10 s, still underground, the Brazier pulsing on top of it
+		g.step(0.05)
+		was_under = was_under and tu.underground
+	check("a Tunneler starts underground and cannot be hit", was_under and is_equal_approx(tu.hp, full))
+	var t := 0.0
+	while tu.underground and t < 120.0:
+		g.step(0.05)
+		t += 0.05
+	var goals := g.nav.goals_of(tu.target_house)
+	check("it pops up next to a house (%.1f s)" % (10.0 + t), not tu.underground and goals.has(tu.cell))
+	for i in range(40):
+		g.step(0.05)
+	check("then it hits that house", tu.attacking and g.houses[tu.target_house].hp < g.houses[tu.target_house].max_hp)
+	g.queue_free()
+	await process_frame
+
+	# Fog variant walks like a Grunt, in mist grey; flagged hidden for Foresight
+	g = await _make_game()
+	var fg := await _night_with(g, "fog", north, 2.0)
+	check("Fog variant: walks a ground route, hidden from Foresight", fg.stats.get("hidden", false) and not fg.path.is_empty() and not fg.flying)
+	g.queue_free()
+	await process_frame
+
+	# Airship cards: Long Mooring Legendary hits ground at half damage; Twin Cannons faster, Legendary 2 targets
+	g = await _make_game()
+	g.cards = {"long_mooring": 2, "twin_cannons": 2, "long_draw": 2}
+	g._start_loop("test")
+	g.trust = 1000
+	g.try_build("airship", Vector2i(11, 3))
+	g.try_build("crossbow", Vector2i(4, 18))  # out of reach of the north gap, so only the Airship hits there
+	var a: Tower = g.towers[0]
+	var c: Tower = g.towers[1]
+	check("Long Mooring Legendary: range 7, also ground", is_equal_approx(a.reach, 7 * GameConfig.CELL) and a.hits_ground and a.hits_air)
+	check("Twin Cannons Legendary: 40% faster, 2 targets", is_equal_approx(a.interval, 1.0 / 1.4) and a.targets_per_volley == 2)
+	check("Long Draw Legendary: Longbow hits flyers too", c.hits_air and c.hits_ground)
+	g.start_night()
+	g._spawn_queue.clear()
+	var g1: Enemy = g._spawn(north, "grunt")
+	var g2: Enemy = g._spawn(GameConfig.SPAWNS["north"][2], "grunt")
+	var hp0: float = g1.hp
+	for i in range(60):
+		g.step(0.05)
+	var hit1 := is_instance_valid(g1) and g1.hp < hp0
+	var hit2 := is_instance_valid(g2) and g2.hp < hp0
+	check("Twin Cannons Legendary + Long Mooring: both ground targets hit, half damage (3 per shell)",
+		hit1 and hit2 and is_equal_approx(fposmod(hp0 - g1.hp, 3.0), 0.0))
 	g.queue_free()
 	await process_frame

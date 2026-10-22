@@ -2,9 +2,11 @@ class_name WavePlan
 extends RefCounted
 ## Which enemies come on a night, from where and when (spec 6a). Deterministic from the run seed, so a night
 ## can be replayed.
-##   - The budget is spent only on types unlocked by that night (GameConfig.ENEMIES[..]["unlock"]).
-##   - Guard rail: on the night a type unlocks, the first group is that type ALONE and small, so the player
-##     can learn it.
+##   - The budget is spent only on types unlocked by that night and loop (GameConfig.ENEMIES[..]["unlock"],
+##     ["unlock_loop"]).
+##   - Guard rail: on the night a type unlocks, it opens the night ALONE in a small group, so the player can
+##     learn it. Two new types on one night (night 2: Scout and Wisp) get one lead group each.
+##   - Guard rail: flyers never more than GameConfig.FLYER_SHARE of the night's threat.
 ##   - The rest is split into 3 groups growing 2 : 3 : 4 (so no spawn gets more than half the budget), one
 ##     group per spawn edge in a seeded order.
 ##   - Loop 2 (spec 16) adds one extra group per night (worth a third more threat), from the edge that had the
@@ -19,13 +21,15 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed + night * 7919 + loop * 104729
 	var unlocked: Array[String] = []
-	var fresh := ""  # the type that unlocks tonight, if any
+	var fresh: Array[String] = []  # types that unlock tonight, each opens the night alone (loop 1 only)
 	for k in GameConfig.WAVE_TYPES:
 		var u: int = GameConfig.ENEMIES[k]["unlock"]
-		if u <= night + 1:
+		if u <= night + 1 and loop >= GameConfig.ENEMIES[k].get("unlock_loop", 0):
 			unlocked.append(k)
-		if u == night + 1 and u > 1 and loop == 0:
-			fresh = k
+			if u == night + 1 and u > 1 and loop == 0:
+				fresh.append(k)
+	var extra := budget / 3 if loop >= 1 else 0
+	var air := {"left": int((budget + extra * GameConfig.LOOP2_EXTRA_GROUPS) * GameConfig.FLYER_SHARE)}
 	var shares := [2, 3, 4]
 	var budgets: Array[int] = []
 	var left := budget
@@ -37,9 +41,10 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 	var carry := 0
 	for i in range(3):
 		var pool := unlocked
-		if i == 0 and fresh != "":
-			pool = [fresh] as Array[String]  # tonight's new type comes first, alone
-		groups[i] = _buy(budgets[i] + carry, pool, rng, i == 0 and fresh != "")
+		var alone := i < fresh.size() and i < 2
+		if alone:
+			pool = [fresh[i]] as Array[String]  # tonight's new type comes first, alone
+		groups[i] = _buy(budgets[i] + carry, pool, rng, alone, air)
 		carry = budgets[i] + carry - threat_of(groups[i])  # what an only-new-type group could not spend
 	var spawns: Array = GameConfig.SPAWNS.keys()
 	for i in range(spawns.size() - 1, 0, -1):  # seeded shuffle: which edge each group comes from
@@ -54,17 +59,19 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 		for x in range(GameConfig.LOOP2_EXTRA_GROUPS):
 			# worth a third of the night's budget, from the edge whose group was smallest (the first)
 			out.append({"time": GameConfig.FIRST_GROUP_DELAY + (3 + x) * GameConfig.GROUP_INTERVAL, "spawn": spawns[0],
-				"enemies": _buy(budget / 3, unlocked, rng, false)})
+				"enemies": _buy(extra, unlocked, rng, false, air)})
 	return out
 
 
-static func _buy(budget: int, pool: Array[String], rng: RandomNumberGenerator, only_pool: bool) -> Array[String]:
+static func _buy(budget: int, pool: Array[String], rng: RandomNumberGenerator, only_pool: bool, air: Dictionary) -> Array[String]:
 	## Spend `budget` threat on types from the pool, picked by weight (Grunts most often). Grunts (threat 1)
 	## fill any remainder, except in an only-new-type group, which leaves the remainder to the next group.
+	## air["left"] is the flyer threat the night may still spend; it goes down as flyers are bought.
 	var out: Array[String] = []
 	var left := budget
 	while left > 0:
-		var options := pool.filter(func(k): return GameConfig.ENEMIES[k]["threat"] <= left)
+		var options := pool.filter(func(k): return GameConfig.ENEMIES[k]["threat"] <= left \
+			and (not GameConfig.ENEMIES[k].get("flying", false) or GameConfig.ENEMIES[k]["threat"] <= air["left"]))
 		if options.is_empty():
 			if only_pool:
 				break
@@ -81,6 +88,8 @@ static func _buy(budget: int, pool: Array[String], rng: RandomNumberGenerator, o
 				break
 		out.append(k)
 		left -= GameConfig.ENEMIES[k]["threat"]
+		if GameConfig.ENEMIES[k].get("flying", false):
+			air["left"] -= GameConfig.ENEMIES[k]["threat"]
 	return out
 
 

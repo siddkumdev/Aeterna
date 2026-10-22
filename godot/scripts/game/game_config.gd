@@ -20,7 +20,7 @@ const LOOPS_PER_RUN := 2
 const LOOP2_HP := 1.4
 const LOOP2_EXTRA_GROUPS := 1
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
-const BUILT_SYSTEMS: Array[String] = []
+const BUILT_SYSTEMS: Array[String] = ["airship"]
 
 # Houses (decided 2026-10-22: 60 HP). A night is lost at 3 or more shuttered houses (spec 2).
 const HOUSE_HP := 60.0
@@ -46,13 +46,25 @@ const SPAWNS := {
 
 # Enemies (spec 9; speeds in cells/s). None can damage towers in this slice. dps (damage per second to a
 # house) is only given for the Grunt (2, decided 2026-10-22); the others reuse it as a STAND-IN.
-# unlock = first night (1-based) the type can appear. threat = cost against the night budget (spec 6a).
+# unlock = first night (1-based) the type can appear; unlock_loop = first loop (0-based) it can appear
+# (spec 16: Tunnelers and the Fog variant are loop 2 only). threat = cost against the night budget (spec 6a).
 # weight = how often the wave plan picks it among unlocked types (slice choice: mostly Grunts).
+#   flying:  the Wisp (spec 10) rises out of the tree line and flies straight at the nearest standing house,
+#            fly_height cells above the board; only air attacks hit it (the Airship, Long Draw Legendary).
+#   burrows: the Tunneler (spec 9) travels underground in a straight line, untouchable, and pops up next to
+#            the nearest standing house.
+#   hidden:  the Fog variant is hidden from Foresight (step 3); otherwise it walks like a Grunt.
 const ENEMIES := {
 	"grunt": {"name": "Grunt", "hp": 20.0, "speed": 0.4, "dps": 2.0, "threat": 1, "unlock": 1, "weight": 5},
 	"scout": {"name": "Scout", "hp": 10.0, "speed": 0.8, "dps": 2.0, "threat": 1, "unlock": 2, "weight": 3},
 	"splitter": {"name": "Splitter", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "weight": 2,
 		"splits_into": "splitling", "split_count": 2},
+	"wisp": {"name": "Wisp", "hp": 8.0, "speed": 1.2, "dps": 2.0, "threat": 2, "unlock": 2, "weight": 2,
+		"flying": true, "fly_height": 4.0},
+	"tunneler": {"name": "Tunneler", "hp": 30.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 2, "unlock_loop": 1,
+		"weight": 2, "burrows": true},
+	"fog": {"name": "Fog variant", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "unlock_loop": 1,
+		"weight": 2, "hidden": true},
 	# the two small pieces a Splitter leaves (spec: 2 x 8 HP); never bought by the wave plan
 	# PLACEHOLDER boss (spec E11: a scaled-up Grunt so the loop is testable; the real Warden comes later).
 	# Stats are Claude's stand-ins (the spec gives none); it walks to the houses like a Grunt, 2.5x the size.
@@ -60,7 +72,8 @@ const ENEMIES := {
 		"boss": true},
 	"splitling": {"name": "Splitling", "hp": 8.0, "speed": 0.4, "dps": 1.0, "threat": 0, "unlock": 99, "weight": 0},
 }
-const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter"]  # what the wave plan may buy
+const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter", "wisp", "tunneler", "fog"]  # what the wave plan may buy
+const FLYER_SHARE := 1.0 / 3.0  # spec 6a guard rail: flyers never more than a third of a night's threat
 # Enemy HP grows each night (2026-10-22, Siddharth: ramp per night): night n has x(1 + HP_RAMP * (n - 1)).
 const HP_RAMP_PER_NIGHT := 0.25
 
@@ -74,7 +87,8 @@ const CLUSTER_GAP := 2.5  # seconds between clusters of one group
 const BOSS_DELAY := 15.0  # the placeholder boss leaves the forest after the first escort group
 const SPREAD := 0.3  # each enemy walks up to this many cells off the centre line, so a crowd does not form a queue
 
-# Towers (spec 7). The Airship attacks air only and there are no flyers in this slice, so it is left out.
+# Towers (spec 7). targets: what a tower can hit ("ground" or "air"); cards can widen it (Long Draw and Long
+# Mooring Legendaries). max = how many of that kind may stand on the board (spec 7: at most 2 Airships).
 const TOWERS := {
 	"fire": {
 		"name": "Fire Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
@@ -91,6 +105,12 @@ const TOWERS := {
 		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v03.glb", "turn_part": "swivel",
 		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0,
 	},
+	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot)
+	"airship": {
+		"name": "Airship", "cost": 70, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
+		"max": 2, "scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
+		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
+	},
 }
-const TOWER_ORDER: Array[String] = ["fire", "brazier", "crossbow"]
+const TOWER_ORDER: Array[String] = ["fire", "brazier", "crossbow", "airship"]
 const TOWER_SIZE := Vector2i(2, 2)

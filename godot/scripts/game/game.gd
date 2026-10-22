@@ -7,7 +7,7 @@ extends Node3D
 ## towers and damage reset but cards kept. A run is loop 1 + loop 2. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
-## Desktop keys: 1 / 2 / 3 pick a tower (or a card when cards are offered), left click builds, Esc or right click cancels, Enter or Space
+## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
 ## Debug builds only: F5 toggles x5 and F6 toggles x10 (for testing, not part of the game).
 ##
@@ -284,7 +284,7 @@ func step(delta: float) -> void:
 	for pt in _patches:
 		pt["left"] -= delta
 		for e in enemies.duplicate():
-			if is_instance_valid(e) and e.alive and Vector2(e.position.x - pt["pos"].x, e.position.z - pt["pos"].z).length() <= pt["r"]:
+			if is_instance_valid(e) and e.targetable(false, true) and Vector2(e.position.x - pt["pos"].x, e.position.z - pt["pos"].z).length() <= pt["r"]:
 				e.take_damage(pt["dps"] * delta, false)
 	_patches = _patches.filter(func(pt): return pt["left"] > 0.0)
 	for s in shots.duplicate():
@@ -361,8 +361,13 @@ func select(kind: String) -> void:
 
 
 func can_build(kind: String, cell: Vector2i) -> bool:
-	return phase == Phase.DAY and trust >= GameConfig.TOWERS[kind]["cost"] \
+	return phase == Phase.DAY and trust >= GameConfig.TOWERS[kind]["cost"] and not at_max(kind) \
 		and nav.can_build(cell, GameConfig.TOWER_SIZE, standing_houses())
+
+
+func at_max(kind: String) -> bool:
+	## Spec 7: some kinds have a board limit (at most 2 Airships).
+	return towers.filter(func(t): return t.kind == kind).size() >= GameConfig.TOWERS[kind].get("max", 999)
 
 
 func try_build(kind: String, cell: Vector2i) -> bool:
@@ -376,7 +381,7 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.setup(kind, cell)
 	towers.append(t)
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
-	if trust < GameConfig.TOWERS[kind]["cost"]:
+	if trust < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
 		select("")
 	_update_ghost()
 	_refresh_ui()
@@ -495,7 +500,9 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	if c.x < 0:
 		select("")
 	elif not try_build(selected, c):
-		if trust < GameConfig.TOWERS[selected]["cost"]:
+		if at_max(selected):
+			last_message = "At most %d of those on the board." % GameConfig.TOWERS[selected]["max"]
+		elif trust < GameConfig.TOWERS[selected]["cost"]:
 			last_message = "Not enough trust."
 		else:
 			last_message = "Can't build there (blocked, or it would cut the forest off from every house)."
@@ -522,9 +529,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
-			KEY_1, KEY_2, KEY_3:
+			KEY_1, KEY_2, KEY_3, KEY_4:
 				if phase == Phase.CARDS:
-					choose_card(event.keycode - KEY_1)
+					choose_card(event.keycode - KEY_1)  # 4 does nothing here: at most 3 cards
 				else:
 					_press_button(GameConfig.TOWER_ORDER[event.keycode - KEY_1])
 			KEY_ESCAPE:
@@ -575,7 +582,8 @@ func _build_ui() -> void:
 	specs.append(["speed", "Speed x1"])
 	var w := 0.14
 	var gap := 0.016
-	var x0 := -(4 * w + 3 * gap) / 2.0 + w / 2.0
+	var slots := GameConfig.TOWER_ORDER.size() + 1  # the towers, then Start night (or New run, or the speed sign)
+	var x0 := -(slots * w + (slots - 1) * gap) / 2.0 + w / 2.0
 	for i in specs.size():
 		var id: String = specs[i][0]
 		# a small sign leaning back toward the player, in front of the island's south edge
@@ -586,7 +594,7 @@ func _build_ui() -> void:
 		var mat := ModelUtil.flat_material(Color8(0xC8, 0x8A, 0x4E))
 		node.material_override = mat
 		# New run (after the run) and the speed sign (during a night) take Start night's place
-		var slot := 3 if id == "restart" or id == "speed" else i
+		var slot := slots - 1 if id == "restart" or id == "speed" else i
 		node.position = Vector3(x0 + slot * (w + gap), 0.0, HALF + 0.045)
 		node.rotation_degrees.x = -50
 		ui.add_child(node)
@@ -695,7 +703,7 @@ func _refresh_buttons() -> void:
 					c = [Color8(0xE6, 0xD8, 0xBC), Color8(0xF0, 0xA4, 0x50), Color8(0xE0, 0x50, 0x3A)][o["rarity"]]
 			_:
 				b["node"].visible = phase != Phase.CARDS
-				if not day or trust < GameConfig.TOWERS[id]["cost"]:
+				if not day or trust < GameConfig.TOWERS[id]["cost"] or at_max(id):
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == id:
 					c = Color8(0xF0, 0xB0, 0x4A)
