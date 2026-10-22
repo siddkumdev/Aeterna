@@ -46,4 +46,5 @@ The users often read on a phone with no terminal, so reports must stand alone:
 ## 6. Plugins and tools that come with the repo
 - `.claude/skills/` and `.claude/agents/art-critic.md`: the project workflows (shared through git).
 - `.claude/settings.json` enables Siddharth's `i-have-adhd` output-style plugin (third-party, from GitHub `ayghri/i-have-adhd`). It does nothing unless someone types `/i-have-adhd`. If it is on, the project rule "no time estimates" still wins over its "give specific time estimates" rule.
+- Third-party Godot skills in `.claude/skills/` (installed 2026-10-22 with Siddharth's OK, text only): `godot-gdscript-patterns` (wshobson/agents, MIT) and `godot-development` (omer-metin, Apache-2.0). General Godot 4 guidance, mostly 2D; each starts with a project note: our rules win and the user decides, never "correct" a user's choice from them.
 - `.mcp.json`: the Blender MCP connection (needs `uv` and the Blender add-on; optional, see `docs/SETUP.md`).
