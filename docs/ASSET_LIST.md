@@ -246,7 +246,7 @@ Low overdraw on Quest. Hard-edged toon shapes with glow (#31, #33, #36).
 | X08 | P1 | vfx | Trust sparkle | | | KEEP |
 | X09 | P2 | vfx | Rain and fog | Only if the Gentle Rain / Foggy Night coin outcomes need world effects (open). | | KEEP |
 | X10 | P1 | shader | Time-rewind: world swirl and desaturation | Signature moment. Do not move the camera, for comfort. | | KEEP |
-| X11 | P1 | model | Time-rewind: hourglass or clock hero model | BUILT 2026-10-22: ew_vfx_rewind_hourglass_v01 (828 tris), variant E chunky gold hourglass, crystal-blue sand, symmetric for the flip; parts glass, sand_top, sand_bottom; awaiting approval. | <1k | KEEP |
+| X11 | P1 | model | Time-rewind: hourglass or clock hero model | BUILT 2026-10-22: ew_vfx_rewind_hourglass_v01 (828 tris), variant E chunky gold hourglass, crystal-blue sand, symmetric for the flip; parts glass, sand_top, sand_bottom; APPROVED by Siddharth 2026-10-22. | <1k | KEEP |
 | X12 | P1 | vfx | Time-rewind: particle swirl | | | KEEP |
 | X13 | P0 | vfx | Drop-spell impact | Ring, dust, debris. | | KEEP |
 | X14 | P1 | vfx | Boss phase transition | | | KEEP |
