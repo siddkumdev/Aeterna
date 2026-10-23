@@ -670,6 +670,16 @@ func _press_button(id: String) -> void:
 		"speed":
 			set_speed(1.0 if speed == 2.0 else 2.0)
 		_:
+			if GameConfig.TOWERS.has(id) and selected != id:
+				# a grey sign does nothing but say why (2026-10-23: it used to pick up a tower that could never be placed)
+				if at_max(id):
+					last_message = "At most %d of those on the board. Sell one to move it." % GameConfig.TOWERS[id]["max"]
+					_refresh_ui()
+					return
+				if trust < GameConfig.TOWERS[id]["cost"]:
+					last_message = "Not enough trust for a %s." % GameConfig.TOWERS[id]["name"]
+					_refresh_ui()
+					return
 			select("" if selected == id else id)
 
 
@@ -972,6 +982,9 @@ func _refresh_buttons() -> void:
 					c = [Color8(0xE6, 0xD8, 0xBC), Color8(0xF0, 0xA4, 0x50), Color8(0xE0, 0x50, 0x3A)][o["rarity"]]
 			_:
 				b["node"].visible = phase != Phase.CARDS
+				var cfg: Dictionary = GameConfig.TOWERS[id]
+				b["label"].text = "%s\n%d/%d placed" % [cfg["name"], cfg["max"], cfg["max"]] if at_max(id) \
+					else "%s\n%d trust" % [cfg["name"], cfg["cost"]]
 				if not day or trust < GameConfig.TOWERS[id]["cost"] or at_max(id):
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == id:

@@ -331,6 +331,16 @@ func _step2() -> void:
 	check("Airship builds", g.try_build("airship", Vector2i(11, 3)))
 	check("second Airship builds", g.try_build("airship", Vector2i(4, 4)))
 	check("a third Airship is refused (max 2)", not g.try_build("airship", Vector2i(17, 4)) and g.at_max("airship"))
+	g._press_button("airship")
+	check("the grey Airship sign does not pick one up, and reads 2/2 placed",
+		g.selected != "airship" and g._buttons["airship"]["label"].text.contains("2/2 placed"))
+	g._press_button("fire")
+	check("other towers still build with 2 Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 4)))
+	g._press_button("fire")
+	g.trust = 10
+	g._press_button("brazier")
+	check("a sign you cannot afford does not pick up a tower", g.selected == "")
+	g.trust = 1000
 	w = await _night_with(g, "wisp", north, 25.0)
 	check("the Airship shoots a Wisp down", not is_instance_valid(w) or not w.alive)
 	g.queue_free()
