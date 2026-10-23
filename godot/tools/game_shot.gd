@@ -18,6 +18,12 @@ func _initialize() -> void:
 	g._update_ghost()
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_day.png")
+	# sell mode: the orange plate over the tower under the pointer
+	g.select("sell")
+	g._hover_board_cell = Vector2i(12, 12)
+	g._update_ghost()
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_sell.png")
 	g.select("")
 	g.trust = 200
 	g.try_build("crossbow", Vector2i(3, 9))
@@ -90,7 +96,7 @@ func _initialize() -> void:
 		g._refresh_ui()
 		await _settle()
 		root.get_viewport().get_texture().get_image().save_png(prefix + "_foresight_t%d.png" % g.foresight_tier())
-	print("saved ", prefix, "_day / _night / _air / _boss / _cards / _foresight_t1/t2/t3 .png")
+	print("saved ", prefix, "_day / _sell / _night / _air / _boss / _cards / _foresight_t1/t2/t3 .png")
 	quit()
 
 

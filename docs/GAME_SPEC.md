@@ -56,6 +56,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
 - **Dawn income:** +5 trust per standing house.
 - **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
+- **Selling (Siddharth 2026-10-23):** day only, with the Sell sign; full cost back on the day the tower was built, half (rounded down) after a night.
 - **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now), Watch Hut 70.
 - **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
 - Fate Coin can modify income (see 17).
@@ -145,7 +146,7 @@ Cooldown only; no mana or resource cost.
 ### 13. Foresight gesture
 - **Primary:** grab a crystal lens (always on the player's belt-side) and hold it up to look through toward the forest edge. Gaze-aimed.
 - **Optional:** cup a hand like a spyglass if hand detection proves reliable.
-- **Tier visuals:** tier 1 blurry silhouettes + the compass direction of each group; tier 2 adds type icons + counts; tier 3 adds exact path ribbons; tier 4 adds timing markers; tier 5 (late) "rewrite": close one forest spawn point or swap one enemy type. **2026-10-23 (Siddharth): only 3 tiers, spread over the 5 loops: tier 1 = loops 1-2 (silhouettes + direction), tier 2 = loops 3-4 (types, counts, departure times), tier 3 = loop 5 (path ribbons, Tunneler rings, rewrite).** Built (M1 stand-in): the tier-3 rewrite is "close one gap for the coming night, once per night; its groups use the next edge"; swapping a type is not built.
+- **Tier visuals:** tier 1 blurry silhouettes + the compass direction of each group; tier 2 adds type icons + counts; tier 3 adds exact path ribbons; tier 4 adds timing markers; tier 5 (late) "rewrite": close one forest spawn point or swap one enemy type. **2026-10-23 (Siddharth): only 3 tiers, spread over the 5 loops: tier 1 = loops 1-2 (silhouettes + direction), tier 2 = loops 3-4 (types, counts; departure times removed 2026-10-23), tier 3 = loop 5 (path ribbons, Tunneler rings, rewrite).** Built (M1 stand-in): the tier-3 rewrite is "close one gap for the coming night, once per night; its groups use the next edge"; swapping a type is not built.
 - Holding the lens costs nothing, but one hand is occupied while looking.
 - **Lens look per tier (Siddharth 2026-10-21, Godot):** the lens is a cracked hand mirror (I03 variant B); purple magic holds the shards together (VFX), and the cracks reduce as the Foresight tier rises.
 

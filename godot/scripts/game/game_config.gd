@@ -23,7 +23,7 @@ const EXTRA_GROUPS_PER_LOOP := 1
 
 # Foresight (spec 13): the Crystal Lens shows the coming night during the day. 3 tiers spread over the 5 loops
 # (Siddharth 2026-10-23: loops 1-2 / 3-4 / 5). 1 blurry silhouettes + the direction of each group; 2 adds type
-# icons + counts + when each group leaves; 3 adds path ribbons (and where Tunnelers come up) and the rewrite
+# icons + counts (no departure times: Siddharth 2026-10-23); 3 adds path ribbons (and where Tunnelers come up) and the rewrite
 # (close one spawn for the night: its groups come from the next open edge instead). The Fog variant never shows.
 const FORESIGHT_TIERS := 3
 const FORESIGHT_TIER_BY_LOOP: Array[int] = [1, 1, 2, 2, 3]
@@ -127,4 +127,7 @@ const TOWERS := {
 	},
 }
 const TOWER_ORDER: Array[String] = ["fire", "brazier", "crossbow", "airship"]
+# Selling (Siddharth 2026-10-23): day only, with the Sell sign. Full cost back on the day the tower was built
+# (undo a mistake), half (rounded down) once a night has passed.
+const SELL_LATER := 0.5
 const TOWER_SIZE := Vector2i(2, 2)

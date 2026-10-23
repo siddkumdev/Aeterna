@@ -20,6 +20,7 @@ func _initialize() -> void:
 	await _cards()
 	await _step2()
 	await _foresight()
+	await _sell()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -434,11 +435,11 @@ func _foresight() -> void:
 					fog_seen += 1
 			ok1 = ok1 and not r1[i].has("types") and r1[i]["silhouettes"].size() == ceili(shown / 2.0)
 			ok2 = ok2 and r2[i]["silhouettes"].size() == shown
-			ok4 = ok4 and r2[i].has("time") and not r1[i].has("time")
+			ok4 = ok4 and not r2[i].has("time") and not r3[i].has("time")
 			ok3 = ok3 and r3[i].has("paths") and not (r3[i]["paths"].is_empty() and r3[i]["surface"].is_empty()) and not r2[i].has("paths")
 	check("tier 1: silhouettes only, about half as many as are coming", ok1)
 	check("tier 2: one silhouette each plus type counts", ok2)
-	check("tier 2: departure times", ok4)
+	check("no tier shows departure times", ok4)
 	check("tier 3: path ribbons for every group", ok3)
 	check("the Fog variant never shows (%d planned)" % fog_planned, fog_seen == 0 and fog_planned > 0)
 
@@ -534,5 +535,29 @@ func _foresight() -> void:
 	g._clear_night()
 	g._end_night()  # the night cleared
 	check("next day the gap is open again", g.closed_spawn == "" and (g.phase != Game.Phase.DAY or g.night_plan().size() > 0))
+	g.queue_free()
+	await process_frame
+
+
+func _sell() -> void:
+	var g := await _make_game()
+	g.try_build("fire", Vector2i(11, 4))
+	var t: Tower = g.towers[0]
+	var before := g.trust
+	check("the tower under any of its 4 cells is found", g.tower_at(Vector2i(12, 5)) == t and g.tower_at(Vector2i(13, 5)) == null)
+	check("selling on the day it was built refunds the full cost", g.sell(t) and g.trust == before + 60 and g.towers.is_empty())
+	check("its cells open up again (can build there)", g.can_build("fire", Vector2i(11, 4)))
+	g.try_build("fire", Vector2i(11, 4))
+	g.try_build("brazier", Vector2i(4, 11))
+	g.select("sell")
+	check("Sell sign selects sell mode", g.selected == "sell")
+	g.start_night()
+	check("no selling during the night", not g.sell(g.towers[0]) and g.towers.size() == 2)
+	g._clear_night()
+	g._end_night()
+	before = g.trust
+	check("after a night: half back (Fire 30)", g.sell(g.towers[0]) and g.trust == before + 30)
+	before = g.trust
+	check("after a night: half back (Brazier 25)", g.sell(g.towers[0]) and g.trust == before + 25)
 	g.queue_free()
 	await process_frame

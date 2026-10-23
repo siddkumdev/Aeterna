@@ -12,6 +12,7 @@ var kind := "fire"
 var cfg: Dictionary
 var cell := Vector2i.ZERO
 var cooldown := 0.0
+var built_night := 0  # the night (0-based, in this loop) whose day it was built on: selling refunds in full that day
 var shots_fired := 0
 
 # effective stats (base + cards)

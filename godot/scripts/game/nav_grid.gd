@@ -99,6 +99,13 @@ func add_tower(top_left: Vector2i, size: Vector2i) -> void:
 		astar.set_point_solid(c, true)
 
 
+func remove_tower(top_left: Vector2i, size: Vector2i) -> void:
+	for c in footprint(top_left, size):
+		if kind.get(c, "") == "tower":
+			kind.erase(c)
+			astar.set_point_solid(c, false)
+
+
 func clear_towers() -> void:
 	for c in kind.keys():
 		if kind[c] == "tower":

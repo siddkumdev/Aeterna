@@ -7,7 +7,7 @@ extends Node3D
 ## towers and damage reset but cards kept. A run is loop 1 + loop 2. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
-## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), left click builds, Esc or right click cancels, Enter or Space
+## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), 5 = sell (then click a tower), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
 ## Debug builds only: F5 toggles x5, F6 x10 and F7 x50 (for testing, not part of the game).
 ## Foresight: hold L to look through the Crystal Lens during the day (in VR: grab the lens on the table's right
@@ -71,6 +71,7 @@ var _ghost_plate: MeshInstance3D
 var _ghost_models := {}
 var _ghost_ring: MeshInstance3D
 var _hover_cell := Vector2i(-1, -1)
+var _hover_board_cell := Vector2i(-1, -1)  # the single cell under the pointer (for selling)
 var _buttons := {}  # id -> {"node", "mat", "label", "box": AABB (board-local)}
 var _hud: Label3D
 var _msg: Label3D
@@ -426,14 +427,45 @@ func _hold_check(_h: House) -> bool:
 # ---------------------------------------------------------------- building
 
 func select(kind: String) -> void:
+	## A tower kind to place, "sell" to pick towers to sell, or "" for nothing.
 	selected = kind if phase == Phase.DAY else ""
 	_grid_lines.visible = selected != ""
 	for k in _ghost_models:
 		_ghost_models[k].visible = k == selected
-	if selected != "":
+	_ghost_ring.visible = selected != "sell"
+	if selected != "" and selected != "sell":
 		_draw_ring(GameConfig.TOWERS[selected]["range"] * GameConfig.CELL)
 	_update_ghost()
 	_refresh_ui()
+
+
+func tower_at(cell: Vector2i) -> Tower:
+	for t in towers:
+		if NavGrid.footprint(t.cell, GameConfig.TOWER_SIZE).has(cell):
+			return t
+	return null
+
+
+func sell_value(t: Tower) -> int:
+	var cost: int = GameConfig.TOWERS[t.kind]["cost"]
+	return cost if t.built_night == night else int(cost * GameConfig.SELL_LATER)
+
+
+func sell(t: Tower) -> bool:
+	## Day only: the tower goes, its cells open up again, and trust comes back (sell_value).
+	if phase != Phase.DAY or t == null or not towers.has(t):
+		return false
+	var back := sell_value(t)
+	trust += back
+	nav.remove_tower(t.cell, GameConfig.TOWER_SIZE)
+	towers.erase(t)
+	t.queue_free()
+	last_message = "%s sold: +%d trust." % [GameConfig.TOWERS[t.kind]["name"], back]
+	if foresight.showing:
+		foresight.refresh()
+	_update_ghost()
+	_refresh_ui()
+	return true
 
 
 func can_build(kind: String, cell: Vector2i) -> bool:
@@ -455,6 +487,7 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.game = self
 	_towers_root.add_child(t)
 	t.setup(kind, cell)
+	t.built_night = night
 	towers.append(t)
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
 	if trust < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
@@ -517,6 +550,21 @@ func _draw_ring(r: float) -> void:
 
 
 func _update_ghost() -> void:
+	if selected == "sell":
+		# an orange plate over the tower under the pointer
+		# a plate wider than the tower's base so its rim shows round it, and the refund in the message line
+		var t := tower_at(_hover_board_cell)
+		_ghost.visible = t != null
+		_ghost_plate.scale = Vector3(1.6, 1, 1.6)
+		if t:
+			_ghost.position = NavGrid.footprint_centre(t.cell, GameConfig.TOWER_SIZE)
+			(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.95, 0.6, 0.2, 0.6)
+			var when := "built today: full cost" if t.built_night == night else "half cost after a night"
+			_msg.text = "Sell %s: +%d trust (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
+		elif _msg:
+			_msg.text = "Pick a tower to sell. Full cost back on the day it was built, half after that."
+		return
+	_ghost_plate.scale = Vector3.ONE
 	var show := selected != "" and _hover_cell.x >= 0
 	_ghost.visible = show
 	if not show:
@@ -543,6 +591,16 @@ func _button_at(origin: Vector3, dir: Vector3) -> String:
 	return ""
 
 
+func _board_cell_at(origin: Vector3, dir: Vector3) -> Vector2i:
+	## The cell under the ray, or (-1, -1) off the board.
+	var r := _ray_to_board(origin, dir)
+	var hit: Variant = Plane(Vector3.UP, 0.0).intersects_ray(r[0], r[1])
+	if hit == null:
+		return Vector2i(-1, -1)
+	var c := NavGrid.local_to_cell(hit)
+	return c if c.x >= 0 and c.y >= 0 and c.x < GameConfig.SIZE and c.y < GameConfig.SIZE else Vector2i(-1, -1)
+
+
 func _cell_at(origin: Vector3, dir: Vector3) -> Vector2i:
 	## Top-left cell of the 2 x 2 footprint centred under the ray, or (-1, -1) off the board.
 	var r := _ray_to_board(origin, dir)
@@ -561,8 +619,10 @@ func _hover(origin: Vector3, dir: Vector3) -> void:
 	for id in _buttons:
 		_buttons[id]["hover"] = id == over
 	var c := _cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
-	if c != _hover_cell:
+	var bc := _board_cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
+	if c != _hover_cell or bc != _hover_board_cell:
 		_hover_cell = c
+		_hover_board_cell = bc
 		_update_ghost()
 	_refresh_buttons()
 
@@ -573,6 +633,14 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 		_press_button(b)
 		return
 	if selected == "":
+		return
+	if selected == "sell":
+		var bc := _board_cell_at(origin, dir)
+		if bc.x < 0:
+			select("")
+		elif not sell(tower_at(bc)):
+			last_message = "Pick a tower to sell."
+			_refresh_ui()
 		return
 	var c := _cell_at(origin, dir)
 	if c.x < 0:
@@ -610,6 +678,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
+			KEY_5:
+				_press_button("sell")
 			KEY_1, KEY_2, KEY_3, KEY_4:
 				if phase == Phase.CARDS:
 					choose_card(event.keycode - KEY_1)  # 4 does nothing here: at most 3 cards
@@ -662,12 +732,13 @@ func _build_ui() -> void:
 	var specs := []
 	for k in GameConfig.TOWER_ORDER:
 		specs.append([k, "%s\n%d trust" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
+	specs.append(["sell", "Sell\ntower"])
 	specs.append(["night", "Start night"])
 	specs.append(["restart", "New run"])
 	specs.append(["speed", "Speed x1"])
 	var w := 0.14
 	var gap := 0.016
-	var slots := GameConfig.TOWER_ORDER.size() + 1  # the towers, then Start night (or New run, or the speed sign)
+	var slots := GameConfig.TOWER_ORDER.size() + 2  # the towers, Sell, then Start night (or New run, or the speed sign)
 	var x0 := -(slots * w + (slots - 1) * gap) / 2.0 + w / 2.0
 	for i in specs.size():
 		var id: String = specs[i][0]
@@ -881,6 +952,12 @@ func _refresh_buttons() -> void:
 				b["node"].visible = phase == Phase.NIGHT
 				b["label"].text = "Speed x2" if speed == 2.0 else "Speed x1"
 				c = Color8(0xF0, 0xB0, 0x4A) if speed == 2.0 else c
+			"sell":
+				b["node"].visible = phase != Phase.CARDS
+				if not day or towers.is_empty():
+					c = Color8(0x8A, 0x84, 0x7C)
+				elif selected == "sell":
+					c = Color8(0xF0, 0xB0, 0x4A)
 			"close_north", "close_east", "close_west":
 				b["node"].visible = day and foresight.showing and foresight_tier() >= GameConfig.FORESIGHT_TIERS \
 					and closed_spawn == "" and id.substr(6) in foresight.seen_spawns()

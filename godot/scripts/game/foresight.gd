@@ -4,8 +4,7 @@ extends Node3D
 ## the day only. 3 tiers (GameConfig.FORESIGHT_TIER_BY_LOOP: loops 1-2, 3-4, 5):
 ##   1  blurry silhouettes (about half as many as are coming, so the size reads but not the count) and an
 ##      arrow at the gap each group comes from
-##   2  every enemy as its own silhouette, plus type names and counts (stand-in for icons) and when each
-##      group leaves the forest
+##   2  every enemy as its own silhouette, plus type names and counts (stand-in for icons)
 ##   3  path ribbons: the route each walking group takes and the straight line of its flyers, plus a ring
 ##      where each Tunneler will come up; and the rewrite: a sign at each gap closes it for the night (once
 ##      per night), its groups use the next edge
@@ -29,7 +28,7 @@ func _ready() -> void:
 
 static func reveal(at_tier: int, plan: Array, g) -> Array[Dictionary]:
 	## One entry per group with anything to show:
-	## {"spawn", "silhouettes": [{"flying", "boss"}], "types": {kind: count} (tier 2+), "time": s (tier 2+),
+	## {"spawn", "silhouettes": [{"flying", "boss"}], "types": {kind: count} (tier 2+),
 	##  "paths": [Array[Vector3] board-local] (tier 3), "surface": [Vector2i] (tier 3)}
 	var out: Array[Dictionary] = []
 	for grp in plan:
@@ -63,8 +62,6 @@ static func reveal(at_tier: int, plan: Array, g) -> Array[Dictionary]:
 					e["paths"].append([from + Vector3(0, 1.5 * GameConfig.CELL, 0), g.house_point(h) + up])
 				if shown.has("tunneler"):
 					e["surface"].append(g.surface_cell(h, from))
-		if at_tier >= 2:
-			e["time"] = grp["time"]
 		out.append(e)
 	return out
 
@@ -156,15 +153,13 @@ func _draw(spawn: String, entries: Array) -> Dictionary:
 	# the cone's tip (+Y) points inward, lying flat and squashed to a thin plate (its local Z is vertical)
 	arrow.basis = Basis(across, inward, across.cross(inward) * 0.2)
 	node.add_child(arrow)
-	# words: type counts and departure times (tier 2)
+	# words: type counts (tier 2)
 	var lines: Array[String] = []
 	for e in entries:
 		var parts: Array[String] = []
 		for k in e.get("types", {}):
 			parts.append("%s x%d" % [GameConfig.ENEMIES[k]["name"], e["types"][k]])
 		var line := ", ".join(parts)
-		if e.has("time"):
-			line = "%s  @ %d s" % [line, int(e["time"])]
 		if line != "":
 			lines.append(line)
 	if not lines.is_empty():
