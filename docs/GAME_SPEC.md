@@ -56,6 +56,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
 - **Dawn income:** +5 trust per standing house.
 - **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
+- **Dawn repair (Siddharth 2026-10-23):** damage carries over between nights; each dawn every house heals 10 HP (a shuttered house with HP again opens up). The hourglass rewind still repairs everything.
 - **Selling (Siddharth 2026-10-23):** day only, with the Sell sign; full cost back on the day the tower was built, half (rounded down) after a night.
 - **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now), Watch Hut 70.
 - **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
@@ -213,7 +214,7 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 
 ### 18. Villagers
 - **Cast for the slice:** 5 villagers sharing one part-based design (reference #29 for proportions).
-- **Help requests (4 kinds):** Blocked chimney (grab and pull out the rubble), Stuck bird (grab and move it), Lost lantern (carry it back to its house), Stuck cart (push it clear). Rewards: 10-25 trust.
+- **Help requests (4 kinds):** Blocked chimney (grab and pull out the rubble), Stuck bird (grab and move it), Lost lantern (carry it back to its house), Stuck cart (push it clear). Rewards: 10-25 trust. **Built 2026-10-23 (M1 stand-in):** each day 4 requests, one of each kind on different standing houses; rewards bird 10, chimney 15, lantern 20, cart 25; unfinished ones vanish at night. Placeholder capsule villagers stand by the request houses until Durva's villagers exist.
 - **Memory dialogue (wordless icon bubbles + short subtitle):** loop 1 none; loop 2 the baker says "Haven't we met?" and two other villagers show small recognition; loop 3 (if built) someone helps on purpose for free.
 
 ---

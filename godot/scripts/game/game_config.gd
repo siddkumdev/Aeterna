@@ -35,7 +35,24 @@ const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
 const BUILT_SYSTEMS: Array[String] = ["airship"]
 
-# Houses (decided 2026-10-22: 60 HP). A night is lost at 3 or more shuttered houses (spec 2).
+# Villager help requests (spec 18; step 5 of the full loop). Each day REQUESTS_PER_DAY requests, one of each
+# kind, on different standing houses; done by hand for trust. Rewards are Claude's stand-ins inside the spec's
+# 10-25 range (harder gesture, more trust). Unfinished requests vanish at night.
+const REQUESTS := {
+	"chimney": {"name": "Blocked chimney", "reward": 15, "scene": "res://assets/village/ew_village_chimney_rubble_v01.glb"},
+	"bird": {"name": "Stuck bird", "reward": 10, "scene": "res://assets/village/ew_village_songbird_v01.glb"},
+	"lantern": {"name": "Lost lantern", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
+	"cart": {"name": "Stuck cart", "reward": 25, "scene": "res://assets/village/ew_village_handcart_v01.glb"},
+}
+const REQUESTS_PER_DAY := 4
+const HELP_MARKER_SCENE := "res://assets/ui/ew_ui_help_marker_v01.glb"
+const REQUEST_GRAB_REACH := 0.05  # m from a hand (or the mouse ray) to a prop to grab it
+const LANTERN_DISTANCE := Vector2(4, 7)  # cells from its house where a lost lantern lies
+
+# Houses (decided 2026-10-22: 60 HP). Damage carries over between nights (Siddharth 2026-10-23): each dawn a
+# house heals DAWN_REPAIR HP (a shuttered house with HP again opens up); the hourglass rewind repairs fully.
+# A night is lost at 3 or more shuttered houses (spec 2).
+const DAWN_REPAIR := 10.0
 const HOUSE_HP := 60.0
 const HOUSES_LOST_AT := 3
 # Six 2x2 houses in a tight ring (radius about 3.5 cells; Siddharth 2026-10-22: 5.5 felt too far apart)

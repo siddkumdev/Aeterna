@@ -1,12 +1,14 @@
 class_name Game
 extends Node3D
-## The game loop (spec 6 + 15). Day = spend trust on towers; Night = enemies walk from the forest gaps to
-## the houses; Dawn = income (+5 per standing house, +10 x night for clearing it) and repairs. A loop is
-## 5 nights + a boss night (placeholder boss for now). Beating the boss offers 3 ability cards (keep 1);
-## losing a night offers 1 Common card. Either way the hourglass turns: loop 2 starts, harder, with trust,
-## towers and damage reset but cards kept. A run is loop 1 + loop 2. Runs in the Meta XR Simulator (hand
+## The game loop (spec 6 + 15). Day = spend trust on towers and help villagers (requests, done by hand);
+## Night = enemies walk from the forest gaps to the houses; Dawn = income (+5 per standing house, +10 x night
+## for clearing it) and +10 HP for each house (damage carries over). A loop is 5 nights + a boss night
+## (placeholder boss for now). Beating the boss offers 3 ability cards (keep 1); losing a night offers 1
+## Common card. Either way the hourglass turns: the next loop starts, harder, with trust, towers and damage
+## reset but cards kept. A run is 5 loops. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
+## Requests: drag a request's prop with the mouse (VR: pinch it and move your hand), let go to finish.
 ## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), 5 = sell (then click a tower), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
 ## Debug builds only: F5 toggles x5, F6 x10 and F7 x50 (for testing, not part of the game).
@@ -51,6 +53,10 @@ var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are 
 var last_message := ""
 
 var foresight: Foresight
+var requests: Array[HelpRequest] = []
+var _requests_root: Node3D
+var _held_req: HelpRequest  # the request prop being moved
+var _held_req_hand: GameHand  # the hand holding it, or null for the mouse
 var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
 
 var _lens: Node3D  # the Crystal Lens model (spec 13)
@@ -103,6 +109,7 @@ func _ready() -> void:
 	foresight.name = "Foresight"
 	foresight.game = self
 	board.add_child(foresight)
+	_requests_root = _child(board, "Requests")
 	_build_ui()
 	_build_lens()
 	if with_rig:
@@ -158,6 +165,10 @@ func _set_phase(p: int, message: String) -> void:
 		select("")
 	if foresight and foresight.showing:
 		set_lens(false)  # the lens only reads the coming night; it goes blank when the day ends
+	if _requests_root and p == Phase.DAY:
+		_post_requests()
+	elif _requests_root:
+		_clear_requests()
 	_set_light(NIGHT_LIGHT if p == Phase.NIGHT else DAY_LIGHT)
 	_refresh_ui()
 	phase_changed.emit(p)
@@ -252,6 +263,112 @@ func surface_cell(house: int, p: Vector3) -> Vector2i:
 	return best
 
 
+func _post_requests() -> void:
+	## The day's requests: one of each kind, on different standing houses, in a seeded order.
+	_clear_requests()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = run_seed * 53 + loop * 11 + night
+	var where: Array = standing_houses()
+	var kinds: Array = GameConfig.REQUESTS.keys()
+	for arr in [where, kinds]:
+		for i in range(arr.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var t = arr[i]
+			arr[i] = arr[j]
+			arr[j] = t
+	for i in range(mini(GameConfig.REQUESTS_PER_DAY, mini(where.size(), kinds.size()))):
+		var r := HelpRequest.new()
+		r.game = self
+		_requests_root.add_child(r)
+		r.setup(kinds[i], where[i], _lantern_spot(where[i], rng) if kinds[i] == "lantern" else Vector3.ZERO)
+		requests.append(r)
+
+
+func _lantern_spot(house: int, rng: RandomNumberGenerator) -> Vector3:
+	## Open grass LANTERN_DISTANCE cells from the house: not a house, tower, forest or spawn cell.
+	var centre := house_point(house)
+	for i in range(60):
+		var a := rng.randf() * TAU
+		var d := rng.randf_range(GameConfig.LANTERN_DISTANCE.x, GameConfig.LANTERN_DISTANCE.y) * GameConfig.CELL
+		var p := centre + Vector3(cos(a), 0, sin(a)) * d
+		var c := NavGrid.local_to_cell(p)
+		if c.x >= 2 and c.y >= 2 and c.x <= GameConfig.SIZE - 3 and c.y <= GameConfig.SIZE - 3 and not nav.kind.has(c):
+			return NavGrid.cell_centre(c)
+	return centre + Vector3(0, 0, 3.0 * GameConfig.CELL)
+
+
+func _clear_requests() -> void:
+	_held_req = null
+	_held_req_hand = null
+	for r in requests:
+		r.queue_free()
+	requests.clear()
+
+
+func request_near(world: Vector3) -> HelpRequest:
+	## The open request whose prop is nearest to a hand, within REQUEST_GRAB_REACH.
+	var best: HelpRequest = null
+	var best_d := GameConfig.REQUEST_GRAB_REACH
+	for r in requests:
+		var d := r.grab_point().distance_to(world)
+		if not r.done and d <= best_d:
+			best_d = d
+			best = r
+	return best
+
+
+func request_on_ray(origin: Vector3, dir: Vector3) -> HelpRequest:
+	## The open request whose prop the mouse ray passes closest to, within REQUEST_GRAB_REACH.
+	var best: HelpRequest = null
+	var best_d := GameConfig.REQUEST_GRAB_REACH * 0.6
+	for r in requests:
+		var p := r.grab_point()
+		var d := (p - origin).cross(dir.normalized()).length()
+		if not r.done and d <= best_d:
+			best_d = d
+			best = r
+	return best
+
+
+func grab_request(r: HelpRequest, hand: GameHand = null) -> bool:
+	if phase != Phase.DAY or r == null or _held_req != null or not r.grab():
+		return false
+	_held_req = r
+	_held_req_hand = hand
+	select("")
+	return true
+
+
+func release_request() -> bool:
+	## Let go of the held prop; pays the reward when that finished the request.
+	if _held_req == null:
+		return false
+	var r := _held_req
+	_held_req = null
+	_held_req_hand = null
+	if not r.release():
+		return false
+	trust += r.reward
+	last_message = "%s: thank you! +%d trust" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
+	_refresh_ui()
+	return true
+
+
+func _update_held() -> void:
+	if _held_req == null:
+		return
+	if _held_req_hand:
+		_held_req.move_to(board.to_local(_held_req_hand.global_position))
+	elif _camera:
+		# the mouse drags on a level plane a little above where the prop started (the board for the cart)
+		var m := get_viewport().get_mouse_position()
+		var r := _ray_to_board(_camera.project_ray_origin(m), _camera.project_ray_normal(m))
+		var h: float = _held_req.prop.position.y if _held_req.kind in ["chimney", "bird"] else 0.02
+		var hit: Variant = Plane(Vector3.UP, h).intersects_ray(r[0], r[1])
+		if hit != null:
+			_held_req.move_to(hit)
+
+
 func _end_night() -> void:
 	## The night was cleared: every enemy spawned and defeated with fewer than 3 houses shuttered.
 	var standing := standing_houses().size()
@@ -260,7 +377,7 @@ func _end_night() -> void:
 		income += 5  # Deep Pockets Legendary: no house shuttered tonight
 	trust += income
 	for h in houses:
-		h.repair()
+		h.heal(GameConfig.DAWN_REPAIR)  # damage carries over (Siddharth 2026-10-23)
 	_clear_night()
 	if night == GameConfig.BOSS_NIGHT:
 		_end_loop(true)
@@ -712,9 +829,15 @@ func _unhandled_input(event: InputEvent) -> void:
 					set_speed(1.0 if speed == 50.0 else 50.0)
 			KEY_R:
 				new_run(run_seed + 1)
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _held_req and _held_req_hand == null:
+		release_request()
 	elif event is InputEventMouseButton and event.pressed and _camera and not _xr:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			_press(_camera.project_ray_origin(event.position), _camera.project_ray_normal(event.position))
+			var o := _camera.project_ray_origin(event.position)
+			var d := _camera.project_ray_normal(event.position)
+			if _button_at(o, d) == "" and grab_request(request_on_ray(o, d)):
+				return
+			_press(o, d)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			select("")
 
@@ -727,6 +850,7 @@ func _process(delta: float) -> void:
 	if not with_rig:
 		return
 	_update_lens()
+	_update_held()
 	if _xr:
 		if _active_hand:
 			_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
@@ -862,11 +986,16 @@ func hand_pressed(h: GameHand) -> void:
 	if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= GameConfig.LENS_GRAB_REACH:
 		_lens_hand = h
 		return
+	if grab_request(request_near(h.global_position), h):
+		return
 	_active_hand = h
 	_press(h.ray_origin(), h.ray_dir())
 
 
 func hand_released(h: GameHand) -> void:
+	if _held_req and _held_req_hand == h:
+		release_request()
+		return
 	if h == _lens_hand:
 		_lens_hand = null
 		_lens.transform = _lens_rest

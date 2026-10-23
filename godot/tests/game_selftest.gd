@@ -21,6 +21,7 @@ func _initialize() -> void:
 	await _step2()
 	await _foresight()
 	await _sell()
+	await _requests()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -569,5 +570,97 @@ func _sell() -> void:
 	check("after a night: half back (Fire 30)", g.sell(g.towers[0]) and g.trust == before + 30)
 	before = g.trust
 	check("after a night: half back (Brazier 25)", g.sell(g.towers[0]) and g.trust == before + 25)
+	g.queue_free()
+	await process_frame
+
+
+func _requests() -> void:
+	var g := await _make_game()
+	var kinds := {}
+	var where := {}
+	for r in g.requests:
+		kinds[r.kind] = true
+		where[r.house] = true
+	check("day 1: 4 requests, one of each kind, on 4 different houses", g.requests.size() == 4 and kinds.size() == 4 and where.size() == 4)
+	var by := {}
+	for r in g.requests:
+		by[r.kind] = r
+	var C := GameConfig.CELL
+	var t0 := g.trust
+
+	var ch: HelpRequest = by["chimney"]
+	var home: Vector3 = ch.prop.position
+	g.grab_request(ch)
+	ch.move_to(home + Vector3(0, 0.5 * C, 0))
+	check("chimney: a small tug does nothing, the rubble goes back", not g.release_request() and ch.prop.position == home and not ch.done)
+	g.grab_request(ch)
+	ch.move_to(home + Vector3(0, 2.0 * C, 0))
+	check("chimney: pulled out -> done, +15 trust", g.release_request() and ch.done and g.trust == t0 + 15)
+
+	var bd: HelpRequest = by["bird"]
+	g.grab_request(bd)
+	bd.move_to(bd.prop.position + Vector3(2.5 * C, 0, 0))
+	check("bird: moved off the chimney -> done, +10", g.release_request() and bd.done and g.trust == t0 + 25)
+
+	var ln: HelpRequest = by["lantern"]
+	g.grab_request(ln)
+	ln.move_to(ln._goal + Vector3(4.0 * C, 0.02, 0))
+	check("lantern: dropped away from its house stays on the grass", not g.release_request() and not ln.done and ln.prop.position.y == 0.0)
+	g.grab_request(ln)
+	ln.move_to(ln._goal + Vector3(0.5 * C, 0.02, 0))
+	check("lantern: carried to its house -> done, +20", g.release_request() and ln.done and ln.prop.position == ln._goal and g.trust == t0 + 45)
+
+	var ct: HelpRequest = by["cart"]
+	var cart_home: Vector3 = ct.prop.position
+	g.grab_request(ct)
+	ct.move_to(cart_home + Vector3(1.0 * C, 0.03, 0))
+	check("cart: stays on the ground while pushed", ct.prop.position.y == 0.0)
+	check("cart: a short push does nothing", not g.release_request() and ct.prop.position == cart_home)
+	g.grab_request(ct)
+	ct.move_to(cart_home + Vector3(0, 0, 2.5 * C))
+	check("cart: pushed clear -> done, +25", g.release_request() and ct.done and g.trust == t0 + 70)
+	check("a finished request cannot be grabbed again", not g.grab_request(ch))
+
+	# night: requests go away and cannot be grabbed; a new set comes with the next day
+	g.start_night()
+	check("requests vanish at night", g.requests.is_empty())
+	g._clear_night()
+	g._end_night()
+	check("the next day brings 4 new requests", g.requests.size() == 4 and g.requests.all(func(r): return not r.done))
+	g.queue_free()
+	await process_frame
+
+	# VR hand: pinch at the prop, move the hand, let go
+	g = await _make_game()
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "bird")[0]
+	hand.global_position = bird.grab_point()
+	g.hand_pressed(hand)
+	check("a pinch at a request prop grabs it", g._held_req == bird)
+	hand.global_position += Vector3(0.0, 0.05, 0.12)
+	g._update_held()
+	check("the prop follows the hand", bird.prop.global_position.distance_to(hand.global_position) < 0.001)
+	var before := g.trust
+	g.hand_released(hand)
+	check("letting go far enough finishes it", bird.done and g.trust == before + 10)
+	hand.global_position = g.board.global_position + Vector3(0, 0.3, 0)
+	g.hand_pressed(hand)
+	check("a pinch away from every prop grabs nothing", g._held_req == null)
+	hand.queue_free()
+	g.queue_free()
+	await process_frame
+
+	# dawn repair: damage carries over, +10 HP a dawn; a shuttered house opens again with 10 HP
+	g = await _make_game()
+	g.start_night()
+	g._spawn_queue.clear()
+	g.houses[0].damage(30.0)
+	g.houses[1].damage(100.0)
+	g._clear_night()
+	g._end_night()
+	check("dawn: a hurt house heals only 10 (60 - 30 + 10 = 40)", is_equal_approx(g.houses[0].hp, 40.0))
+	check("dawn: a shuttered house opens again with 10 HP", not g.houses[1].is_shuttered and is_equal_approx(g.houses[1].hp, 10.0))
 	g.queue_free()
 	await process_frame

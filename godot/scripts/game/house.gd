@@ -2,7 +2,7 @@ class_name House
 extends Node3D
 ## One village house on a 2 x 2 footprint. Grunts wear its HP down; at 0 it is shuttered (spec 2):
 ## each moving part tweens to its "<part>_broken" marker, lit windows go off, rubble appears.
-## Repaired at dawn (slice: every house is repaired for free).
+## At dawn it heals GameConfig.DAWN_REPAIR HP (damage carries over); the hourglass rewind repairs it fully.
 
 signal shuttered(house: House)
 
@@ -68,6 +68,15 @@ func damage(amount: float) -> void:
 		is_shuttered = true
 		_apply(true, true)
 		shuttered.emit(self)
+
+
+func heal(amount: float) -> void:
+	## Dawn repair: some HP back; a shuttered house that has HP again opens up.
+	hp = minf(max_hp, hp + amount)
+	_update_bar()
+	if is_shuttered and hp > 0.0:
+		is_shuttered = false
+		_apply(false, true)
 
 
 func repair() -> void:
