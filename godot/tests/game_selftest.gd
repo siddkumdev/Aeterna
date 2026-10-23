@@ -325,17 +325,17 @@ func _step2() -> void:
 	g.queue_free()
 	await process_frame
 
-	# Airship: shoots the Wisp down, ignores ground enemies; at most 2
+	# Airship: shoots the Wisp down, ignores ground enemies; no limit on how many (Siddharth 2026-10-23)
 	g = await _make_game()
 	g.trust = 1000
 	check("Airship builds", g.try_build("airship", Vector2i(11, 3)))
 	check("second Airship builds", g.try_build("airship", Vector2i(4, 4)))
-	check("a third Airship is refused (max 2)", not g.try_build("airship", Vector2i(17, 4)) and g.at_max("airship"))
+	check("a third Airship builds too (no cap)", g.try_build("airship", Vector2i(17, 4)) and not g.at_max("airship"))
 	g._press_button("airship")
-	check("the grey Airship sign does not pick one up, and reads 2/2 placed",
-		g.selected != "airship" and g._buttons["airship"]["label"].text.contains("2/2 placed"))
+	check("the Airship sign still picks one up with 3 out", g.selected == "airship" and g._buttons["airship"]["label"].text.contains("35 trust"))
+	g._press_button("airship")
 	g._press_button("fire")
-	check("other towers still build with 2 Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 4)))
+	check("other towers build with Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 7)))
 	g._press_button("fire")
 	g.trust = 10
 	g._press_button("brazier")

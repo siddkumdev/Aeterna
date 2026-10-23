@@ -48,7 +48,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 ### 4. Tower placement
 - Placed on grid cells, one tower per cell, large preview ghost, snap on release. Throw the ghost off the island to cancel before placing.
 - **Once placed, a tower stays.** No moving. (Selling/refunding is not in this draft; see open questions.)
-- **Cap:** 8 towers + 2 huts on the board; at most 2 Airships. The cap is a pacing lever, tunable.
+- **Cap:** 8 towers + 2 huts on the board (not built yet). The 2-Airship limit was removed (Siddharth 2026-10-23). The cap is a pacing lever, tunable.
 - **Upgrades:** none per tower in the competition build; progression comes from loop unlocks (see 15).
 
 ### 5. Economy (trust)
@@ -92,7 +92,7 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 | Fire Tower | shoots a fireball at one target; good range, **no AoE** | 5 cells | 14 per fireball, 1 shot per 1.5 s | 60 | the reliable heavy hitter |
 | Blast Brazier | **good AoE, short range, lower damage** | 2 cells | 4 per pulse to all within 1 cell, 1 pulse per second | 50 | holds a choke point near the village |
 | Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on long straight approaches (piercing line) |
-| Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 35 (was 70) | max 2; floats 2 cells above the board |
+| Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 35 (was 70) | no limit (was max 2, removed 2026-10-23); floats 2 cells above the board |
 - No Barricade, Light Tower or Healing Shrine in this roster. Healing is done by the Mend Vial spell instead.
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 
@@ -254,5 +254,5 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 
 ## Open questions to settle first
 1. Selling or refunding towers: none in this draft. Want it back, or no?
-2. Tower cap (8 towers + 2 huts, max 2 Airships): keep?
+2. Tower cap (8 towers + 2 huts): keep? (2-Airship limit removed 2026-10-23)
 3. Which remaining items do you want to change before the first playable?

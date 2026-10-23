@@ -101,7 +101,8 @@ const BOSS_DELAY := 15.0  # the placeholder boss leaves the forest after the fir
 const SPREAD := 0.3  # each enemy walks up to this many cells off the centre line, so a crowd does not form a queue
 
 # Towers (spec 7). targets: what a tower can hit ("ground" or "air"); cards can widen it (Long Draw and Long
-# Mooring Legendaries). max = how many of that kind may stand on the board (spec 7: at most 2 Airships).
+# Mooring Legendaries). Optional "max" = how many of that kind may stand on the board (none set: the 2-Airship
+# limit from spec 7 was removed by Siddharth 2026-10-23).
 const TOWERS := {
 	"fire": {
 		"name": "Fire Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
@@ -122,7 +123,7 @@ const TOWERS := {
 	# cost 35 = half the spec's 70 (Siddharth 2026-10-22: "for now")
 	"airship": {
 		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
-		"max": 2, "scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
+		"scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
 	},
 }
