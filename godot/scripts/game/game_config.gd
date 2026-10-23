@@ -15,17 +15,18 @@ const NIGHT_CLEAR_TRUST_PER_NIGHT := 10
 # Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
 const NIGHTS_PER_LOOP := 6
 const BOSS_NIGHT := 5  # 0-based: the 6th night
-const LOOPS_PER_RUN := 5  # 2026-10-22 (Siddharth): 5 loops for M1, so Foresight reaches tier 5 (tier = loop)
+const LOOPS_PER_RUN := 5  # 2026-10-22 (Siddharth): 5 loops for M1
 # Each loop after the first (spec 16 for loop 2: +40% enemy HP and one extra group per night; Claude's stand-in
 # for loops 3-5: the same step again each loop). Loop n (0-based) = HP x(1 + 0.4 n), n extra groups per night.
 const LOOP_HP_STEP := 0.4
 const EXTRA_GROUPS_PER_LOOP := 1
 
-# Foresight (spec 13): the Crystal Lens shows the coming night during the day. Tier = loop number (1-5,
-# Siddharth 2026-10-22). 1 blurry silhouettes + the direction of each group; 2 adds type icons + counts;
-# 3 adds path ribbons (and where Tunnelers come up); 4 adds timing; 5 adds the rewrite (close one spawn for
-# the night: its groups come from the next open edge instead). The Fog variant is never shown.
-const FORESIGHT_TIERS := 5
+# Foresight (spec 13): the Crystal Lens shows the coming night during the day. 3 tiers spread over the 5 loops
+# (Siddharth 2026-10-23: loops 1-2 / 3-4 / 5). 1 blurry silhouettes + the direction of each group; 2 adds type
+# icons + counts + when each group leaves; 3 adds path ribbons (and where Tunnelers come up) and the rewrite
+# (close one spawn for the night: its groups come from the next open edge instead). The Fog variant never shows.
+const FORESIGHT_TIERS := 3
+const FORESIGHT_TIER_BY_LOOP: Array[int] = [1, 1, 2, 2, 3]
 const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Foresight only
 const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab

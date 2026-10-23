@@ -51,7 +51,7 @@ var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are 
 var last_message := ""
 
 var foresight: Foresight
-var closed_spawn := ""  # Foresight tier 5 rewrite: the gap closed for the coming night
+var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
 
 var _lens: Node3D  # the Crystal Lens model (spec 13)
 var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
@@ -208,11 +208,11 @@ func night_plan() -> Array[Dictionary]:
 
 
 func foresight_tier() -> int:
-	return mini(loop + 1, GameConfig.FORESIGHT_TIERS)
+	return GameConfig.FORESIGHT_TIER_BY_LOOP[mini(loop, GameConfig.FORESIGHT_TIER_BY_LOOP.size() - 1)]
 
 
 func close_spawn(spawn: String) -> bool:
-	## Foresight tier 5 rewrite: close one forest gap for the coming night, once per night.
+	## Foresight top-tier rewrite: close one forest gap for the coming night, once per night.
 	if phase != Phase.DAY or foresight_tier() < GameConfig.FORESIGHT_TIERS or closed_spawn != "" or not GameConfig.SPAWNS.has(spawn):
 		return false
 	closed_spawn = spawn
@@ -727,8 +727,8 @@ func _build_ui() -> void:
 
 
 func _build_close_signs(ui: Node3D) -> void:
-	## Foresight tier 5: one sign inside each forest gap, "Close this path tonight". Shown only while the lens
-	## is up at tier 5 and no gap has been closed tonight.
+	## Foresight top tier: one sign inside each forest gap, "Close this path tonight". Shown only while the lens
+	## is up at the top tier and no gap has been closed tonight.
 	for spawn in GameConfig.SPAWNS:
 		var gap: Array = GameConfig.SPAWNS[spawn]
 		var centre := (NavGrid.cell_centre(gap[0]) + NavGrid.cell_centre(gap[gap.size() - 1])) / 2.0

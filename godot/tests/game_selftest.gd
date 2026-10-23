@@ -407,7 +407,7 @@ func _foresight() -> void:
 	for lp in range(5):
 		g.loop = lp
 		tiers.append(g.foresight_tier())
-	check("Foresight tier = loop number (1..5)", tiers == [1, 2, 3, 4, 5])
+	check("Foresight: 3 tiers over loops 1-2 / 3-4 / 5", tiers == [1, 1, 2, 2, 3])
 
 	# what each tier reveals, on loop 2's night 3 (Fog variants can come) of several seeds
 	var fog_seen := 0
@@ -426,7 +426,6 @@ func _foresight() -> void:
 		var r1 := Foresight.reveal(1, plan, g)
 		var r2 := Foresight.reveal(2, plan, g)
 		var r3 := Foresight.reveal(3, plan, g)
-		var r4 := Foresight.reveal(4, plan, g)
 		for i in r1.size():
 			var shown := 0
 			for k in r2[i]["types"]:
@@ -435,12 +434,12 @@ func _foresight() -> void:
 					fog_seen += 1
 			ok1 = ok1 and not r1[i].has("types") and r1[i]["silhouettes"].size() == ceili(shown / 2.0)
 			ok2 = ok2 and r2[i]["silhouettes"].size() == shown
+			ok4 = ok4 and r2[i].has("time") and not r1[i].has("time")
 			ok3 = ok3 and r3[i].has("paths") and not (r3[i]["paths"].is_empty() and r3[i]["surface"].is_empty()) and not r2[i].has("paths")
-			ok4 = ok4 and r4[i].has("time") and not r3[i].has("time")
 	check("tier 1: silhouettes only, about half as many as are coming", ok1)
 	check("tier 2: one silhouette each plus type counts", ok2)
+	check("tier 2: departure times", ok4)
 	check("tier 3: path ribbons for every group", ok3)
-	check("tier 4: departure times", ok4)
 	check("the Fog variant never shows (%d planned)" % fog_planned, fog_seen == 0 and fog_planned > 0)
 
 	# tier 3: the ring drawn for a Tunneler is where it really comes up
@@ -513,16 +512,18 @@ func _foresight() -> void:
 	g.queue_free()
 	await process_frame
 
-	# tier 5 rewrite: close one gap for the night
+	# tier 3 rewrite: close one gap for the night
 	g = await _make_game()
-	check("no rewrite below tier 5", not g.close_spawn("north"))
+	check("no rewrite below tier 3", not g.close_spawn("north"))
+	g.loop = 3
+	check("no rewrite at tier 2 (loop 4)", not g.close_spawn("north"))
 	g.loop = 4
 	var before := g.night_plan()
 	var from_north := before.filter(func(x): return x["spawn"] == "north").size()
 	g.set_lens(true)
-	check("tier 5: lens up shows a close sign at each gap with enemies", ["north", "east", "west"].any(func(k): return g._buttons["close_" + k]["node"].visible))
+	check("tier 3: lens up shows a close sign at each gap with enemies", ["north", "east", "west"].any(func(k): return g._buttons["close_" + k]["node"].visible))
 	g.set_lens(false)
-	check("tier 5: closing the north gap works once", g.close_spawn("north") and not g.close_spawn("east"))
+	check("tier 3: closing the north gap works once", g.close_spawn("north") and not g.close_spawn("east"))
 	var after := g.night_plan()
 	check("its groups come from the next edge, none from the north (%d moved)" % from_north,
 		after.all(func(x): return x["spawn"] != "north") and after.size() == before.size())

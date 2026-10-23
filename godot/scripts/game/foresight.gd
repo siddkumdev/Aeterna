@@ -1,14 +1,14 @@
 class_name Foresight
 extends Node3D
 ## What the Crystal Lens shows (spec 13): the coming night, drawn at the forest edge in crystal blue, during
-## the day only. Its tier is the loop number (1-5):
+## the day only. 3 tiers (GameConfig.FORESIGHT_TIER_BY_LOOP: loops 1-2, 3-4, 5):
 ##   1  blurry silhouettes (about half as many as are coming, so the size reads but not the count) and an
 ##      arrow at the gap each group comes from
-##   2  every enemy as its own silhouette, plus type names and counts (stand-in for icons)
+##   2  every enemy as its own silhouette, plus type names and counts (stand-in for icons) and when each
+##      group leaves the forest
 ##   3  path ribbons: the route each walking group takes and the straight line of its flyers, plus a ring
-##      where each Tunneler will come up
-##   4  when each group leaves the forest
-##   5  rewrite: a sign at each gap closes it for the night (once per night); its groups use the next edge
+##      where each Tunneler will come up; and the rewrite: a sign at each gap closes it for the night (once
+##      per night), its groups use the next edge
 ## The Fog variant never shows. Gaze-aimed: only groups whose gap is near where the head looks are drawn
 ## (desktop: all of them). `reveal()` is the same information as data, for the headless tests.
 
@@ -29,8 +29,8 @@ func _ready() -> void:
 
 static func reveal(at_tier: int, plan: Array, g) -> Array[Dictionary]:
 	## One entry per group with anything to show:
-	## {"spawn", "silhouettes": [{"flying", "boss"}], "types": {kind: count} (tier 2+),
-	##  "paths": [Array[Vector3] board-local] (tier 3+), "surface": [Vector2i] (tier 3+), "time": s (tier 4+)}
+	## {"spawn", "silhouettes": [{"flying", "boss"}], "types": {kind: count} (tier 2+), "time": s (tier 2+),
+	##  "paths": [Array[Vector3] board-local] (tier 3), "surface": [Vector2i] (tier 3)}
 	var out: Array[Dictionary] = []
 	for grp in plan:
 		var shown: Array = grp["enemies"].filter(func(k): return not GameConfig.ENEMIES[k].get("hidden", false))
@@ -63,7 +63,7 @@ static func reveal(at_tier: int, plan: Array, g) -> Array[Dictionary]:
 					e["paths"].append([from + Vector3(0, 1.5 * GameConfig.CELL, 0), g.house_point(h) + up])
 				if shown.has("tunneler"):
 					e["surface"].append(g.surface_cell(h, from))
-		if at_tier >= 4:
+		if at_tier >= 2:
 			e["time"] = grp["time"]
 		out.append(e)
 	return out
@@ -156,7 +156,7 @@ func _draw(spawn: String, entries: Array) -> Dictionary:
 	# the cone's tip (+Y) points inward, lying flat and squashed to a thin plate (its local Z is vertical)
 	arrow.basis = Basis(across, inward, across.cross(inward) * 0.2)
 	node.add_child(arrow)
-	# words: type counts (tier 2), departure times (tier 4)
+	# words: type counts and departure times (tier 2)
 	var lines: Array[String] = []
 	for e in entries:
 		var parts: Array[String] = []
