@@ -621,6 +621,28 @@ func _requests() -> void:
 	check("cart: pushed clear -> done, +25", g.release_request() and ct.done and g.trust == t0 + 70)
 	check("a finished request cannot be grabbed again", not g.grab_request(ch))
 
+	# a tower built on or beside a loose lantern or cart carries it to open ground (it used to hide it)
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+	g.trust = 1000
+	for kind in ["lantern", "cart"]:
+		var rq: HelpRequest = g.requests.filter(func(x): return x.kind == kind)[0]
+		var cc := NavGrid.local_to_cell(rq.prop.position)
+		check("%s starts on open ground" % kind, g._open_at(cc) or kind == "cart")
+		var built := g.try_build("fire", cc - Vector2i(0, 2)) or g.try_build("fire", cc + Vector2i(0, 1))  # a tower right beside it
+		check("%s: the tower beside it was built" % kind, built)
+		var after := NavGrid.local_to_cell(rq.prop.position)
+		var hidden := false
+		for t in g.towers:
+			for f in NavGrid.footprint(t.cell, GameConfig.TOWER_SIZE):
+				if absi(f.x - after.x) <= 1 and absi(f.y - after.y) <= 1:
+					hidden = true
+		check("%s is not on or beside a tower after building next to it" % kind, not hidden and not g.nav.kind.has(after))
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+
 	# night: requests go away and cannot be grabbed; a new set comes with the next day
 	g.start_night()
 	check("requests vanish at night", g.requests.is_empty())

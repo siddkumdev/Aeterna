@@ -284,6 +284,37 @@ func _post_requests() -> void:
 		requests.append(r)
 
 
+func _open_at(c: Vector2i) -> bool:
+	## A cell with a clear cell on every side: not forest, house, tower or spawn, and none of those next to it
+	## (what stands next to a prop can hide it from the seat).
+	if c.x < 2 or c.y < 2 or c.x > GameConfig.SIZE - 3 or c.y > GameConfig.SIZE - 3:
+		return false
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			if nav.kind.has(c + Vector2i(dx, dy)):
+				return false
+	return true
+
+
+func open_ground_near(p: Vector3) -> Vector3:
+	## Centre of the nearest open cell to a board-local point (rings of growing size round it).
+	var c := NavGrid.local_to_cell(p)
+	for r in range(0, GameConfig.SIZE):
+		var best := Vector2i(-1, -1)
+		var best_d := INF
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue
+				var n := c + Vector2i(dx, dy)
+				if _open_at(n) and Vector2(dx, dy).length() < best_d:
+					best_d = Vector2(dx, dy).length()
+					best = n
+		if best.x >= 0:
+			return NavGrid.cell_centre(best)
+	return p
+
+
 func _lantern_spot(house: int, rng: RandomNumberGenerator) -> Vector3:
 	## Open grass LANTERN_DISTANCE cells from the house: not a house, tower, forest or spawn cell.
 	var centre := house_point(house)
@@ -292,7 +323,7 @@ func _lantern_spot(house: int, rng: RandomNumberGenerator) -> Vector3:
 		var d := rng.randf_range(GameConfig.LANTERN_DISTANCE.x, GameConfig.LANTERN_DISTANCE.y) * GameConfig.CELL
 		var p := centre + Vector3(cos(a), 0, sin(a)) * d
 		var c := NavGrid.local_to_cell(p)
-		if c.x >= 2 and c.y >= 2 and c.x <= GameConfig.SIZE - 3 and c.y <= GameConfig.SIZE - 3 and not nav.kind.has(c):
+		if _open_at(c):
 			return NavGrid.cell_centre(c)
 	return centre + Vector3(0, 0, 3.0 * GameConfig.CELL)
 
@@ -606,6 +637,8 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.setup(kind, cell)
 	t.built_night = night
 	towers.append(t)
+	for r in requests:
+		r.dodge(NavGrid.footprint(cell, GameConfig.TOWER_SIZE))
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
 	if trust < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
 		select("")

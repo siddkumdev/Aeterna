@@ -24,6 +24,7 @@ var held := false
 var _home := Vector3.ZERO  # where the prop started
 var _goal := Vector3.ZERO  # lantern: where it is returned to
 var _marker: Node3D
+var _prop_marker: Node3D  # a second "!" that rides on a lantern or cart, so it can be found even behind a tall tower
 var _villager: Node3D
 
 
@@ -57,6 +58,13 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 			var tw := _marker.create_tween().set_loops()
 			tw.tween_property(_marker, "position:y", _marker.position.y + 0.008, 0.6).set_trans(Tween.TRANS_SINE)
 			tw.tween_property(_marker, "position:y", _marker.position.y, 0.6).set_trans(Tween.TRANS_SINE)
+	if kind == "lantern" or kind == "cart":
+		var pm = load(GameConfig.HELP_MARKER_SCENE)
+		if pm:
+			_prop_marker = pm.instantiate()
+			_prop_marker.scale = Vector3.ONE * MARK_SCALE
+			prop.add_child(_prop_marker)
+			_prop_marker.position = Vector3(0, ModelUtil.bounds(prop).end.y + 0.004, 0)
 	_villager = _stand_in_villager(house)
 	add_child(_villager)
 	_villager.position = _beside_door(h, 1.2) + h.basis.x * GameConfig.CELL * 0.8
@@ -121,10 +129,29 @@ func release() -> bool:
 	return false
 
 
+func dodge(footprint: Array[Vector2i]) -> void:
+	## A tower was just built: a lantern or cart on or right beside its cells (a tall tower hides what is
+	## next to it from the seat) is carried to the nearest open ground. Not while someone is holding it.
+	if done or held or (kind != "lantern" and kind != "cart"):
+		return
+	var c := NavGrid.local_to_cell(prop.position)
+	for f in footprint:
+		if absi(f.x - c.x) <= 1 and absi(f.y - c.y) <= 1:
+			var spot: Vector3 = game.open_ground_near(prop.position)
+			var shift := spot - prop.position
+			prop.position = spot
+			_home += Vector3(shift.x, 0, shift.z)
+			if kind == "lantern":
+				pass  # its goal is the house's hook, which never moves
+			return
+
+
 func _finish() -> void:
 	done = true
 	if _marker:
 		_marker.visible = false
+	if _prop_marker:
+		_prop_marker.visible = false
 	if _villager and _villager.is_inside_tree():
 		var tw := _villager.create_tween()  # a happy hop
 		tw.tween_property(_villager, "position:y", 0.02, 0.15).set_trans(Tween.TRANS_SINE)
