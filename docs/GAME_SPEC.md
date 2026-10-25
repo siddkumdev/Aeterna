@@ -2,6 +2,8 @@
 
 Status: every item below is PROPOSED, not decided. Numbers are starting values to tune in play, not facts. Item numbers match `docs/DESIGN_SPECS_TODO.md`. Edit anything; whatever you change becomes DECIDED and I build from it.
 
+**M1 status (2026-10-25): see `docs/M1_FEATURES.md` for what is built, cut and moved to M2. Where this spec and that file disagree, `M1_FEATURES.md` and `art/decisions.md` win.**
+
 Revision 2 (Siddharth's feedback applied): no moving towers, no mana (cooldowns only), new 4-tower roster, flat island confirmed, ability choice confirmed.
 
 **Everything is grid-based (Siddharth's rule).** The unit of measure is the CELL. 1 cell = 5 cm in the real world; the board is 24 x 24 cells (1.2 m; was 12 x 12 until 2026-10-22, Siddharth: "way too small"). All gameplay distances, ranges, radii, speeds, heights and model footprints below are in cells (or cells per second). Real-world units (cm, m/s) appear only where they describe the player's body or hand input, and are marked "real".
@@ -9,12 +11,12 @@ Revision 2 (Siddharth's feedback applied): no moving towers, no mana (cooldowns 
 ### Grid and footprints (Siddharth: all buildings are one uniform size)
 | Thing | Footprint (cells) | Height (cells) |
 |---|---|---|
-| Every building: house, Fire Tower, Blast Brazier, Longbow Tower, Watch Hut | 2 x 2 | 3-4 (same footprint; silhouettes differ by shape and colour, not size) |
+| Every building: house, Fire Tower, Blast Brazier, Longbow Tower | 2 x 2 | 3-4 (same footprint; silhouettes differ by shape and colour, not size) |
 | Airship (friendly tower) | 2 x 2 (moored over its footprint) | floats 2 above board, about 3 tall |
 | Tree | 1 x 1 | 2-3 |
 | Villager, troop, ground enemy | fits in 1 cell | 1 |
 | Boss (not a building) | 3 x 3 | 5 |
-Space check: 6 houses + 8 towers + 2 huts = 16 buildings x 4 cells = 64 of 144 cells, leaving 80 for paths, forest edge and open space. The tower cap (8 + 2 huts) can be lowered if the board feels crowded.
+Space check (old 12 x 12 draft): 6 houses + 8 towers = 14 buildings x 4 cells = 56 cells. The board is now 24 x 24 (576 cells), so space is not a problem; there is no tower cap.
 Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide) will be rescaled to the 2 x 2 footprint when asset building starts.
 
 ---
@@ -43,22 +45,22 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - A night is a fixed number of enemy groups (see 6). It ends when all groups are spawned and every enemy is defeated, or the night is lost.
 - **Win:** all enemies defeated with 4+ houses standing. Reward at dawn.
 - **Doing nothing:** enemies shutter 3 houses, the night is lost, and the time loop triggers with a reduced reward.
-- **Passive combat:** towers and troops fight on their own; the player's inputs are placement, rally point, spells and swatting flyers.
+- **Passive combat:** towers fight on their own; the player's inputs are placement, selling, helping villagers, and spells at night. (Troops, the rally flag and hand swat are cut/skipped for M1.)
 
 ### 4. Tower placement
 - Placed on grid cells, one tower per cell, large preview ghost, snap on release. Throw the ghost off the island to cancel before placing.
-- **Once placed, a tower stays.** No moving. (Selling/refunding is not in this draft; see open questions.)
-- **Cap:** 8 towers + 2 huts on the board (not built yet). The 2-Airship limit was removed (Siddharth 2026-10-23). The cap is a pacing lever, tunable.
+- **Once placed, a tower stays** (no moving), but it can be sold at day with the Sell sign (see 5).
+- **Cap:** none (Siddharth 2026-10-23 removed the 2-Airship limit; the old 8 + 2 hut cap was never built). Trust is the only limit.
 - **Upgrades:** none per tower in the competition build; progression comes from loop unlocks (see 15).
 
 ### 5. Economy (trust)
 - Start: 200 trust per loop (loop 1 night 1). (Was 100; raised 2026-10-22 by Siddharth.)
-- **Day income:** helping villagers (see 18), about 4-6 requests per day at 10-25 trust each.
+- **Day income:** helping villagers (see 18): 4 requests per day, 10-25 trust each. Siddharth 2026-10-23: far too frequent, retune with trust in the M3 balance pass.
 - **Dawn income:** +5 trust per standing house.
-- **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. OPEN: the amount (he will decide later; do not invent a number) and whether it scales with the night.
+- **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. DECIDED 2026-10-22: 10 x the night number.
 - **Dawn repair (Siddharth 2026-10-23):** damage carries over between nights; each dawn every house heals 10 HP (a shuttered house with HP again opens up). The hourglass rewind still repairs everything.
 - **Selling (Siddharth 2026-10-23):** day only, with the Sell sign; full cost back on the day the tower was built, half (rounded down) after a night.
-- **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now), Watch Hut 70.
+- **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now).
 - **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
 - Fate Coin can modify income (see 17).
 
@@ -69,7 +71,7 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 - Loop 2 repeats the structure with the changes in 16. **2026-10-22 (Siddharth): a run is 5 loops for M1.** Loops 3-5 repeat the loop-2 step again each loop (stand-in: enemy HP x(1 + 0.4 x (loop - 1)), one more extra group per night each loop).
 
 ### 6a. Wave generation (Siddharth: "somewhat procedurally generated"; rules below are PROPOSED)
-What is fixed: the number of loops (2, loop 3 only if built), 5 nights + 1 boss night per loop, and when each enemy type first appears. What is generated: which enemies come each night, how many, from which of the 3 spawn points, and when.
+What is fixed: the number of loops (5 for M1), 5 nights + 1 boss night per loop, and when each enemy type first appears. What is generated: which enemies come each night, how many, from which of the 3 spawn points, and when.
 - **Seed:** each run gets a random seed; the generator is deterministic from it, so a run can be replayed and bugs reproduced.
 - **Threat budget per night:** each enemy costs threat points (proposal: Grunt 1, Scout 1, Wisp 2, Splitter 3, Tunneler 3, Fog variant 3). Night n of loop 1 gets a budget that grows each night (was 6, 9, 12, 16, 20; 2026-10-22 harder: **8, 14, 22, 32, 44**, plus enemy HP +25% per night; Scouts unlock night 2, Splitters night 3). Loop 2 budgets are 40% higher (whether this replaces or adds to the "+40% enemy HP" idea in 16 is deferred; Siddharth will decide later).
 - **Spending the budget:** the generator buys enemies only from the types unlocked so far, splits them into 3 groups, gives each group a spawn point and a start time inside the night. Group sizes grow through the night.
@@ -94,10 +96,10 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 | Blast Brazier | **good AoE, short range, lower damage** | 2 cells | 4 per pulse to all within 1 cell, 1 pulse per second | 50 | holds a choke point near the village |
 | Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on long straight approaches (piercing line) |
 | Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 35 (was 70) | no limit (was max 2, removed 2026-10-23); floats 2 cells above the board |
-- No Barricade, Light Tower or Healing Shrine in this roster. Healing is done by the Mend Vial spell instead.
+- No Barricade, Light Tower or Healing Shrine in this roster. Houses heal 10 HP each dawn instead (see 5).
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 
-### 8. Hut and troops
+### 8. Hut and troops (ALL CUT 2026-10-25, history only)
 - **CUT (Siddharth 2026-10-25): no Watch Hut, Guards, Slingers or rally flag.** "4 towers are enough for a cozy game." The night-time hands verb is spells instead. Everything below in this section is kept only as history; the three troop cards (Shield Wall, Sharp Stones, Friendly Faces) are out of the card pool (now 11).
 - **DECIDED (Siddharth, 2026-10-19): one spawning building per troop type**, not one hut for all troops. The Watch Hut spawns Guards only; Slingers get their own building. OPEN: the Slinger building's name, cost and look; whether it unlocks in loop 2 with the Slinger. Spawning buildings are designed only after the troop characters are final.
 - **Watch Hut** (cost 70): spawns a Guard every 8 s, up to 3 alive per hut.
@@ -115,12 +117,12 @@ Speed in cells per second, HP in points. Looks follow the faceted skeleton famil
 | Tunneler | goes underground, pops up mid-village | 0.4 | 30 | 3 (path) |
 | Splitter (mushroom, #15) | splits into 2 small on death | 0.4 | 25 (+2 x 8) | 2 (type) |
 | Fog variant (loop 2+) | hidden from Foresight, only seen when it reaches the board | 0.4 | 25 | never |
-- **Boss (placeholder name "the Warden"):** 3 phases. P1 summons Grunt groups. P2 shielded by 3 crystals that must be destroyed (drop spells are ideal). P3 enrages, adds flyers rising from the tree line. Loop 2 adds a 4th phase.
+- **Boss (placeholder name "the Warden"):** M1 builds a simple 3-phase version (Siddharth 2026-10-25); numbers are stand-ins, see `docs/M1_FEATURES.md`. 3 phases. P1 summons Grunt groups. P2 shielded by 3 crystals that must be destroyed (drop spells are ideal). P3 enrages, adds flyers rising from the tree line. Loop 2 adds a 4th phase.
 
 ### 10. Flyers
 - **One type:** the Wisp (small, fast, 8 HP), a creature. The Sky Barge enemy airship and any second flyer are cut (Siddharth, 2026-10-17).
 - **Entry:** rise out of the tree line above a forest spawn point, then fly at a height of 3-5 cells above the board straight toward their target.
-- **Defeating them:** the Airship tower attacks air. Hands: swat a Wisp (hand speed above a low threshold passing through its hit sphere); thrown Fire Orbs can hit flyers directly; Boulder Drop and ground towers cannot hit air.
+- **Defeating them:** the Airship tower attacks air. Hands: swat a Wisp was SKIPPED for M1 (Siddharth 2026-10-25). Spells hit ground and air; the Airship is the only tower that attacks air.
 - **Forgiveness:** hit sphere is 2x the visual radius; 100 ms magnetism toward the hand; swat damage works at any real hand speed above 0.5 m/s.
 - **Introduction:** Wisps from night 2 of loop 1.
 
@@ -154,7 +156,8 @@ Cooldown only; no mana or resource cost. **Cast at night only; every spell is re
 - Holding the lens costs nothing, but one hand is occupied while looking.
 - **Lens look per tier (Siddharth 2026-10-21, Godot):** the lens is a cracked hand mirror (I03 variant B); purple magic holds the shards together (VFX), and the cracks reduce as the Foresight tier rises.
 
-### 14. Menus and interaction (hands only)
+### 14. Menus and interaction (hands only; MOVED TO M2 2026-10-25)
+M1 uses 3D signs hit by a ray (VR pinch, desktop mouse hand) and number keys; the palm wheel below is the M2 target.
 - **Build menu:** turn the left palm up to open a radial wheel (#37) with the tower and hut cards; pinch-grab a card to pull the 3D model out; drag onto the board, preview ghost snaps to the grid, release to place, throw off the island to cancel.
 - **Spells:** a second tab of the same wheel (or a row of 4 objects on the palm, each with a cooldown ring).
 - **Rally flag:** point and pinch on the board (see 8).
@@ -176,7 +179,7 @@ Cooldown only; no mana or resource cost. **Cast at night only; every spell is re
 - **Duplicates:** a card you already own can be offered again only at a higher rarity than the one you hold; taking it upgrades your copy (it does not stack on top).
 - **Losing a night:** still 1 card, no choice, always Common.
 - **Legendary bonus:** a Legendary card gets the Legendary numbers AND a new behaviour (last column), so it feels different, not just bigger. Legendary bonuses MAY break a tower's normal role (e.g. Longbow hitting flyers, Airship hitting ground); that is the point of a Legendary (confirmed by Siddharth). Each bonus is visible on the board (an effect or animation) so the player sees what changed.
-- **Pool (14): 11 tower/troop cards, 3 overall.** Values are Common / Rare / Legendary.
+- **Pool (11 after the troop cut 2026-10-25): 8 tower cards (1-8) and 3 overall (12-14); cards 9-11 are cut.** Values are Common / Rare / Legendary.
 
 | # | Card | Applies to | Common | Rare | Legendary | Legendary bonus |
 |---|---|---|---|---|---|---|
@@ -185,17 +188,16 @@ Cooldown only; no mana or resource cost. **Cast at night only; every spell is re
 | 3 | Bellows | Blast Brazier | pulses 15% faster | 25% | 40% | every 3rd pulse knocks ground enemies back 1 cell |
 | 4 | Hot Coals | Blast Brazier | 5 dmg per pulse (base 4) | 6 | 8 | each pulse leaves a burning patch for 2 s (2 dmg/s) |
 | 5 | Heavy Bolts | Longbow Tower | 5 dmg per bolt (base 4) | 6 | 8 | bolts slow every enemy they pierce by 30% for 2 s |
-| 6 | Long Draw | Longbow Tower | range 7 cells (base 6) | 8 | 9 | bolts can also hit flyers |
+| 6 | Long Draw | Longbow Tower | range 7 cells (base 6) | 8 | 9 | ~~CUT~~ bolts can also hit flyers |
 | 7 | Long Mooring | Airship | range 5 cells (base 4) | 6 | 7 | the Airship can also shoot ground enemies at half damage |
 | 8 | Twin Cannons | Airship | fires 15% faster | 25% | 40% | each volley fires at two different targets |
 | 9 | Shield Wall | Guards | +25% HP | +50% | +100% | enemies within 1 cell of a Guard must fight it before moving on |
-| 10 | Sharp Stones | Slingers | +25% damage | +50% | +100% | each stone bounces to a second enemy within 1 cell |
-| 11 | Friendly Faces | Watch Hut | 4 troops per hut (base 3) | 4, respawn 25% faster | 5, respawn 50% faster | troops standing near the rally flag heal 2 HP/s |
+| 10 | ~~CUT~~ Sharp Stones | Slingers | +25% damage | +50% | +100% | each stone bounces to a second enemy within 1 cell |
+| 11 | ~~CUT~~ Friendly Faces | Watch Hut | 4 troops per hut (base 3) | 4, respawn 25% faster | 5, respawn 50% faster | troops standing near the rally flag heal 2 HP/s |
 | 12 | Quick Hands | all spells | cooldowns 15% shorter | 25% | 40% | each spell cast has a 25% chance to come back off cooldown instantly |
 | 13 | Sturdy Homes | houses | +25% HP | +50% | +100% | once per night, the first house that would be shuttered holds at 1 HP instead |
 | 14 | Deep Pockets | trust | +30 starting trust | +50 | +80 | +5 trust after every night in which no house was shuttered |
 
-- Sharp Stones is only offered once Slingers are unlocked (loop 2).
 - Dropped: Far Sight (Foresight already sharpens each loop), Thunder Drop (spell, not tower/troop).
 - A larger pool comes later.
 
@@ -203,7 +205,7 @@ Cooldown only; no mana or resource cost. **Cast at night only; every spell is re
 - **Both** more and new: +40% enemy HP, one extra group per night, Tunnelers from night 2, the Fog variant, and the boss gains a 4th phase.
 - **Visible upgrade for the demo:** Foresight goes from blurry silhouettes (loop 1) to type icons with counts (loop 2), and the villagers' first memory lines appear.
 
-### 17. Fate Coin
+### 17. Fate Coin (CUT for M1, parked 2026-10-23/25; nothing in the build uses it)
 Flicked each morning with the thumb; the landed face shows a glyph. Outcomes (starting weights equal):
 | Glyph | Name | Effect for that day/night |
 |---|---|---|
@@ -218,7 +220,7 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 ### 18. Villagers
 - **Cast for the slice:** 5 villagers sharing one part-based design (reference #29 for proportions).
 - **Help requests (4 kinds):** Blocked chimney (grab and pull out the rubble), Stuck bird (grab and move it), Lost lantern (carry it back to its house), Stuck cart (push it clear). Rewards: 10-25 trust. **Built 2026-10-23 (M1 stand-in):** each day 4 requests, one of each kind on different standing houses; rewards bird 10, chimney 15, lantern 20, cart 25; unfinished ones vanish at night. Placeholder capsule villagers stand by the request houses until Durva's villagers exist.
-- **Memory dialogue (wordless icon bubbles + short subtitle):** loop 1 none; loop 2 the baker says "Haven't we met?" and two other villagers show small recognition; loop 3 (if built) someone helps on purpose for free.
+- **Memory dialogue (MOVED TO M2 2026-10-25; Hades-style reactive lines):** loop 1 none; loop 2 the baker says "Haven't we met?" and two other villagers show small recognition; loop 3 (if built) someone helps on purpose for free.
 
 ---
 
@@ -231,7 +233,7 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 - **Reveal:** loop 1 it is just a monster; loop 2 its crystal matches the player's lens; later loops hint at making peace. (Fully optional beyond loop 2.)
 - **Title:** Aeterna (final name, Siddharth 2026-10-22; "Endless Watch" was the working title, kept only in file names such as the `ew_` asset prefix and `docs/Endless Watch Assets.html`).
 
-### 20. First minutes, wordless tutorial (in order)
+### 20. First minutes, wordless tutorial (in order; MOVED TO M2 2026-10-25)
 1. Flick the Fate Coin. 2. Raise the lens and look at the forest edge (silhouettes). 3. Palm-up menu, pull a tower, place it on the glowing grid. 4. Help one villager (grab the stuck bird). 5. Dusk: the forest stirs and the first enemies appear at the tree line. 6. Night: cast a spell and swat a Wisp. 7. Dawn summary. About 6 icon hints, no spoken words.
 
 ### 21. Demo-video beats (in order)
@@ -256,7 +258,5 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 
 ---
 
-## Open questions to settle first
-1. Selling or refunding towers: none in this draft. Want it back, or no?
-2. Tower cap (8 towers + 2 huts): keep? (2-Airship limit removed 2026-10-23)
-3. Which remaining items do you want to change before the first playable?
+## Open questions
+Selling (built) and the tower cap (none) are settled. Remaining: the M1 stand-in numbers (loops 3-5, request rewards, spell numbers, boss) are confirmed or retuned in M3.
