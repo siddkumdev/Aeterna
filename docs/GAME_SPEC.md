@@ -227,6 +227,10 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 ## E. Story and presentation
 
 ### 19. Boss and reveal
+- **The barrier (Siddharth 2026-10-26):** a magic barrier protects the village. The opening cutscene shows it standing. During the village's annual re-strengthening of the barrier, the Warden attacks and breaks it, and the player steps in to save the village.
+- **Why time rewinds when we LOSE (decided 2026-10-26):** the player's lens crystal shares the Heartwood's power and refuses the ending: when the village falls it pulls the player back to the last moment the barrier still held, and the player keeps what they learned.
+- **Why time rewinds when we WIN (decided 2026-10-26):** beating the Warden only breaks its shell. It is the Heartwood's grief, so it reforms; the barrier stays broken, and only another rewind, to before the ritual, gives a chance to mend it properly. This is the seed for the later "making peace" hint.
+- **Where it shows:** opening cutscene (barrier up, ritual, the break); the rewind sequence uses these lines; villager memory lines (M2) can refer to the barrier. Cutscene itself is M2 (art and audio).
 - **Boss:** "the Warden", the forest's old guardian, grown from the cracked Heartwood crystal.
 - **Why the forest turned:** the village's ancestors took a piece of the Heartwood; the Warden's grief corrupts the forest.
 - **Time loop:** the same crystal powers the player's Foresight and the rewind.
