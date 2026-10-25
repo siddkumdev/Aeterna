@@ -177,14 +177,114 @@ def variant_d():
     return p, (0, 0, cz)
 
 
-VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
+# ---- round 2 (Siddharth: loves A and B; the towers are manned, so each has a spot for its wizard) ----------
+# A placeholder wizard (capsule robe, head, pointed hat) stands in each preview so the crew's scale and spot can be
+# judged; Durva's character kit replaces it. __crew_anchor marks where the crew member stands (feet).
+
+def figure(x, y, z, face_deg=270.0):
+    """Placeholder wizard, about 0.7 cell tall. face_deg 270 = looking to the front (-Y)."""
+    f = [bc.cone("robe", 0.0075, 0.0045, 0.020, (x, y, z + 0.010), "roof_teal", 8),
+         bc.blob("head", 0.0055, (x, y, z + 0.0255), "skin_light", 1),
+         bc.cone("wiz_hat", 0.0072, 0.0, 0.014, (x, y, z + 0.0375), "ink", 8),
+         bc.cone("wiz_brim", 0.0085, 0.0085, 0.0014, (x, y, z + 0.0315), "ink", 8)]
+    f[3]["no_bevel"] = True
+    f[2]["no_bevel"] = True
+    return f
+
+
+def variant_e():
+    """A refined: Hat Spire with a front balcony, where the wizard stands next to the lit window."""
+    p, _ = variant_a()
+    p.append(bc.box("balcony", (0.026, 0.014, 0.004), (0, -0.0405, 0.0975), "wood_light"))
+    p += [bc.box("balcony_post", (0.004, 0.004, 0.012), (sx * 0.0115, -0.0455, 0.1055), "wood_dark") for sx in (-1, 1)]
+    p.append(bc.box("balcony_rail", (0.026, 0.003, 0.003), (0, -0.0455, 0.1095), "wood_dark"))
+    p += [bc.box("bracket", (0.004, 0.012, 0.004), (sx * 0.0105, -0.0385, 0.0925), "wood_dark") for sx in (-1, 1)]
+    p += figure(0, -0.0405, 0.0995)
+    return p, (-0.0125, 0, 0.1900), (0, -0.0405, 0.0995)
+
+
+def variant_f():
+    """A, slimmer and taller (critic: be different from the Fire Tower): narrow cream tier with a terracotta belt,
+    wide-brimmed hat with a curled tip; the wizard looks out of a side balcony."""
+    up = (0.030, 0.027, 0.070, 0.104)
+    p = stone_body(top=0.062)
+    p += [
+        bc.cone("band", 0.0350, 0.0350, 0.008, (0, 0, 0.066), "roof_terracotta", 8, R8),
+        bc.cone("upper", up[0], up[1], up[3] - up[2], (0, 0, (up[2] + up[3]) / 2), "wall_cream", 8, R8),
+    ]
+    p += [bc.on_wall("beam", 0.004, 0.0035, 0.030, f, 0.087, up, "wood_dark", sink=0.0003) for f in (45, 135, 225, 315)]
+    win = bc.on_wall("window", 0.010, 0.004, 0.012, 270, 0.088, up, "lantern_glow")
+    bc.paint(win, "lantern_glow", glow=True)
+    p += [win, bc.on_wall("sill", 0.014, 0.006, 0.003, 270, 0.0805, up, "wood_light")]
+    p.append(bc.cone("brim", 0.045, 0.040, 0.004, (0, 0, 0.1055), "ink", 8, R8))  # wide brim, overhangs the footprint edge a little
+    p.append(bc.cone("brim_band", 0.0415, 0.0415, 0.004, (0, 0, 0.1085), "roof_terracotta", 8, R8))
+    p.append(bc.cone("hat", 0.030, 0.012, 0.050, (0, 0, 0.1345), "ink", 8, R8))
+    mid = bc.cone("hat_mid", 0.0125, 0.0075, 0.020, (0, 0, 0.0), "ink", 8, R8)
+    tilted(mid, (0, -20, 0), (-0.0020, 0, 0.1655))
+    tip = bc.cone("hat_tip", 0.0075, 0.0035, 0.018, (0, 0, 0.0), "ink", 8, R8)
+    tilted(tip, (0, -50, 0), (-0.0105, 0, 0.1815))
+    p += [mid, tip, bc.cone("orb_collar", 0.0085, 0.0085, 0.004, (-0.0205, 0, 0.1868), "stone_dark", 8, R8)]
+    # side balcony on the east face (the wizard looks out over the board's right side)
+    p.append(bc.box("balcony", (0.014, 0.024, 0.004), (0.0395, 0, 0.0975 - 0.002), "wood_light"))
+    p += [bc.box("balcony_post", (0.004, 0.004, 0.012), (0.0455, sy * 0.0115, 0.1035), "wood_dark") for sy in (-1, 1)]
+    p.append(bc.box("balcony_rail", (0.003, 0.026, 0.003), (0.0455, 0, 0.1075), "wood_dark"))
+    p += figure(0.0395, 0, 0.0975)
+    return p, (-0.0205, 0, 0.2050), (0.0395, 0, 0.0975)
+
+
+def variant_g():
+    """B refined: Open Belfry with the cap raised on chunky posts so the orb and the wizard both show."""
+    p = stone_body(top=0.066)
+    p.append(bc.cone("floor", 0.038, 0.038, 0.006, (0, 0, 0.069), "stone_dark", 8, R8))
+    p.append(bc.cone("pedestal", 0.011, 0.015, 0.008, (0, 0, 0.076), "stone", 8, R8))
+    for i in range(4):
+        a = math.radians(45 + 90 * i)
+        p.append(bc.box("post", (0.008, 0.008, 0.042), (0.029 * math.cos(a), 0.029 * math.sin(a), 0.093), "wood_dark", rot_z_deg=math.degrees(a)))
+    p += ring(4, 0.0295, 0.0745, (0.008, 0.011, 0.006), "stone", start=0, name="foot")
+    p.append(bc.cone("rail_low", 0.0305, 0.0305, 0.003, (0, 0, 0.083), "wood_light", 8, R8))
+    p.append(bc.cone("eave", 0.042, 0.042, 0.004, (0, 0, 0.116), "wood_dark", 8, R8))
+    p.append(bc.cone("cap", 0.040, 0.007, 0.032, (0, 0, 0.134), "roof_terracotta", 8, R8))
+    p.append(bc.cone("finial", 0.006, 0.006, 0.003, (0, 0, 0.1515), "ink", 6))
+    pt = bc.cone("finial_tip", 0.0045, 0.0, 0.014, (0, 0, 0.161), "ink", 6)
+    pt["no_bevel"] = True
+    p.append(pt)
+    p += ring(4, 0.0245, 0.0765, (0.005, 0.003, 0.005), "fire_red", start=45, name="rune")
+    p += figure(0.0, -0.0215, 0.072)  # beside the orb, in front, looking out
+    return p, (0, 0.004, 0.100), (0, -0.0215, 0.072)
+
+
+def variant_h():
+    """A x B hybrid (the critic's idea): A's black wizard hat raised on four pillars over an open chamber."""
+    p = stone_body(top=0.066)
+    p.append(bc.cone("floor", 0.038, 0.038, 0.006, (0, 0, 0.069), "stone_dark", 8, R8))
+    p.append(bc.cone("pedestal", 0.011, 0.015, 0.008, (0, 0, 0.076), "stone", 8, R8))
+    for i in range(4):
+        a = math.radians(45 + 90 * i)
+        p.append(bc.box("pillar", (0.008, 0.008, 0.040), (0.029 * math.cos(a), 0.029 * math.sin(a), 0.092), "stone", rot_z_deg=math.degrees(a)))
+    p += ring(4, 0.0295, 0.0745, (0.008, 0.011, 0.006), "stone_dark", start=0, name="foot")
+    p.append(bc.cone("brim", 0.0425, 0.0425, 0.005, (0, 0, 0.1145), "wood_dark", 8, R8))
+    p.append(bc.cone("hat_band", 0.0345, 0.0345, 0.005, (0, 0, 0.1215), "roof_terracotta", 8, R8))
+    p.append(bc.cone("hat", 0.037, 0.014, 0.038, (0, 0, 0.1365), "ink", 8, R8))
+    tip = bc.cone("hat_tip", 0.0150, 0.0050, 0.026, (0, 0, 0.0), "ink", 8, R8)
+    tilted(tip, (0, -28, 0), (-0.0060, 0, 0.1675))
+    p += [tip, bc.cone("orb_collar", 0.0085, 0.0085, 0.004, (-0.0125, 0, 0.1810), "stone_dark", 8, R8)]
+    p += ring(4, 0.0245, 0.0765, (0.005, 0.003, 0.005), "fire_red", start=45, name="rune")
+    p += figure(0.0, -0.0215, 0.072)
+    return p, (-0.0125, 0, 0.2000), (0, -0.0215, 0.072)
+
+
+VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d,
+            "E": variant_e, "F": variant_f, "G": variant_g, "H": variant_h}
 
 
 def build(params=None, seed=0):
     v = (params or {}).get("variant", "A")
-    parts, orb_at = VARIANTS[v]()
+    res = VARIANTS[v]()
+    parts, orb_at = res[0], res[1]
     root = bc.assemble(NAME, [("", parts, (0, 0, 0), None)])
     bc.anchor(root, "orb_anchor", orb_at, size=0.0155)
+    if len(res) > 2:
+        bc.anchor(root, "crew_anchor", res[2], size=0.008)  # where the wizard's feet stand
     bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
     return root
 
