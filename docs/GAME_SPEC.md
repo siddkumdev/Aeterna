@@ -117,7 +117,7 @@ Speed in cells per second, HP in points. Looks follow the faceted skeleton famil
 | Tunneler | goes underground, pops up mid-village | 0.4 | 30 | 3 (path) |
 | Splitter (mushroom, #15) | splits into 2 small on death | 0.4 | 25 (+2 x 8) | 2 (type) |
 | Fog variant (loop 2+) | hidden from Foresight, only seen when it reaches the board | 0.4 | 25 | never |
-- **Boss (placeholder name "the Warden"):** M1 builds a simple 3-phase version (Siddharth 2026-10-25); numbers are stand-ins, see `docs/M1_FEATURES.md`. 3 phases. P1 summons Grunt groups. P2 shielded by 3 crystals that must be destroyed (drop spells are ideal). P3 enrages, adds flyers rising from the tree line. Loop 2 adds a 4th phase.
+- **Boss (placeholder name "the Warden"):** BUILT in M1 (2026-10-25, stand-in numbers, see `docs/M1_FEATURES.md`; the loop-2+ 4th phase is not built). 3 phases. P1 summons Grunt groups. P2 shielded by 3 crystals that must be destroyed (drop spells are ideal). P3 enrages, adds flyers rising from the tree line. Loop 2 adds a 4th phase.
 
 ### 10. Flyers
 - **One type:** the Wisp (small, fast, 8 HP), a creature. The Sky Barge enemy airship and any second flyer are cut (Siddharth, 2026-10-17).

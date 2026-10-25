@@ -76,3 +76,10 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | Rage ring | "a spell like rage (from clash royale) that speeds up the attack speed of tower within its area of effect" (Siddharth 2026-10-25). A ring on the ground showing the area; towers inside should visibly speed up. Red/orange (not Clash Royale's purple: purple is the Warden). | ring at spell position | new: spell VFX |
 | Root Ward | "roots of a tree creating a shield around the house", cast by dropping a potion (Siddharth 2026-10-25). Roots grow up out of the ground round the house into a dome; fade when the shield runs out. | dome centred on the house | new: spell VFX |
 | Spell tokens | each spell is held as a small object (orb, boulder, dark cloud, red ring, potion bottle); the potion shatters on landing | tokens on the table in front of the signs | new: spell VFX |
+
+## Warden phases (2026-10-25)
+| Effect | What was asked | Anchor | Asset list |
+|---|---|---|---|
+| Warden summon | P1 "summons Grunt groups" (spec 9): ink rising out of the ground beside it | at the Warden's feet | new: boss VFX |
+| Crystal shield | P2 "shielded by 3 crystals" (spec 9): crystals that ring it, purple glow, a faint shield bubble that flickers when hit; shatter when broken | each crystal, the Warden's centre | new: boss VFX |
+| Enrage | P3 "enrages" (spec 9): red-orange pulse and steam; Wisps rise out of the tree line with a ripple | Warden's chest; tree-line spawn cells | new: boss VFX |

@@ -24,6 +24,7 @@ func _initialize() -> void:
 	await _requests()
 	await _spells()
 	await _mouse_hand_rules()
+	await _warden()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -699,6 +700,8 @@ func _still(g: Game, kind: String, at: Vector3) -> Enemy:
 	var e: Enemy = g._spawn(NavGrid.local_to_cell(at), kind, at)
 	e.offset = Vector3.ZERO
 	e.slow(0.0001, 100000.0)
+	if kind == "boss":
+		e.hp = 200.0  # the spell tests use the boss as a damage sponge (it had 200 HP before the Warden's phases)
 	return e
 
 
@@ -880,3 +883,50 @@ func _mouse_hand_rules() -> void:
 	hand.queue_free()
 	g.queue_free()
 	await process_frame
+
+
+func _warden() -> void:
+	var g := await _make_game()
+	g.night = GameConfig.BOSS_NIGHT
+	g.start_night()
+	g._spawn_queue.clear()
+	var boss: Enemy = g._spawn(Vector2i(12, 3), "boss", _at(12, 3))
+	boss.offset = Vector3.ZERO
+	boss.slow(0.0001, 100000.0)
+	g.warden = Warden.new(g, boss)
+	var scale := boss.hp / GameConfig.ENEMIES["boss"]["hp"]
+	var grunts0 := g.enemies.filter(func(e): return e.kind == "grunt").size()
+	_run(g, GameConfig.WARDEN_SUMMON_EVERY + 0.2)
+	var grunts1 := g.enemies.filter(func(e): return e.kind == "grunt").size()
+	check("Warden phase 1: summons %d Grunts every %d s" % [GameConfig.WARDEN_SUMMON_COUNT, int(GameConfig.WARDEN_SUMMON_EVERY)],
+		g.warden.phase == 1 and grunts1 - grunts0 == GameConfig.WARDEN_SUMMON_COUNT)
+	boss.take_damage(boss.hp + 1.0)
+	check("Warden: empty phase-1 HP starts phase 2, it lives, shielded, 3 crystals of 40 HP",
+		boss.alive and g.warden.phase == 2 and boss.shielded and g.warden.crystals.size() == 3
+		and g.warden.crystals.all(func(c): return c.hp == 40.0))
+	var before := boss.hp
+	boss.take_damage(500.0)
+	boss.ignite(50.0, 2.0, false)
+	_run(g, 0.5)
+	check("Warden phase 2: no damage while a crystal stands", boss.alive and boss.hp == before)
+	var c0: Enemy = g.warden.crystals[0]
+	check("Warden phase 2: crystals ring it at %.0f cells" % GameConfig.WARDEN_CRYSTAL_RING,
+		absf(Vector2(c0.position.x - boss.position.x, c0.position.z - boss.position.z).length() - GameConfig.WARDEN_CRYSTAL_RING * GameConfig.CELL) < 0.002)
+	for c in g.warden.crystals.duplicate():
+		c.take_damage(40.0)
+		_run(g, 0.05)
+		if g.warden.phase == 2:
+			check("Warden phase 2: still shielded with %d crystal(s) left" % g.warden.crystals.size(), boss.shielded)
+	check("Warden: all crystals broken starts phase 3, unshielded, %d HP x night/loop scale, enraged x%.1f" % [int(GameConfig.WARDEN_P3_HP), GameConfig.WARDEN_ENRAGE],
+		g.warden.phase == 3 and not boss.shielded and absf(boss.hp - GameConfig.WARDEN_P3_HP * scale) < 0.01
+		and absf(boss.stats["speed"] - GameConfig.ENEMIES["boss"]["speed"] * GameConfig.WARDEN_ENRAGE) < 0.0001
+		and GameConfig.ENEMIES["boss"]["speed"] == 0.25)
+	var wisps0 := g.enemies.filter(func(e): return e.kind == "wisp").size()
+	_run(g, GameConfig.WARDEN_WISP_EVERY + 0.2)
+	var wisps1 := g.enemies.filter(func(e): return e.kind == "wisp").size()
+	check("Warden phase 3: %d Wisps rise every %d s" % [GameConfig.WARDEN_WISP_COUNT, int(GameConfig.WARDEN_WISP_EVERY)],
+		wisps1 - wisps0 >= GameConfig.WARDEN_WISP_COUNT)
+	boss.take_damage(boss.hp + 1.0)
+	_run(g, 0.1)
+	check("Warden: empty phase-3 HP kills it", not boss.alive and g.warden == null)
+	g.queue_free()

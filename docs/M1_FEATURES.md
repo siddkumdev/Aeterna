@@ -21,12 +21,12 @@ Verify any time (Godot console exe from `local.env` as `GODOT_EXE`):
 | 11 | Foresight: Crystal Lens, 3 tiers over the 5 loops, tier-3 "close a path" rewrite | |
 | 12 | Spells (night only): Fire Orb, Boulder Drop, Storm Cloud, Rage, Root Ward; ground and air | stand-in numbers |
 | 13 | Ability cards: 11-card pool, 70/25/5 rarity, 3 offered after a boss win (keep 1), 1 Common after a loss | |
+| 15 | The Warden, 3 phases (built 2026-10-25): P1 150 HP, summons 2 Grunts every 10 s; P2 shielded by 3 crystals (40 HP each, ring it at 2 cells, travel with it), no damage until all break; P3 200 HP, speed and damage x1.5, 2 Wisps every 8 s from a random forest edge. Phase HP scales with night and loop like any enemy. The loop-2+ 4th phase is not built | stand-in numbers chosen by Siddharth from my options |
 | 14 | Input: VR hands (grab/pinch), desktop mouse hand, signs + number keys, speed keys (x2; debug x5/x10/x50), easy reach in desktop and the simulator | |
 
 ## To build before M1 closes
 | # | Feature | Notes |
 |---|---|---|
-| 15 | Simple 3-phase boss (the Warden) | Siddharth said yes 2026-10-25; details are being decided with him; loop 2+ 4th phase decided separately |
 | 16 | A full 5-loop run played by a person on desktop and in the Meta XR Simulator | the VR grab code has only been tested headless with fake hands |
 
 ## Cut for M1 (not built, stays in the spec as history)

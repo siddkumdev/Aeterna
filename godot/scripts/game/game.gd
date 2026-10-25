@@ -3,7 +3,7 @@ extends Node3D
 ## The game loop (spec 6 + 15). Day = spend trust on towers and help villagers (requests, done by hand);
 ## Night = enemies walk from the forest gaps to the houses; Dawn = income (+5 per standing house, +10 x night
 ## for clearing it) and +10 HP for each house (damage carries over). A loop is 5 nights + a boss night
-## (placeholder boss for now). Beating the boss offers 3 ability cards (keep 1); losing a night offers 1
+## (the 3-phase Warden). Beating the boss offers 3 ability cards (keep 1); losing a night offers 1
 ## Common card. Either way the hourglass turns: the next loop starts, harder, with trust, towers and damage
 ## reset but cards kept. A run is 5 loops. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
@@ -85,6 +85,7 @@ var _hand_ring: MeshInstance3D
 var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
 var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
 var _hourglass: Node3D
+var warden: Warden  # the boss's phases, while the Warden is alive (null otherwise)
 var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i, "kind": String}], sorted by time
 var _rng := RandomNumberGenerator.new()  # seeded per night: cluster sizes, gap cells, walking offsets
 var _towers_root: Node3D
@@ -223,7 +224,7 @@ func start_night() -> bool:
 			t += GameConfig.CLUSTER_GAP
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
 	if night == GameConfig.BOSS_NIGHT:
-		_set_phase(Phase.NIGHT, "Boss night. The Warden comes (placeholder).")
+		_set_phase(Phase.NIGHT, "Boss night. The Warden comes.")
 	else:
 		_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
 	return true
@@ -534,6 +535,7 @@ func _clear_night() -> void:
 		if is_instance_valid(e):
 			e.queue_free()
 	enemies.clear()
+	warden = null
 	for s in shots:
 		if is_instance_valid(s):
 			s.queue_free()
@@ -566,10 +568,14 @@ func step(delta: float) -> void:
 	night_time += delta
 	while not _spawn_queue.is_empty() and _spawn_queue[0]["t"] <= night_time:
 		var ev: Dictionary = _spawn_queue.pop_front()
-		_spawn(ev["cell"], ev["kind"])
+		var born := _spawn(ev["cell"], ev["kind"])
+		if ev["kind"] == "boss":
+			warden = Warden.new(self, born)
 	for e in enemies.duplicate():
 		if is_instance_valid(e):
 			e.step(delta)
+	if warden:
+		warden.step(delta)
 	for t in towers:
 		t.step(delta)
 	spells.step(delta)
@@ -1243,6 +1249,8 @@ func _refresh_hud() -> void:
 			t += " (%s closed)" % closed_spawn
 	if phase == Phase.NIGHT:
 		t += "   |   Enemies %d" % (enemies.size() + _spawn_queue.size())
+		if warden:
+			t += "   |   Warden phase %d" % warden.phase
 	if speed > 2.0:
 		t += "   |   DEBUG x%d" % int(speed)
 	elif speed > 1.0:

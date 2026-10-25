@@ -114,6 +114,15 @@ func _initialize() -> void:
 		t += 0.05
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_boss.png")
+	# phase 2: the Warden shielded by its ring of crystals
+	var boss: Enemy = g.warden.boss
+	boss.take_damage(boss.hp + 1.0)
+	t = 0.0
+	while t < 1.0:
+		g.step(0.05)
+		t += 0.05
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_boss_p2.png")
 	# the cards offered after beating the boss (cards for every tower, so one shows each rarity colour)
 	g._end_loop(true)
 	g.offers = [{"id": "quick_fuse", "rarity": 0}, {"id": "hot_coals", "rarity": 1}, {"id": "ember_shot", "rarity": 2}]
@@ -134,7 +143,7 @@ func _initialize() -> void:
 		g._refresh_ui()
 		await _settle()
 		root.get_viewport().get_texture().get_image().save_png(prefix + "_foresight_t%d.png" % g.foresight_tier())
-	print("saved ", prefix, "_day / _sell / _hand / _night / _air / _spells / _boss / _cards / _foresight_t1/t2/t3 .png")
+	print("saved ", prefix, "_day / _sell / _hand / _night / _air / _spells / _boss / _boss_p2 / _cards / _foresight_t1/t2/t3 .png")
 	quit()
 
 

@@ -5,7 +5,9 @@ extends Node3D
 ##   scout     small, thin, with a pointed hood; twice as fast
 ##   splitter  squat body under a wide mushroom cap; splits into 2 splitlings when it dies
 ##   splitling a small capsule
-##   boss      PLACEHOLDER Warden: a Grunt 2.5x the size (spec E11); immune to knockback
+##   boss      the Warden, a Grunt 2.5x the size; immune to knockback. Warden (warden.gd) runs its three phases:
+##             `shielded` blocks all damage, `on_zero` lets a phase end without dying
+##   crystal   a Warden shield crystal: stands where Warden puts it, never moves or attacks, 40 HP
 ##   wisp      a small flying ink orb with a tail; rises out of the tree line and flies straight at the
 ##             nearest standing house, hovers over it and hits it. Only air attacks reach it.
 ##   tunneler  a squat digger; underground it is only a moving dirt mound (cannot be hit), it goes in a
@@ -33,6 +35,8 @@ var alive := true
 var offset := Vector3.ZERO  # board-local, within GameConfig.SPREAD cells of the cell centre
 var height := 0.045
 var is_boss := false
+var shielded := false  # the Warden in phase 2: takes no damage while a crystal stands
+var on_zero := Callable()  # the Warden: returns true when 0 HP only ends a phase (it does not die)
 var flying := false
 var underground := false  # a Tunneler on its way: cannot be hit
 var colour := INK
@@ -61,6 +65,8 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 	_body = Node3D.new()
 	add_child(_body)
 	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night) * (1.0 + GameConfig.LOOP_HP_STEP * loop)
+	if stats.get("static", false):
+		hp = stats["hp"]  # crystals do not scale with the night or the loop
 	var s := GameConfig.SPREAD * GameConfig.CELL
 	offset = Vector3(rng.randf_range(-s, s), 0.0, rng.randf_range(-s, s))
 	match kind:
@@ -97,6 +103,10 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 			_mound.material_override = ModelUtil.flat_material(DIRT)
 			add_child(_mound)
 			_body.visible = false
+		"crystal":
+			height = 0.06
+			colour = Color(0.66, 0.45, 0.95)  # Warden purple, light enough to spot
+			_crystal(0.012, 0.03, 0.04)
 		"boss":
 			height = 0.112
 			_capsule(0.03, 0.112)
@@ -114,6 +124,21 @@ func _capsule(r: float, h: float) -> void:
 	m.mesh = cm
 	m.position.y = h / 2.0
 	_paint(m)
+
+
+func _crystal(r: float, h: float, y: float) -> void:
+	## a floating diamond: two cones base to base, centred at height y
+	for flip in [1, -1]:
+		var m := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.0
+		cm.bottom_radius = r
+		cm.height = h
+		m.mesh = cm
+		m.position.y = y + flip * h / 2.0
+		if flip == -1:
+			m.rotation.x = PI
+		_paint(m)
 
 
 func _ball(r: float, y: float) -> void:
@@ -196,6 +221,8 @@ func targetable(air: bool, ground: bool) -> bool:
 
 func _reroute() -> void:
 	attacking = false
+	if stats.get("static", false):
+		return
 	if flying or underground:
 		target_house = game.nearest_house_to(position)
 		path = []
@@ -230,6 +257,8 @@ func step(delta: float) -> void:
 		slow_left -= delta
 		if slow_left <= 0.0:
 			slow_factor = 1.0
+	if stats.get("static", false):
+		return  # a crystal only stands there (Warden moves it)
 	if target_house == -1 or game.houses[target_house].is_shuttered:
 		_reroute()
 		if target_house == -1:
@@ -292,7 +321,7 @@ func _face(p: Vector3) -> void:
 
 
 func take_damage(amount: float, flash := true) -> void:
-	if not alive:
+	if not alive or shielded:
 		return
 	hp -= amount
 	if flash:
@@ -300,9 +329,17 @@ func take_damage(amount: float, flash := true) -> void:
 			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
 		_flash = 0.08
 	if hp <= 0.0:
+		if on_zero.is_valid() and on_zero.call():
+			return  # a phase ended, the Warden lives on
 		alive = false
 		died.emit(self)
 		queue_free()
+
+
+func set_tint(c: Color) -> void:
+	colour = c
+	for m in _mats:
+		m.albedo_color = c
 
 
 func chest() -> Vector3:
@@ -323,7 +360,7 @@ func slow(factor: float, seconds: float) -> void:
 
 func knockback(from: Vector3) -> void:
 	## Pushed 1 cell away from `from` (board-local), if that cell can be walked; then re-plans its route.
-	if is_boss or flying or underground or not alive:
+	if is_boss or flying or underground or not alive or stats.get("static", false):
 		return
 	var d := position - from
 	d.y = 0.0

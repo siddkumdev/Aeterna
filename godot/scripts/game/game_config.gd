@@ -100,10 +100,13 @@ const ENEMIES := {
 	"fog": {"name": "Fog variant", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "unlock_loop": 1,
 		"weight": 2, "hidden": true},
 	# the two small pieces a Splitter leaves (spec: 2 x 8 HP); never bought by the wave plan
-	# PLACEHOLDER boss (spec E11: a scaled-up Grunt so the loop is testable; the real Warden comes later).
-	# Stats are Claude's stand-ins (the spec gives none); it walks to the houses like a Grunt, 2.5x the size.
-	"boss": {"name": "Warden (placeholder)", "hp": 200.0, "speed": 0.25, "dps": 6.0, "threat": 0, "unlock": 99, "weight": 0,
+	# The Warden (spec 9, M1 version with 3 phases, run by Warden). It walks to the houses like a Grunt, 2.5x the size;
+	# "hp" is phase 1 (WARDEN_P3_HP is the final stand). Speed and dps are stand-ins; phase 3 multiplies both.
+	"boss": {"name": "Warden", "hp": 150.0, "speed": 0.25, "dps": 6.0, "threat": 0, "unlock": 99, "weight": 0,
 		"boss": true},
+	# its shield crystals (phase 2): stand where the Warden puts them, break like any enemy
+	"crystal": {"name": "Warden crystal", "hp": 40.0, "speed": 0.0, "dps": 0.0, "threat": 0, "unlock": 99, "weight": 0,
+		"static": true},
 	"splitling": {"name": "Splitling", "hp": 8.0, "speed": 0.4, "dps": 1.0, "threat": 0, "unlock": 99, "weight": 0},
 }
 const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter", "wisp", "tunneler", "fog"]  # what the wave plan may buy
@@ -118,7 +121,17 @@ const GROUP_INTERVAL := 12.0
 const FIRST_GROUP_DELAY := 3.0
 const CLUSTER_SIZE := Vector2i(2, 3)
 const CLUSTER_GAP := 2.5  # seconds between clusters of one group
-const BOSS_DELAY := 15.0  # the placeholder boss leaves the forest after the first escort group
+const BOSS_DELAY := 15.0  # the Warden leaves the forest after the first escort group
+# The Warden's phases (Siddharth chose these stand-ins 2026-10-25; retuned in M3). Phase HP is scaled by the night
+# and loop like any enemy's; crystal HP is not.
+const WARDEN_SUMMON_EVERY := 10.0  # phase 1: this many seconds between summons ...
+const WARDEN_SUMMON_COUNT := 2  # ... of this many Grunts beside it
+const WARDEN_CRYSTALS := 3  # phase 2: shield crystals; it takes no damage until all are broken
+const WARDEN_CRYSTAL_RING := 2.0  # cells from the Warden
+const WARDEN_P3_HP := 200.0  # phase 3 (the final stand)
+const WARDEN_ENRAGE := 1.5  # phase 3: speed and damage multiplier
+const WARDEN_WISP_EVERY := 8.0  # phase 3: Wisps rise from a random forest edge this often ...
+const WARDEN_WISP_COUNT := 2  # ... this many at a time
 const SPREAD := 0.3  # each enemy walks up to this many cells off the centre line, so a crowd does not form a queue
 
 # Towers (spec 7). targets: what a tower can hit ("ground" or "air"); cards can widen it (Long Draw and Long
