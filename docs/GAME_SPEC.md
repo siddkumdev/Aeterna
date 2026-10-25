@@ -98,6 +98,7 @@ All towers are autonomous. Only the Airship attacks air; the other three attack 
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 
 ### 8. Hut and troops
+- **CUT (Siddharth 2026-10-25): no Watch Hut, Guards, Slingers or rally flag.** "4 towers are enough for a cozy game." The night-time hands verb is spells instead. Everything below in this section is kept only as history; the three troop cards (Shield Wall, Sharp Stones, Friendly Faces) are out of the card pool (now 11).
 - **DECIDED (Siddharth, 2026-10-19): one spawning building per troop type**, not one hut for all troops. The Watch Hut spawns Guards only; Slingers get their own building. OPEN: the Slinger building's name, cost and look; whether it unlocks in loop 2 with the Slinger. Spawning buildings are designed only after the troop characters are final.
 - **Watch Hut** (cost 70): spawns a Guard every 8 s, up to 3 alive per hut.
 - **Guard:** melee, 30 HP, 4 damage per hit.

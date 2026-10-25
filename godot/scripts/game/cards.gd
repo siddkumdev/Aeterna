@@ -35,15 +35,8 @@ const POOL := {
 	"twin_cannons": {"name": "Twin Cannons", "applies": "Airship", "values": [15, 25, 40], "requires": "airship",
 		"text": "Fires %s%% faster",
 		"legend": "Each volley fires at two different targets"},
-	"shield_wall": {"name": "Shield Wall", "applies": "Guards", "values": [25, 50, 100], "requires": "hut",
-		"text": "Guards +%s%% HP",
-		"legend": "Enemies within 1 cell of a Guard must fight it before moving on"},
-	"sharp_stones": {"name": "Sharp Stones", "applies": "Slingers", "values": [25, 50, 100], "requires": "slinger",
-		"text": "Slingers +%s%% damage",
-		"legend": "Each stone bounces to a second enemy within 1 cell"},
-	"friendly_faces": {"name": "Friendly Faces", "applies": "Watch Hut", "values": [4, 4, 5], "requires": "hut",
-		"text": "%s troops per hut (base 3)",
-		"legend": "Troops near the rally flag heal 2 HP/s"},
+	# Shield Wall, Sharp Stones and Friendly Faces (Guards, Slingers, Watch Hut) were cut with the troops
+	# (Siddharth 2026-10-25); the pool is 11 cards.
 	"quick_hands": {"name": "Quick Hands", "applies": "all spells", "values": [15, 25, 40], "requires": "spells",
 		"text": "Spell cooldowns %s%% shorter",
 		"legend": "Each cast has a 25% chance to come straight back off cooldown"},
