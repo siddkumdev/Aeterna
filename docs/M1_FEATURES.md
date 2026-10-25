@@ -43,3 +43,6 @@ Hands-only menus (palm wheel), villager memory lines (Hades-style), the wordless
 
 ## Moved to M3 (balance)
 Trust and request frequency tuned together, loops 3-5 scaling, spell numbers, boss numbers, difficulty curve across both loops, comfort.
+
+## Moved to M4
+The opening cutscene (barrier, the annual ritual, the Warden breaking it).
