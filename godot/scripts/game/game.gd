@@ -8,6 +8,11 @@ extends Node3D
 ## reset but cards kept. A run is 5 loops. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
+## Desktop = a MOUSE HAND: it follows the mouse at a height the wheel sets (a stem and a ring show where it is above
+## the board), left click is its pinch. It uses the same code as the VR hands: pinch near the lens, a request prop or a
+## spell token to grab it, anywhere else to press what the mouse points at (signs, board cells). While a tower, Sell or
+## a spell is armed, clicks only place/cast. A faint bubble round the hand shows the grab reach (lights up when
+## something can be grabbed): on in the desktop and in the simulator (AETERNA_EASY_REACH=1), reach doubled there.
 ## Spells (night): keys 1-5 or the signs pick Fire Orb, Boulder Drop, Storm Cloud, Rage or Root Ward, then click the
 ## board to cast (mouse wheel sets the Boulder's drop height). VR: pinch a spell's token on the table, move your hand
 ## over the board and let go (the boulder falls from the height you let go).
@@ -72,6 +77,11 @@ var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (bo
 var _lens_grip := Vector3.ZERO  # the grip anchor in the lens model's own space
 var _lens_hand: GameHand  # the hand holding it, or null
 var _xr_cam: XRCamera3D
+var easy_reach := false  # desktop and simulator: grab distances x GameConfig.EASY_REACH and the reach bubbles show
+var _mouse_hand: GameHand  # desktop only
+var _hand_height := 0.03  # m above the board: set with the mouse wheel
+var _hand_stem: MeshInstance3D
+var _hand_ring: MeshInstance3D
 var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
 var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
 var _hourglass: Node3D
@@ -100,6 +110,7 @@ var _xr := false
 func _ready() -> void:
 	if with_rig:
 		_xr = _init_xr()
+		easy_reach = not _xr or OS.get_environment("AETERNA_EASY_REACH") == "1"
 	_build_lights()
 	board = Node3D.new()
 	board.name = "Board"
@@ -352,25 +363,33 @@ func _clear_requests() -> void:
 	requests.clear()
 
 
+func reach(metres: float) -> float:
+	## A grab distance, doubled where easy reach is on.
+	return metres * (GameConfig.EASY_REACH if easy_reach else 1.0)
+
+
+func grabbable_near(world: Vector3) -> bool:
+	## Is anything a pinch here would pick up (the lens, a request prop, a spell token) within reach?
+	if placing():
+		return false
+	if _lens and _lens_hand == null and world.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
+		return true
+	if request_near(world) != null:
+		return true
+	return phase == Phase.NIGHT and _held_spell == "" and spells.token_near(world) != ""
+
+
+func placing() -> bool:
+	## A tower, Sell or a spell is armed: clicks place or cast instead of grabbing.
+	return selected != "" or spell_sel != ""
+
+
 func request_near(world: Vector3) -> HelpRequest:
 	## The open request whose prop is nearest to a hand, within REQUEST_GRAB_REACH.
 	var best: HelpRequest = null
-	var best_d := GameConfig.REQUEST_GRAB_REACH
+	var best_d := reach(GameConfig.REQUEST_GRAB_REACH)
 	for r in requests:
 		var d := r.grab_point().distance_to(world)
-		if not r.done and d <= best_d:
-			best_d = d
-			best = r
-	return best
-
-
-func request_on_ray(origin: Vector3, dir: Vector3) -> HelpRequest:
-	## The open request whose prop the mouse ray passes closest to, within REQUEST_GRAB_REACH.
-	var best: HelpRequest = null
-	var best_d := GameConfig.REQUEST_GRAB_REACH * 0.6
-	for r in requests:
-		var p := r.grab_point()
-		var d := (p - origin).cross(dir.normalized()).length()
 		if not r.done and d <= best_d:
 			best_d = d
 			best = r
@@ -415,14 +434,6 @@ func _update_held() -> void:
 		return
 	if _held_req_hand:
 		_held_req.move_to(board.to_local(_held_req_hand.global_position))
-	elif _camera:
-		# the mouse drags on a level plane a little above where the prop started (the board for the cart)
-		var m := get_viewport().get_mouse_position()
-		var r := _ray_to_board(_camera.project_ray_origin(m), _camera.project_ray_normal(m))
-		var h: float = _held_req.prop.position.y if _held_req.kind in ["chimney", "bird"] else 0.02
-		var hit: Variant = Plane(Vector3.UP, h).intersects_ray(r[0], r[1])
-		if hit != null:
-			_held_req.move_to(hit)
 
 
 func cast_spell(id: String, pos: Vector3, height := -1.0) -> bool:
@@ -943,23 +954,25 @@ func _unhandled_input(event: InputEvent) -> void:
 					set_speed(1.0 if speed == 50.0 else 50.0)
 			KEY_R:
 				new_run(run_seed + 1)
-	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _held_req and _held_req_hand == null:
-		release_request()
-	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-		var b: Dictionary = GameConfig.SPELLS["boulder"]
-		spell_height = clampf(spell_height + (1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0), b["min_height"], b["max_height"])
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_hand:
+		_mouse_hand.release()
+	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _mouse_hand:
+		var up := 1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0
 		if spell_sel == "boulder":
+			# a Boulder armed with its sign: the wheel sets how high it is dropped from (whole cells)
+			var b: Dictionary = GameConfig.SPELLS["boulder"]
+			spell_height = clampf(spell_height + up, b["min_height"], b["max_height"])
 			last_message = "Boulder Drop: dropped from %d cells up (mouse wheel changes it)." % int(spell_height)
 			_refresh_ui()
-	elif event is InputEventMouseButton and event.pressed and _camera and not _xr:
+		else:
+			_hand_height = clampf(_hand_height + up * 0.025, 0.0, 0.45)  # otherwise the wheel moves the hand up and down
+	elif event is InputEventMouseButton and event.pressed and _mouse_hand:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			var o := _camera.project_ray_origin(event.position)
-			var d := _camera.project_ray_normal(event.position)
-			if _button_at(o, d) == "" and grab_request(request_on_ray(o, d)):
-				return
-			_press(o, d)
+			_update_mouse_hand()
+			_mouse_hand.press()
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			select("")
+			pick_spell(spell_sel) if spell_sel != "" else null
 
 
 func _process(delta: float) -> void:
@@ -969,8 +982,11 @@ func _process(delta: float) -> void:
 		left -= MAX_TICK
 	if not with_rig:
 		return
+	_update_mouse_hand()
 	_update_lens()
 	_update_held()
+	for h in _hands:
+		h.set_bubble_hot(grabbable_near(h.global_position))
 	if _xr:
 		if _active_hand:
 			_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
@@ -1121,17 +1137,19 @@ func lens_grip_position() -> Vector3:
 
 
 func hand_pressed(h: GameHand) -> void:
-	## A pinch or grasp near the lens grip picks the lens up; anywhere else it presses what the ray points at.
-	if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= GameConfig.LENS_GRAB_REACH:
-		_lens_hand = h
-		return
-	if grab_request(request_near(h.global_position), h):
-		return
-	var tok := spells.token_near(h.global_position) if phase == Phase.NIGHT and _held_spell == "" else ""
-	if tok != "" and spells.is_ready(tok):
-		_held_spell = tok
-		_held_spell_hand = h
-		return
+	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
+	## tower, Sell or a spell is armed) it presses what the ray points at.
+	if not placing():
+		if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
+			_lens_hand = h
+			return
+		if grab_request(request_near(h.global_position), h):
+			return
+		var tok := spells.token_near(h.global_position) if phase == Phase.NIGHT and _held_spell == "" else ""
+		if tok != "" and spells.is_ready(tok):
+			_held_spell = tok
+			_held_spell_hand = h
+			return
 	_active_hand = h
 	_press(h.ray_origin(), h.ray_dir())
 
@@ -1167,6 +1185,8 @@ func _update_lens() -> void:
 		var up := _lens.global_position.y > board.global_position.y + GameConfig.LENS_RAISE
 		if up and _xr_cam:
 			set_lens(true, _xr_cam.global_position, -_xr_cam.global_transform.basis.z)
+		elif up:
+			set_lens(true)  # desktop: every gap
 		else:
 			set_lens(false)
 	elif not _xr:
@@ -1321,6 +1341,50 @@ func _set_light(preset: Array) -> void:
 		_env.ambient_light_color = amb
 
 
+func _build_mouse_hand() -> void:
+	## The desktop hand (see the header): a tip with a reach bubble, a stem down to the board and a ring where it
+	## is above the board, so the height reads from the seat.
+	_mouse_hand = GameHand.new()
+	_mouse_hand.name = "mouse_hand"
+	_mouse_hand.show_ray = false
+	_mouse_hand.camera = _camera
+	_mouse_hand.pressed.connect(hand_pressed)
+	_mouse_hand.released.connect(hand_released)
+	add_child(_mouse_hand)
+	_mouse_hand.make_bubble(reach(GameConfig.REQUEST_GRAB_REACH))
+	_mouse_hand.get_child(0).scale = Vector3.ONE * 1.8  # the tip (GameHand's first child) is small at table distance
+	_hand_stem = MeshInstance3D.new()
+	var sb := BoxMesh.new()
+	sb.size = Vector3(0.002, 1.0, 0.002)
+	_hand_stem.mesh = sb
+	_hand_stem.material_override = ModelUtil.flat_material(Color8(0xFF, 0xF0, 0xC8), true, 0.6)
+	_mouse_hand.add_child(_hand_stem)
+	_hand_ring = MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.009
+	tm.outer_radius = 0.012
+	_hand_ring.mesh = tm
+	_hand_ring.scale.y = 0.3
+	_hand_ring.material_override = ModelUtil.flat_material(Color8(0xFF, 0xF0, 0xC8), true, 0.8)
+	_mouse_hand.add_child(_hand_ring)
+
+
+func _update_mouse_hand() -> void:
+	## The mouse hand sits where the mouse ray meets a level plane _hand_height above the board.
+	if _mouse_hand == null or _camera == null:
+		return
+	var m := get_viewport().get_mouse_position()
+	var plane_y := board.global_position.y + _hand_height
+	var hit: Variant = Plane(Vector3.UP, plane_y).intersects_ray(_camera.project_ray_origin(m), _camera.project_ray_normal(m))
+	if hit != null:
+		_mouse_hand.global_position = hit
+	_mouse_hand.visible = true  # an XR controller node can hide itself when it has no tracker
+	_hand_stem.scale.y = maxf(_hand_height, 0.001)
+	_hand_stem.position.y = -_hand_height / 2.0
+	_hand_ring.position.y = -_hand_height + 0.002
+	_mouse_hand.set_bubble_hot(grabbable_near(_mouse_hand.global_position))
+
+
 func _init_xr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
 	if xr and xr.is_initialized():
@@ -1339,6 +1403,7 @@ func _build_rig() -> void:
 		# above and behind a seated player's head, so the whole 1.2 m board and the signs fit on screen
 		_camera.position = Vector3(0, 1.75, 0.25)
 		_camera.rotation_degrees.x = -47.0
+		_build_mouse_hand()
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)
@@ -1354,5 +1419,7 @@ func _build_rig() -> void:
 		origin.add_child(c)
 		c.pressed.connect(hand_pressed)
 		c.released.connect(hand_released)
+		if easy_reach:
+			c.make_bubble(reach(GameConfig.REQUEST_GRAB_REACH))
 		_hands.append(c)
 	_active_hand = _hands[1]

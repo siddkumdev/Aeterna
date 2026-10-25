@@ -22,6 +22,8 @@ if (-not $simJson) { $simJson = 'C:\Program Files\MetaXRSimulator\v207.1\meta_op
 if (-not $godot -or -not (Test-Path $godot)) { Write-Error "GODOT_EXE missing or wrong in $envFile (run: python tools/doctor.py)"; exit 1 }
 if (-not (Test-Path $simJson)) { Write-Error "META_XR_SIM_JSON not found: $simJson (run: python tools/doctor.py)"; exit 1 }
 $env:XR_RUNTIME_JSON = $simJson
+# Easy reach: grab distances x2 and a faint reach bubble round each hand, so keyboard-driven simulator hands can find small objects.
+$env:AETERNA_EASY_REACH = '1'
 
 $args = @('--path', $project, '--xr-mode', 'on')
 if ($Report) { $args += @('--', '--quit-after-report') }

@@ -24,6 +24,18 @@ func _initialize() -> void:
 	g._update_ghost()
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_sell.png")
+	# the desktop mouse hand near the lost lantern: the bubble lights up when something can be grabbed
+	g.select("")
+	var lan: HelpRequest = g.requests.filter(func(r): return r.kind == "lantern")[0]
+	g._hand_height = 0.045
+	g._mouse_hand.global_position = lan.grab_point() + Vector3(0.05, g._hand_height - 0.008, 0.03)
+	g._hand_stem.scale.y = g._hand_height
+	g._hand_stem.position.y = -g._hand_height / 2.0
+	g._hand_ring.position.y = -g._hand_height + 0.002
+	g._mouse_hand.set_bubble_hot(g.grabbable_near(g._mouse_hand.global_position))
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_hand.png")
+	g._mouse_hand.global_position = Vector3(0, 3, 0)  # out of the later shots
 	g.select("")
 	g.trust = 200
 	g.try_build("crossbow", Vector2i(3, 9))
@@ -122,7 +134,7 @@ func _initialize() -> void:
 		g._refresh_ui()
 		await _settle()
 		root.get_viewport().get_texture().get_image().save_png(prefix + "_foresight_t%d.png" % g.foresight_tier())
-	print("saved ", prefix, "_day / _sell / _night / _air / _spells / _boss / _cards / _foresight_t1/t2/t3 .png")
+	print("saved ", prefix, "_day / _sell / _hand / _night / _air / _spells / _boss / _cards / _foresight_t1/t2/t3 .png")
 	quit()
 
 

@@ -31,6 +31,10 @@ const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Fores
 const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
+# Easy reach (debug aid, 2026-10-25): grab distances are multiplied by this on the desktop (mouse hand) and when
+# the env var AETERNA_EASY_REACH=1 (set by run_sim.ps1), so keyboard-driven hands can find small objects. Real
+# headset: 1.
+const EASY_REACH := 2.0
 const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle of where the head looks (gaps are ~32 deg apart from the seat)
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
 const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]

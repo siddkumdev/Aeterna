@@ -23,6 +23,7 @@ func _initialize() -> void:
 	await _sell()
 	await _requests()
 	await _spells()
+	await _mouse_hand_rules()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -850,6 +851,32 @@ func _spells() -> void:
 	hand.global_position = g.board.to_global(Vector3(1.0, 0.1, 0.0))  # off the board
 	g.hand_released(hand)
 	check("let go off the board: nothing is cast", g.spells.is_ready("rage"))
+	hand.queue_free()
+	g.queue_free()
+	await process_frame
+
+
+func _mouse_hand_rules() -> void:
+	var g := await _make_game()
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "bird")[0]
+	var near := bird.grab_point() + Vector3(0.08, 0, 0)  # 8 cm away: out of the normal 5 cm reach, inside the easy 10 cm
+	hand.global_position = near
+	check("normal reach: 8 cm is too far to grab", not g.easy_reach and g.request_near(near) == null and not g.grabbable_near(near))
+	g.easy_reach = true
+	check("easy reach doubles the distances (5 cm -> 10 cm)", is_equal_approx(g.reach(0.05), 0.10))
+	check("easy reach: the bubble would light up (something grabbable)", g.grabbable_near(near))
+	g.select("fire")
+	check("a tower armed: nothing counts as grabbable", g.placing() and not g.grabbable_near(near))
+	g.hand_pressed(hand)
+	check("a tower armed: a pinch near a prop does not grab it (it places instead)", g._held_req == null)
+	g.select("")
+	hand.global_position = near
+	g.hand_pressed(hand)
+	check("easy reach: the same pinch grabs it", g._held_req == bird)
+	g.hand_released(hand)
 	hand.queue_free()
 	g.queue_free()
 	await process_frame

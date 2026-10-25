@@ -335,7 +335,7 @@ func hide_aim() -> void:
 func token_near(world: Vector3) -> String:
 	## The spell token a hand is close enough to grab (VR), or "".
 	var best := ""
-	var best_d := GameConfig.SPELL_GRAB_REACH
+	var best_d: float = game.reach(GameConfig.SPELL_GRAB_REACH)
 	for id in tokens:
 		var d: float = tokens[id].global_position.distance_to(world)
 		if tokens[id].visible and d <= best_d:
