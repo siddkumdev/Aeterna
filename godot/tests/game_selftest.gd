@@ -22,6 +22,7 @@ func _initialize() -> void:
 	await _foresight()
 	await _sell()
 	await _requests()
+	await _spells()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -684,5 +685,171 @@ func _requests() -> void:
 	g._end_night()
 	check("dawn: a hurt house heals only 10 (60 - 30 + 10 = 40)", is_equal_approx(g.houses[0].hp, 40.0))
 	check("dawn: a shuttered house opens again with 10 HP", not g.houses[1].is_shuttered and is_equal_approx(g.houses[1].hp, 10.0))
+	g.queue_free()
+	await process_frame
+
+
+func _at(cx: int, cy: int, dx_cells := 0.0, dz_cells := 0.0) -> Vector3:
+	return NavGrid.cell_centre(Vector2i(cx, cy)) + Vector3(dx_cells, 0, dz_cells) * GameConfig.CELL
+
+
+func _still(g: Game, kind: String, at: Vector3) -> Enemy:
+	## An enemy that stays where it is put (frozen with a very long slow), so spell numbers can be measured.
+	var e: Enemy = g._spawn(NavGrid.local_to_cell(at), kind, at)
+	e.offset = Vector3.ZERO
+	e.slow(0.0001, 100000.0)
+	return e
+
+
+func _night_start(g: Game) -> void:
+	g.start_night()
+	g._spawn_queue.clear()
+	_still(g, "boss", _at(20, 20))  # keeps the night from ending while a test runs
+
+
+func _run(g: Game, seconds: float) -> void:
+	var t := 0.0
+	while t < seconds and g.phase == Game.Phase.NIGHT:
+		g.step(0.05)
+		t += 0.05
+
+
+func _spells() -> void:
+	var C := GameConfig.CELL
+	var g := await _make_game()
+	check("no spells in the day", not g.cast_spell("fire_orb", _at(5, 5)))
+	_night_start(g)
+	check("night: the spell signs show and the tower signs hide",
+		g._buttons["spell_fire_orb"]["node"].visible and not g._buttons["fire"]["node"].visible and g.spells.tokens["rage"].visible)
+
+	# Fire Orb: 12 damage in a 1-cell radius, ground and air; a tunneler underground is safe
+	var a := _still(g, "boss", _at(5, 5))
+	var b := _still(g, "boss", _at(5, 5, 0.6, 0.0))
+	var far := _still(g, "boss", _at(5, 5, 3.0, 0.0))
+	var wisp := _still(g, "wisp", _at(5, 5, 0.0, 0.5))
+	var mole := _still(g, "tunneler", _at(5, 5, -0.4, 0.0))
+	check("Fire Orb casts", g.cast_spell("fire_orb", _at(5, 5)))
+	_run(g, 0.3)
+	check("the orb is still in the air before 0.5 s", is_equal_approx(a.hp, 200.0))
+	_run(g, 0.4)
+	check("Fire Orb: 12 damage inside 1 cell (ground)", is_equal_approx(a.hp, 188.0) and is_equal_approx(b.hp, 188.0))
+	check("Fire Orb: none outside the radius", is_equal_approx(far.hp, 200.0))
+	check("Fire Orb hits flyers (a Wisp, 8 HP, dies)", not is_instance_valid(wisp) or not wisp.alive)
+	check("a Tunneler underground cannot be hit", is_equal_approx(mole.hp, mole.stats["hp"]) and mole.underground)
+	check("Fire Orb cools down 8 s, then is ready", not g.cast_spell("fire_orb", _at(5, 5)) and g.spells.cooldown["fire_orb"] > 7.0)
+	_run(g, 8.0)
+	check("ready again after 8 s", g.spells.is_ready("fire_orb"))
+
+	# Boulder Drop: height scales damage (1 + h/8) and radius (1 + 0.5 h/8), fall time sqrt(2h/(0.25 g))
+	var lo := _still(g, "boss", _at(12, 5))
+	var near_lo := _still(g, "boss", _at(12, 5, 1.3, 0.0))
+	var edge := _still(g, "boss", _at(12, 5, 1.8, 0.0))
+	check("Boulder casts from 1 cell up", g.cast_spell("boulder", _at(12, 5), 1.0))
+	_run(g, 0.3)
+	check("h=1: 15 x 1.125 damage at the centre, inside r=1.59 cells", is_equal_approx(lo.hp, 200.0 - 15.0 * 1.125) and near_lo.hp < 200.0)
+	check("h=1: a target 1.8 cells out is missed", is_equal_approx(edge.hp, 200.0))
+	_run(g, 15.0)
+	var hi := _still(g, "boss", _at(12, 12))
+	var near_hi := _still(g, "boss", _at(12, 12, 1.8, 0.0))
+	g.cast_spell("boulder", _at(12, 12), 8.0)
+	_run(g, 0.4)
+	check("h=8: still falling at 0.4 s (0.57 s fall)", is_equal_approx(hi.hp, 200.0))
+	_run(g, 0.3)
+	check("h=8: 15 x 2 = 30 damage, and the wider radius (2.25) reaches 1.8 cells", is_equal_approx(hi.hp, 170.0) and near_hi.hp < 200.0)
+	_run(g, 15.0)
+
+	# Storm Cloud: strikes every 1.5 s for 6 s, each strike chains to 2 more within 2 cells, air included
+	var s1 := _still(g, "boss", _at(5, 12))
+	var sw := _still(g, "wisp", _at(5, 12, 1.5, 0.0))
+	var s2 := _still(g, "boss", _at(5, 12, 3.0, 0.0))
+	var s3 := _still(g, "boss", _at(5, 12, 4.5, 0.0))
+	check("Storm Cloud casts", g.cast_spell("storm", _at(5, 12)))
+	_run(g, 0.4)
+	check("no strike before 0.5 s", is_equal_approx(s1.hp, 200.0))
+	_run(g, 0.3)
+	check("first strike: 8 damage on the first target, the Wisp (air) and the next boss; not the 4th in line",
+		is_equal_approx(s1.hp, 192.0) and (not is_instance_valid(sw) or not sw.alive) and is_equal_approx(s2.hp, 192.0) and is_equal_approx(s3.hp, 200.0))
+	_run(g, 6.5)
+	check("4 strikes in 6 s (0.5, 2.0, 3.5, 5.0): 32 damage, then the cloud is gone",
+		is_equal_approx(s1.hp, 168.0) and g.spells._fx.filter(func(f): return f["kind"] == "storm").is_empty())
+	_run(g, 6.0)
+
+	# Rage: towers inside the ring shoot faster for 8 s; outside they do not
+	g.queue_free()
+	await process_frame
+	var shots := []
+	for rage in [false, true]:
+		g = await _make_game()
+		g.trust = 1000
+		g.try_build("fire", Vector2i(11, 4))
+		_night_start(g)
+		_still(g, "boss", _at(11, 8))
+		if rage:
+			check("Rage casts over the tower", g.cast_spell("rage", g.towers[0].position))
+			check("haste inside 1.5, outside 1.0",
+				is_equal_approx(g.spells.haste_at(g.towers[0].position), 1.5) and is_equal_approx(g.spells.haste_at(_at(11, 4, 5.0, 0.0)), 1.0))
+		_run(g, 8.0)
+		shots.append(g.towers[0].shots_fired)
+		if rage:
+			_run(g, 0.2)
+			check("Rage ends after 8 s", is_equal_approx(g.spells.haste_at(g.towers[0].position), 1.0))
+		g.queue_free()
+		await process_frame
+	check("Rage: about 1.5x the shots in 8 s (%d vs %d)" % [shots[1], shots[0]], shots[1] >= shots[0] + 2 and float(shots[1]) / shots[0] < 1.8)
+
+	# Root Ward: a potion over a house soaks 40 damage for 8 s
+	g = await _make_game()
+	_night_start(g)
+	check("Root Ward over open ground is refused and costs no cooldown", not g.cast_spell("roots", _at(2, 2)) and g.spells.is_ready("roots"))
+	check("Root Ward over a house", g.cast_spell("roots", g.house_point(0) + Vector3(C, 0, 0)) and is_equal_approx(g.houses[0].ward, 40.0))
+	g.houses[0].damage(30.0)
+	check("30 damage is soaked: HP unchanged, 10 left", is_equal_approx(g.houses[0].hp, g.houses[0].max_hp) and is_equal_approx(g.houses[0].ward, 10.0))
+	g.houses[0].damage(30.0)
+	check("then the rest gets through: 20 damage", is_equal_approx(g.houses[0].hp, g.houses[0].max_hp - 20.0) and g.houses[0].ward == 0.0)
+	_run(g, 0.2)
+	check("a used-up ward removes its roots", g.spells._fx.filter(func(f): return f["kind"] == "roots").is_empty())
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+	_night_start(g)
+	g.cast_spell("roots", g.house_point(1))
+	_run(g, 8.2)
+	check("an unused ward fades after 8 s", g.houses[1].ward == 0.0)
+
+	# Quick Hands card, night reset, the signs and the VR grab
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+	g.cards = {"quick_hands": 1}
+	_night_start(g)
+	g.cast_spell("fire_orb", _at(5, 5))
+	check("Quick Hands Rare: cooldown 25% shorter (8 -> 6 s)", is_equal_approx(g.spells.cooldown["fire_orb"], 6.0))
+	g._clear_night()
+	g.phase = Game.Phase.DAY  # as if the night had ended
+	g.start_night()
+	check("a new night starts with every spell ready", g.spells.is_ready("fire_orb"))
+	g.pick_spell("storm")
+	check("a sign arms a spell", g.spell_sel == "storm")
+	g.pick_spell("storm")
+	check("the same sign puts it down again", g.spell_sel == "")
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	g._refresh_buttons()
+	hand.global_position = g.spells.tokens["boulder"].global_position
+	g.hand_pressed(hand)
+	check("a pinch at the Boulder token picks it up", g._held_spell == "boulder")
+	hand.global_position = g.board.to_global(Vector3(0.05, 0.4, 0.05))  # 8 cells above the board
+	g._update_held()
+	g.hand_released(hand)
+	check("let go over the board casts it from the hand's height", not g.spells.is_ready("boulder") and g._held_spell == "")
+	var fall := g.spells._fx.filter(func(f): return f["kind"] == "ball")
+	check("the boulder falls for 0.57 s (8 cells, toy gravity)", fall.size() == 1 and absf(fall[0]["total"] - 0.571) < 0.01)
+	hand.global_position = g.spells.tokens["rage"].global_position
+	g.hand_pressed(hand)
+	hand.global_position = g.board.to_global(Vector3(1.0, 0.1, 0.0))  # off the board
+	g.hand_released(hand)
+	check("let go off the board: nothing is cast", g.spells.is_ready("rage"))
+	hand.queue_free()
 	g.queue_free()
 	await process_frame

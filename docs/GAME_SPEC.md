@@ -128,15 +128,17 @@ Speed in cells per second, HP in points. Looks follow the faceted skeleton famil
 
 ## C. Hand interactions
 
-### 11. Spells and potions (4)
-Cooldown only; no mana or resource cost.
+### 11. Spells and potions (5; redesigned with Siddharth 2026-10-25)
+Cooldown only; no mana or resource cost. **Cast at night only; every spell is ready at the start of each night. All spells can hit both ground and air enemies** (Siddharth 2026-10-25; the Boulder used to be ground only). Magic colours as always: black, orange, red; no blue lightning, no purple Rage.
 | Spell | Gesture | Cooldown | Effect |
 |---|---|---|---|
-| Mend Vial | grab vial, tilt to pour over an area | 20 s | heals 30 over 3 s within a 2-cell radius |
-| Fire Orb | grab, throw in an arc | 8 s | 12 damage within a 1-cell radius on impact; can hit flyers directly |
-| Boulder Drop | grab, release above the board (drop spell) | 15 s | damage and radius scale with release height (see 12); ground only |
-| Ward Rune | trace a circle with a fingertip over a house | 25 s | absorbs 40 damage for 8 s |
-- Each spell object sits on the palm menu with a cooldown ring; it can be grabbed again when the ring completes.
+| Fire Orb | grab, throw/drop over the board | 8 s | 12 damage within a 1-cell radius on impact |
+| Boulder Drop | grab, release above the board (drop spell) | 15 s | damage and radius scale with release height (see 12); stand-in base 15 damage, 1.5 cells |
+| Storm Cloud (NEW, replaces Mend Vial) | grab a dark cloud, release over the board | 12 s | the cloud hangs there 6 s and every 1.5 s strikes the nearest enemy under it (2.5 cells); each strike chains to up to 2 more enemies within 2 cells of the last; 8 damage per hit. Stand-in numbers. |
+| Rage (NEW, like Clash Royale's Rage) | grab, release over the board | 25 s | a red ring of 3 cells radius for 8 s: towers inside attack 50% faster. Stand-in numbers. |
+| Root Ward (was Ward Rune) | grab a potion, drop it over a house | 25 s | tree roots grow round the house and absorb 40 damage for 8 s (Siddharth 2026-10-25: roots, and a dropped potion instead of tracing a circle) |
+- Each spell is a small object on the table at night; pick it up (VR pinch) and let go over the board. Desktop: keys 1-5 or the signs, then click the board; mouse wheel sets the Boulder's height.
+- The Mend Vial (heal 30 over 3 s) was dropped: Siddharth did not like it.
 
 ### 12. Drop-spell rule
 - A dropped spell is released at height h (clamped 1-8 cells above the board) and falls with toy gravity (0.25 g) so timing is readable.

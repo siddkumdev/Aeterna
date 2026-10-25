@@ -33,7 +33,7 @@ const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
 const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle of where the head looks (gaps are ~32 deg apart from the seat)
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
-const BUILT_SYSTEMS: Array[String] = ["airship"]
+const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]
 
 # Villager help requests (spec 18; step 5 of the full loop). Each day REQUESTS_PER_DAY requests, one of each
 # kind, on different standing houses; done by hand for trust. Rewards are Claude's stand-ins inside the spec's
@@ -144,6 +144,24 @@ const TOWERS := {
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
 	},
 }
+# Spells (spec 11, redesigned with Siddharth 2026-10-25): all hit ground AND air. Cast at night only, cooldown only.
+# Numbers from the spec where it gives them (Fire Orb 12 / 1 cell / 8 s, Boulder 15 s and the drop rule of spec 12,
+# Ward 40 for 8 s / 25 s); everything else is Claude's stand-in for the balance pass (marked ~).
+const SPELLS := {
+	"fire_orb": {"name": "Fire Orb", "cooldown": 8.0, "damage": 12.0, "radius": 1.0, "flight": 0.5},
+	# ~ base damage 15 and radius 1.5 cells at height 0; height 1-8 cells scales both (spec 12)
+	"boulder": {"name": "Boulder Drop", "cooldown": 15.0, "damage": 15.0, "radius": 1.5, "min_height": 1.0, "max_height": 8.0, "default_height": 4.0},
+	# ~ the chain jumps to up to 2 more enemies within 2 cells of the last one; 6 s of cloud
+	"storm": {"name": "Storm Cloud", "cooldown": 12.0, "duration": 6.0, "interval": 1.5, "damage": 8.0, "reach": 2.5,
+		"chain": 2, "chain_reach": 2.0, "height": 5.0},
+	# ~ towers inside the ring shoot 50% faster
+	"rage": {"name": "Rage", "cooldown": 25.0, "duration": 8.0, "radius": 3.0, "haste": 1.5},
+	# the spec's Ward Rune, now tree roots from a dropped potion (Siddharth 2026-10-25)
+	"roots": {"name": "Root Ward", "cooldown": 25.0, "duration": 8.0, "absorb": 40.0, "reach": 2.0},
+}
+const SPELL_ORDER: Array[String] = ["fire_orb", "boulder", "storm", "rage", "roots"]
+const SPELL_GRAB_REACH := 0.05  # m from a hand to a spell token on the table to grab it (VR)
+
 const TOWER_ORDER: Array[String] = ["fire", "brazier", "crossbow", "airship"]
 # Selling (Siddharth 2026-10-23): day only, with the Sell sign. Full cost back on the day the tower was built
 # (undo a mistake), half (rounded down) once a night has passed.

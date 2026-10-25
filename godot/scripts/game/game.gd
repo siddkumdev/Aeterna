@@ -8,6 +8,9 @@ extends Node3D
 ## reset but cards kept. A run is 5 loops. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
+## Spells (night): keys 1-5 or the signs pick Fire Orb, Boulder Drop, Storm Cloud, Rage or Root Ward, then click the
+## board to cast (mouse wheel sets the Boulder's drop height). VR: pinch a spell's token on the table, move your hand
+## over the board and let go (the boulder falls from the height you let go).
 ## Requests: drag a request's prop with the mouse (VR: pinch it and move your hand), let go to finish.
 ## Desktop keys: 1 / 2 / 3 / 4 pick a tower (1-3 pick a card when cards are offered), 5 = sell (then click a tower), left click builds, Esc or right click cancels, Enter or Space
 ## starts the night, Tab toggles x2 speed (a player option, also a sign during the night), R restarts the run.
@@ -53,6 +56,11 @@ var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are 
 var last_message := ""
 
 var foresight: Foresight
+var spells: Spells
+var spell_sel := ""  # the spell armed with a sign or key, waiting for a click on the board
+var spell_height := GameConfig.SPELLS["boulder"]["default_height"]  # the Boulder's drop height (cells) for mouse casts
+var _held_spell := ""  # VR: the spell token in a hand
+var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
 var _held_req: HelpRequest  # the request prop being moved
@@ -105,6 +113,10 @@ func _ready() -> void:
 	shots_root = _child(board, "Shots")
 	_build_houses()
 	_build_ghost()
+	spells = Spells.new()
+	spells.name = "Spells"
+	spells.game = self
+	board.add_child(spells)
 	foresight = Foresight.new()
 	foresight.name = "Foresight"
 	foresight.game = self
@@ -163,6 +175,9 @@ func _set_phase(p: int, message: String) -> void:
 	last_message = message
 	if p != Phase.DAY:
 		select("")
+	if p != Phase.NIGHT and spells:
+		spell_sel = ""
+		spells.hide_aim()
 	if foresight and foresight.showing:
 		set_lens(false)  # the lens only reads the coming night; it goes blank when the day ends
 	if _requests_root and p == Phase.DAY:
@@ -179,6 +194,7 @@ func start_night() -> bool:
 		return false
 	night_time = 0.0
 	_spawn_queue.clear()
+	spells.reset()
 	_rng.seed = run_seed * 31 + night
 	_held_tonight = false
 	for g in night_plan():
@@ -386,6 +402,15 @@ func release_request() -> bool:
 
 
 func _update_held() -> void:
+	if _held_spell != "" and _held_spell_hand:
+		var local := board.to_local(_held_spell_hand.global_position)
+		var b: Dictionary = GameConfig.SPELLS["boulder"]
+		var inside := absf(local.x) <= HALF and absf(local.z) <= HALF
+		if inside:
+			spells.show_aim(_held_spell, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+		else:
+			spells.hide_aim()
+		spells.tokens[_held_spell].global_position = _held_spell_hand.global_position  # the token rides in the hand
 	if _held_req == null:
 		return
 	if _held_req_hand:
@@ -398,6 +423,32 @@ func _update_held() -> void:
 		var hit: Variant = Plane(Vector3.UP, h).intersects_ray(r[0], r[1])
 		if hit != null:
 			_held_req.move_to(hit)
+
+
+func cast_spell(id: String, pos: Vector3, height := -1.0) -> bool:
+	## Casts a spell at a board-local position; says why when it cannot. The height is for the Boulder (-1 = the
+	## mouse height).
+	if phase != Phase.NIGHT:
+		return false
+	if not spells.is_ready(id):
+		last_message = "%s is still cooling down (%d s)." % [GameConfig.SPELLS[id]["name"], ceili(spells.cooldown[id])]
+		_refresh_ui()
+		return false
+	var ok := spells.cast(id, pos, spell_height if height < 0.0 else height)
+	if ok:
+		last_message = "%s!" % GameConfig.SPELLS[id]["name"]
+	_refresh_ui()
+	return ok
+
+
+func pick_spell(id: String) -> void:
+	## Arms a spell (or puts it down again); only at night.
+	if phase != Phase.NIGHT or not GameConfig.SPELLS.has(id):
+		return
+	spell_sel = "" if spell_sel == id else id
+	if spell_sel == "":
+		spells.hide_aim()
+	_refresh_ui()
 
 
 func _end_night() -> void:
@@ -478,6 +529,10 @@ func _clear_night() -> void:
 	shots.clear()
 	_spawn_queue.clear()
 	_patches.clear()
+	if spells:
+		spells.clear_effects()
+	spell_sel = ""
+	_held_spell = ""
 
 
 func standing_houses() -> Array[int]:
@@ -506,6 +561,7 @@ func step(delta: float) -> void:
 			e.step(delta)
 	for t in towers:
 		t.step(delta)
+	spells.step(delta)
 	for pt in _patches:
 		pt["left"] -= delta
 		for e in enemies.duplicate():
@@ -770,6 +826,13 @@ func _hover(origin: Vector3, dir: Vector3) -> void:
 		_buttons[id]["hover"] = id == over
 	var c := _cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
 	var bc := _board_cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
+	if spell_sel != "":
+		var sr := _ray_to_board(origin, dir)
+		var sh: Variant = Plane(Vector3.UP, 0.0).intersects_ray(sr[0], sr[1])
+		if over == "" and sh != null and absf(sh.x) <= HALF and absf(sh.z) <= HALF:
+			spells.show_aim(spell_sel, sh, spell_height)
+		else:
+			spells.hide_aim()
 	if c != _hover_cell or bc != _hover_board_cell:
 		_hover_cell = c
 		_hover_board_cell = bc
@@ -781,6 +844,16 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	var b := _button_at(origin, dir)
 	if b != "":
 		_press_button(b)
+		return
+	if spell_sel != "":
+		var sr := _ray_to_board(origin, dir)
+		var sh: Variant = Plane(Vector3.UP, 0.0).intersects_ray(sr[0], sr[1])
+		if sh == null or absf(sh.x) > HALF or absf(sh.z) > HALF:
+			pick_spell(spell_sel)  # pointing off the board puts the spell down
+		elif cast_spell(spell_sel, sh):
+			spell_sel = ""
+			spells.hide_aim()
+			_refresh_ui()
 		return
 	if selected == "":
 		return
@@ -812,6 +885,9 @@ func _press_button(id: String) -> void:
 	if id.begins_with("close_"):
 		close_spawn(id.substr(6))
 		return
+	if id.begins_with("spell_"):
+		pick_spell(id.substr(6))
+		return
 	match id:
 		"night":
 			start_night()
@@ -839,9 +915,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_5:
-				_press_button("sell")
+				if phase == Phase.NIGHT:
+					pick_spell(GameConfig.SPELL_ORDER[4])
+				else:
+					_press_button("sell")
 			KEY_1, KEY_2, KEY_3, KEY_4:
-				if phase == Phase.CARDS:
+				if phase == Phase.NIGHT:
+					pick_spell(GameConfig.SPELL_ORDER[event.keycode - KEY_1])
+				elif phase == Phase.CARDS:
 					choose_card(event.keycode - KEY_1)  # 4 does nothing here: at most 3 cards
 				else:
 					_press_button(GameConfig.TOWER_ORDER[event.keycode - KEY_1])
@@ -864,6 +945,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				new_run(run_seed + 1)
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _held_req and _held_req_hand == null:
 		release_request()
+	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var b: Dictionary = GameConfig.SPELLS["boulder"]
+		spell_height = clampf(spell_height + (1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -1.0), b["min_height"], b["max_height"])
+		if spell_sel == "boulder":
+			last_message = "Boulder Drop: dropped from %d cells up (mouse wheel changes it)." % int(spell_height)
+			_refresh_ui()
 	elif event is InputEventMouseButton and event.pressed and _camera and not _xr:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			var o := _camera.project_ray_origin(event.position)
@@ -899,6 +986,8 @@ func _build_ui() -> void:
 	var specs := []
 	for k in GameConfig.TOWER_ORDER:
 		specs.append([k, "%s\n%d trust" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
+	for sid: String in GameConfig.SPELL_ORDER:
+		specs.append(["spell_" + sid, GameConfig.SPELLS[sid]["name"]])
 	specs.append(["sell", "Sell\ntower"])
 	specs.append(["night", "Start night"])
 	specs.append(["restart", "New run"])
@@ -917,7 +1006,11 @@ func _build_ui() -> void:
 		var mat := ModelUtil.flat_material(Color8(0xC8, 0x8A, 0x4E))
 		node.material_override = mat
 		# New run (after the run) and the speed sign (during a night) take Start night's place
-		var slot := slots - 1 if id == "restart" or id == "speed" else i
+		var slot := slots - 1 if id == "restart" or id == "speed" or id == "night" else i
+		if id.begins_with("spell_"):
+			slot = GameConfig.SPELL_ORDER.find(id.substr(6))  # the spells use the tower signs' places at night
+		elif id == "sell":
+			slot = GameConfig.TOWER_ORDER.size()
 		node.position = Vector3(x0 + slot * (w + gap), 0.0, HALF + 0.045)
 		node.rotation_degrees.x = -50
 		ui.add_child(node)
@@ -960,8 +1053,21 @@ func _build_ui() -> void:
 		_hourglass.visible = false
 		ui.add_child(_hourglass)
 	_build_close_signs(ui)
+	_build_spell_tokens(ui, x0, w, gap)
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
+
+
+func _build_spell_tokens(ui: Node3D, x0: float, w: float, gap: float) -> void:
+	## One small object per spell on the table in front of the signs (night only): pinch it in VR to cast.
+	for i in GameConfig.SPELL_ORDER.size():
+		var id: String = GameConfig.SPELL_ORDER[i]
+		var t := Spells.make_token(id)
+		t.position = Vector3(x0 + i * (w + gap), 0.03, HALF + 0.115)
+		t.visible = false
+		t.set_meta("home", t.position)
+		ui.add_child(t)
+		spells.tokens[id] = t
 
 
 func _build_close_signs(ui: Node3D) -> void:
@@ -1021,11 +1127,27 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if grab_request(request_near(h.global_position), h):
 		return
+	var tok := spells.token_near(h.global_position) if phase == Phase.NIGHT and _held_spell == "" else ""
+	if tok != "" and spells.is_ready(tok):
+		_held_spell = tok
+		_held_spell_hand = h
+		return
 	_active_hand = h
 	_press(h.ray_origin(), h.ray_dir())
 
 
 func hand_released(h: GameHand) -> void:
+	if _held_spell != "" and _held_spell_hand == h:
+		var id := _held_spell
+		var local := board.to_local(h.global_position)
+		_held_spell = ""
+		_held_spell_hand = null
+		spells.hide_aim()
+		spells.tokens[id].position = spells.tokens[id].get_meta("home")
+		if absf(local.x) <= HALF and absf(local.z) <= HALF:
+			var b: Dictionary = GameConfig.SPELLS["boulder"]
+			cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+		return
 	if _held_req and _held_req_hand == h:
 		release_request()
 		return
@@ -1124,8 +1246,18 @@ func _refresh_buttons() -> void:
 				b["node"].visible = phase == Phase.NIGHT
 				b["label"].text = "Speed x2" if speed == 2.0 else "Speed x1"
 				c = Color8(0xF0, 0xB0, 0x4A) if speed == 2.0 else c
+			"spell_fire_orb", "spell_boulder", "spell_storm", "spell_rage", "spell_roots":
+				var sid: String = id.substr(6)
+				b["node"].visible = phase == Phase.NIGHT
+				var cd: float = spells.cooldown.get(sid, 0.0)
+				b["label"].text = "%s\n%s" % [GameConfig.SPELLS[sid]["name"], "ready" if cd <= 0.0 else "%d s" % ceili(cd)]
+				c = Color8(0x8A, 0x84, 0x7C) if cd > 0.0 else Color8(0xC8, 0x8A, 0x4E)
+				if spell_sel == sid:
+					c = Color8(0xF0, 0xB0, 0x4A)
+				if spells.tokens.has(sid):
+					spells.tokens[sid].visible = phase == Phase.NIGHT and cd <= 0.0
 			"sell":
-				b["node"].visible = phase != Phase.CARDS
+				b["node"].visible = day
 				if not day or towers.is_empty():
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == "sell":
@@ -1143,7 +1275,7 @@ func _refresh_buttons() -> void:
 					b["label"].text = Cards.describe(o["id"], o["rarity"]) + "\n\n" + hint
 					c = [Color8(0xE6, 0xD8, 0xBC), Color8(0xF0, 0xA4, 0x50), Color8(0xE0, 0x50, 0x3A)][o["rarity"]]
 			_:
-				b["node"].visible = phase != Phase.CARDS
+				b["node"].visible = day
 				var cfg: Dictionary = GameConfig.TOWERS[id]
 				b["label"].text = "%s\n%d/%d placed" % [cfg["name"], cfg["max"], cfg["max"]] if at_max(id) \
 					else "%s\n%d trust" % [cfg["name"], cfg["cost"]]

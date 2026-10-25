@@ -100,7 +100,7 @@ func _apply_cards() -> void:
 
 
 func step(delta: float) -> void:
-	cooldown = maxf(0.0, cooldown - delta)
+	cooldown = maxf(0.0, cooldown - delta * game.spells.haste_at(position))  # Rage rings speed it up
 	var target := _nearest([])
 	if target == null:
 		return

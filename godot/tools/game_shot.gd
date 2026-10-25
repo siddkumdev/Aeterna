@@ -61,6 +61,32 @@ func _initialize() -> void:
 		t += 0.05
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_air.png")
+	# spells (step 7): a Storm Cloud striking a group, a Rage ring round a tower, roots round a house, an orb landing
+	g._clear_night()
+	g.phase = Game.Phase.DAY
+	g.loop = 0
+	g.night = 2
+	g.trust = 400
+	g.try_build("fire", Vector2i(4, 9))
+	g.try_build("crossbow", Vector2i(18, 9))
+	g.start_night()
+	g._spawn_queue.clear()
+	for p in [Vector2i(5, 14), Vector2i(6, 14), Vector2i(7, 15), Vector2i(8, 16)]:
+		var e: Enemy = g._spawn(p, "grunt", NavGrid.cell_centre(p))
+		e.slow(0.0001, 1000.0)
+	for p in [Vector2i(18, 14), Vector2i(19, 15)]:
+		var e2: Enemy = g._spawn(p, "scout", NavGrid.cell_centre(p))
+		e2.slow(0.0001, 1000.0)
+	g.cast_spell("storm", NavGrid.cell_centre(Vector2i(6, 14)))
+	g.cast_spell("rage", g.towers[0].position)
+	g.cast_spell("roots", g.house_point(2))
+	g.cast_spell("fire_orb", NavGrid.cell_centre(Vector2i(18, 14)))
+	t = 0.0
+	while t < 0.62:
+		g.step(0.05)
+		t += 0.05
+	await _settle()
+	root.get_viewport().get_texture().get_image().save_png(prefix + "_spells.png")
 	# boss night: the placeholder Warden walking in with its escorts
 	for tw in g.towers.filter(func(x): return x.kind == "airship"):
 		tw.queue_free()
@@ -96,7 +122,7 @@ func _initialize() -> void:
 		g._refresh_ui()
 		await _settle()
 		root.get_viewport().get_texture().get_image().save_png(prefix + "_foresight_t%d.png" % g.foresight_tier())
-	print("saved ", prefix, "_day / _sell / _night / _air / _boss / _cards / _foresight_t1/t2/t3 .png")
+	print("saved ", prefix, "_day / _sell / _night / _air / _spells / _boss / _cards / _foresight_t1/t2/t3 .png")
 	quit()
 
 

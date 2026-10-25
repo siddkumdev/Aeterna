@@ -13,6 +13,7 @@ var hp := GameConfig.HOUSE_HP
 ## Asked once when the house would be shuttered; returning true keeps it at 1 HP (Sturdy Homes, Legendary)
 var hold_check: Callable
 var is_shuttered := false
+var ward := 0.0  # damage still soaked up by Root Ward roots
 
 var _parts := {}  # part -> MeshInstance3D
 var _home := {}  # part -> Transform3D (standing pose)
@@ -60,6 +61,12 @@ func _build_bar(height: float) -> void:
 func damage(amount: float) -> void:
 	if is_shuttered:
 		return
+	if ward > 0.0:
+		var soaked := minf(ward, amount)
+		ward -= soaked
+		amount -= soaked
+		if amount <= 0.0:
+			return
 	hp = maxf(0.0, hp - amount)
 	if hp <= 0.0 and hold_check.is_valid() and hold_check.call(self):
 		hp = 1.0
