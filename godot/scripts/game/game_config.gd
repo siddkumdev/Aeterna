@@ -139,8 +139,8 @@ const SPREAD := 0.3  # each enemy walks up to this many cells off the centre lin
 # limit from spec 7 was removed by Siddharth 2026-10-23).
 const TOWERS := {
 	"fire": {
-		"name": "Fire Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
-		"scene": "res://assets/defense/ew_defense_fire_tower_v07.glb", "turn_part": "head",
+		"name": "Wizard Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
+		"scene": "res://assets/defense/ew_defense_wizard_tower_v02.glb", "turn_part": "",  # the hat does not turn to aim
 		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0,
 	},
 	"brazier": {

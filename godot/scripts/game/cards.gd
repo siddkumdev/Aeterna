@@ -11,10 +11,10 @@ const RARITY_NAMES: Array[String] = ["Common", "Rare", "Legendary"]
 const RARITY_ODDS: Array[float] = [0.70, 0.25, 0.05]
 
 const POOL := {
-	"ember_shot": {"name": "Ember Shot", "applies": "Fire Tower", "values": [2, 3, 4],
+	"ember_shot": {"name": "Ember Shot", "applies": "Wizard Tower", "values": [2, 3, 4],
 		"text": "Fireballs set enemies burning: %s damage/s for 3 s",
 		"legend": "An enemy that dies while burning passes its burn to the nearest enemy within 1 cell"},
-	"quick_fuse": {"name": "Quick Fuse", "applies": "Fire Tower", "values": [15, 25, 40],
+	"quick_fuse": {"name": "Quick Fuse", "applies": "Wizard Tower", "values": [15, 25, 40],
 		"text": "Fires %s%% faster",
 		"legend": "Every 5th fireball is double size and deals double damage"},
 	"bellows": {"name": "Bellows", "applies": "Blast Brazier", "values": [15, 25, 40],

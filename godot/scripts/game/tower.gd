@@ -44,6 +44,8 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 	for n in ModelUtil.walk(model):
 		if n is Marker3D and str(n.name).ends_with("muzzle_anchor"):
 			_muzzle = n
+		elif n is Marker3D and str(n.name).ends_with("orb_anchor") and _muzzle == null:
+			_muzzle = n  # the Wizard Tower fires from its floating orb
 	if _turn:
 		_turn_home = _turn.basis
 	_apply_cards()
