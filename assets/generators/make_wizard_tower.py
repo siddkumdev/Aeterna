@@ -27,7 +27,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 import blender_common as bc  # noqa: E402
 
-NAME = "ew_defense_wizard_tower_v01"
+NAME = "ew_defense_wizard_tower_v02"
 R8 = 22.5
 LOWER = (0.037, 0.033, 0.010, 0.062)   # stone storey frustum (r_bottom, r_top, z_bottom, z_top)
 UPPER = (0.033, 0.031, 0.070, 0.100)   # cream storey
@@ -273,6 +273,41 @@ def variant_h():
     return p, (-0.0125, 0, 0.2000), (0, -0.0215, 0.072)
 
 
+def build_final(seed=0):
+    """The chosen design (Siddharth picked H, 2026-10-26): A's black wizard hat raised on four stone pillars over
+    an open chamber, the orb floating above the hat tip. No placeholder wizard: crews come from the character kit.
+
+    Parts (moved separately in Godot, no rig):
+        ew_defense_wizard_tower_v02              stone base, floor, pedestal, four pillars (static)
+        ew_defense_wizard_tower_v02__hat         brim, band, hat, bent tip, orb collar; pivot at the brim, for a sway or bob
+        ew_defense_wizard_tower_v02__orb_anchor  empty above the hat tip: the floating fire orb (VFX)
+        ew_defense_wizard_tower_v02__crew_anchor empty on the chamber floor: where the wizard stands (feet)
+        ew_defense_wizard_tower_v02__pulse_anchor empty at ground centre (range ring reference)
+    """
+    base = stone_body(top=0.066)
+    base.append(bc.cone("floor", 0.038, 0.038, 0.006, (0, 0, 0.069), "stone_dark", 8, R8))
+    base.append(bc.cone("pedestal", 0.011, 0.015, 0.008, (0, 0, 0.076), "stone", 8, R8))
+    for i in range(4):
+        a = math.radians(45 + 90 * i)
+        base.append(bc.box("pillar", (0.011, 0.011, 0.040), (0.029 * math.cos(a), 0.029 * math.sin(a), 0.092), "stone", rot_z_deg=math.degrees(a)))
+    base += ring(4, 0.0295, 0.0745, (0.008, 0.011, 0.006), "stone_dark", start=0, name="foot")
+    base += ring(4, 0.0245, 0.0765, (0.005, 0.003, 0.005), "fire_red", start=45, name="rune")
+    HZ = 0.1145  # hat pivot = brim centre
+    hat = [
+        bc.cone("brim", 0.0425, 0.0425, 0.005, (0, 0, HZ), "wood_dark", 8, R8),
+        bc.cone("hat_band", 0.0345, 0.0345, 0.005, (0, 0, 0.1215), "roof_terracotta", 8, R8),
+        bc.cone("hat", 0.037, 0.014, 0.038, (0, 0, 0.1365), "ink", 8, R8),
+    ]
+    tip = bc.cone("hat_tip", 0.0150, 0.0050, 0.026, (0, 0, 0.0), "ink", 8, R8)
+    tilted(tip, (0, -28, 0), (-0.0060, 0, 0.1675))
+    hat += [tip, bc.cone("orb_collar", 0.0085, 0.0085, 0.004, (-0.0125, 0, 0.1810), "stone_dark", 8, R8)]
+    root = bc.assemble(NAME, [("", base, (0, 0, 0), None), ("hat", hat, (0, 0, HZ), "")])
+    bc.anchor(root, "orb_anchor", (-0.0125, 0, 0.2000), size=0.0155)
+    bc.anchor(root, "crew_anchor", (0, -0.0215, 0.072), size=0.008)
+    bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
+    return root
+
+
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d,
             "E": variant_e, "F": variant_f, "G": variant_g, "H": variant_h}
 
@@ -291,7 +326,12 @@ def build(params=None, seed=0):
 
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    v = args[0] if args else "A"
+    v = args[0] if args else "final"
     bc.clear_scene()
-    obj = build({"variant": v})
-    print("BLEND", bc.save_blend(obj, "wizard_tower_" + v))
+    if v == "final":
+        obj = build_final()
+        print("BLEND", bc.save_blend(obj, "wizard_tower"))
+        print("EXPORT", bc.export_glb(obj, "defense"))
+    else:
+        obj = build({"variant": v})
+        print("BLEND", bc.save_blend(obj, "wizard_tower_" + v))

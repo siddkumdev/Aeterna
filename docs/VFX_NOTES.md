@@ -83,3 +83,8 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | Warden summon | P1 "summons Grunt groups" (spec 9): ink rising out of the ground beside it | at the Warden's feet | new: boss VFX |
 | Crystal shield | P2 "shielded by 3 crystals" (spec 9): crystals that ring it, purple glow, a faint shield bubble that flickers when hit; shatter when broken | each crystal, the Warden's centre | new: boss VFX |
 | Enrage | P3 "enrages" (spec 9): red-orange pulse and steam; Wisps rise out of the tree line with a ripple | Warden's chest; tree-line spawn cells | new: boss VFX |
+
+## Wizard Tower (2026-10-26)
+| Effect | What was asked | Anchor | Asset list |
+|---|---|---|---|
+| Wizard Tower animation VFX | Fire Tower rebranded as a wizard tower, "same mechanic but different model and animation vfx (which was planned)" (Siddharth 2026-10-26). The orb floats above the hat tip, charges, then spits the fireball; magic stays black/orange/red | __orb_anchor | X26 (flame orb) |
