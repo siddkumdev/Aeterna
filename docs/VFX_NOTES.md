@@ -89,3 +89,8 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 |---|---|---|---|
 | Wizard Tower animation VFX | Fire Tower rebranded as a wizard tower, "same mechanic but different model and animation vfx (which was planned)" (Siddharth 2026-10-26). The orb floats above the hat tip, charges, then spits the fireball; magic stays black/orange/red | __orb_anchor | X26 (flame orb) |
 | Wizard staff glow | the fireball should leave the wizard's staff (Siddharth 2026-10-26): a charge-up glow at the staff knob when the tower is about to fire, orange/red | the staff tip (CrewMember.hand_point) | X26 |
+
+## Guard Tower (2026-10-26)
+| Effect | What was asked | Anchor | Asset list |
+|---|---|---|---|
+| Guard spawn | a spawning tower whose troops stand in place until an enemy is in sight (Siddharth 2026-10-26): the gate leaves swing open and a Guard steps out with a small dust puff; the banner flutters | __spawn_anchor | new: Guard Tower VFX |

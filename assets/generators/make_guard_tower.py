@@ -52,6 +52,15 @@ def shield(x, y, z, r=0.0065, col="roof_terracotta", face_deg=0.0):
     return out
 
 
+def shield_kite(x, y, z, col="roof_terracotta"):
+    """A heater shield (square top, pointed bottom) on a wall facing -Y, z = its centre."""
+    top = bc.box("kite_top", (0.0125, 0.003, 0.0075), (x, y, z + 0.0025), col)
+    tip = bc.box("kite_tip", (0.0090, 0.003, 0.0090), (0, 0, 0), col)
+    tilted(tip, (0, 45, 0), (x, y, z - 0.0020))
+    boss = bc.blob("kite_boss", 0.0022, (x, y - 0.0018, z + 0.0005), "ink", 1)
+    return [top, tip, boss]
+
+
 def banner(x, y, z0, h=0.050, col="roof_terracotta"):
     """Pole with a pennant banner and a gold dot."""
     return [
@@ -254,15 +263,15 @@ def keep_base(r=0.032, top=0.050, cream_from=None):
     arch = bc.cone("arch", 0.009, 0.009, 0.005, (0, 0, 0), "ink", 8)
     tilted(arch, (90, 0, 0), (KX, -ap - 0.0015, gz + 0.011))
     p.append(arch)
-    p += shield(KX, -ap - 0.0025, gz + 0.0205, 0.0068, "roof_terracotta")
+    p += shield_kite(KX, -ap - 0.0025, gz + 0.0195)
     return p, ap
 
 
 def armoury(h=0.030):
     """D's lean-to on the right: posts, a teal shed roof sloping out, a back wall against the keep, chunky spears
     and shields."""
-    p = [bc.box("shed_post", (0.005, 0.005, h), (0.0405, -0.022, 0.008 + h / 2), "wood_dark"),
-         bc.box("shed_post", (0.005, 0.005, h), (0.0405, 0.026, 0.008 + h / 2), "wood_dark"),
+    p = [bc.box("shed_post", (0.0065, 0.0065, h), (0.0405, -0.022, 0.008 + h / 2), "wood_dark"),
+         bc.box("shed_post", (0.0065, 0.0065, h), (0.0405, 0.026, 0.008 + h / 2), "wood_dark"),
          bc.box("shed_back", (0.003, 0.050, h - 0.004), (0.0165, 0.002, 0.008 + (h - 0.004) / 2), "wood_light")]
     roof = bc.box("shed_roof", (0.032, 0.056, 0.004), (0, 0, 0), "roof_teal")
     tilted(roof, (0, 13, 0), (0.0285, 0.002, 0.008 + h + 0.0005))
@@ -270,8 +279,8 @@ def armoury(h=0.030):
     p.append(bc.box("rack", (0.006, 0.034, 0.003), (0.027, 0.002, 0.015), "wood_dark"))
     for i in range(3):
         y = -0.012 + i * 0.014
-        p.append(bc.box("spear", (0.0035, 0.0035, 0.022), (0.027, y, 0.026), "wood_light"))
-        tp = bc.cone("spear_tip", 0.0042, 0.0, 0.008, (0.027, y, 0.041), "stone", 4)
+        p.append(bc.box("spear", (0.0046, 0.0046, 0.015), (0.027, y, 0.0225), "wood_light"))  # stays under the roof
+        tp = bc.cone("spear_tip", 0.0055, 0.0, 0.007, (0.027, y, 0.0325), "stone", 4)
         tp["no_bevel"] = True
         p.append(tp)
     p += shield(0.0425 - 0.002, -0.0125, 0.0155, 0.0058, "roof_terracotta", face_deg=-90)
@@ -328,6 +337,36 @@ def variant_h():
     return p, (KX, -ap - 0.004, 0.002)
 
 
+def build_final(seed=0):
+    """The chosen design (Siddharth picked E, 2026-10-26): Keep and Armoury, as the real game asset. No guards in the
+    model: the troops are characters from the character kit, which stand in a ring touching the tower.
+
+    Parts (moved separately in Godot, no rig):
+        ew_defense_guard_tower_v01                 keep, roof, armoury (static)
+        ew_defense_guard_tower_v01__door_l / __door_r   the two gate leaves, pivots on their outer hinges: swing open
+                                                   when a Guard steps out
+        ew_defense_guard_tower_v01__banner         pennant and pole, pivot at the pole's foot: flutter or sway
+        ew_defense_guard_tower_v01__spawn_anchor   empty in the gateway: where each new Guard appears
+        ew_defense_guard_tower_v01__pulse_anchor   empty at ground centre (sight / range ring reference)
+    """
+    base, ap = keep_base()
+    doors = [o for o in base if o.name.startswith("gate_door")]
+    base = [o for o in base if not o.name.startswith("gate_door")]
+    base += keep_roof(0.0385, 0.054, tip_flag=False) + armoury()
+    ban = banner(KX, 0.0, 0.054 + 0.032 - 0.003, 0.026)
+    gz = 0.022
+    gy = -ap - 0.0025
+    dl, dr = doors[0], doors[1]
+    groups = [("", base, (0, 0, 0), None),
+              ("door_l", [dl], (KX - 0.0045 - 0.00425, gy, gz), ""),
+              ("door_r", [dr], (KX + 0.0045 + 0.00425, gy, gz), ""),
+              ("banner", ban, (KX, 0.0, 0.054 + 0.032 - 0.003), "")]
+    root = bc.assemble(NAME, groups)
+    bc.anchor(root, "spawn_anchor", (KX, -ap - 0.004, 0.002), size=0.008)
+    bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
+    return root
+
+
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d,
             "E": variant_e, "F": variant_f, "G": variant_g, "H": variant_h}
 
@@ -344,7 +383,12 @@ def build(params=None, seed=0):
 
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    v = args[0] if args else "A"
+    v = args[0] if args else "final"
     bc.clear_scene()
-    obj = build({"variant": v})
-    print("BLEND", bc.save_blend(obj, "guard_tower_" + v))
+    if v == "final":
+        obj = build_final()
+        print("BLEND", bc.save_blend(obj, "guard_tower"))
+        print("EXPORT", bc.export_glb(obj, "defense"))
+    else:
+        obj = build({"variant": v})
+        print("BLEND", bc.save_blend(obj, "guard_tower_" + v))
