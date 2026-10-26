@@ -74,7 +74,7 @@ def guard(x, y, z=0.0):
     return g
 
 
-def ring_guards(radius=0.062):
+def ring_guards(radius=0.074):
     return guard(-0.034, -radius) + guard(0.0, -radius - 0.004) + guard(0.034, -radius)
 
 
@@ -85,7 +85,7 @@ def variant_a():
         bc.box("walls_low", (0.082, 0.070, 0.014), (0, 0, 0.015), "stone"),
         bc.box("walls_up", (0.080, 0.068, 0.018), (0, 0, 0.031), "wall_cream"),
         bc.gable("roof", 0.092, 0.080, 0.028, (0, 0, 0.040), "roof_teal"),
-        bc.box("ridge", (0.004, 0.084, 0.004), (0, 0, 0.0685), "roof_terracotta"),
+        bc.box("ridge", (0.007, 0.084, 0.006), (0, 0, 0.0685), "roof_terracotta"),
         bc.box("eave_f", (0.094, 0.004, 0.004), (0, -0.040, 0.041), "wood_dark"),
         bc.box("eave_b", (0.094, 0.004, 0.004), (0, 0.040, 0.041), "wood_dark"),
         bc.box("chimney", (0.010, 0.010, 0.020), (0.026, 0.014, 0.0615), "stone_dark"),
@@ -96,7 +96,7 @@ def variant_a():
         bc.box("step", (0.030, 0.008, 0.005), (0, -0.0425, 0.0025), "stone_dark"),
     ]
     p += [bc.box("beam", (0.004, 0.0035, 0.018), (x, -0.0345, 0.031), "wood_dark") for x in (-0.034, -0.022, 0.022, 0.034)]
-    p += shield(-0.029, -0.0365, 0.028, 0.0065, "roof_terracotta") + shield(0.029, -0.0365, 0.028, 0.0065, "roof_orange")
+    p += shield(-0.0295, -0.0365, 0.029, 0.0088, "roof_terracotta") + shield(0.0295, -0.0365, 0.029, 0.0088, "roof_orange")
     p += [bc.box("window", (0.003, 0.010, 0.010), (0.0405, 0, 0.032), "lantern_glow"),
           bc.box("window", (0.003, 0.010, 0.010), (-0.0405, 0, 0.032), "lantern_glow")]
     for w in p[-2:]:
@@ -114,14 +114,12 @@ def variant_b():
         bc.box("parapet_base", (0.086, 0.074, 0.004), (0, 0, 0.0505), "stone_dark"),
     ]
     # battlements all round (merlons on the edge of the top)
-    for i in range(7):
-        x = -0.036 + i * 0.012
-        p.append(bc.box("merlon", (0.008, 0.006, 0.008), (x, -0.034, 0.0565), "stone"))
-        p.append(bc.box("merlon", (0.008, 0.006, 0.008), (x, 0.034, 0.0565), "stone"))
-    for j in range(1, 5):
-        y = -0.034 + j * 0.0136
-        p.append(bc.box("merlon", (0.006, 0.008, 0.008), (-0.040, y, 0.0565), "stone"))
-        p.append(bc.box("merlon", (0.006, 0.008, 0.008), (0.040, y, 0.0565), "stone"))
+    for x in (-0.030, -0.010, 0.010, 0.030):
+        p.append(bc.box("merlon", (0.012, 0.007, 0.009), (x, -0.0335, 0.0565), "stone"))
+        p.append(bc.box("merlon", (0.012, 0.007, 0.009), (x, 0.0335, 0.0565), "stone"))
+    for y in (-0.014, 0.014):
+        p.append(bc.box("merlon", (0.007, 0.012, 0.009), (-0.0395, y, 0.0565), "stone"))
+        p.append(bc.box("merlon", (0.007, 0.012, 0.009), (0.0395, y, 0.0565), "stone"))
     # arched gate: frame, dark opening, door leaves, arch top as a half-disc
     p += [
         bc.box("gate_frame", (0.030, 0.004, 0.030), (0, -0.0345, 0.023), "stone_dark"),
@@ -136,8 +134,8 @@ def variant_b():
     p += shield(0, -0.0355, 0.0405, 0.0072, "roof_terracotta")
     # corner turrets with teal cone roofs
     for sx in (-1, 1):
-        p.append(bc.cone("turret", 0.0095, 0.0095, 0.030, (sx * 0.0385, -0.0305, 0.058), "stone", 8, R8))
-        p.append(bc.cone("turret_roof", 0.0125, 0.0, 0.016, (sx * 0.0385, -0.0305, 0.081), "roof_teal", 8, R8))
+        p.append(bc.cone("turret", 0.0120, 0.0120, 0.030, (sx * 0.0375, -0.0295, 0.058), "stone", 8, R8))
+        p.append(bc.cone("turret_roof", 0.0150, 0.0, 0.018, (sx * 0.0375, -0.0295, 0.082), "roof_teal", 8, R8))
         p[-1]["no_bevel"] = True
     p += banner(0.0, 0.020, 0.0545, 0.040)
     return p, (0, -0.0385, 0.002)
@@ -155,16 +153,16 @@ def variant_c():
         bc.box("keep_door_frame", (0.016, 0.003, 0.019), (0, -0.0245, 0.0160), "stone_dark"),
     ]
     # palisade: stakes round the keep, a gap at the front (the gate)
-    n = 16
+    n = 10
     for i in range(n):
         deg = 270 + (i - (n - 1) / 2) * (300 / (n - 1))  # 300 degrees round, centred on the back
         a = math.radians(deg + 180)
         x, y = 0.040 * math.cos(a), 0.040 * math.sin(a)
         h = 0.026 + 0.003 * ((i * 7) % 3)
-        st = bc.box("stake", (0.0065, 0.0065, h), (x, y, 0.003 + h / 2), "wood_light", rot_z_deg=math.degrees(a) + 90)
+        st = bc.box("stake", (0.0095, 0.0095, h), (x, y, 0.003 + h / 2), "wood_light", rot_z_deg=math.degrees(a) + 90)
         st["no_bevel"] = True  # keeps the triangle count in budget
         p.append(st)
-        tip = bc.cone("stake_tip", 0.0048, 0.0, 0.006, (x, y, 0.003 + h + 0.003), "wood_light", 4, 45)
+        tip = bc.cone("stake_tip", 0.0070, 0.0, 0.007, (x, y, 0.003 + h + 0.003), "wood_light", 4, 45)
         tip["no_bevel"] = True
         p.append(tip)
     # gate posts and a crossbar at the front
@@ -181,22 +179,22 @@ def variant_d():
     """Watch Post."""
     p = [
         bc.box("foundation", (0.088, 0.076, 0.008), (0, 0, 0.004), "stone_dark"),
-        bc.box("tower_low", (0.046, 0.046, 0.030), (-0.020, 0.008, 0.023), "stone"),
-        bc.box("tower_up", (0.044, 0.044, 0.026), (-0.020, 0.008, 0.051), "wall_cream"),
-        bc.box("tower_band", (0.049, 0.049, 0.004), (-0.020, 0.008, 0.0395), "wood_dark"),
-        bc.box("deck", (0.052, 0.052, 0.004), (-0.020, 0.008, 0.066), "wood_dark"),
+        bc.box("tower_low", (0.046, 0.046, 0.022), (-0.020, 0.008, 0.019), "stone"),
+        bc.box("tower_up", (0.044, 0.044, 0.018), (-0.020, 0.008, 0.043), "wall_cream"),
+        bc.box("tower_band", (0.049, 0.049, 0.004), (-0.020, 0.008, 0.032), "wood_dark"),
+        bc.box("deck", (0.052, 0.052, 0.004), (-0.020, 0.008, 0.054), "wood_dark"),
     ]
     for i in range(4):  # merlons on the deck corners and mid-sides
         for (dx, dy) in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
             pass
     for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0)):
-        p.append(bc.box("merlon", (0.009, 0.009, 0.008), (-0.020 + dx * 0.0215, 0.008 + dy * 0.0215, 0.072), "stone"))
-    p += banner(-0.020, 0.008, 0.068, 0.034)
+        p.append(bc.box("merlon", (0.009, 0.009, 0.008), (-0.020 + dx * 0.0215, 0.008 + dy * 0.0215, 0.060), "stone"))
+    p += banner(-0.020, 0.008, 0.056, 0.034)
     # door and window on the tower
-    p += [bc.box("door_frame", (0.018, 0.004, 0.024), (-0.020, -0.0165, 0.020), "stone_dark"),
+    p += [bc.box("door_frame", (0.018, 0.004, 0.022), (-0.020, -0.0165, 0.019), "stone_dark"),
           bc.box("door", (0.013, 0.0045, 0.020), (-0.020, -0.0175, 0.018), "wood_dark"),
           bc.box("step", (0.022, 0.008, 0.005), (-0.020, -0.023, 0.0025), "stone_dark")]
-    win = bc.box("window", (0.010, 0.003, 0.011), (-0.020, -0.0155, 0.055), "lantern_glow")
+    win = bc.box("window", (0.010, 0.003, 0.011), (-0.020, -0.0155, 0.043), "lantern_glow")
     bc.paint(win, "lantern_glow", glow=True)
     p.append(win)
     # lean-to armoury beside the tower: posts, a teal shed roof sloping down, a spear rack and shields
@@ -207,11 +205,11 @@ def variant_d():
     tilted(roof, (0, 12, 0), (0.0245, 0.004, 0.0345))
     p.append(roof)
     p.append(bc.box("rack", (0.006, 0.034, 0.003), (0.030, 0.004, 0.012), "wood_dark"))
-    for i in range(5):
-        y = -0.010 + i * 0.0085
-        sp = bc.box("spear", (0.0018, 0.0018, 0.030), (0.0305, y, 0.027), "wood_light")
+    for i in range(3):
+        y = -0.010 + i * 0.014
+        sp = bc.box("spear", (0.0035, 0.0035, 0.022), (0.0305, y, 0.023), "wood_light")
         p.append(sp)
-        tp = bc.cone("spear_tip", 0.0028, 0.0, 0.006, (0.0305, y, 0.0435), "stone", 4)
+        tp = bc.cone("spear_tip", 0.0042, 0.0, 0.008, (0.0305, y, 0.038), "stone", 4)
         tp["no_bevel"] = True
         p.append(tp)
     p += shield(0.0345, -0.0235, 0.0105, 0.0058, "roof_terracotta", face_deg=-90)
