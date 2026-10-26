@@ -216,7 +216,120 @@ def variant_d():
     return p, (-0.020, -0.0235, 0.002)
 
 
-VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
+# ---- round 2 (Siddharth: B's vibe, C's shape, D's overall design) ----------------------------------------
+# An octagonal stone keep (C's shape) with B's arched gate, shield emblem and teal turrets or battlements, and D's
+# lean-to armoury of spears and shields on its right side. The door and the gate face the front (-Y).
+
+KX = -0.014  # keep centre (the lean-to takes the right side of the 2 x 2 footprint)
+
+
+def at_keep(o, dx=0.0):
+    o.location.x += KX + dx
+    bc.apply_transforms(o)
+    return o
+
+
+def keep_base(r=0.032, top=0.050, cream_from=None):
+    """Foundation, octagonal stone keep (optionally a cream upper storey from cream_from), a timber band, the gate."""
+    wall = (r, r * 0.9, 0.008, top)
+    p = [bc.box("foundation", (0.088, 0.076, 0.008), (0, 0, 0.004), "stone_dark")]
+    if cream_from is None:
+        p.append(bc.cone("keep", wall[0], wall[1], top - 0.008, (KX, 0, (0.008 + top) / 2), "stone", 8, R8))
+    else:
+        rm = r + (r * 0.9 - r) * (cream_from - 0.008) / (top - 0.008)
+        p.append(bc.cone("keep_low", wall[0], rm, cream_from - 0.008, (KX, 0, (0.008 + cream_from) / 2), "stone", 8, R8))
+        p.append(bc.cone("keep_up", rm, wall[1], top - cream_from, (KX, 0, (cream_from + top) / 2), "wall_cream", 8, R8))
+        p.append(bc.cone("keep_band", rm + 0.0025, rm + 0.0025, 0.004, (KX, 0, cream_from), "wood_dark", 8, R8))
+    p.append(bc.cone("eave", r * 0.9 + 0.004, r * 0.9 + 0.004, 0.004, (KX, 0, top + 0.002), "wood_dark", 8, R8))
+    # the arched gate (B): stone frame, dark opening, two door leaves, an arch top, the step
+    gz = 0.022
+    ap = r * math.cos(math.pi / 8) - 0.0005
+    p += [
+        bc.box("gate_frame", (0.026, 0.004, 0.030), (KX, -ap - 0.0005, gz + 0.003), "stone_dark"),
+        bc.box("gate", (0.018, 0.005, 0.022), (KX, -ap - 0.0015, gz), "ink"),
+        bc.box("gate_door", (0.0085, 0.0045, 0.020), (KX - 0.0045, -ap - 0.0025, gz - 0.001), "wood_dark"),
+        bc.box("gate_door", (0.0085, 0.0045, 0.020), (KX + 0.0045, -ap - 0.0025, gz - 0.001), "wood_dark"),
+        bc.box("step", (0.028, 0.008, 0.005), (KX, -ap - 0.0065, 0.0025 + 0.003), "stone_dark"),
+    ]
+    arch = bc.cone("arch", 0.009, 0.009, 0.005, (0, 0, 0), "ink", 8)
+    tilted(arch, (90, 0, 0), (KX, -ap - 0.0015, gz + 0.011))
+    p.append(arch)
+    p += shield(KX, -ap - 0.0025, gz + 0.0205, 0.0068, "roof_terracotta")
+    return p, ap
+
+
+def armoury(h=0.030):
+    """D's lean-to on the right: posts, a teal shed roof sloping out, a back wall against the keep, chunky spears
+    and shields."""
+    p = [bc.box("shed_post", (0.005, 0.005, h), (0.0405, -0.022, 0.008 + h / 2), "wood_dark"),
+         bc.box("shed_post", (0.005, 0.005, h), (0.0405, 0.026, 0.008 + h / 2), "wood_dark"),
+         bc.box("shed_back", (0.003, 0.050, h - 0.004), (0.0165, 0.002, 0.008 + (h - 0.004) / 2), "wood_light")]
+    roof = bc.box("shed_roof", (0.032, 0.056, 0.004), (0, 0, 0), "roof_teal")
+    tilted(roof, (0, 13, 0), (0.0285, 0.002, 0.008 + h + 0.0005))
+    p.append(roof)
+    p.append(bc.box("rack", (0.006, 0.034, 0.003), (0.027, 0.002, 0.015), "wood_dark"))
+    for i in range(3):
+        y = -0.012 + i * 0.014
+        p.append(bc.box("spear", (0.0035, 0.0035, 0.022), (0.027, y, 0.026), "wood_light"))
+        tp = bc.cone("spear_tip", 0.0042, 0.0, 0.008, (0.027, y, 0.041), "stone", 4)
+        tp["no_bevel"] = True
+        p.append(tp)
+    p += shield(0.0425 - 0.002, -0.0125, 0.0155, 0.0058, "roof_terracotta", face_deg=-90)
+    return p
+
+
+def keep_roof(r_eave, z, h=0.032, tip_flag=True):
+    p = [bc.cone("keep_roof", r_eave, 0.006, h, (KX, 0, z + h / 2), "roof_teal", 8, R8)]
+    if tip_flag:
+        p += banner(KX, 0.0, z + h - 0.003, 0.026)
+    return p
+
+
+def variant_e():
+    """Keep and Armoury: B's gate on C's keep, D's lean-to, the teal cone roof."""
+    p, ap = keep_base()
+    p += keep_roof(0.0385, 0.054)
+    p += armoury()
+    return p, (KX, -ap - 0.004, 0.002)
+
+
+def variant_f():
+    """Battlement Keep: the same keep with B's battlements and a small cream drum under the cone roof."""
+    p, ap = keep_base()
+    for i in range(6):
+        a = math.radians(i * 60 + 30)
+        p.append(bc.box("merlon", (0.011, 0.007, 0.010), (KX + 0.0275 * math.cos(a), 0.0275 * math.sin(a), 0.0575), "stone", rot_z_deg=math.degrees(a) + 90))
+    p.append(bc.cone("drum", 0.019, 0.017, 0.016, (KX, 0, 0.061), "wall_cream", 8, R8))
+    p += keep_roof(0.0235, 0.069, h=0.026)
+    p += armoury()
+    return p, (KX, -ap - 0.004, 0.002)
+
+
+def variant_g():
+    """Turret Keep: the keep with B's two corner turrets and a cone roof."""
+    p, ap = keep_base()
+    for sx in (-1, 1):
+        tx, ty = KX + sx * 0.0215, -0.0245
+        p.append(bc.cone("turret", 0.0105, 0.0105, 0.034, (tx, ty, 0.025), "stone", 8, R8))
+        p.append(bc.cone("turret_eave", 0.0125, 0.0125, 0.003, (tx, ty, 0.0425), "wood_dark", 8, R8))
+        cap = bc.cone("turret_roof", 0.0135, 0.0, 0.018, (tx, ty, 0.0535), "roof_teal", 8, R8)
+        cap["no_bevel"] = True
+        p.append(cap)
+    p += keep_roof(0.0385, 0.054, h=0.030)
+    p += armoury()
+    return p, (KX, -ap - 0.004, 0.002)
+
+
+def variant_h():
+    """Two-tone Keep: a stone lower storey and a cream upper storey like D, wider and a little lower, cone roof."""
+    p, ap = keep_base(r=0.033, top=0.048, cream_from=0.030)
+    p += keep_roof(0.0395, 0.052, h=0.028)
+    p += armoury()
+    return p, (KX, -ap - 0.004, 0.002)
+
+
+VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d,
+            "E": variant_e, "F": variant_f, "G": variant_g, "H": variant_h}
 
 
 def build(params=None, seed=0):
