@@ -88,3 +88,4 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | Effect | What was asked | Anchor | Asset list |
 |---|---|---|---|
 | Wizard Tower animation VFX | Fire Tower rebranded as a wizard tower, "same mechanic but different model and animation vfx (which was planned)" (Siddharth 2026-10-26). The orb floats above the hat tip, charges, then spits the fireball; magic stays black/orange/red | __orb_anchor | X26 (flame orb) |
+| Wizard staff glow | the fireball should leave the wizard's staff (Siddharth 2026-10-26): a charge-up glow at the staff knob when the tower is about to fire, orange/red | the staff tip (CrewMember.hand_point) | X26 |

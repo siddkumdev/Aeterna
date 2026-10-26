@@ -142,6 +142,7 @@ const TOWERS := {
 		"name": "Wizard Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
 		"scene": "res://assets/defense/ew_defense_wizard_tower_v02.glb", "turn_part": "",  # the hat does not turn to aim
 		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0,
+		"crew": "wizard", "shoot_from_crew": true,  # stands at the model's crew_anchor; fireballs leave from his staff tip
 	},
 	"brazier": {
 		"name": "Blast Brazier", "cost": 50, "range": 2.0, "damage": 4.0, "interval": 1.0, "kind": "splash",
@@ -152,6 +153,7 @@ const TOWERS := {
 		"name": "Longbow Tower", "cost": 55, "range": 6.0, "damage": 4.0, "interval": 1.2, "kind": "pierce",
 		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v03.glb", "turn_part": "swivel",
 		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0,
+		"crew": "archer", "crew_at": Vector3(0.033, 0.056, 0.033),  # model-local metres (this model has no crew anchor yet)
 	},
 	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot).
 	# cost 35 = half the spec's 70 (Siddharth 2026-10-22: "for now")
@@ -159,6 +161,7 @@ const TOWERS := {
 		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
 		"scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
+		"crew": "pilot", "crew_at": Vector3(0.0, 0.121, -0.012),
 	},
 }
 # Spells (spec 11, redesigned with Siddharth 2026-10-25): all hit ground AND air. Cast at night only, cooldown only.

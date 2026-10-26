@@ -29,6 +29,8 @@ var _turn: Node3D
 var _turn_home: Basis
 var _muzzle_h := 0.1
 var _muzzle: Node3D  # the model's muzzle anchor, when it has one (the Airship's cannon)
+var last_from := Vector3.ZERO  # where the latest shot left the tower (world)
+var crew: CrewMember  # the villager manning it (a stand-in body, animated)
 
 
 func setup(tower_kind: String, top_left: Vector2i) -> void:
@@ -48,7 +50,27 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 			_muzzle = n  # the Wizard Tower fires from its floating orb
 	if _turn:
 		_turn_home = _turn.basis
+	_add_crew(model)
 	_apply_cards()
+
+
+func _add_crew(model: Node3D) -> void:
+	## The tower's NPC: at the model's crew_anchor when it has one, else at cfg["crew_at"] (model-local metres).
+	if not cfg.has("crew"):
+		return
+	var at: Vector3 = cfg.get("crew_at", Vector3.ZERO)
+	for n in ModelUtil.walk(model):
+		if n is Marker3D and str(n.name).ends_with("crew_anchor"):
+			var t := Transform3D.IDENTITY
+			var p: Node = n
+			while p != null and p != self:  # the anchor's place in the tower's space (works before it is in the tree)
+				t = (p as Node3D).transform * t
+				p = p.get_parent()
+			at = t.origin
+	crew = CrewMember.new()
+	add_child(crew)
+	crew.setup(cfg["crew"])
+	crew.position = at
 
 
 func _apply_cards() -> void:
@@ -122,6 +144,11 @@ func step(delta: float) -> void:
 			elif kind == "brazier":
 				mods["knockback"] = true
 		var from := _muzzle.global_position if _muzzle and _muzzle.is_inside_tree() else global_position + Vector3(0, _muzzle_h, 0)
+		if crew:
+			crew.react(target.global_position)
+			if cfg.get("shoot_from_crew", false):
+				from = crew.hand_point()
+		last_from = from
 		var picked: Array = [target]
 		while picked.size() < targets_per_volley:
 			var other := _nearest(picked)  # Twin Cannons Legendary: a second, different target

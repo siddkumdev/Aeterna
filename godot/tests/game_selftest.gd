@@ -25,6 +25,7 @@ func _initialize() -> void:
 	await _spells()
 	await _mouse_hand_rules()
 	await _warden()
+	await _crews()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -929,4 +930,25 @@ func _warden() -> void:
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)
 	check("Warden: empty phase-3 HP kills it", not boss.alive and g.warden == null)
+	g.queue_free()
+
+
+func _crews() -> void:
+	var g := await _make_game()
+	g.trust = 500
+	g.try_build("fire", Vector2i(6, 12))
+	g.try_build("crossbow", Vector2i(11, 12))
+	g.try_build("airship", Vector2i(16, 12))
+	var kinds := g.towers.map(func(t): return t.crew.kind if t.crew else "")
+	check("every tower has its crew: wizard, archer, pilot", kinds == ["wizard", "archer", "pilot"])
+	var wiz: Tower = g.towers[0]
+	var anchor_ok := wiz.crew.position.distance_to(Vector3(0, 0.072, 0.0215)) < 0.003  # the model's crew_anchor (Godot axes)
+	check("the Wizard Tower's wizard stands at the model's crew anchor", anchor_ok)
+	g.start_night()
+	g._spawn_queue.clear()
+	var target := _still(g, "grunt", _at(7, 9))
+	wiz.cooldown = 0.0
+	g.step(0.05)
+	check("firing starts the crew's shot animation", wiz.crew._act > 0.0)
+	check("a wizard's fireball leaves from his staff tip", wiz.last_from.distance_to(wiz.crew.hand_point()) < 0.001 and not g.shots.is_empty() and target != null)
 	g.queue_free()
