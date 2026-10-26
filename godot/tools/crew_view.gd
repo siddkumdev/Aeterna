@@ -12,6 +12,7 @@ var dist := 0.17
 var towers: Array = []
 var targets: Array = []
 var slow := false
+var _was := {}
 
 
 func _initialize() -> void:
@@ -49,6 +50,16 @@ func _tick() -> void:
 	var c := tw.crew.global_position + Vector3(0, 0.012, 0)
 	cam.global_position = c + Vector3(sin(yaw), 0.55, cos(yaw)).normalized() * dist
 	cam.look_at(c, Vector3.UP)
+	if _edge(KEY_1):
+		focus = 0
+	if _edge(KEY_2):
+		focus = 1
+	if _edge(KEY_3):
+		focus = 2
+	if _edge(KEY_S):
+		slow = not slow
+	if _edge(KEY_ESCAPE):
+		quit()
 	if Input.is_key_pressed(KEY_LEFT):
 		yaw -= 0.03
 	if Input.is_key_pressed(KEY_RIGHT):
@@ -59,11 +70,9 @@ func _tick() -> void:
 		dist = minf(0.5, dist + 0.002)
 
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_1: focus = 0
-			KEY_2: focus = 1
-			KEY_3: focus = 2
-			KEY_S: slow = not slow
-			KEY_ESCAPE: quit()
+func _edge(key: Key) -> bool:
+	## true once when the key goes down (a SceneTree script gets no _input, so the keys are polled)
+	var now := Input.is_key_pressed(key)
+	var fired: bool = now and not _was.get(key, false)
+	_was[key] = now
+	return fired
