@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import blender_common as bc  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
-NAME = "ew_defense_crossbow_tower_v03"
+NAME = "ew_defense_crossbow_tower_v04"  # v04: adds __crew_anchor (geometry unchanged from v03)
 R8 = 22.5
 
 
@@ -359,6 +359,7 @@ def build_final(seed=0):
                               ("bolt", sets["bolt"], bolt_pivot, "swivel"),
                               ("prod", sets["prod"], prod_pivot, "swivel")])
     bc.anchor(root, "bolt_anchor", tip, parent_suffix="bolt", size=0.006)  # pale-green wind VFX rides on the bolt
+    bc.anchor(root, "crew_anchor", (0.033, -0.033, 0.056), size=0.008)  # where the crew member stands: a deck corner, clear of the swinging bow
     bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
     return root
 

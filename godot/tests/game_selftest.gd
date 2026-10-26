@@ -945,6 +945,8 @@ func _crews() -> void:
 	var wiz: Tower = g.towers[0]
 	var anchor_ok := wiz.crew.position.distance_to(Vector3(0, 0.072, 0.0215)) < 0.003  # the model's crew_anchor (Godot axes)
 	check("the Wizard Tower's wizard stands at the model's crew anchor", anchor_ok)
+	check("the archer and the pilot stand at their models' crew anchors too",
+		g.towers[1].crew.position.distance_to(Vector3(0.033, 0.056, 0.033)) < 0.003 and g.towers[2].crew.position.distance_to(Vector3(0.0, 0.121, -0.012)) < 0.003)
 	g.start_night()
 	g._spawn_queue.clear()
 	var target := _still(g, "grunt", _at(7, 9))

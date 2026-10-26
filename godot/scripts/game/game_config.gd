@@ -156,17 +156,17 @@ const TOWERS := {
 	},
 	"crossbow": {
 		"name": "Longbow Tower", "cost": 55, "range": 6.0, "damage": 4.0, "interval": 1.2, "kind": "pierce",
-		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v03.glb", "turn_part": "swivel",
+		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v04.glb", "turn_part": "swivel",
 		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0,
-		"crew": "archer", "crew_at": Vector3(0.033, 0.056, 0.033),  # model-local metres (this model has no crew anchor yet)
+		"crew": "archer",  # stands at the model's crew_anchor (a deck corner)
 	},
 	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot).
 	# cost 35 = half the spec's 70 (Siddharth 2026-10-22: "for now")
 	"airship": {
 		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
-		"scene": "res://assets/defense/ew_defense_airship_v01.glb", "turn_part": "turret",
+		"scene": "res://assets/defense/ew_defense_airship_v02.glb", "turn_part": "turret",
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
-		"crew": "pilot", "crew_at": Vector3(0.0, 0.121, -0.012),
+		"crew": "pilot",
 	},
 }
 # Spells (spec 11, redesigned with Siddharth 2026-10-25): all hit ground AND air. Cast at night only, cooldown only.

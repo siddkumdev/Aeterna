@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import blender_common as bc  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
-NAME = "ew_defense_airship_v01"
+NAME = "ew_defense_airship_v02"  # v02: adds __crew_anchor (geometry unchanged from v01)
 HULL_Z = 0.100  # hull bottom: the ship floats 2 cells above the board (GAME_SPEC)
 ROPE = 0.0024   # rope thickness: thin enough to read as rope, thick enough to survive at arm's length
 
@@ -484,6 +484,7 @@ def build_final(seed=0):
     bc.anchor(root, "muzzle_anchor", muzzle, parent_suffix="barrel", size=0.005)
     bc.anchor(root, "burner_anchor", mouth, parent_suffix="ship", size=0.008)
     bc.anchor(root, "tether_anchor", bow, parent_suffix="ship", size=0.003)
+    bc.anchor(root, "crew_anchor", (0.0, 0.012, 0.121), size=0.008)  # the pilot, on the deck behind the cannon
     bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
     return root
 
