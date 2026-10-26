@@ -995,6 +995,18 @@ func _guards() -> void:
 	for i in 400:
 		g.step(0.05)
 	check("then every Guard walks back to its post", gt.guards.all(func(x): return x.global_position.distance_to(x.post()) < 0.004 and x.state == "idle"))
+	# an enemy that vanishes (freed) while a Guard chases it must not crash the Guard (seen by Siddharth 2026-10-26)
+	var v := _still(g, "grunt", post + Vector3(0, 0, 1.4 * C))
+	for i in 10:
+		g.step(0.05)
+	var chasing: bool = gt.guards.any(func(x): return x.state == "chase")
+	g.enemies.erase(v)
+	v.free()
+	for i in 20:
+		g.step(0.05)
+	check("a chased enemy freed mid-chase: Guards drop the target and walk home, no crash", chasing and gt.guards.all(func(x): return x.target == null and x.state != "chase"))
+	for i in 300:
+		g.step(0.05)
 	# ground only: a Wisp near the post is ignored; with Shield Wall Legendary it is hit
 	var w := _still(g, "wisp", post + Vector3(0, 0, 1.0 * C))
 	for i in 100:

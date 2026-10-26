@@ -49,9 +49,10 @@ func step(delta: float) -> void:
 	_crew.walking = false
 	_cool = maxf(0.0, _cool - delta * tower.game.spells.haste_at(tower.position))  # Rage rings speed the swing up
 	var home := post()
-	if target != null and (not is_instance_valid(target) or not target.alive or not target.targetable(tower.guards_air, true)):
-		target = null
-		state = "return"
+	if not is_instance_valid(target) or not target.alive or not target.targetable(tower.guards_air, true):
+		target = null  # gone, dead or untargetable (a freed enemy may compare equal to null, so test validity first)
+		if state == "chase":
+			state = "return"
 	if target != null and _flat_dist(target.global_position, home) > _cfg["leash"] * C:
 		_release()
 		_ignore = true
@@ -60,6 +61,8 @@ func step(delta: float) -> void:
 		target = _find(home)
 		if target != null:
 			state = "chase"
+	if state == "chase" and target == null:
+		state = "return"  # nothing in sight any more: walk home
 	match state:
 		"chase":
 			var d := _flat_dist(target.global_position, global_position)
