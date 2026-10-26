@@ -144,10 +144,15 @@ const TOWERS := {
 		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0,
 		"crew": "wizard", "shoot_from_crew": true,  # stands at the model's crew_anchor; fireballs leave from his staff tip
 	},
-	"brazier": {
-		"name": "Blast Brazier", "cost": 50, "range": 2.0, "damage": 4.0, "interval": 1.0, "kind": "splash",
-		"splash": 1.0, "scene": "res://assets/defense/ew_defense_bomb_tower_v06.glb", "turn_part": "head",
-		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_speed": 6.0,
+	# The Guard Tower (Siddharth 2026-10-26, replaces the Blast Brazier): spawns Guards that stand in a ring touching
+	# it and fight only what comes into their sight. Numbers are the old Watch Hut / Guard ones he chose; the rest are
+	# stand-ins (~): hit every second, walking speed, the reach of a spear. Cards: Shield Wall, Friendly Faces.
+	"guard": {
+		"name": "Guard Tower", "cost": 70, "range": 2.0, "damage": 4.0, "interval": 1.0, "kind": "spawner",
+		"scene": "res://assets/defense/ew_defense_guard_tower_v01.glb", "turn_part": "",
+		"guards": 3, "guard_hp": 30.0, "guard_damage": 4.0, "respawn": 8.0,
+		"sight": 2.0, "leash": 4.0,  # cells from the post (Siddharth: chase, then walk back)
+		"attack_interval": 1.0, "guard_speed": 0.8, "reach": 0.6,  # ~
 	},
 	"crossbow": {
 		"name": "Longbow Tower", "cost": 55, "range": 6.0, "damage": 4.0, "interval": 1.2, "kind": "pierce",
@@ -182,7 +187,7 @@ const SPELLS := {
 const SPELL_ORDER: Array[String] = ["fire_orb", "boulder", "storm", "rage", "roots"]
 const SPELL_GRAB_REACH := 0.05  # m from a hand to a spell token on the table to grab it (VR)
 
-const TOWER_ORDER: Array[String] = ["fire", "brazier", "crossbow", "airship"]
+const TOWER_ORDER: Array[String] = ["fire", "guard", "crossbow", "airship"]
 # Selling (Siddharth 2026-10-23): day only, with the Sell sign. Full cost back on the day the tower was built
 # (undo a mistake), half (rounded down) once a night has passed.
 const SELL_LATER := 0.5

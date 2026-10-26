@@ -8,9 +8,9 @@ extends SceneTree
 # every house), then Longbows and more fire on the approaches, Braziers by the houses, a second Airship
 const PLAN := [["fire", Vector2i(11, 4)], ["fire", Vector2i(4, 11)], ["fire", Vector2i(18, 11)], ["airship", Vector2i(11, 11)],
 	["crossbow", Vector2i(8, 4)], ["crossbow", Vector2i(4, 14)], ["crossbow", Vector2i(18, 8)],
-	["brazier", Vector2i(14, 6)], ["brazier", Vector2i(6, 10)], ["brazier", Vector2i(16, 11)],
+	["guard", Vector2i(14, 6)], ["guard", Vector2i(6, 10)], ["guard", Vector2i(16, 11)],
 	["fire", Vector2i(14, 4)], ["fire", Vector2i(4, 8)], ["fire", Vector2i(18, 14)], ["airship", Vector2i(11, 18)],
-	["crossbow", Vector2i(8, 18)], ["fire", Vector2i(14, 18)], ["brazier", Vector2i(6, 15)], ["brazier", Vector2i(17, 15)]]
+	["crossbow", Vector2i(8, 18)], ["fire", Vector2i(14, 18)], ["guard", Vector2i(6, 15)], ["guard", Vector2i(17, 15)]]
 
 
 func _initialize() -> void:

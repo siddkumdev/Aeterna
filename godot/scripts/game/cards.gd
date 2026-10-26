@@ -17,12 +17,15 @@ const POOL := {
 	"quick_fuse": {"name": "Quick Fuse", "applies": "Wizard Tower", "values": [15, 25, 40],
 		"text": "Fires %s%% faster",
 		"legend": "Every 5th fireball is double size and deals double damage"},
-	"bellows": {"name": "Bellows", "applies": "Blast Brazier", "values": [15, 25, 40],
-		"text": "Pulses %s%% faster",
-		"legend": "Every 3rd pulse knocks ground enemies back 1 cell"},
-	"hot_coals": {"name": "Hot Coals", "applies": "Blast Brazier", "values": [5, 6, 8],
-		"text": "%s damage per pulse (base 4)",
-		"legend": "Each pulse leaves a burning patch for 2 s (2 damage/s)"},
+	# Guard Tower cards (Siddharth 2026-10-26): the Brazier's Bellows and Hot Coals are gone. Shield Wall's Legendary
+	# lets Guards hit flyers (replaces the old "must fight it first" bonus); Friendly Faces is the old card without the
+	# rally-flag heal: Rare and Legendary also bring replacements faster (25% / 50%).
+	"shield_wall": {"name": "Shield Wall", "applies": "Guard Tower", "values": [25, 50, 100],
+		"text": "Guards have +%s%% HP",
+		"legend": "Guards can also hit flyers"},
+	"friendly_faces": {"name": "Friendly Faces", "applies": "Guard Tower", "values": [4, 4, 5],
+		"text": "%s Guards per tower (base 3); Rare: replacements 25%% faster",
+		"legend": "Replacements arrive 50% faster"},
 	"heavy_bolts": {"name": "Heavy Bolts", "applies": "Longbow Tower", "values": [5, 6, 8],
 		"text": "%s damage per bolt (base 4)",
 		"legend": "Bolts slow every enemy they pierce by 30% for 2 s"},
@@ -35,8 +38,7 @@ const POOL := {
 	"twin_cannons": {"name": "Twin Cannons", "applies": "Airship", "values": [15, 25, 40], "requires": "airship",
 		"text": "Fires %s%% faster",
 		"legend": "Each volley fires at two different targets"},
-	# Shield Wall, Sharp Stones and Friendly Faces (Guards, Slingers, Watch Hut) were cut with the troops
-	# (Siddharth 2026-10-25); the pool is 11 cards.
+	# Sharp Stones (Slingers) stays cut; with Shield Wall and Friendly Faces back the pool is 11 cards.
 	"quick_hands": {"name": "Quick Hands", "applies": "all spells", "values": [15, 25, 40], "requires": "spells",
 		"text": "Spell cooldowns %s%% shorter",
 		"legend": "Each cast has a 25% chance to come straight back off cooldown"},

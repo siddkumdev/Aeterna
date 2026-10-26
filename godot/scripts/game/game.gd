@@ -472,6 +472,9 @@ func _end_night() -> void:
 	trust += income
 	for h in houses:
 		h.heal(GameConfig.DAWN_REPAIR)  # damage carries over (Siddharth 2026-10-23)
+	for t in towers:
+		if t.cfg["kind"] == "spawner":
+			t.refill()  # stand-in: the Guards are all back, at full health, by morning
 	_clear_night()
 	if night == GameConfig.BOSS_NIGHT:
 		_end_loop(true)

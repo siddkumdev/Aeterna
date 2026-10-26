@@ -92,14 +92,14 @@ What is fixed: the number of loops (5 for M1), 5 nights + 1 boss night per loop,
 All towers are autonomous. Only the Airship attacks air; the other three attack ground only.
 | Tower | Role | Range | Damage | Cost | Notes |
 |---|---|---|---|---|---|
-| Fire Tower | shoots a fireball at one target; good range, **no AoE** | 5 cells | 14 per fireball, 1 shot per 1.5 s | 60 | the reliable heavy hitter |
-| Blast Brazier | **good AoE, short range, lower damage** | 2 cells | 4 per pulse to all within 1 cell, 1 pulse per second | 50 | holds a choke point near the village |
+| Wizard Tower (was Fire Tower, renamed 2026-10-26; same mechanic, new model and animation VFX) | a wizard shoots a fireball from his staff at one target; good range, **no AoE** | 5 cells | 14 per fireball, 1 shot per 1.5 s | 60 | the reliable heavy hitter |
+| Guard Tower (replaces the Blast Brazier 2026-10-26) | a SPAWNING tower: 3 Guards stand in a ring of free cells touching it and fight only what comes within 2 cells of their post (chase, leash 4 cells, then walk back); ground only; enemies stop to fight a Guard that hits them; no pathing block | sight 2 cells | Guards 30 HP, 4 damage a hit (stand-in: 1 hit per second) | 70 | a replacement every 8 s at night; refilled at dawn (stand-in) |
 | Longbow Tower | like the Fire Tower but weaker, **longer range, piercing** | 6 cells | 4 per bolt, hits every enemy in a line, 1 shot per 1.2 s | 55 | best on long straight approaches (piercing line) |
 | Airship | **air attacks only**; a small friendly airship moored over its cell | 4 cells | 6 per shot, 1 shot per second | 35 (was 70) | no limit (was max 2, removed 2026-10-23); floats 2 cells above the board |
 - No Barricade, Light Tower or Healing Shrine in this roster. Houses heal 10 HP each dawn instead (see 5).
 - The friendly Airship uses the airship shape language of #43 in village colours (cream and teal). Enemy flyers are creatures, not airships.
 
-### 8. Hut and troops (ALL CUT 2026-10-25, history only)
+### 8. Hut and troops (the Watch Hut, Slingers and rally flag stay CUT; Guards came back inside the Guard Tower, Siddharth 2026-10-26, see 7)
 - **CUT (Siddharth 2026-10-25): no Watch Hut, Guards, Slingers or rally flag.** "4 towers are enough for a cozy game." The night-time hands verb is spells instead. Everything below in this section is kept only as history; the three troop cards (Shield Wall, Sharp Stones, Friendly Faces) are out of the card pool (now 11).
 - **DECIDED (Siddharth, 2026-10-19): one spawning building per troop type**, not one hut for all troops. The Watch Hut spawns Guards only; Slingers get their own building. OPEN: the Slinger building's name, cost and look; whether it unlocks in loop 2 with the Slinger. Spawning buildings are designed only after the troop characters are final.
 - **Watch Hut** (cost 70): spawns a Guard every 8 s, up to 3 alive per hut.
@@ -185,8 +185,8 @@ M1 uses 3D signs hit by a ray (VR pinch, desktop mouse hand) and number keys; th
 |---|---|---|---|---|---|---|
 | 1 | Ember Shot | Fire Tower | burn 2 dmg/s for 3 s | 3 dmg/s | 4 dmg/s | an enemy that dies while burning passes its burn to the nearest enemy within 1 cell |
 | 2 | Quick Fuse | Fire Tower | fires 15% faster | 25% | 40% | every 5th fireball is double size and deals double damage |
-| 3 | Bellows | Blast Brazier | pulses 15% faster | 25% | 40% | every 3rd pulse knocks ground enemies back 1 cell |
-| 4 | Hot Coals | Blast Brazier | 5 dmg per pulse (base 4) | 6 | 8 | each pulse leaves a burning patch for 2 s (2 dmg/s) |
+| 3 | Shield Wall | Guard Tower | Guards +25% HP | +50% | +100% | Guards can also hit flyers (replaces the old 'must fight it first' bonus; Siddharth 2026-10-26) |
+| 4 | Friendly Faces | Guard Tower | 4 Guards per tower (base 3) | 4, replacements 25% faster | 5, replacements 50% faster | (the old rally-flag heal is dropped) |
 | 5 | Heavy Bolts | Longbow Tower | 5 dmg per bolt (base 4) | 6 | 8 | bolts slow every enemy they pierce by 30% for 2 s |
 | 6 | Long Draw | Longbow Tower | range 7 cells (base 6) | 8 | 9 | ~~CUT~~ bolts can also hit flyers |
 | 7 | Long Mooring | Airship | range 5 cells (base 4) | 6 | 7 | the Airship can also shoot ground enemies at half damage |

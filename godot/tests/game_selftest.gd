@@ -26,6 +26,7 @@ func _initialize() -> void:
 	await _mouse_hand_rules()
 	await _warden()
 	await _crews()
+	await _guards()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -195,7 +196,7 @@ func _nights() -> void:
 		var gs := await _make_game()
 		gs.try_build("fire", Vector2i(11, 11))
 		gs.try_build("crossbow", Vector2i(9, 3))
-		gs.try_build("brazier", Vector2i(3, 9))
+		gs.try_build("guard", Vector2i(3, 9))
 		gs.set_speed(spd)
 		gs.start_night()
 		var frames := 0
@@ -221,7 +222,7 @@ func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
 	var g := await _make_game()
 	var spots: Array[Vector2i] = [Vector2i(11, 11), Vector2i(11, 4), Vector2i(5, 11), Vector2i(17, 11), Vector2i(11, 18),
 		Vector2i(14, 5), Vector2i(8, 5), Vector2i(5, 15), Vector2i(17, 15), Vector2i(5, 7), Vector2i(17, 7), Vector2i(14, 17)]
-	var order := ["fire", "crossbow", "brazier", "airship"]
+	var order := ["fire", "crossbow", "guard", "airship"]
 	var out := {"lost_on": 7, "loops": 1, "log": []}
 	while g.phase != Game.Phase.DONE:
 		if g.phase == Game.Phase.CARDS:
@@ -286,19 +287,19 @@ func _cards() -> void:
 
 	# effects: build towers with cards held and check their numbers
 	var g := await _make_game()
-	g.cards = {"quick_fuse": 2, "hot_coals": 1, "long_draw": 0, "sturdy_homes": 1, "deep_pockets": 0}
+	g.cards = {"quick_fuse": 2, "shield_wall": 1, "long_draw": 0, "sturdy_homes": 1, "deep_pockets": 0}
 	g._start_loop("test")
 	check("Deep Pockets: +30 starting trust", g.trust == GameConfig.START_TRUST + 30)
 	check("Sturdy Homes Rare: houses 60 -> 90 HP", is_equal_approx(g.houses[0].max_hp, 90.0) and is_equal_approx(g.houses[0].hp, 90.0))
 	g.trust = 1000
 	g.try_build("fire", Vector2i(11, 11))
-	g.try_build("brazier", Vector2i(11, 4))
+	g.try_build("guard", Vector2i(11, 4))
 	g.try_build("crossbow", Vector2i(5, 11))
 	var f: Tower = g.towers[0]
 	var b: Tower = g.towers[1]
 	var c: Tower = g.towers[2]
 	check("Quick Fuse Legendary: 40% faster and every 5th shot", is_equal_approx(f.interval, 1.5 / 1.4) and f.every_nth == 5)
-	check("Hot Coals Rare: 6 damage per pulse, no patch", is_equal_approx(b.damage, 6.0) and not b.shot_mods.get("patch", false))
+	check("Shield Wall Rare: Guards 45 HP, cannot hit flyers", is_equal_approx(b.guard_hp, 45.0) and not b.guards_air)
 	check("Long Draw Common: range 7 cells", is_equal_approx(c.reach, 7 * GameConfig.CELL) and not c.hits_air)
 	g.queue_free()
 	await process_frame
@@ -343,7 +344,7 @@ func _step2() -> void:
 	check("other towers build with Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 7)))
 	g._press_button("fire")
 	g.trust = 10
-	g._press_button("brazier")
+	g._press_button("guard")
 	check("a sign you cannot afford does not pick up a tower", g.selected == "")
 	g.trust = 1000
 	w = await _night_with(g, "wisp", north, 25.0)
@@ -360,13 +361,13 @@ func _step2() -> void:
 	# Tunneler: cannot be hit underground, comes up next to a house, then towers can hit it
 	g = await _make_game()
 	g.trust = 1000
-	g.try_build("brazier", Vector2i(11, 2))  # right where it leaves the forest
+	g.try_build("guard", Vector2i(11, 2))  # right where it leaves the forest
 	g.start_night()
 	g._spawn_queue.clear()
 	var tu: Enemy = g._spawn(north, "tunneler")
 	var full: float = tu.hp
 	var was_under := true
-	for i in range(200):  # 10 s, still underground, the Brazier pulsing on top of it
+	for i in range(200):  # 10 s, still underground, the Guard Tower on top of it
 		g.step(0.05)
 		was_under = was_under and tu.underground
 	check("a Tunneler starts underground and cannot be hit", was_under and is_equal_approx(tu.hp, full))
@@ -563,7 +564,7 @@ func _sell() -> void:
 	check("selling on the day it was built refunds the full cost", g.sell(t) and g.trust == before + 60 and g.towers.is_empty())
 	check("its cells open up again (can build there)", g.can_build("fire", Vector2i(11, 4)))
 	g.try_build("fire", Vector2i(11, 4))
-	g.try_build("brazier", Vector2i(4, 11))
+	g.try_build("guard", Vector2i(4, 11))
 	g.select("sell")
 	check("Sell sign selects sell mode", g.selected == "sell")
 	g.start_night()
@@ -573,7 +574,7 @@ func _sell() -> void:
 	before = g.trust
 	check("after a night: half back (Fire 30)", g.sell(g.towers[0]) and g.trust == before + 30)
 	before = g.trust
-	check("after a night: half back (Brazier 25)", g.sell(g.towers[0]) and g.trust == before + 25)
+	check("after a night: half back (Guard Tower 35)", g.sell(g.towers[0]) and g.trust == before + 35)
 	g.queue_free()
 	await process_frame
 
@@ -952,3 +953,105 @@ func _crews() -> void:
 	check("firing starts the crew's shot animation", wiz.crew._act > 0.0)
 	check("a wizard's fireball leaves from his staff tip", wiz.last_from.distance_to(wiz.crew.hand_point()) < 0.001 and not g.shots.is_empty() and target != null)
 	g.queue_free()
+
+
+func _guards() -> void:
+	var C := GameConfig.CELL
+	var g := await _make_game()
+	g.trust = 1000
+	g.try_build("guard", Vector2i(11, 11))
+	var gt: Tower = g.towers[0]
+	check("a built Guard Tower has 3 Guards, each on its own free post touching the tower",
+		gt.guards.size() == 3 and gt.guards.map(func(x): return x.index).size() == 3 and _distinct_posts(gt))
+	var home := gt.guards[0].global_position
+	g.cards = {}
+	_night_start(g)
+	for i in 100:
+		g.step(0.05)
+	check("with no enemy around, Guards stay at their posts (no wandering)", gt.guards[0].global_position.distance_to(home) < 0.001)
+	# an enemy within sight: the Guard walks up, fights it, the enemy stops and fights back
+	var post: Vector3 = gt.get_parent().to_local(gt.guards[0].post())  # board-local, like enemy positions
+	var far := _still(g, "grunt", post + Vector3(3.5 * C, 0, 0))
+	for i in 20:
+		g.step(0.05)
+	check("an enemy 3.5 cells from the post is out of sight and ignored", gt.guards[0].target == null)
+	far.queue_free()
+	g.enemies.erase(far)
+	var e := _still(g, "grunt", post + Vector3(0, 0, 1.4 * C))
+	e.hp = 20.0
+	var hp0 := gt.guards[0].hp
+	var met := false
+	for i in 60:
+		g.step(0.05)
+		if e.alive and e.blocked_by != null:
+			met = true
+	check("an enemy within 2 cells: a Guard chases it and the enemy stops to fight it", met)
+	for i in 400:
+		g.step(0.05)
+	check("Guards (4 damage a hit) kill a 20 HP Grunt", not e.alive)
+	check("and the Grunt hurt the Guard that fought it", gt.guards.any(func(x): return x.hp < gt.guard_hp))
+	for i in 400:
+		g.step(0.05)
+	check("then every Guard walks back to its post", gt.guards.all(func(x): return x.global_position.distance_to(x.post()) < 0.004 and x.state == "idle"))
+	# ground only: a Wisp near the post is ignored; with Shield Wall Legendary it is hit
+	var w := _still(g, "wisp", post + Vector3(0, 0, 1.0 * C))
+	for i in 100:
+		g.step(0.05)
+	check("Guards cannot hit a flyer", w.alive and w.hp == w.stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * g.night) * (1.0 + GameConfig.LOOP_HP_STEP * g.loop))
+	g.queue_free()
+	await process_frame
+
+	g = await _make_game()
+	g.cards = {"shield_wall": 2}
+	g.trust = 1000
+	g._start_loop("test")
+	g.try_build("guard", Vector2i(11, 11))
+	gt = g.towers[0]
+	check("Shield Wall Legendary: +100% HP and Guards can hit flyers", is_equal_approx(gt.guard_hp, 60.0) and gt.guards_air)
+	_night_start(g)
+	var w2 := _still(g, "wisp", gt.get_parent().to_local(gt.guards[0].post()) + Vector3(0, 0, 1.0 * C))
+	for i in 400:
+		g.step(0.05)
+	check("and then they bring a Wisp down", not w2.alive)
+	# a fallen Guard is replaced after `respawn` seconds
+	var victim: Guard = gt.guards[0]
+	victim.die()
+	g.step(0.05)
+	check("a dead Guard leaves a gap", gt.guards.size() == 2)
+	for i in int(gt.respawn / 0.05) + 5:
+		g.step(0.05)
+	check("and is replaced after %.0f s, stepping out of the gate" % gt.respawn, gt.guards.size() == 3)
+	# dawn: damaged Guards are healed
+	gt.guards[0].hp = 5.0
+	g._clear_night()
+	g.phase = Game.Phase.NIGHT
+	g.night = 0
+	g._end_night()
+	check("at dawn the Guards are back at full health", gt.guards.all(func(x): return is_equal_approx(x.hp, gt.guard_hp)))
+	g.queue_free()
+	await process_frame
+
+	g = await _make_game()
+	g.cards = {"friendly_faces": 1}
+	g.trust = 1000
+	g._start_loop("test")
+	g.try_build("guard", Vector2i(11, 11))
+	gt = g.towers[0]
+	check("Friendly Faces Rare: 4 Guards, replacements 25% faster", gt.max_guards == 4 and gt.guards.size() == 4 and is_equal_approx(gt.respawn, 8.0 / 1.25))
+	var gone := gt.guards[0]
+	g.select("sell")
+	g.sell(gt)
+	await process_frame
+	check("selling the tower takes its Guards with it", not is_instance_valid(gt) and not is_instance_valid(gone))
+	g.queue_free()
+	await process_frame
+
+
+func _distinct_posts(t: Tower) -> bool:
+	var seen := {}
+	for g in t.guards:
+		var c := NavGrid.local_to_cell(t.get_parent().to_local(g.post()))
+		if seen.has(c) or t.game.nav.astar.is_point_solid(c):
+			return false
+		seen[c] = true
+	return true

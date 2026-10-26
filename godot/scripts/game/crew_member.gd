@@ -7,6 +7,8 @@ extends Node3D
 ##                            air. Fires: turns to the target and thrusts the staff at it; shots leave from the staff tip.
 ##   archer  (Longbow Tower)  tunic and cap, both hands on the crossbow's crank: winds it, and a hard pull on each shot.
 ##   pilot   (Airship)        tunic and cap, both hands on a little wheel: steers; points at the target on each shot.
+##   guard   (Guard Tower)    teal tunic, helmet and a spear. Idle: shifts its weight and looks about; walking: hops;
+##                            thrusts the spear on each hit. Driven by Guard (set_facing, walking).
 
 const SKIN := Color(0.949, 0.788, 0.627)
 const INK := Color(0.067, 0.11, 0.188)
@@ -25,13 +27,14 @@ var _arm_l: Node3D
 var _arm_r: Node3D
 var _staff: Node3D  # the wizard's staff (pivots at the right hand)
 var _wheel: Node3D
+var walking := false  # the Guard sets this while it walks (a hop)
 
 
 func setup(crew_kind: String) -> void:
 	kind = crew_kind
 	_body = Node3D.new()
 	add_child(_body)
-	var robe_col := TEAL if kind == "wizard" else TUNIC
+	var robe_col := TEAL if (kind == "wizard" or kind == "guard") else TUNIC
 	_cyl(_body, 0.0072, 0.0042, 0.016, Vector3(0, 0.008, 0), robe_col)
 	_head = Node3D.new()
 	_head.position = Vector3(0, 0.0195, 0)
@@ -44,6 +47,8 @@ func setup(crew_kind: String) -> void:
 			_cyl(_head, 0.0088, 0.0088, 0.0014, Vector3(0, 0.0042, 0), INK)  # brim
 			_cyl(_head, 0.0068, 0.0, 0.013, Vector3(0, 0.0105, 0), INK)  # hat
 			_cyl(_head, 0.0069, 0.0069, 0.0016, Vector3(0, 0.0058, 0), Color(0.69, 0.31, 0.19))  # band
+		"guard":
+			_cyl(_head, 0.0062, 0.0050, 0.0065, Vector3(0, 0.0050, 0), Color(0.549, 0.565, 0.588))  # stone-grey helmet
 		"archer":
 			_cyl(_head, 0.0056, 0.0030, 0.0055, Vector3(0, 0.0048, 0), WOOD)  # cap
 		_:
@@ -57,6 +62,13 @@ func setup(crew_kind: String) -> void:
 		_cyl(_staff, 0.0013, 0.0013, 0.032, Vector3(0, 0.010, 0), WOOD)
 		_ball(_staff, 0.0028, Vector3(0, 0.0265, 0), Color(0.69, 0.31, 0.19))  # a dark knob; the glow is VFX
 		_arm_r.rotation.x = -0.9
+	elif kind == "guard":
+		_staff = Node3D.new()  # the spear, pivots at the right hand
+		_staff.position = Vector3(0.0085, 0.0095, 0.0035)
+		_body.add_child(_staff)
+		_cyl(_staff, 0.0013, 0.0013, 0.034, Vector3(0, 0.008, 0), WOOD)
+		_cyl(_staff, 0.0028, 0.0, 0.007, Vector3(0, 0.0275, 0), Color(0.549, 0.565, 0.588))
+		_arm_r.rotation.x = -0.7
 	elif kind == "pilot":
 		_wheel = Node3D.new()
 		_wheel.position = Vector3(0, 0.0105, 0.0085)
@@ -111,10 +123,14 @@ func react(target_pos: Vector3) -> void:
 	_act = ACT_TIME
 
 
+func set_facing(yaw: float) -> void:
+	_yaw_goal = yaw
+
+
 func hand_point() -> Vector3:
 	## World position shots leave from (the wizard's staff tip).
 	if _staff:
-		return _staff.to_global(Vector3(0, 0.0285, 0))
+		return _staff.to_global(Vector3(0, 0.0285, 0))  # wizard staff / guard spear tip
 	return global_position + Vector3(0, 0.02, 0)
 
 
@@ -126,6 +142,12 @@ func _process(delta: float) -> void:
 	var k := sin(PI * (1.0 - _act / ACT_TIME)) if _act > 0.0 else 0.0  # 0 -> 1 -> 0 over the shot
 	_body.position.y = 0.0006 * sin(_t * 2.2)  # breathing
 	match kind:
+		"guard":
+			_arm_l.rotation.x = -0.15 + 0.1 * sin(_t * 1.3)
+			_staff.rotation.x = -0.05 + 0.04 * sin(_t * 0.9) - 1.25 * k  # a thrust
+			_head.rotation.y = 0.35 * sin(_t * 0.6)
+			if walking:
+				_body.position.y = 0.0016 * absf(sin(_t * 10.0))
 		"wizard":
 			_arm_l.rotation.x = -0.5 + 0.45 * sin(_t * 1.4) - 1.0 * k  # stirs the air, flings out on a shot
 			_arm_l.rotation.z = 0.35 + 0.2 * sin(_t * 0.9)

@@ -36,6 +36,7 @@ var offset := Vector3.ZERO  # board-local, within GameConfig.SPREAD cells of the
 var height := 0.045
 var is_boss := false
 var shielded := false  # the Warden in phase 2: takes no damage while a crystal stands
+var blocked_by: Guard  # a Guard that is fighting it: it stops and fights back
 var on_zero := Callable()  # the Warden: returns true when 0 HP only ends a phase (it does not die)
 var flying := false
 var underground := false  # a Tunneler on its way: cannot be hit
@@ -259,6 +260,12 @@ func step(delta: float) -> void:
 			slow_factor = 1.0
 	if stats.get("static", false):
 		return  # a crystal only stands there (Warden moves it)
+	if blocked_by != null:
+		if is_instance_valid(blocked_by) and blocked_by.alive and not underground:
+			_face(position + (blocked_by.global_position - global_position))
+			blocked_by.take_damage(stats["dps"] * delta)  # it fights the Guard instead of walking on
+			return
+		blocked_by = null
 	if target_house == -1 or game.houses[target_house].is_shuttered:
 		_reroute()
 		if target_house == -1:

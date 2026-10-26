@@ -14,7 +14,7 @@ Verify any time (Godot console exe from `local.env` as `GODOT_EXE`):
 | 4 | Wave generator (seeded threat budget, 3 groups, guard rails) | |
 | 5 | Enemies: Grunt, Scout, Splitter (+ Splitlings), Wisp (flyer), Tunneler (underground), Fog variant | |
 | 6 | Pathfinding with towers and houses as obstacles; a build that would wall off every house is refused | |
-| 7 | Towers: Fire, Blast Brazier, Longbow (piercing), Airship (air only); no cap; sell at day (full refund same day, half later) | |
+| 7 | Towers: Wizard (was Fire), Guard Tower (spawns Guards; replaced the Blast Brazier 2026-10-26), Longbow (piercing), Airship (air only); each manned by a placeholder animated NPC; no cap; sell at day (full refund same day, half later) | |
 | 8 | Economy: 200 start trust, dawn +5 per house, night-clear 10 x night number, request rewards 10-25 | |
 | 9 | Dawn repair: damage carries over, +10 HP per house per dawn; a shuttered house reopens with HP | |
 | 10 | Villager help requests: 4 per day (chimney, bird, lantern, cart), grab by hand, placeholder villagers | far too frequent: M3 |
@@ -32,7 +32,7 @@ Verify any time (Godot console exe from `local.env` as `GODOT_EXE`):
 ## Cut for M1 (not built, stays in the spec as history)
 | Feature | Why |
 |---|---|
-| Troops, Watch Hut, Slinger building, rally flag, 3 troop cards | Siddharth 2026-10-25: "4 towers are enough for a cozy game" |
+| Watch Hut, Slingers, rally flag, Sharp Stones (the Guards came back inside the Guard Tower 2026-10-26) | Siddharth 2026-10-25: "4 towers are enough for a cozy game" |
 | Fate Coin | parked 2026-10-23, cut for M1 2026-10-25 |
 | Hand swat on Wisps | skipped 2026-10-25 |
 | Mend Vial spell | replaced by Storm Cloud and Rage |

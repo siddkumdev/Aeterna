@@ -1,7 +1,7 @@
 extends SceneTree
 ## Watch the tower crews live in a window (real time, nothing to learn):
 ##   <godot console> --xr-mode off --path godot -s res://tools/crew_view.gd
-## Keys: 1 = Wizard Tower, 2 = Longbow Tower, 3 = Airship, Left / Right = turn the view, Up / Down = zoom,
+## Keys: 1 = Wizard Tower, 2 = Longbow Tower, 3 = Airship, 4 = Guard Tower (a Guard fights a Grunt that never dies), Left / Right = turn the view, Up / Down = zoom,
 ## S = slow motion on / off, Esc = quit. The towers fire at a target that never dies.
 
 var g: Game
@@ -24,14 +24,19 @@ func _initialize() -> void:
 	g.try_build("fire", Vector2i(6, 12))
 	g.try_build("crossbow", Vector2i(11, 12))
 	g.try_build("airship", Vector2i(16, 12))
+	g.try_build("guard", Vector2i(11, 4))
 	g.night = 2
 	g.start_night()
 	g._spawn_queue.clear()
 	g.set_process(false)  # the view ticks the game itself, so S can slow it
 	towers = g.towers.duplicate()
 	var spots := [[Vector2i(7, 9), "grunt", 0.0], [Vector2i(11, 9), "grunt", 0.0], [Vector2i(16, 10), "wisp", 0.06]]
+	var gpost: Vector3 = g.towers[3].get_parent().to_local(g.towers[3].guards[0].post())
+	spots.append([NavGrid.local_to_cell(gpost + Vector3(0, 0, 1.2 * GameConfig.CELL)), "grunt", 0.0])
+	spots[3][0] = Vector2i(0, 0)  # replaced below by the exact spot
+	var exact := gpost + Vector3(0, 0, 1.2 * GameConfig.CELL)
 	for s in spots:
-		var e: Enemy = g._spawn(s[0], s[1], NavGrid.cell_centre(s[0]) + Vector3(0, s[2], 0))
+		var e: Enemy = g._spawn(s[0], s[1], (exact if s[0] == Vector2i(0, 0) else NavGrid.cell_centre(s[0])) + Vector3(0, s[2], 0))
 		e.slow(0.0001, 1.0e9)
 		e.hp = 1.0e9
 		targets.append(e)
@@ -47,7 +52,12 @@ func _tick() -> void:
 	Engine.time_scale = 0.25 if slow else 1.0
 	g.step(dt)
 	var tw: Tower = towers[focus]
-	var c := tw.crew.global_position + Vector3(0, 0.012, 0)
+	var anchor: Vector3 = tw.global_position
+	if tw.crew:
+		anchor = tw.crew.global_position
+	elif not tw.guards.is_empty():
+		anchor = tw.guards[0].global_position
+	var c := anchor + Vector3(0, 0.012, 0)
 	cam.global_position = c + Vector3(sin(yaw), 0.55, cos(yaw)).normalized() * dist
 	cam.look_at(c, Vector3.UP)
 	if _edge(KEY_1):
@@ -56,6 +66,8 @@ func _tick() -> void:
 		focus = 1
 	if _edge(KEY_3):
 		focus = 2
+	if _edge(KEY_4):
+		focus = 3
 	if _edge(KEY_S):
 		slow = not slow
 	if _edge(KEY_ESCAPE):

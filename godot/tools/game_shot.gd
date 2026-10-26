@@ -39,7 +39,7 @@ func _initialize() -> void:
 	g.select("")
 	g.trust = 200
 	g.try_build("crossbow", Vector2i(3, 9))
-	g.try_build("brazier", Vector2i(19, 9))
+	g.try_build("guard", Vector2i(19, 9))
 	g.set_process(true)
 	g.speed = 0.0  # the shot steps the night by hand below
 	g.night = 2  # night 3: Grunts, Scouts and the first Splitter
@@ -125,7 +125,7 @@ func _initialize() -> void:
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_boss_p2.png")
 	# the cards offered after beating the boss (cards for every tower, so one shows each rarity colour)
 	g._end_loop(true)
-	g.offers = [{"id": "quick_fuse", "rarity": 0}, {"id": "hot_coals", "rarity": 1}, {"id": "ember_shot", "rarity": 2}]
+	g.offers = [{"id": "quick_fuse", "rarity": 0}, {"id": "friendly_faces", "rarity": 1}, {"id": "ember_shot", "rarity": 2}]
 	g._refresh_ui()
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_cards.png")
