@@ -104,15 +104,15 @@ Change column (what happened to the tracker item):
 Roster changed: 4 towers plus the hut, no tiers.
 | ID | Pri | Kind | Asset | Notes | Budget | Change |
 |---|---|---|---|---|---|---|
-| D01 | P0 | model | Fire Tower | 2 x 2. Base, rotating head, and an anchor for the flame-orb VFX ball that powers the tower (the orb is VFX, X26). Long range, single target, no AoE. DONE: ew_defense_fire_tower_v07 APPROVED by Siddharth 2026-10-18 (v06 look, parts split: head, coals, window) (rim prongs, chunky merlons, one lit window). REBRANDED 2026-10-26 (Siddharth): the Fire Tower is now the WIZARD TOWER (same mechanic, new model): BUILT ew_defense_wizard_tower_v02 (black wizard hat on four pillars, __hat, __orb_anchor, __crew_anchor), approved by Siddharth 2026-10-26. | 1-2k | CHANGED, DONE |
+| D01 | P0 | model | Wizard Tower (was Fire Tower) | 2 x 2. Base, rotating head, and an anchor for the flame-orb VFX ball that powers the tower (the orb is VFX, X26). Long range, single target, no AoE. DONE: ew_defense_fire_tower_v07 APPROVED by Siddharth 2026-10-18 (v06 look, parts split: head, coals, window) (rim prongs, chunky merlons, one lit window). REBRANDED 2026-10-26 (Siddharth): the Fire Tower is now the WIZARD TOWER (same mechanic, new model): BUILT ew_defense_wizard_tower_v02 (black wizard hat on four pillars, __hat, __orb_anchor, __crew_anchor), approved by Siddharth 2026-10-26. | 1-2k | CHANGED, DONE |
 | D02 | | model | Archer tower tiers 2 and 3 | REMOVED: no per-tower upgrades. | | REMOVED |
-| D03 | P0 | model | Blast Brazier (magic-bomb tower; rename open) | 2 x 2. 'Tipping Cauldron': rune stone base, turntable head, cauldron that tips to lob magic bombs (black/orange/red). Short range, 1-cell AoE, low damage. DONE: ew_defense_bomb_tower_v06 APPROVED by Siddharth 2026-10-18 (v05 look, parts split: head, cauldron, ladle, bombs 1-3) (plain bombs; brew, rune and fuse glow are VFX). REPLACED 2026-10-26 (Siddharth): the Blast Brazier is removed and replaced by the GUARD TOWER (a spawning tower, Guards stand in a ring and fight what comes into sight): BUILT ew_defense_guard_tower_v01 (keep, arched gate, armoury; __door_l/__door_r, __banner, __spawn_anchor), approved by Siddharth 2026-10-26. | 1-2k | CHANGED, DONE |
+| D03 | P0 | model | Guard Tower (was Blast Brazier) | 2 x 2. 'Tipping Cauldron': rune stone base, turntable head, cauldron that tips to lob magic bombs (black/orange/red). Short range, 1-cell AoE, low damage. DONE: ew_defense_bomb_tower_v06 APPROVED by Siddharth 2026-10-18 (v05 look, parts split: head, cauldron, ladle, bombs 1-3) (plain bombs; brew, rune and fuse glow are VFX). REPLACED 2026-10-26 (Siddharth): the Blast Brazier is removed and replaced by the GUARD TOWER (a spawning tower, Guards stand in a ring and fight what comes into sight): BUILT ew_defense_guard_tower_v01 (keep, arched gate, armoury; __door_l/__door_r, __banner, __spawn_anchor), approved by Siddharth 2026-10-26. | 1-2k | CHANGED, DONE |
 | D04 | P1 | model | Wind Crossbow Tower (was Longbow; name open) | 2 x 2. Low stone keep, railed timber deck, big crossbow on a turntable (__swivel). Pale-green wind VFX on the bolt. Lower damage, longer range, piercing. | 1-2k | DONE: ew_defense_crossbow_tower_v03 APPROVED by Siddharth 2026-10-18 (parts: swivel, string, bolt, prod) |
 | D05 | P1 | model | Airship (friendly) | 2 x 2. Moored balloon ship (ref1 shape): bone balloon with diamond net and red band, wide round dark hull, stern cabin, deck cannon turret (360 deg) firing a flaming cannonball; tethered to a stone-capped stake on a plank landing pad (ref2). Air targets only. Max 2. | 1-2k | DONE: ew_defense_airship_v01 APPROVED by Siddharth 2026-10-19 (parts: ship, flag, turret, barrel, tether). Open: barrel elevation limits (clear at every heading from +15 to +30 deg) |
 | D06 | | model | Anti-air option | RESOLVED: the Airship (D05) handles flyers; hands and Fire Tower help. | | REMOVED |
-| D07 | P0 | model | Watch Hut (Guard spawner) | 2 x 2. Spawns Guards only (one spawning building per troop type, Siddharth 2026-10-19). Closed/spawning door states. Designed after the Guard character is final. | 1-2k | CHANGED |
-| D08 | P0 | model | Troop: Guard | Melee, fits 1 cell. | 1-2k | EDIT |
-| D09 | P1 | model | Troop: Slinger | Ranged, unlocked in loop 2. | 1-2k | EDIT |
+| D07 | | model | Watch Hut (Guard spawner) | REMOVED 2026-10-26 (Siddharth): cut for M1 (Siddharth 2026-10-25); Guards now live inside the Guard Tower (D03). | 1-2k | REMOVED |
+| D08 | | model | Troop: Guard | REMOVED 2026-10-26 (Siddharth): cut as a separate troop; Guards are crew of the Guard Tower (D03), their body is the character-kit job. | 1-2k | REMOVED |
+| D09 | | model | Troop: Slinger | REMOVED 2026-10-26 (Siddharth): cut for M1 (Siddharth 2026-10-25). | 1-2k | REMOVED |
 | D10 | P0 | anim | Troop animation set | Idle, walk, attack, hit, die, spawn via part tweens. | | KEEP |
 | D11 | P0 | model | Rally flag and rally ring | Planted by point and pinch. The ring is a VFX ring at __ring_anchor, not a model (Siddharth 2026-10-21). BUILT 2026-10-21: two flags kept, ew_defense_rally_flag_banner_v01 (288 tris) and ew_defense_rally_flag_pennant_v01 (300 tris), both awaiting Siddharth; he picks which ships later. Open: final pick, and the tris budget (list said <200). | <200 | EDIT |
 | D12 | P0 | shader | Placement ghost and range ring | Translucent material, green valid, red invalid, per-type ghost silhouettes. Basic version exists in code. | | EDIT, BUILT |
@@ -124,7 +124,7 @@ Roster changed: 4 towers plus the hut, no tiers.
 | D18 | P1 | anim | Tower firing animations | Fire Tower recoil, Longbow draw and release, Brazier flame flare, Airship propeller and gun. | | EDIT |
 | D19 | | model | Damaged / destroyed tower state | REMOVED: enemies attack houses, not towers. House damage is the shuttered state (V01). | | REMOVED |
 | D20 | P1 | model | Airship projectile | NEW. BUILT 2026-10-21: ew_defense_cannonball_v01 (dark iron ball with belt, fire is VFX at __fire_anchor, 108 tris), APPROVED by Siddharth 2026-10-21. | <100 | NEW |
-| D21 | P1 | model | Slinger spawning building (name open) | 2 x 2. Spawns Slingers (one spawning building per troop type, Siddharth 2026-10-19). Cost and unlock open. Designed after the Slinger character is final. | 1-2k | NEW |
+| D21 | | model | Slinger spawning building (name open) | REMOVED 2026-10-26 (Siddharth): cut for M1 (Siddharth 2026-10-25). | 1-2k | REMOVED |
 
 ## E Enemies
 Types and sizes: Grunt, Scout, Tunneler, Splitter, Wisp (the only flyer), Fog variant, boss "the Warden" (placeholder name). Faceted skeleton family (#24-27), no jewels, parts-based, tween-animated.
@@ -169,11 +169,11 @@ Rebuilt. Old M01-M04 (wall rift portal, portal animation, forest-edge portal, bo
 Spells are cooldown-only and fit in a 4-spell pool.
 | ID | Pri | Kind | Asset | Notes | Budget | Change |
 |---|---|---|---|---|---|---|
-| I01 | P1 | model | Fate Coin | Model, flick physics, 6 glyph faces (one per outcome). | <300 | EDIT |
+| I01 | | model | Fate Coin | REMOVED 2026-10-26 (Siddharth): cut for M1 (parked 2026-10-23, cut 2026-10-25); may return after the hackathon. | <300 | REMOVED |
 | I02 | P1 | vfx | Coin result effect | Landing glow with glyph, by outcome. | | KEEP |
 | I03 | P0 | model | Crystal Lens | Hand-held lens (handle plus crystal, glowing) for Foresight. MODEL BUILT 2026-10-21: ew_foresight_crystal_lens_v01 (548 tris), variant B tall oval gold hand mirror, whole glass part (cracks + purple binding are shader/VFX, fade per tier); APPROVED by Siddharth 2026-10-21 (548 tris accepted over the <500 target). | <500 | EDIT |
 | I04 | P0 | shader | Foresight blur-to-sharp lens shader | Sharper each loop; cheap, no full-screen post effects. | | KEEP |
-| I05 | P1 | model | Mend Vial | One bottle, liquid shader, tilt to pour. Cooldown 20 s. | <400 | CHANGED |
+| I05 | | model | Mend Vial | REMOVED 2026-10-26 (Siddharth): replaced by Storm Cloud and Rage (2026-10-25). | <400 | REMOVED |
 | I06 | P1 | model | Fire Orb | Thrown. Cooldown 8 s. | <200 | KEEP |
 | I07 | P0 | model | Boulder Drop | Falls under toy gravity (0.25 g); release height decides timing and impact. Cooldown 15 s. The chosen vertical feature. | <300 | KEEP |
 | I08 | | model | Drop spell: falling star or flask | REMOVED: the pool is 4 spells. | | REMOVED |
