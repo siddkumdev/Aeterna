@@ -1179,6 +1179,23 @@ func _vfx() -> void:
 	check("the wind never changes a rule: the grunt still took bolt damage", foe3.hp < 99999.0)
 	g3.queue_free()
 	await process_frame
+	var g4 := await _make_game()
+	g4.trust = 500
+	g4.try_build("airship", Vector2i(5, 12))
+	var sh: Tower = g4.towers[0]
+	check("the Airship has its effects (burner and muzzle anchors found)", sh.fx != null and sh.fx._burner_at != null and sh.fx._muzzle_at != null)
+	var home: Vector3 = sh.fx._ship.position
+	g4.start_night()
+	g4._spawn_queue.clear()
+	var wisp := _still(g4, "wisp", _at(7, 9))
+	wisp.hp = 99999.0
+	sh.cooldown = 0.0
+	g4.step(0.05)
+	sh.fx._process(0.4)
+	check("the balloon bobs (moves a little, under 3 mm)", sh.fx._ship.position.distance_to(home) > 0.0001 and sh.fx._ship.position.distance_to(home) < 0.003)
+	check("an Airship shot is a flaming cannonball (painted head and tail)", not g4.shots.is_empty() and g4.shots[0]._glow != null and g4.shots[0]._trail != null)
+	g4.queue_free()
+	await process_frame
 	g = await _make_game()
 	var n := 0
 	for i in 60:

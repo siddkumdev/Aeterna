@@ -33,6 +33,11 @@ static func attach(t: Tower, orb_anchor: Node3D, parts := {}, gate: Node3D = nul
 		fx.tower = t
 		fx._build_guard(parts, gate)
 		return fx
+	if t.kind == "airship" and parts.has("ship"):
+		t.add_child(fx)
+		fx.tower = t
+		fx._build_ship(parts)
+		return fx
 	fx.free()
 	return null
 
@@ -73,6 +78,9 @@ func _process(delta: float) -> void:
 		return
 	if tower.kind == "guard":
 		_process_guard(delta)
+		return
+	if tower.kind == "airship":
+		_process_ship(delta)
 		return
 	if orb == null:
 		return
@@ -185,3 +193,54 @@ func _dust() -> void:
 	if _gate == null or not _gate.is_inside_tree():
 		return
 	VfxKit.toon_dust(tower.game.shots_root, _gate.global_position + Vector3(0, 0.018, 0.01), 0.08)
+
+
+# ---- Airship: the burner flame under the balloon, the muzzle flash and smoke, the balloon bobbing on its tether ------
+
+var _ship: Node3D
+var _flag: Node3D
+var _ship_home := Transform3D.IDENTITY
+var _flag_home := Basis.IDENTITY
+var _burner: MeshInstance3D
+var _burner_at: Node3D  # the model's burner_anchor, in the balloon's mouth
+var _muzzle_at: Node3D  # the model's muzzle_anchor on the barrel
+
+
+func _build_ship(parts: Dictionary) -> void:
+	_ship = parts["ship"]
+	_ship_home = _ship.transform
+	_flag = parts.get("flag")
+	if _flag != null:
+		_flag_home = _flag.basis
+	for n in ModelUtil.walk(tower):
+		if n is Marker3D and str(n.name).ends_with("burner_anchor"):
+			_burner_at = n
+		elif n is Marker3D and str(n.name).ends_with("muzzle_anchor"):
+			_muzzle_at = n
+	_burner = VfxKit.toon_fire(self, 1, Vector2(0.014, 0.024), 0.5, 1.6)
+	VfxKit.toon_set(_burner, "depth_bias", 0.012)
+	_shots = tower.shots_fired
+
+
+func _process_ship(delta: float) -> void:
+	_t += delta
+	var charge := 0.0
+	if tower.aiming:
+		charge = clampf(1.0 - tower.cooldown / maxf(tower.interval, 0.01), 0.0, 1.0)
+	# the moored balloon bobs and sways a little (kept under 3 mm so the rope still reaches its bow)
+	var bob := Vector3(0, 0.0025 * sin(_t * 1.4), 0)
+	var sway := Basis.from_euler(Vector3(sin(_t * 0.9) * 0.025, 0.0, sin(_t * 1.1) * 0.025))
+	_ship.transform = Transform3D(_ship_home.basis * sway, _ship_home.origin + bob)
+	if _flag != null:
+		_flag.basis = _flag_home * Basis.from_euler(Vector3(0.0, sin(_t * 3.1) * 0.2 + sin(_t * 7.3) * 0.05, sin(_t * 2.2) * 0.06))
+	# the burner: a small steady flame, roaring up as the cannon charges a shot
+	if _burner_at != null:
+		_burner.global_position = _burner_at.global_position
+	VfxKit.toon_set(_burner, "energy", 0.4 + 0.5 * charge + 0.08 * sin(_t * 8.0))
+	VfxKit.toon_set(_burner, "size", Vector2(0.012 + 0.008 * charge, 0.02 + 0.014 * charge))
+	if tower.shots_fired != _shots:
+		_shots = tower.shots_fired
+		if _muzzle_at != null:
+			var root: Node = tower.game.shots_root
+			VfxKit.toon_burst(root, _muzzle_at.global_position, 0.05, "burst", 0.2)  # the flash
+			VfxKit.toon_smoke(root, _muzzle_at.global_position, 0.035, 1.3)  # and a puff of smoke

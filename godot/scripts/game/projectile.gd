@@ -150,6 +150,8 @@ func _impact_fx() -> void:
 	if _fx_kind == "fireball":
 		var s := _fx_scale
 		VfxKit.toon_burst(game.shots_root, global_position + Vector3(0, 0.03, 0) * s, 0.17 * s, "burst", 0.5)
+		if is_instance_valid(target) and target.flying:
+			return  # a hit in the air has no ground to ring
 		var ground := Vector3(global_position.x, game.board.global_position.y, global_position.z)
 		VfxKit.toon_burst(game.shots_root, ground, maxf(0.08, splash * 2.2), "ring", 0.5)
 

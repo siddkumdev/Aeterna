@@ -165,7 +165,7 @@ const TOWERS := {
 	"airship": {
 		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
 		"scene": "res://assets/defense/ew_defense_airship_v02.glb", "turn_part": "turret",
-		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0,
+		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0, "fx": "fireball",
 		"crew": "pilot",
 	},
 }
