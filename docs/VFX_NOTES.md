@@ -106,3 +106,4 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | 2026-10-27 | Longbow effects (vortex REMOVED 2026-10-27, Siddharth: "remove the spiral thing"): loaded-bolt vortex (low at rest, tall as the string draws), 3 gust streaks behind the flying bolt, pierce slash on every enemy hit, release slash + gust ring, faint idle ground ring every ~2-3 s | same | bolt_anchor, bolt, enemy chest | X22, X27 |
 | 2026-10-27 | Longbow wind toned down and made see-through | Siddharth: "too much vfx for the long bow ... reduce that and also it should be a bit transparent" | same anchors | X22 |
 | 2026-10-27 | Longbow: release spark and pierce slash removed | Siddharth: remove the spiral at the bow tip and at the enemy | - | X22 |
+| 2026-10-27 | Wizard Tower and Longbow Tower effects APPROVED by Siddharth | Siddharth: "Yes approve both, start the Airship" | - | X26, X22 |

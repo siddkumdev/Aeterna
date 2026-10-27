@@ -204,3 +204,5 @@ Siddharth: "Approved, skip the torch, start the Longbow Tower." Guard Tower v02 
 "Remove the spiral thing, I don't like it": the little tornado by the loaded bolt is gone. Kept: gust streaks behind the bolt, pierce slash on hits, small release spark.
 ## 2026-10-27 - Longbow: only the bolt trail stays (Siddharth)
 "No, like at the tip of the bow at the tower and also in the enemies position": the release spark at the bow tip and the pierce slash on enemies are removed. The Longbow's only wind effect is now the gust streaks behind the flying bolt.
+## 2026-10-27 - Wizard Tower and Longbow Tower VFX approved (Siddharth)
+Siddharth: "Yes approve both, start the Airship." Approved by Siddharth (2026-10-27): Wizard Tower effects (painted orb, charge flame, release, swirl, smoke, build pop) and Longbow Tower effects (gust streaks behind the bolt only; vortex, release spark and hit slash removed). Guard Tower effects and model v02 were approved earlier the same day. Next: Airship.
