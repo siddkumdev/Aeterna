@@ -27,6 +27,7 @@ func _initialize() -> void:
 	await _warden()
 	await _crews()
 	await _guards()
+	await _decor()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -939,7 +940,7 @@ func _crews() -> void:
 	g.trust = 500
 	g.try_build("fire", Vector2i(5, 12))  # (6,12) now holds village props
 	g.try_build("crossbow", Vector2i(11, 12))
-	g.try_build("airship", Vector2i(16, 12))
+	g.try_build("airship", Vector2i(17, 12))  # (16,13) now holds a village prop
 	var kinds := g.towers.map(func(t): return t.crew.kind if t.crew else "")
 	check("every tower has its crew: wizard, archer, pilot", kinds == ["wizard", "archer", "pilot"])
 	var wiz: Tower = g.towers[0]
@@ -1069,3 +1070,20 @@ func _distinct_posts(t: Tower) -> bool:
 			return false
 		seen[c] = true
 	return true
+
+
+func _decor() -> void:
+	var g := await _make_game()
+	g.trust = 1000
+	check("the village has prop cells", g.decor_cells.size() >= 10)
+	var c: Vector2i = g.decor_cells[0]
+	var top_left := c  # a 2 x 2 tower whose top-left cell is the prop cell
+	check("a tower cannot be built on a village prop", not g.can_build("fire", top_left) and not g.try_build("fire", top_left))
+	check("props never sit in the open centre block", g.decor_cells.all(func(d): return not VillageDresser.CENTRE_BLOCK.has_point(d)))
+	check("the centre still takes a tower", g.can_build("fire", Vector2i(11, 11)))
+	# enemies walk through props: the route does not treat a prop cell as solid
+	check("props are not solid for the pathfinder", not g.nav.astar.is_point_solid(c))
+	g._start_loop("again")
+	check("the props still block towers after the time loop resets the grid", not g.can_build("fire", top_left))
+	g.queue_free()
+	await process_frame
