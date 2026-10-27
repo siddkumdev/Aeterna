@@ -199,14 +199,13 @@ func _dust() -> void:
 
 var _vortex: MeshInstance3D
 var _bolt_at: Node3D  # the model's bolt_anchor (moves with the bolt)
-var _ring_t := 0.0
 
 
 func _build_bow() -> void:
 	for n in ModelUtil.walk(tower):
 		if n is Marker3D and str(n.name).ends_with("bolt_anchor"):
 			_bolt_at = n
-	_vortex = VfxKit.toon_wind(self, 0, Vector2(0.035, 0.06), 0.3, 1.2)
+	_vortex = VfxKit.toon_wind(self, 0, Vector2(0.02, 0.035), 0.3, 1.2)
 	VfxKit.toon_set(_vortex, "depth_bias", 0.015)
 	_shots = tower.shots_fired
 
@@ -219,14 +218,8 @@ func _process_bow(delta: float) -> void:
 	var at := _bolt_at.global_position if _bolt_at != null else tower.global_position + Vector3(0, 0.05, 0)
 	# the wind stands up round the loaded bolt: a low curl at rest, a tall fierce one as the string comes back
 	_vortex.global_position = at + Vector3(0, -0.01, 0)
-	VfxKit.toon_set(_vortex, "size", Vector2(0.03 + 0.03 * charge, 0.04 + 0.04 * charge))
-	VfxKit.toon_set(_vortex, "energy", 0.35 + 0.65 * charge + 0.05 * sin(_t * 4.0))
-	# a faint breath of wind rings out across the ground now and then
-	_ring_t -= delta
-	if _ring_t <= 0.0:
-		_ring_t = 2.2 + randf() * 0.8
-		var foot := Vector3(tower.global_position.x, tower.game.board.global_position.y, tower.global_position.z)
-		VfxKit.toon_wind_burst(tower.game.shots_root, foot, 0.11, "ring", 1.2)
+	VfxKit.toon_set(_vortex, "size", Vector2(0.018 + 0.012 * charge, 0.03 + 0.02 * charge))
+	VfxKit.toon_set(_vortex, "energy", 0.3 + 0.5 * charge)
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
 		_bow_fired(at)
@@ -234,5 +227,4 @@ func _process_bow(delta: float) -> void:
 
 func _bow_fired(at: Vector3) -> void:
 	var root: Node = tower.game.shots_root
-	VfxKit.toon_wind_burst(root, at, 0.09, "slash", 0.3)  # the string snaps: a white spark with slashes
-	VfxKit.toon_wind_burst(root, at - Vector3(0, 0.02, 0), 0.12, "ring", 0.4)  # and a hard gust ring
+	VfxKit.toon_wind_burst(root, at, 0.05, "slash", 0.25)  # the string snaps: one small white spark with slashes

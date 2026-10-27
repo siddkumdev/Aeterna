@@ -4,7 +4,7 @@ render_mode unshaded, cull_disabled, depth_draw_never;
 // swept blades with pale white-green highlights and a ring of tiny streaks on the ground. STREAKS, never sparkles
 // (decided 2026-10-18), and always whiter than heal_green so it never reads as healing.
 //   mode 0  VORTEX   a small tornado standing on the quad's bottom edge (uv.y 0 = base): ink blades with pale highlights
-//   mode 1  STREAKS  three swept streaks along `axis` (uv.x 0 = tail tip, 1 = head): the bolt's gust trail
+//   mode 1  STREAKS  two swept streaks along `axis` (uv.x 0 = tail tip, 1 = head): the bolt's gust trail
 //   mode 2  RING     flat ring of broken streaks on the ground, `progress` 0 -> 1 (lay flat)
 //   mode 3  SLASH    a pierce flash: pale slashes whipping out of a white spark, `progress` 0 -> 1
 
@@ -14,7 +14,7 @@ uniform float progress : hint_range(0.0, 1.0) = 0.0;
 uniform float energy : hint_range(0.0, 1.5) = 1.0;
 uniform float flow = 1.0;
 uniform float seed = 0.0;
-uniform float alpha = 1.0;
+uniform float alpha = 0.55;  // see-through: the wind is a light touch, never hides the tower or the enemy
 uniform vec3 c_hi : source_color = vec3(0.957, 1.0, 0.961);     // the whitest streak
 uniform vec3 c_pale : source_color = vec3(0.749, 0.941, 0.773); // BFF0C5 (heal_green lightened toward white)
 uniform vec3 c_green : source_color = vec3(0.561, 0.863, 0.69); // 8FDCB0, the deepest wind tone, still paler than heal_green
@@ -71,12 +71,12 @@ void fragment() {
 		col = mix(col, c_pale, (1.0 - smoothstep(0.0, 0.12, y)) * 0.9);  // a bright foot where it meets the ground
 	} else if (mode == 1) {
 		float x = uv.x;
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 2; i++) {
 			float fi = float(i);
-			float lane = (fi - 1.0) * 0.44;
+			float lane = (fi - 0.5) * 0.5;
 			float start = 0.08 + fi * 0.17 + 0.1 * nz(vec2(fi * 3.1, seed));
 			float wob = (nz(vec2(x * 2.2 - t * 1.6 + fi * 7.0, fi)) - 0.5) * 0.22 * (1.0 - x);
-			float w = (0.05 + 0.1 * smoothstep(start, 1.0, x)) * (i == 1 ? 1.3 : 0.8);
+			float w = (0.05 + 0.1 * smoothstep(start, 1.0, x)) * 0.8;
 			float d = abs(p.y - lane - wob) / w;
 			float on = step(start, x) * (1.0 - smoothstep(0.9, 1.0, d));
 			if (on > vis) {

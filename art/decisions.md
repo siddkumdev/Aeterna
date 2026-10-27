@@ -198,3 +198,5 @@ Siddharth: "I like this now" about the Wizard Tower effects (painted orb, charge
 Hearth smoke looked like it went through the roof. Added a stone chimney with a dark opening on the armoury roof (model v02, `__smoke_anchor`); smoke now rises from it. Awaiting approval.
 ## 2026-10-27 - Guard Tower v02 approved, Longbow Tower VFX started (Siddharth)
 Siddharth: "Approved, skip the torch, start the Longbow Tower." Guard Tower v02 (chimney) approved; no torch. Longbow wind built as a toon shader in the #33 look (black ink swept blades, white-green highlights, streaks). Awaiting his feedback in the game.
+## 2026-10-27 - Longbow wind reduced (Siddharth)
+"Too much vfx for the long bow, reduce that, and a bit transparent." Removed the idle ground ring and the release ring; vortex, streaks (3 to 2) and slashes smaller; all wind drawn at 55% opacity.
