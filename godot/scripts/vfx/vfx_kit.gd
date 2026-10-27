@@ -11,6 +11,9 @@ const FIRE_YELLOW := Color("FFD45A") # palette fire_yellow
 const INK := Color("111C30")         # palette ink
 const WIND := Color("BFF0C5")        # heal_green 7FE08A lightened 50% toward white: kept whiter than heal_green
 const MAX_BURSTS := 24
+const FIRE_SHADER := preload("res://shaders/fx_toon_fire.gdshader")
+const BURST_SHADER := preload("res://shaders/fx_toon_burst.gdshader")
+static var _noise: ImageTexture
 
 static var _tex := {}
 static var _mats := {}
@@ -205,3 +208,95 @@ static func ring(at_parent: Node, world_pos: Vector3, color: Color, radius := 0.
 
 static func active_bursts() -> int:
 	return _active
+
+
+# ---- hand-painted toon fire (the moodboard VFX look: hard bands, ink cut-outs, swept tails) -----------------------
+
+static func noise() -> ImageTexture:
+	## Seamless soft noise (3 octaves of value noise) drawn once; the toon shaders scroll and threshold it.
+	if _noise != null:
+		return _noise
+	var n := 128
+	var img := Image.create(n, n, false, Image.FORMAT_L8)
+	var oct := [[4, 0.55], [8, 0.3], [16, 0.15]]
+	var lat := {}
+	for o in oct:
+		var f: int = o[0]
+		var g := []
+		for i in f * f:
+			g.append(randf_seed_hash(i * 7 + f * 131))
+		lat[f] = g
+	for y in n:
+		for x in n:
+			var v := 0.0
+			for o in oct:
+				var f: int = o[0]
+				var fx := float(x) / n * f
+				var fy := float(y) / n * f
+				var x0 := int(floor(fx)) % f
+				var y0 := int(floor(fy)) % f
+				var x1 := (x0 + 1) % f
+				var y1 := (y0 + 1) % f
+				var tx := smoothstep(0.0, 1.0, fx - floor(fx))
+				var ty := smoothstep(0.0, 1.0, fy - floor(fy))
+				var g: Array = lat[f]
+				var a := lerpf(g[y0 * f + x0], g[y0 * f + x1], tx)
+				var b := lerpf(g[y1 * f + x0], g[y1 * f + x1], tx)
+				v += lerpf(a, b, ty) * o[1]
+			img.set_pixel(x, y, Color(v, v, v, 1.0))
+	_noise = ImageTexture.create_from_image(img)
+	return _noise
+
+
+static func randf_seed_hash(i: int) -> float:
+	var h := (i * 374761393 + 668265263) & 0x7fffffff
+	h = ((h ^ (h >> 13)) * 1274126177) & 0x7fffffff
+	return float(h % 10007) / 10007.0
+
+
+static func toon_fire(parent: Node3D, mode: int, size: Vector2, energy := 1.0, flow := 1.0) -> MeshInstance3D:
+	## mode 0 orb, 1 plume, 2 comet (see fx_toon_fire.gdshader). size = world size in metres (along the axis, across).
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = FIRE_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", mode)
+	m.set_shader_parameter("size", size)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("flow", flow)
+	m.set_shader_parameter("seed", randf() * 40.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func toon_set(mi: MeshInstance3D, param: String, value: Variant) -> void:
+	(mi.material_override as ShaderMaterial).set_shader_parameter(param, value)
+
+
+static func toon_burst(at_parent: Node, world_pos: Vector3, size: float, kind := "burst", life := 0.5) -> MeshInstance3D:
+	## A one-shot painted explosion ("burst": cloud, dark blotches and pale shards) or a flaming ground ring ("ring").
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return null
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = BURST_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", 1 if kind == "ring" else 0)
+	m.set_shader_parameter("size", Vector2(size, size))
+	m.set_shader_parameter("seed", randf() * 40.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	at_parent.add_child(mi)
+	mi.global_position = world_pos + (Vector3(0, 0.002, 0) if kind == "ring" else Vector3.ZERO)
+	_active += 1
+	mi.tree_exited.connect(_burst_gone)
+	var tw := mi.create_tween()
+	tw.tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
+	tw.tween_callback(mi.queue_free)
+	return mi

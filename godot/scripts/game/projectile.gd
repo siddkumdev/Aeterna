@@ -25,8 +25,9 @@ var _dir := Vector3.ZERO
 var _hit := {}
 var _fx_kind := ""
 var _fx_scale := 1.0
-var _glow: MeshInstance3D
-var _trail: CPUParticles3D
+var _glow: MeshInstance3D   # the painted fire head
+var _trail: MeshInstance3D  # the painted comet tail
+var _last := Vector3.ZERO
 
 
 func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mods := {}) -> void:
@@ -57,15 +58,17 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 	_fx_kind = cfg.get("fx", "")
 	_fx_scale = mods.get("scale", 1.0) * cfg.get("shot_scale", 1.0)
 	if _fx_kind == "fireball":
-		# the dark core is wrapped in fire (X02): a hot glow round it and a trail of embers behind
-		_glow = VfxKit.halo(self, 0.034 * _fx_scale, Color(VfxKit.FIRE_ORANGE, 0.85))
-		VfxKit.halo(self, 0.016 * _fx_scale, Color(VfxKit.FIRE_YELLOW, 0.9), "disc")  # the white-hot rim round the dark core
-		_trail = VfxKit.trail(self, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 70, 0.4, 0.010 * _fx_scale)
+		# the dark core is wrapped in painted fire (X02): an orb-shaped head and a swept comet tail (moodboard #44/#31)
+		var k := _fx_scale
+		_glow = VfxKit.toon_fire(self, 0, Vector2(0.05, 0.05) * k, 1.0, 1.4)
+		_trail = VfxKit.toon_fire(self, 2, Vector2(0.14, 0.05) * k, 1.0, 1.2)
+		_last = from
 
 
 func step(delta: float) -> void:
 	if done:
 		return
+	_aim_tail()
 	match kind:
 		"single":
 			if is_instance_valid(target) and target.alive:
@@ -107,6 +110,15 @@ func step(delta: float) -> void:
 				_finish()
 
 
+func _aim_tail() -> void:
+	if _trail == null:
+		return
+	var v := global_position - _last
+	_last = global_position
+	if v.length() > 0.0001:
+		VfxKit.toon_set(_trail, "axis", v.normalized())
+
+
 func _can_hit(e: Enemy) -> bool:
 	return e.targetable(mods.get("air", false), mods.get("ground", true))
 
@@ -125,8 +137,6 @@ func _hit_enemy(e: Enemy) -> void:
 func _finish() -> void:
 	done = true
 	_impact_fx()
-	if _trail != null:
-		VfxKit.release_trail(_trail, game.shots_root)  # the trail fades out where the shot ended
 	queue_free()
 
 
@@ -135,8 +145,9 @@ func _impact_fx() -> void:
 		return
 	if _fx_kind == "fireball":
 		var s := _fx_scale
-		VfxKit.flash(game.shots_root, global_position, Color(VfxKit.FIRE_YELLOW, 0.95), 0.045 * s, 0.18)
-		VfxKit.burst(game.shots_root, global_position, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 14, 0.07, 0.45, 0.007 * s)
+		VfxKit.toon_burst(game.shots_root, global_position + Vector3(0, 0.03, 0) * s, 0.17 * s, "burst", 0.5)
+		var ground := Vector3(global_position.x, game.board.global_position.y, global_position.z)
+		VfxKit.toon_burst(game.shots_root, ground, maxf(0.08, splash * 2.2), "ring", 0.5)
 
 
 static func _flat(v: Vector3) -> float:
