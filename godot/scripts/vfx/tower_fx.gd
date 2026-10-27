@@ -39,12 +39,12 @@ func _build_wizard(orb_anchor: Node3D) -> void:
 	VfxKit.toon_set(_staff, "depth_bias", 0.02)  # nearer the camera so the hat and pillars never hide it
 	_plume = VfxKit.toon_fire(self, 1, Vector2(0.02, 0.05), 0.0, 1.8)
 	VfxKit.toon_set(_plume, "depth_bias", 0.02)
-	_idle = VfxKit.trail(self, VfxKit.FIRE_ORANGE, VfxKit.INK, 3, 1.6, 0.003)
-	_idle.position = Vector3(0, 0.1, 0)
+	_idle = VfxKit.trail(orb_anchor, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 14, 1.6, 0.009)  # ember shower off the orb, clear of the hat
+	_idle.position = Vector3(0, -0.004, 0)
 	_idle.direction = Vector3.UP
-	_idle.spread = 40.0
-	_idle.initial_velocity_min = 0.004
-	_idle.initial_velocity_max = 0.012
+	_idle.spread = 80.0
+	_idle.initial_velocity_min = 0.01
+	_idle.initial_velocity_max = 0.025
 	_idle.gravity = Vector3.ZERO
 	_shots = tower.shots_fired
 
@@ -64,15 +64,14 @@ func _process(delta: float) -> void:
 		_charge = clampf(1.0 - tower.cooldown / maxf(tower.interval, 0.01), 0.0, 1.0)
 	orb.level = 1.0 - 0.75 * _charge  # the orb gives its power to the staff
 	var sp := _staff_pos()
-	var idle := 0.2 + 0.05 * sin(_t * 3.0)
+	var idle := 0.5 + 0.08 * sin(_t * 3.0)
 	var glow := maxf(idle, _charge)
 	_staff.global_position = sp
 	VfxKit.toon_set(_staff, "size", Vector2.ONE * (0.012 + 0.03 * glow))
 	VfxKit.toon_set(_staff, "energy", 0.15 + 1.0 * glow)
 	_plume.global_position = sp + Vector3(0, 0.006 + 0.012 * _charge, 0)
-	VfxKit.toon_set(_plume, "size", Vector2(0.018 + 0.022 * _charge, 0.016 + 0.024 * _charge))
-	_plume.visible = _charge > 0.1
-	VfxKit.toon_set(_plume, "energy", 1.1 * _charge * _charge)  # grows as the staff fills, gone when idle
+	VfxKit.toon_set(_plume, "size", Vector2(0.014 + 0.026 * glow, 0.012 + 0.028 * glow))
+	VfxKit.toon_set(_plume, "energy", 0.45 + 0.65 * _charge)  # a small steady flame at rest, full when charged  # grows as the staff fills, gone when idle
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
 		_fired(sp)
