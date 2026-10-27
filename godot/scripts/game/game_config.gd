@@ -157,7 +157,7 @@ const TOWERS := {
 	"crossbow": {
 		"name": "Longbow Tower", "cost": 55, "range": 6.0, "damage": 4.0, "interval": 1.2, "kind": "pierce",
 		"pierce_width": 0.5, "scene": "res://assets/defense/ew_defense_crossbow_tower_v04.glb", "turn_part": "swivel",
-		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0,
+		"shot": "res://assets/defense/ew_defense_wind_bolt_v01.glb", "shot_speed": 20.0, "fx": "wind",
 		"crew": "archer",  # stands at the model's crew_anchor (a deck corner)
 	},
 	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot).

@@ -13,6 +13,7 @@ const WIND := Color("BFF0C5")        # heal_green 7FE08A lightened 50% toward wh
 const MAX_BURSTS := 24
 const FIRE_SHADER := preload("res://shaders/fx_toon_fire.gdshader")
 const BURST_SHADER := preload("res://shaders/fx_toon_burst.gdshader")
+const WIND_SHADER := preload("res://shaders/fx_toon_wind.gdshader")
 static var _noise: ImageTexture
 
 static var _tex := {}
@@ -275,6 +276,50 @@ static func toon_fire(parent: Node3D, mode: int, size: Vector2, energy := 1.0, f
 
 static func toon_set(mi: MeshInstance3D, param: String, value: Variant) -> void:
 	(mi.material_override as ShaderMaterial).set_shader_parameter(param, value)
+
+
+static func toon_wind(parent: Node3D, mode: int, size: Vector2, energy := 1.0, flow := 1.0) -> MeshInstance3D:
+	## The Longbow's painted wind (fx_toon_wind.gdshader): mode 0 vortex, 1 gust streaks along `axis`.
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = WIND_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", mode)
+	m.set_shader_parameter("size", size)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("flow", flow)
+	m.set_shader_parameter("seed", randf() * 40.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func toon_wind_burst(at_parent: Node, world_pos: Vector3, size: float, kind := "slash", life := 0.4) -> MeshInstance3D:
+	## One-shot painted wind: "slash" (pierce flash, faces the camera) or "ring" (a flat gust ring on the ground).
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return null
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = WIND_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", 2 if kind == "ring" else 3)
+	m.set_shader_parameter("size", Vector2(size, size))
+	m.set_shader_parameter("seed", randf() * 40.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	at_parent.add_child(mi)
+	mi.global_position = world_pos + (Vector3(0, 0.002, 0) if kind == "ring" else Vector3.ZERO)
+	_active += 1
+	mi.tree_exited.connect(_burst_gone)
+	var tw := mi.create_tween()
+	tw.tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
+	tw.tween_callback(mi.queue_free)
+	return mi
 
 
 static func toon_burst(at_parent: Node, world_pos: Vector3, size: float, kind := "burst", life := 0.5) -> MeshInstance3D:

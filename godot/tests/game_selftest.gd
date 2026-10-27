@@ -1162,6 +1162,26 @@ func _vfx() -> void:
 	check("a Guard stepping out swings the gate leaves open", gt.fx._door_open > 0.5 and not gt.fx._door_l.basis.is_equal_approx(closed))
 	g2.queue_free()
 	await process_frame
+	var g3 := await _make_game()
+	g3.trust = 500
+	g3.try_build("crossbow", Vector2i(5, 12))
+	var bw: Tower = g3.towers[0]
+	check("the Longbow Tower has its wind effects, found at the bolt anchor", bw.fx != null and bw.fx._vortex != null and bw.fx._bolt_at != null)
+	g3.start_night()
+	g3._spawn_queue.clear()
+	var foe3 := _still(g3, "grunt", _at(7, 9))
+	foe3.hp = 99999.0
+	bw.cooldown = 0.0
+	g3.step(0.05)
+	bw.fx._process(0.016)
+	check("a Longbow shot rides a gust trail", not g3.shots.is_empty() and g3.shots[0]._trail != null)
+	for i in 60:
+		g3.step(0.05)
+		bw.fx._process(0.05)
+	await process_frame
+	check("the wind never changes a rule: the grunt still took bolt damage", foe3.hp < 99999.0)
+	g3.queue_free()
+	await process_frame
 	g = await _make_game()
 	var n := 0
 	for i in 60:

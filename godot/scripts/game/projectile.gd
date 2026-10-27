@@ -63,6 +63,10 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 		_glow = VfxKit.toon_fire(self, 0, Vector2(0.05, 0.05) * k, 1.0, 1.4)
 		_trail = VfxKit.toon_fire(self, 2, Vector2(0.14, 0.05) * k, 1.0, 1.2)
 		_last = from
+	elif _fx_kind == "wind":
+		# the bolt rides a gust: three swept pale-green streaks behind it (moodboard #33; streaks, never sparkles)
+		_trail = VfxKit.toon_wind(self, 1, Vector2(0.2, 0.06) * _fx_scale, 1.0, 1.4)
+		_last = from
 
 
 func step(delta: float) -> void:
@@ -131,6 +135,8 @@ func _hit_enemy(e: Enemy) -> void:
 		e.ignite(mods["burn"], 3.0, mods.get("burn_spreads", false))  # Ember Shot: burn for 3 s
 	if mods.get("slow", false):
 		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
+	if _fx_kind == "wind" and game != null and is_inside_tree():
+		VfxKit.toon_wind_burst(game.shots_root, e.chest(), 0.07, "slash", 0.35)  # the pierce flash
 	e.take_damage(dmg)
 
 
