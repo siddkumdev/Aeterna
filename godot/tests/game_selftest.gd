@@ -1172,11 +1172,9 @@ func _vfx() -> void:
 	foe3.hp = 99999.0
 	bw.cooldown = 0.0
 	g3.step(0.05)
-	bw.fx._process(0.016)
 	check("a Longbow shot rides a gust trail", not g3.shots.is_empty() and g3.shots[0]._trail != null)
 	for i in 60:
 		g3.step(0.05)
-		bw.fx._process(0.05)
 	await process_frame
 	check("the wind never changes a rule: the grunt still took bolt damage", foe3.hp < 99999.0)
 	g3.queue_free()
