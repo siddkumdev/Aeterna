@@ -194,3 +194,5 @@ Soft glow halos rejected. Effects are hand-painted toon shaders: banded yellow/o
 
 ## 2026-10-27 - Wizard Tower VFX liked; Guard Tower VFX started (Siddharth)
 Siddharth: "I like this now" about the Wizard Tower effects (painted orb, charge flame, swirl, smoke). Next tower: Guard Tower (gate swing, dust puff, banner). Not yet marked approved in the tracker; awaiting his explicit approval.
+## 2026-10-27 - Guard Tower v02: chimney (Siddharth)
+Hearth smoke looked like it went through the roof. Added a stone chimney with a dark opening on the armoury roof (model v02, `__smoke_anchor`); smoke now rises from it. Awaiting approval.

@@ -149,7 +149,7 @@ const TOWERS := {
 	# stand-ins (~): hit every second, walking speed, the reach of a spear. Cards: Shield Wall, Friendly Faces.
 	"guard": {
 		"name": "Guard Tower", "cost": 70, "range": 2.0, "damage": 4.0, "interval": 1.0, "kind": "spawner",
-		"scene": "res://assets/defense/ew_defense_guard_tower_v01.glb", "turn_part": "",
+		"scene": "res://assets/defense/ew_defense_guard_tower_v02.glb", "turn_part": "",
 		"guards": 3, "guard_hp": 30.0, "guard_damage": 4.0, "respawn": 8.0,
 		"sight": 2.0, "leash": 4.0,  # cells from the post (Siddharth: chase, then walk back)
 		"attack_interval": 1.0, "guard_speed": 0.8, "reach": 0.6,  # ~

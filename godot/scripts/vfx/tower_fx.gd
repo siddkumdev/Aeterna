@@ -134,6 +134,7 @@ var _banner_home := Basis.IDENTITY
 var _guards_seen := 0
 var _hearth_t := 0.0
 var _forge: MeshInstance3D
+var _chimney: Node3D  # the model's smoke_anchor: the flue opening on the armoury roof
 const DOOR_SWING := 1.7  # radians (about 100 degrees)
 
 
@@ -146,6 +147,9 @@ func _build_guard(parts: Dictionary, gate: Node3D) -> void:
 	for d in [_door_l, _door_r]:
 		_door_home.append(d.basis if d != null else Basis.IDENTITY)
 	_guards_seen = tower.guards.size()
+	for n in ModelUtil.walk(tower):
+		if n is Marker3D and str(n.name).ends_with("smoke_anchor"):
+			_chimney = n
 	_forge = VfxKit.toon_fire(self, 0, Vector2.ONE * 0.012, 0.5, 1.4)  # forge glow under the armoury roof
 	VfxKit.toon_set(_forge, "depth_bias", 0.012)
 
@@ -155,14 +159,14 @@ func _process_guard(delta: float) -> void:
 	# the banner: a slow sway with a quicker ripple, stronger when a fight is on
 	var wind := 0.07 + (0.05 if tower.aiming else 0.0)
 	_banner.basis = _banner_home * Basis.from_euler(Vector3(sin(_t * 1.9) * wind * 0.5, 0.0, sin(_t * 1.3) * wind + sin(_t * 5.1) * wind * 0.25))
-	# the armoury: a flickering forge glow under the lean-to and hearth smoke drifting off its roof
+	# the armoury: a flickering forge glow under the lean-to and hearth smoke rising out of the chimney
 	var base := tower.global_position
 	_forge.global_position = base + Vector3(0.0275, 0.016, 0.012)
 	VfxKit.toon_set(_forge, "energy", 0.45 + 0.2 * sin(_t * 9.0) + 0.1 * sin(_t * 15.0))
 	_hearth_t -= delta
 	if _hearth_t <= 0.0:
 		_hearth_t = 1.0 + randf() * 0.7
-		VfxKit.toon_smoke(tower.game.shots_root, base + Vector3(0.027, 0.042, -0.008), 0.04, 2.2)
+		VfxKit.toon_smoke(tower.game.shots_root, _chimney.global_position if _chimney != null else base + Vector3(0.032, 0.0535, -0.012), 0.03, 2.2)
 	# a Guard stepping out opens the gate for a moment and puffs dust
 	var n := tower.guards.size()
 	if n > _guards_seen and tower.game.phase == Game.Phase.NIGHT:

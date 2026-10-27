@@ -26,7 +26,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 import blender_common as bc  # noqa: E402
 
-NAME = "ew_defense_guard_tower_v01"
+NAME = "ew_defense_guard_tower_v02"
 R8 = 22.5
 
 
@@ -287,6 +287,18 @@ def armoury(h=0.030):
     return p
 
 
+CHIMNEY_TOP = (0.032, 0.012, 0.0535)  # the smoke leaves the dark opening here (v02, Siddharth 2026-10-27)
+
+
+def chimney():
+    """A stone stack through the armoury's shed roof, out past the keep roof's overhang so the smoke rises clear of it: a dark opening on top so the hearth
+    smoke visibly comes out of a flue instead of through the roof. Starts below the roof surface so it is embedded."""
+    x, y, _ = CHIMNEY_TOP
+    return [bc.box("chimney", (0.0085, 0.0085, 0.0135), (x, y, 0.04425), "stone_dark"),
+            bc.box("chimney_cap", (0.0105, 0.0105, 0.0030), (x, y, 0.0505), "stone"),
+            bc.box("chimney_hole", (0.0055, 0.0055, 0.0010), (x, y, 0.0525), "ink")]
+
+
 def keep_roof(r_eave, z, h=0.032, tip_flag=True):
     p = [bc.cone("keep_roof", r_eave, 0.006, h, (KX, 0, z + h / 2), "roof_teal", 8, R8)]
     if tip_flag:
@@ -348,11 +360,12 @@ def build_final(seed=0):
         ew_defense_guard_tower_v01__banner         pennant and pole, pivot at the pole's foot: flutter or sway
         ew_defense_guard_tower_v01__spawn_anchor   empty in the gateway: where each new Guard appears
         ew_defense_guard_tower_v01__pulse_anchor   empty at ground centre (sight / range ring reference)
+        v02 adds a stone chimney on the armoury roof and ew_defense_guard_tower_v02__smoke_anchor in its opening
     """
     base, ap = keep_base()
     doors = [o for o in base if o.name.startswith("gate_door")]
     base = [o for o in base if not o.name.startswith("gate_door")]
-    base += keep_roof(0.0385, 0.054, tip_flag=False) + armoury()
+    base += keep_roof(0.0385, 0.054, tip_flag=False) + armoury() + chimney()
     ban = banner(KX, 0.0, 0.054 + 0.032 - 0.003, 0.026)
     gz = 0.022
     gy = -ap - 0.0025
@@ -364,6 +377,7 @@ def build_final(seed=0):
     root = bc.assemble(NAME, groups)
     bc.anchor(root, "spawn_anchor", (KX, -ap - 0.004, 0.002), size=0.008)
     bc.anchor(root, "pulse_anchor", (0, 0, 0), size=0.05)
+    bc.anchor(root, "smoke_anchor", CHIMNEY_TOP, size=0.006)
     return root
 
 
