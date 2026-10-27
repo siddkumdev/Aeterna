@@ -11,6 +11,7 @@ uniform int mode = 0;
 uniform float progress : hint_range(0.0, 1.0) = 0.0;
 uniform float seed = 0.0;
 uniform float alpha = 1.0;
+uniform float shards = 1.0;  // 0 for smoke: no spikes
 uniform vec3 c_core : source_color = vec3(1.0, 0.831, 0.353);
 uniform vec3 c_mid : source_color = vec3(0.965, 0.643, 0.365);
 uniform vec3 c_out : source_color = vec3(0.91, 0.271, 0.173);
@@ -71,7 +72,7 @@ void fragment() {
 		float sp = pow(ang, 14.0) * 1.0;  // narrow wedges
 		float in_spike = step(inner, r) * step(r, len * (0.35 + 0.65 * sp)) * step(0.35, sp + 0.35 * (1.0 - r / max(len, 0.01)));
 		float spike_fade = 1.0 - smoothstep(0.55, 1.0, pr);
-		if (in_spike * spike_fade > 0.5 && vis < 0.5) {
+		if (shards > 0.5 && in_spike * spike_fade > 0.5 && vis < 0.5) {
 			col = c_shard;
 			vis = 1.0;
 		}

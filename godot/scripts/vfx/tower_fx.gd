@@ -11,10 +11,13 @@ var tower: Tower
 var orb: OrbGlow
 var _staff: MeshInstance3D
 var _plume: MeshInstance3D  # the painted flame wrapping the staff while it charges
+var _wisps: Array[MeshInstance3D] = []  # painted flame wisps spiralling from the base up to the orb
+var _smoke_t := 0.0
 var _idle: CPUParticles3D   # embers drifting off the hat at rest
 var _t := 0.0
 var _shots := 0
 var _charge := 0.0
+const WISPS := 6
 
 
 static func attach(t: Tower, orb_anchor: Node3D) -> TowerFx:
@@ -39,6 +42,10 @@ func _build_wizard(orb_anchor: Node3D) -> void:
 	VfxKit.toon_set(_staff, "depth_bias", 0.02)  # nearer the camera so the hat and pillars never hide it
 	_plume = VfxKit.toon_fire(self, 1, Vector2(0.02, 0.05), 0.0, 1.8)
 	VfxKit.toon_set(_plume, "depth_bias", 0.02)
+	for i in WISPS:
+		var w := VfxKit.toon_fire(self, 0, Vector2.ONE * 0.012, 0.8, 1.5)
+		VfxKit.toon_set(w, "depth_bias", 0.012)
+		_wisps.append(w)
 	_idle = VfxKit.trail(orb_anchor, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 14, 1.6, 0.009)  # ember shower off the orb, clear of the hat
 	_idle.position = Vector3(0, -0.004, 0)
 	_idle.direction = Vector3.UP
@@ -72,6 +79,11 @@ func _process(delta: float) -> void:
 	_plume.global_position = sp + Vector3(0, 0.006 + 0.012 * _charge, 0)
 	VfxKit.toon_set(_plume, "size", Vector2(0.014 + 0.026 * glow, 0.012 + 0.028 * glow))
 	VfxKit.toon_set(_plume, "energy", 0.45 + 0.65 * _charge)  # a small steady flame at rest, full when charged  # grows as the staff fills, gone when idle
+	_swirl()
+	_smoke_t -= delta
+	if _smoke_t <= 0.0:
+		_smoke_t = 1.3 + randf() * 0.5
+		VfxKit.toon_smoke(tower.game.shots_root, orb.global_position - Vector3(0.006, 0.03, 0), 0.04, 2.4)
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
 		_fired(sp)
@@ -83,3 +95,16 @@ func _fired(staff_pos: Vector3) -> void:
 	VfxKit.toon_burst(fx_root, staff_pos, 0.1, "burst", 0.3)
 	VfxKit.toon_burst(fx_root, staff_pos, 0.1, "ring", 0.3)  # a hard flat ring snaps out of the staff on release
 	VfxKit.burst(fx_root, staff_pos, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 8, 0.05, 0.35, 0.004)
+
+
+func _swirl() -> void:
+	## The whole tower breathes magic: wisps spiral up round it from the base to the orb, widest at the foot.
+	var base := tower.global_position
+	var top := orb.global_position.y - base.y - 0.02
+	for i in _wisps.size():
+		var k := fmod(_t * 0.22 + float(i) / WISPS, 1.0)
+		var a := _t * 1.5 + TAU * i / WISPS + k * 4.0
+		var r := lerpf(0.04, 0.012, k)
+		_wisps[i].global_position = base + Vector3(cos(a) * r, 0.015 + k * top, sin(a) * r)
+		VfxKit.toon_set(_wisps[i], "energy", 0.15 + 0.85 * sin(PI * k) * (0.7 + 0.5 * _charge))
+		VfxKit.toon_set(_wisps[i], "size", Vector2.ONE * (0.014 + 0.010 * sin(PI * k)))
