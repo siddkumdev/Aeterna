@@ -698,6 +698,7 @@ func sell(t: Tower) -> bool:
 	nav.remove_tower(t.cell, GameConfig.TOWER_SIZE)
 	grass.refresh(nav)
 	towers.erase(t)
+	VfxKit.build_pop(shots_root, t.global_position)
 	t.queue_free()
 	last_message = "%s sold: +%d trust." % [GameConfig.TOWERS[t.kind]["name"], back]
 	if foresight.showing:
@@ -729,6 +730,7 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.setup(kind, cell)
 	t.built_night = night
 	towers.append(t)
+	VfxKit.build_pop(shots_root, t.global_position)
 	for r in requests:
 		r.dodge(NavGrid.footprint(cell, GameConfig.TOWER_SIZE))
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]

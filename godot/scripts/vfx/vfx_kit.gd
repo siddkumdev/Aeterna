@@ -300,3 +300,10 @@ static func toon_burst(at_parent: Node, world_pos: Vector3, size: float, kind :=
 	tw.tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
 	tw.tween_callback(mi.queue_free)
 	return mi
+
+
+static func build_pop(parent: Node, at: Vector3) -> void:
+	## A tower going up (or being sold): a painted dust-and-spark cloud and a ground ring round its base.
+	toon_burst(parent, at + Vector3(0, 0.02, 0), 0.12, "burst", 0.45)
+	toon_burst(parent, at, 0.16, "ring", 0.45)
+	burst(parent, at + Vector3(0, 0.01, 0), FIRE_ORANGE, INK, 8, 0.04, 0.4, 0.004)
