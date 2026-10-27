@@ -167,6 +167,8 @@ func step(delta: float) -> void:
 			if cfg.get("shoot_from_crew", false):
 				from = crew.hand_point()
 		last_from = from
+		if kind == "crossbow" and game.grass != null:
+			game.grass.gust(from, target.global_position)  # the bolt's pale-green wind runs through the grass
 		var picked: Array = [target]
 		while picked.size() < targets_per_volley:
 			var other := _nearest(picked)  # Twin Cannons Legendary: a second, different target

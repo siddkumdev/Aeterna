@@ -1093,7 +1093,9 @@ func _grass() -> void:
 	var g := await _make_game()
 	g.trust = 1000
 	var n: int = g.grass.tuft_count()
-	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.BLADES], n > 500 and n * GrassField.BLADES < 15000)
+	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.BLADES], n > 1200 and n * GrassField.BLADES < 20000)
+	g.grass.gust(Vector3.ZERO, Vector3(0.2, 0, 0))
+	check("a Longbow gust is recorded, and a zero-length one is ignored", g.grass.gust_count() == 1 and (func(): g.grass.gust(Vector3.ZERO, Vector3.ZERO); return g.grass.gust_count() == 1).call())
 	var cell := Vector2i(5, 12)
 	var under := 0
 	for i in g.grass._cell.size():
@@ -1105,5 +1107,12 @@ func _grass() -> void:
 	check("tufts under a tower are hidden (%d tufts sit on its 4 cells)" % under, under > 0 and fp.all(func(c): return g.grass._hidden.has(c)) and g.grass._hidden.size() == 4)
 	g.sell(g.towers[0])
 	check("and they come back when the tower is sold", g.grass._hidden.is_empty())
+	g.try_build("crossbow", Vector2i(11, 12))
+	g.start_night()
+	g._spawn_queue.clear()
+	_still(g, "grunt", _at(11, 9))
+	g.towers[0].cooldown = 0.0
+	g.step(0.05)
+	check("a Longbow shot sends a gust through the grass", g.grass.gust_count() >= 1)
 	g.queue_free()
 	await process_frame

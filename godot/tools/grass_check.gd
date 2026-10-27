@@ -26,6 +26,15 @@ func _initialize() -> void:
 	var none := await _shot()
 	print("GRASS pusher on the ground vs none: changed pixels = ", _diff(p, none))
 	print("GRASS pusher 20 cm up vs none: changed pixels = ", _diff(hi, none))
+	# a Longbow gust running across the view, mid-flight (frame saved next to the other previews)
+	g.grass.gust(c + Vector3(-0.12, 0, 0.02), c + Vector3(0.14, 0, -0.02))
+	for i in 12:
+		await process_frame
+	var gust_img := await _shot()
+	var out := OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else ""
+	if out != "":
+		gust_img.save_png(out + "_gust.png")
+		none.save_png(out + "_still.png")
 	quit()
 
 func _shot() -> Image:
