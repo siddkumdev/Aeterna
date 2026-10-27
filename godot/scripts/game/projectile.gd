@@ -135,8 +135,6 @@ func _hit_enemy(e: Enemy) -> void:
 		e.ignite(mods["burn"], 3.0, mods.get("burn_spreads", false))  # Ember Shot: burn for 3 s
 	if mods.get("slow", false):
 		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
-	if _fx_kind == "wind" and game != null and is_inside_tree():
-		VfxKit.toon_wind_burst(game.shots_root, e.chest(), 0.045, "slash", 0.25)  # the pierce flash
 	e.take_damage(dmg)
 
 

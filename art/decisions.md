@@ -202,3 +202,5 @@ Siddharth: "Approved, skip the torch, start the Longbow Tower." Guard Tower v02 
 "Too much vfx for the long bow, reduce that, and a bit transparent." Removed the idle ground ring and the release ring; vortex, streaks (3 to 2) and slashes smaller; all wind drawn at 55% opacity.
 ## 2026-10-27 - Longbow vortex removed (Siddharth)
 "Remove the spiral thing, I don't like it": the little tornado by the loaded bolt is gone. Kept: gust streaks behind the bolt, pierce slash on hits, small release spark.
+## 2026-10-27 - Longbow: only the bolt trail stays (Siddharth)
+"No, like at the tip of the bow at the tower and also in the enemies position": the release spark at the bow tip and the pierce slash on enemies are removed. The Longbow's only wind effect is now the gust streaks behind the flying bolt.

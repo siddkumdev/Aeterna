@@ -33,11 +33,6 @@ static func attach(t: Tower, orb_anchor: Node3D, parts := {}, gate: Node3D = nul
 		fx.tower = t
 		fx._build_guard(parts, gate)
 		return fx
-	if t.kind == "crossbow":
-		t.add_child(fx)
-		fx.tower = t
-		fx._build_bow()
-		return fx
 	fx.free()
 	return null
 
@@ -78,9 +73,6 @@ func _process(delta: float) -> void:
 		return
 	if tower.kind == "guard":
 		_process_guard(delta)
-		return
-	if tower.kind == "crossbow":
-		_process_bow(delta)
 		return
 	if orb == null:
 		return
@@ -193,27 +185,3 @@ func _dust() -> void:
 	if _gate == null or not _gate.is_inside_tree():
 		return
 	VfxKit.toon_dust(tower.game.shots_root, _gate.global_position + Vector3(0, 0.018, 0.01), 0.08)
-
-
-# ---- Longbow Tower: pale-green wind (moodboard #33): a little tornado round the loaded bolt, a gust ring on release ----
-
-var _bolt_at: Node3D  # the model's bolt_anchor (moves with the bolt)
-
-
-func _build_bow() -> void:
-	for n in ModelUtil.walk(tower):
-		if n is Marker3D and str(n.name).ends_with("bolt_anchor"):
-			_bolt_at = n
-	_shots = tower.shots_fired
-
-
-func _process_bow(delta: float) -> void:
-	_t += delta
-	var at := _bolt_at.global_position if _bolt_at != null else tower.global_position + Vector3(0, 0.05, 0)
-	if tower.shots_fired != _shots:
-		_shots = tower.shots_fired
-		_bow_fired(at)
-
-
-func _bow_fired(at: Vector3) -> void:
-	VfxKit.toon_wind_burst(tower.game.shots_root, at, 0.05, "slash", 0.25)  # the string snaps: one small white spark with slashes

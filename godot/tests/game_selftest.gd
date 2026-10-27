@@ -1166,7 +1166,6 @@ func _vfx() -> void:
 	g3.trust = 500
 	g3.try_build("crossbow", Vector2i(5, 12))
 	var bw: Tower = g3.towers[0]
-	check("the Longbow Tower has its wind effects, found at the bolt anchor", bw.fx != null and bw.fx._bolt_at != null)
 	g3.start_night()
 	g3._spawn_queue.clear()
 	var foe3 := _still(g3, "grunt", _at(7, 9))
