@@ -28,6 +28,10 @@ var _arm_r: Node3D
 var _staff: Node3D  # the wizard's staff (pivots at the right hand)
 var _wheel: Node3D
 var walking := false  # the Guard sets this while it walks (a hop)
+var _idle_next := 0.0   # guard idle beats: a spear tap, a look round, a weight shift, a stretch (stand-in animation)
+var _idle_phase := 9.0
+var _idle_kind := 0
+const IDLE_BEAT := 1.4
 
 
 func setup(crew_kind: String) -> void:
