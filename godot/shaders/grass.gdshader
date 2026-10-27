@@ -24,12 +24,14 @@ const float GUST_SPEED = 1.4;
 varying float h;
 varying float dry;
 varying float tone;
+varying float patch;
 varying float gtint;
 
 void vertex() {
 	h = clamp(UV.y, 0.0, 1.0);
 	dry = COLOR.r;
 	tone = COLOR.g;
+	patch = COLOR.b;
 	vec3 base = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	vec2 wd = normalize(wind_dir);
 	float ph = dot(base.xz, wd) * 34.0;
@@ -79,6 +81,7 @@ void fragment() {
 	vec3 c = mix(root_col, mid_col, smoothstep(0.0, 0.5, h));  // dark root, saturated middle, bright tip: layered foliage
 	c = mix(c, tip, smoothstep(0.45, 1.0, h));
 	c *= 0.84 + 0.3 * tone;  // each clump a little lighter or darker
+	c = mix(c, mix(tip_col, dry_col, 0.3) * 1.08, patch * 0.7);  // sunlit lighter patches
 	ALBEDO = mix(c, gust_col, gtint * (0.35 + 0.65 * h));
 	ROUGHNESS = 1.0;
 }

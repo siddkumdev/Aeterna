@@ -45,6 +45,7 @@ var board: Node3D
 var nav: NavGrid
 var grass: GrassField
 var _path_tiles: Array[Rect2] = []
+var _prop_points: Array[Vector2] = []
 var decor_cells: Array[Vector2i] = []  # cells under village props: they block towers, not enemies
 var houses: Array[House] = []
 var towers: Array[Tower] = []
@@ -130,6 +131,7 @@ func _ready() -> void:
 	var dressing := VillageDresser.build(board, 11)
 	decor_cells = dressing["decor"]
 	_path_tiles = dressing["tiles"]
+	_prop_points = dressing["props"]
 	_build_ghost()
 	spells = Spells.new()
 	spells.name = "Spells"
@@ -175,7 +177,7 @@ func _start_loop(message: String) -> void:
 	for c in decor_cells:
 		nav.kind[c] = "decor"
 	if grass == null:
-		grass = GrassField.build(board, nav, _path_tiles, 5)
+		grass = GrassField.build(board, nav, _path_tiles, _prop_points, 5)
 	else:
 		grass.refresh(nav)
 	var sturdy := card("sturdy_homes")

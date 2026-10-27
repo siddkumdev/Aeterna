@@ -7,8 +7,8 @@ extends Node3D
 ## Look: leaf_green roots to leaf_light tips from the palette, a few tufts with dry yellow tips.
 
 const SHADER := preload("res://shaders/grass.gdshader")
-const SPACING := 0.36  # cells between jittered grid points
-const LEAVES := 5
+const SPACING := 0.32  # cells between jittered grid points
+const LEAVES := 6
 const TRIS_PER_TUFT := LEAVES * 3
 const MAX_PUSH := 16
 
@@ -22,11 +22,13 @@ const GUST_LIFE_EXTRA := 0.3  # seconds a gust lingers after its pulse reached t
 const GUST_SPEED := 1.4  # m/s, same as the shader
 
 
-static func build(board: Node3D, nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> GrassField:
+static func build(board: Node3D, nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: int) -> GrassField:
+	## tiles: path tile footprints, props: where village props stand (both in cell coordinates). The grass keeps off
+	## the tiles and leaves a clearing round every prop, so the props sit above it and stay readable.
 	var g := GrassField.new()
 	g.name = "Grass"
 	board.add_child(g)
-	g._make(nav, tiles, rng_seed)
+	g._make(nav, tiles, props, rng_seed)
 	return g
 
 
@@ -41,9 +43,9 @@ func _clump_mesh(rng: RandomNumberGenerator) -> ArrayMesh:
 		var out := Vector3(cos(a), 0.0, sin(a))
 		var side := Vector3(-sin(a), 0.0, cos(a))
 		var r := rng.randf_range(0.0006, 0.0022)
-		var hgt := rng.randf_range(0.013, 0.021)
-		var wid := rng.randf_range(0.0048, 0.0064)  # broad leaves, not thin blades
-		var lean := rng.randf_range(0.006, 0.011)
+		var hgt := rng.randf_range(0.017, 0.027)
+		var wid := rng.randf_range(0.0062, 0.0082)  # broad leaves, not thin blades
+		var lean := rng.randf_range(0.007, 0.013)
 		var root := out * r
 		var mid := root + out * lean * 0.45 + Vector3(0, hgt * 0.62, 0)
 		var tip := root + out * lean + Vector3(0, hgt * 0.82, 0)  # drooping tip
@@ -59,7 +61,7 @@ func _clump_mesh(rng: RandomNumberGenerator) -> ArrayMesh:
 	return st.commit()
 
 
-func _make(nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> void:
+func _make(nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed
 	var noise := FastNoiseLite.new()
@@ -80,9 +82,12 @@ func _make(nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> void:
 			var edge := minf(minf(p.x, n - p.x), minf(p.y, n - p.y))
 			if edge < 2.5:
 				keep *= 0.8
-			var cell := Vector2i(floori(p.x), floori(p.y))
-			if nav.kind.get(cell, "") == "decor":
-				keep *= 0.6
+			for q in props:  # a clearing round every prop, a thin ring of grass just outside it
+				var d := q.distance_to(p)
+				if d < 0.5:
+					keep = 0.0
+				elif d < 0.8:
+					keep *= 0.5
 			for r in houses:
 				if r.grow(0.05).has_point(p):
 					keep = 0.0
@@ -110,7 +115,9 @@ func _make(nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> void:
 		_mm.set_instance_transform(i, xf)
 		# r = how much of the tip is dry yellow, g = this clump's tone (lighter or darker), so no two clumps match
 		var tone := clampf(noise.get_noise_2d(p.x * 2.3 + 40.0, p.y * 2.3) * 0.5 + 0.5 + rng.randf_range(-0.25, 0.25), 0.0, 1.0)
-		_mm.set_instance_color(i, Color(1.0 if rng.randf() < 0.16 else 0.0, tone, 0))
+		# b = lighter-patch amount: big soft sunlit patches of lighter grass (Siddharth 2026-10-27, from the reference)
+		var patch := smoothstep(0.52, 0.8, noise.get_noise_2d(p.x * 0.55 + 90.0, p.y * 0.55 + 15.0) * 0.5 + 0.5)
+		_mm.set_instance_color(i, Color(1.0 if rng.randf() < 0.16 else 0.0, tone, patch))
 	_mat = ShaderMaterial.new()
 	_mat.shader = SHADER
 	var inst := MultiMeshInstance3D.new()
