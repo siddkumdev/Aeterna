@@ -40,6 +40,8 @@ var _gate: Node3D  # the model's spawn_anchor: where a new Guard steps out
 
 var last_from := Vector3.ZERO  # where the latest shot left the tower (world)
 var crew: CrewMember  # the villager manning it (a stand-in body, animated)
+var aiming := false  # a target is in range this tick (the effects read it; nothing in the rules does)
+var fx: TowerFx  # this tower's visual effects, when it has them yet
 
 
 func setup(tower_kind: String, top_left: Vector2i) -> void:
@@ -62,6 +64,7 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 	if _turn:
 		_turn_home = _turn.basis
 	_add_crew(model)
+	fx = TowerFx.attach(self, _muzzle)
 	_apply_cards()
 	if cfg["kind"] == "spawner":
 		refill()
@@ -146,6 +149,7 @@ func step(delta: float) -> void:
 		return
 	cooldown = maxf(0.0, cooldown - delta * game.spells.haste_at(position))  # Rage rings speed it up
 	var target := _nearest([])
+	aiming = target != null
 	if target == null:
 		return
 	if _turn:

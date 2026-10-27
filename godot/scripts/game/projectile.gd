@@ -23,6 +23,10 @@ var _flight := 1.0
 var _left := 0.0
 var _dir := Vector3.ZERO
 var _hit := {}
+var _fx_kind := ""
+var _fx_scale := 1.0
+var _glow: MeshInstance3D
+var _trail: CPUParticles3D
 
 
 func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mods := {}) -> void:
@@ -50,6 +54,13 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 		var m: Node3D = res.instantiate()
 		m.scale = Vector3.ONE * mods.get("scale", 1.0) * cfg.get("shot_scale", 1.0)
 		add_child(m)
+	_fx_kind = cfg.get("fx", "")
+	_fx_scale = mods.get("scale", 1.0) * cfg.get("shot_scale", 1.0)
+	if _fx_kind == "fireball":
+		# the dark core is wrapped in fire (X02): a hot glow round it and a trail of embers behind
+		_glow = VfxKit.halo(self, 0.034 * _fx_scale, Color(VfxKit.FIRE_ORANGE, 0.85))
+		VfxKit.halo(self, 0.016 * _fx_scale, Color(VfxKit.FIRE_YELLOW, 0.9), "disc")  # the white-hot rim round the dark core
+		_trail = VfxKit.trail(self, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 70, 0.4, 0.010 * _fx_scale)
 
 
 func step(delta: float) -> void:
@@ -113,7 +124,19 @@ func _hit_enemy(e: Enemy) -> void:
 
 func _finish() -> void:
 	done = true
+	_impact_fx()
+	if _trail != null:
+		VfxKit.release_trail(_trail, game.shots_root)  # the trail fades out where the shot ended
 	queue_free()
+
+
+func _impact_fx() -> void:
+	if game == null or not is_inside_tree():
+		return
+	if _fx_kind == "fireball":
+		var s := _fx_scale
+		VfxKit.flash(game.shots_root, global_position, Color(VfxKit.FIRE_YELLOW, 0.95), 0.045 * s, 0.18)
+		VfxKit.burst(game.shots_root, global_position, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 14, 0.07, 0.45, 0.007 * s)
 
 
 static func _flat(v: Vector3) -> float:

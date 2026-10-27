@@ -21,9 +21,9 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	g.trust = 500
-	g.try_build("fire", Vector2i(6, 12))
+	g.try_build("fire", Vector2i(5, 12))
 	g.try_build("crossbow", Vector2i(11, 12))
-	g.try_build("airship", Vector2i(16, 12))
+	g.try_build("airship", Vector2i(17, 12))
 	g.try_build("guard", Vector2i(11, 4))
 	g.night = 2
 	g.start_night()

@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await _guards()
 	await _decor()
 	await _grass()
+	await _vfx()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -1116,5 +1117,34 @@ func _grass() -> void:
 	g.towers[0].cooldown = 0.0
 	g.step(0.05)
 	check("a Longbow shot sends a gust through the grass", g.grass.gust_count() >= 1)
+	g.queue_free()
+	await process_frame
+
+func _vfx() -> void:
+	var g := await _make_game()
+	g.trust = 500
+	g.try_build("fire", Vector2i(5, 12))
+	var wiz: Tower = g.towers[0]
+	check("the Wizard Tower has its effects, with the orb at the model's orb anchor", wiz.fx != null and wiz.fx.orb != null and wiz.fx.orb.get_parent().name.ends_with("orb_anchor"))
+	g.start_night()
+	g._spawn_queue.clear()
+	var foe := _still(g, "grunt", _at(7, 9))
+	foe.hp = 99999.0
+	wiz.cooldown = 0.5
+	g.step(0.05)
+	wiz.fx._process(0.016)
+	check("while aiming, the orb gives its power to the staff (it dims below full)", wiz.fx.orb.level < 1.0)
+	wiz.cooldown = 0.0
+	g.step(0.05)
+	check("a shot sends a fireball with a glow and an ember trail", not g.shots.is_empty() and g.shots[0]._trail != null and g.shots[0]._glow != null)
+	for i in 40:
+		g.step(0.05)
+	await process_frame
+	check("the effects never change a rule: the grunt still took damage from the shot", foe.hp < 99999.0)
+	var n := 0
+	for i in 60:
+		if VfxKit.burst(g.shots_root, Vector3.ZERO, Color.WHITE, Color.WHITE) != null:
+			n += 1
+	check("particle cap: at most %d bursts alive at once (%d started)" % [VfxKit.MAX_BURSTS, n], VfxKit.active_bursts() <= VfxKit.MAX_BURSTS)
 	g.queue_free()
 	await process_frame
