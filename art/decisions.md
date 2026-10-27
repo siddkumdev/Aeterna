@@ -200,3 +200,5 @@ Hearth smoke looked like it went through the roof. Added a stone chimney with a 
 Siddharth: "Approved, skip the torch, start the Longbow Tower." Guard Tower v02 (chimney) approved; no torch. Longbow wind built as a toon shader in the #33 look (black ink swept blades, white-green highlights, streaks). Awaiting his feedback in the game.
 ## 2026-10-27 - Longbow wind reduced (Siddharth)
 "Too much vfx for the long bow, reduce that, and a bit transparent." Removed the idle ground ring and the release ring; vortex, streaks (3 to 2) and slashes smaller; all wind drawn at 55% opacity.
+## 2026-10-27 - Longbow vortex removed (Siddharth)
+"Remove the spiral thing, I don't like it": the little tornado by the loaded bolt is gone. Kept: gust streaks behind the bolt, pierce slash on hits, small release spark.

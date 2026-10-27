@@ -197,7 +197,6 @@ func _dust() -> void:
 
 # ---- Longbow Tower: pale-green wind (moodboard #33): a little tornado round the loaded bolt, a gust ring on release ----
 
-var _vortex: MeshInstance3D
 var _bolt_at: Node3D  # the model's bolt_anchor (moves with the bolt)
 
 
@@ -205,26 +204,16 @@ func _build_bow() -> void:
 	for n in ModelUtil.walk(tower):
 		if n is Marker3D and str(n.name).ends_with("bolt_anchor"):
 			_bolt_at = n
-	_vortex = VfxKit.toon_wind(self, 0, Vector2(0.02, 0.035), 0.3, 1.2)
-	VfxKit.toon_set(_vortex, "depth_bias", 0.015)
 	_shots = tower.shots_fired
 
 
 func _process_bow(delta: float) -> void:
 	_t += delta
-	var charge := 0.0
-	if tower.aiming:
-		charge = clampf(1.0 - tower.cooldown / maxf(tower.interval, 0.01), 0.0, 1.0)
 	var at := _bolt_at.global_position if _bolt_at != null else tower.global_position + Vector3(0, 0.05, 0)
-	# the wind stands up round the loaded bolt: a low curl at rest, a tall fierce one as the string comes back
-	_vortex.global_position = at + Vector3(0, -0.01, 0)
-	VfxKit.toon_set(_vortex, "size", Vector2(0.018 + 0.012 * charge, 0.03 + 0.02 * charge))
-	VfxKit.toon_set(_vortex, "energy", 0.3 + 0.5 * charge)
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
 		_bow_fired(at)
 
 
 func _bow_fired(at: Vector3) -> void:
-	var root: Node = tower.game.shots_root
-	VfxKit.toon_wind_burst(root, at, 0.05, "slash", 0.25)  # the string snaps: one small white spark with slashes
+	VfxKit.toon_wind_burst(tower.game.shots_root, at, 0.05, "slash", 0.25)  # the string snaps: one small white spark with slashes
