@@ -7,8 +7,9 @@ extends Node3D
 ## Look: leaf_green roots to leaf_light tips from the palette, a few tufts with dry yellow tips.
 
 const SHADER := preload("res://shaders/grass.gdshader")
-const SPACING := 0.34  # cells between jittered grid points (denser 2026-10-27: "i can barely see it")
-const BLADES := 5
+const SPACING := 0.36  # cells between jittered grid points
+const LEAVES := 5
+const TRIS_PER_TUFT := LEAVES * 3
 const MAX_PUSH := 16
 
 var _mm: MultiMesh
@@ -29,23 +30,32 @@ static func build(board: Node3D, nav: NavGrid, tiles: Array[Rect2], rng_seed: in
 	return g
 
 
-func _blade_mesh(rng: RandomNumberGenerator) -> ArrayMesh:
-	## One tuft: BLADES thin triangles round a centre, leaning outward a little. UV.y = 0 at the root, 1 at the tip.
+func _clump_mesh(rng: RandomNumberGenerator) -> ArrayMesh:
+	## One lush clump (the Clash Royale / Clash of Clans reference, Siddharth 2026-10-20): LEAVES broad leaves fanned
+	## round a centre, each a base, a wide middle and a drooping pointed tip (3 triangles). UV.y = 0 at the root,
+	## 0.5 mid-leaf, 1 at the tip (the shader colours and sways by it).
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for i in BLADES:
-		var a := TAU * (i + rng.randf_range(-0.25, 0.25)) / BLADES
-		var r := rng.randf_range(0.0008, 0.0030)
-		var hgt := rng.randf_range(0.011, 0.019)
-		var w := 0.0016
-		var root := Vector3(cos(a) * r, 0.0, sin(a) * r)
-		var side := Vector3(-sin(a), 0.0, cos(a)) * w
-		var lean := Vector3(cos(a), 0.0, sin(a)) * rng.randf_range(0.0015, 0.0045)
-		var tip := root + lean + Vector3(0, hgt, 0)
-		for v in [[root - side, 0.0], [root + side, 0.0], [tip, 1.0]]:
-			st.set_uv(Vector2(0.5, v[1]))
-			st.set_color(Color.WHITE)
-			st.add_vertex(v[0])
+	for i in LEAVES:
+		var a := TAU * (i + rng.randf_range(-0.2, 0.2)) / LEAVES
+		var out := Vector3(cos(a), 0.0, sin(a))
+		var side := Vector3(-sin(a), 0.0, cos(a))
+		var r := rng.randf_range(0.0006, 0.0022)
+		var hgt := rng.randf_range(0.013, 0.021)
+		var wid := rng.randf_range(0.0048, 0.0064)  # broad leaves, not thin blades
+		var lean := rng.randf_range(0.006, 0.011)
+		var root := out * r
+		var mid := root + out * lean * 0.45 + Vector3(0, hgt * 0.62, 0)
+		var tip := root + out * lean + Vector3(0, hgt * 0.82, 0)  # drooping tip
+		var bl := root - side * wid * 0.32
+		var br := root + side * wid * 0.32
+		var ml := mid - side * wid * 0.5
+		var mr := mid + side * wid * 0.5
+		for t in [[bl, 0.0, br, 0.0, ml, 0.5], [br, 0.0, mr, 0.5, ml, 0.5], [ml, 0.5, mr, 0.5, tip, 1.0]]:
+			for k in 3:
+				st.set_uv(Vector2(0.5, t[k * 2 + 1]))
+				st.set_color(Color.WHITE)
+				st.add_vertex(t[k * 2])
 	return st.commit()
 
 
@@ -66,18 +76,18 @@ func _make(nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> void:
 		var y := 1.2
 		while y < n - 1.2:
 			var p := Vector2(x, y) + Vector2(rng.randf_range(-0.2, 0.2), rng.randf_range(-0.2, 0.2))
-			var keep := 0.85 * (0.5 + 0.5 * (noise.get_noise_2d(p.x, p.y) * 0.5 + 0.5) * 1.6)
+			var keep := 0.95 * (0.7 + 0.3 * (noise.get_noise_2d(p.x, p.y) * 0.5 + 0.5) * 1.6)  # lush: almost everywhere
 			var edge := minf(minf(p.x, n - p.x), minf(p.y, n - p.y))
-			if edge < 3.0:
-				keep *= 0.55
+			if edge < 2.5:
+				keep *= 0.8
 			var cell := Vector2i(floori(p.x), floori(p.y))
 			if nav.kind.get(cell, "") == "decor":
-				keep *= 0.3
+				keep *= 0.6
 			for r in houses:
-				if r.grow(0.1).has_point(p):
+				if r.grow(0.05).has_point(p):
 					keep = 0.0
-				elif r.grow(0.9).has_point(p):
-					keep *= 0.35
+				elif r.grow(0.7).has_point(p):
+					keep *= 0.8  # grass hugs the walls
 			for t in tiles:
 				if t.grow(0.12).has_point(p):
 					keep = 0.0
@@ -88,17 +98,19 @@ func _make(nav: NavGrid, tiles: Array[Rect2], rng_seed: int) -> void:
 	_mm = MultiMesh.new()
 	_mm.transform_format = MultiMesh.TRANSFORM_3D
 	_mm.use_colors = true
-	_mm.mesh = _blade_mesh(rng)
+	_mm.mesh = _clump_mesh(rng)
 	_mm.instance_count = pts.size()
 	for i in pts.size():
 		var p: Vector2 = pts[i]
-		var s := rng.randf_range(0.75, 1.3)
+		var s := rng.randf_range(0.8, 1.35)
 		var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.85, 1.2), s))
 		var xf := Transform3D(b, Vector3((p.x - half) * GameConfig.CELL, 0.0, (p.y - half) * GameConfig.CELL))
 		_xf.append(xf)
 		_cell.append(Vector2i(floori(p.x), floori(p.y)))
 		_mm.set_instance_transform(i, xf)
-		_mm.set_instance_color(i, Color(1.0 if rng.randf() < 0.18 else 0.0, 0, 0))
+		# r = how much of the tip is dry yellow, g = this clump's tone (lighter or darker), so no two clumps match
+		var tone := clampf(noise.get_noise_2d(p.x * 2.3 + 40.0, p.y * 2.3) * 0.5 + 0.5 + rng.randf_range(-0.25, 0.25), 0.0, 1.0)
+		_mm.set_instance_color(i, Color(1.0 if rng.randf() < 0.16 else 0.0, tone, 0))
 	_mat = ShaderMaterial.new()
 	_mat.shader = SHADER
 	var inst := MultiMeshInstance3D.new()

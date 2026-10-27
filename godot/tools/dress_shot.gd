@@ -12,6 +12,7 @@ func _initialize() -> void:
 	g.set_process(false)
 	await _settle()
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_view.png")
+	print("DRESS frame: %d primitives, %d draw calls" % [RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME), RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)])
 	var cam: Camera3D = root.get_viewport().get_camera_3d()
 	var c: Vector3 = g.board.global_position
 	cam.global_position = c + Vector3(0, 1.1, 0.001)

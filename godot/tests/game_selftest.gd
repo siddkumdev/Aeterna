@@ -1093,7 +1093,7 @@ func _grass() -> void:
 	var g := await _make_game()
 	g.trust = 1000
 	var n: int = g.grass.tuft_count()
-	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.BLADES], n > 1200 and n * GrassField.BLADES < 20000)
+	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.TRIS_PER_TUFT], n > 1500 and n * GrassField.TRIS_PER_TUFT < 60000)
 	g.grass.gust(Vector3.ZERO, Vector3(0.2, 0, 0))
 	check("a Longbow gust is recorded, and a zero-length one is ignored", g.grass.gust_count() == 1 and (func(): g.grass.gust(Vector3.ZERO, Vector3.ZERO); return g.grass.gust_count() == 1).call())
 	var cell := Vector2i(5, 12)

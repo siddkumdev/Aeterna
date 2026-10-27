@@ -5,6 +5,7 @@ render_mode cull_disabled, specular_disabled;
 // up to 16 "pushers": ground enemies, Guards and the hands. Colours come from the palette (see GrassField).
 
 uniform vec3 root_col : source_color = vec3(0.365, 0.522, 0.282);  // leaf_green 5D8548
+uniform vec3 mid_col : source_color = vec3(0.533, 0.745, 0.271);   // grass 88BE45, the saturated meadow green
 uniform vec3 tip_col : source_color = vec3(0.553, 0.722, 0.353);   // leaf_light 8DB85A
 uniform vec3 dry_col : source_color = vec3(0.855, 0.812, 0.361);   // leaf_yellow DACF5C
 uniform vec3 gust_col : source_color = vec3(0.749, 0.941, 0.773);  // heal_green 7FE08A lightened 50% toward white: the wind's pale green
@@ -22,11 +23,13 @@ const float GUST_SPEED = 1.4;
 
 varying float h;
 varying float dry;
+varying float tone;
 varying float gtint;
 
 void vertex() {
 	h = clamp(UV.y, 0.0, 1.0);
 	dry = COLOR.r;
+	tone = COLOR.g;
 	vec3 base = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	vec2 wd = normalize(wind_dir);
 	float ph = dot(base.xz, wd) * 34.0;
@@ -72,7 +75,10 @@ void vertex() {
 
 void fragment() {
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);  // always lit like the ground, whichever side we see
-	vec3 tip = mix(tip_col, dry_col, dry * 0.4);
-	ALBEDO = mix(mix(root_col, tip, h), gust_col, gtint * (0.35 + 0.65 * h));
+	vec3 tip = mix(tip_col, dry_col, 0.18 + dry * 0.4);
+	vec3 c = mix(root_col, mid_col, smoothstep(0.0, 0.5, h));  // dark root, saturated middle, bright tip: layered foliage
+	c = mix(c, tip, smoothstep(0.45, 1.0, h));
+	c *= 0.84 + 0.3 * tone;  // each clump a little lighter or darker
+	ALBEDO = mix(c, gust_col, gtint * (0.35 + 0.65 * h));
 	ROUGHNESS = 1.0;
 }
