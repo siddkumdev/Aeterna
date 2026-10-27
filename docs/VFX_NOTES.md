@@ -94,3 +94,4 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | Effect | What was asked | Anchor | Asset list |
 |---|---|---|---|
 | Guard spawn | a spawning tower whose troops stand in place until an enemy is in sight (Siddharth 2026-10-26): the gate leaves swing open and a Guard steps out with a small dust puff; the banner flutters | __spawn_anchor | new: Guard Tower VFX |
+| Wavy grass | "wavy grass sort of" (Siddharth 2026-10-27): small tufts of blades that sway in the wind and bend away from ground enemies, Guards and the hands (answers: tufts, open ground only thinning near paths/houses/forest edge, reacts now). BUILT 2026-10-27 as shader + MultiMesh, no model: godot/shaders/grass.gdshader, scripts/game/grass_field.gd. Later: gust through the grass on each Longbow bolt (pale green wind, offered, not asked) | none (ground) | new: village dressing / ambient |

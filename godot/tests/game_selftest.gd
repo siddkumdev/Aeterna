@@ -28,6 +28,7 @@ func _initialize() -> void:
 	await _crews()
 	await _guards()
 	await _decor()
+	await _grass()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -1085,5 +1086,24 @@ func _decor() -> void:
 	check("props are not solid for the pathfinder", not g.nav.astar.is_point_solid(c))
 	g._start_loop("again")
 	check("the props still block towers after the time loop resets the grid", not g.can_build("fire", top_left))
+	g.queue_free()
+	await process_frame
+
+func _grass() -> void:
+	var g := await _make_game()
+	g.trust = 1000
+	var n: int = g.grass.tuft_count()
+	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.BLADES], n > 500 and n * GrassField.BLADES < 15000)
+	var cell := Vector2i(5, 12)
+	var under := 0
+	for i in g.grass._cell.size():
+		if g.grass._cell[i] in NavGrid.footprint(cell, GameConfig.TOWER_SIZE):
+			under += 1
+	# (headless Godot has no real MultiMesh buffer, so the check reads the field's own record of what it hid)
+	g.try_build("fire", cell)
+	var fp := NavGrid.footprint(cell, GameConfig.TOWER_SIZE)
+	check("tufts under a tower are hidden (%d tufts sit on its 4 cells)" % under, under > 0 and fp.all(func(c): return g.grass._hidden.has(c)) and g.grass._hidden.size() == 4)
+	g.sell(g.towers[0])
+	check("and they come back when the tower is sold", g.grass._hidden.is_empty())
 	g.queue_free()
 	await process_frame

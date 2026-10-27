@@ -35,9 +35,10 @@ var _nav: NavGrid
 var _z := 0
 
 
-static func build(board: Node3D, rng_seed: int) -> Array[Vector2i]:
-	## Returns the cells the props stand on. The game re-marks them as "decor" in every fresh NavGrid (the time loop
-	## builds a new one each loop), so they keep blocking towers.
+static func build(board: Node3D, rng_seed: int) -> Dictionary:
+	## Returns {"decor": the cells the props stand on, "tiles": the path tile footprints (cell coordinates)}. The game
+	## re-marks the decor cells in every fresh NavGrid (the time loop builds a new one each loop), so they keep
+	## blocking towers; the grass keeps off the tiles.
 	var d := VillageDresser.new()
 	d._rng.seed = rng_seed
 	d._nav = NavGrid.new()  # only used to know which cells are house, forest or spawn
@@ -51,7 +52,7 @@ static func build(board: Node3D, rng_seed: int) -> Array[Vector2i]:
 	for c in d._nav.kind:
 		if d._nav.kind[c] == "decor":
 			out.append(c)
-	return out
+	return {"decor": out, "tiles": d._tiles}
 
 
 func _scene(path: String) -> PackedScene:

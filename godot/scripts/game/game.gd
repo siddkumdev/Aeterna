@@ -43,6 +43,8 @@ var run_seed := 1
 
 var board: Node3D
 var nav: NavGrid
+var grass: GrassField
+var _path_tiles: Array[Rect2] = []
 var decor_cells: Array[Vector2i] = []  # cells under village props: they block towers, not enemies
 var houses: Array[House] = []
 var towers: Array[Tower] = []
@@ -125,7 +127,9 @@ func _ready() -> void:
 	_enemies_root = _child(board, "Enemies")
 	shots_root = _child(board, "Shots")
 	_build_houses()
-	decor_cells = VillageDresser.build(board, 11)
+	var dressing := VillageDresser.build(board, 11)
+	decor_cells = dressing["decor"]
+	_path_tiles = dressing["tiles"]
 	_build_ghost()
 	spells = Spells.new()
 	spells.name = "Spells"
@@ -170,6 +174,10 @@ func _start_loop(message: String) -> void:
 	nav = NavGrid.new()
 	for c in decor_cells:
 		nav.kind[c] = "decor"
+	if grass == null:
+		grass = GrassField.build(board, nav, _path_tiles, 5)
+	else:
+		grass.refresh(nav)
 	var sturdy := card("sturdy_homes")
 	for h in houses:
 		h.max_hp = GameConfig.HOUSE_HP * (1.0 + (Cards.value("sturdy_homes", sturdy) / 100.0 if sturdy >= 0 else 0.0))
@@ -686,6 +694,7 @@ func sell(t: Tower) -> bool:
 	var back := sell_value(t)
 	trust += back
 	nav.remove_tower(t.cell, GameConfig.TOWER_SIZE)
+	grass.refresh(nav)
 	towers.erase(t)
 	t.queue_free()
 	last_message = "%s sold: +%d trust." % [GameConfig.TOWERS[t.kind]["name"], back]
@@ -711,6 +720,7 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 		return false
 	trust -= GameConfig.TOWERS[kind]["cost"]
 	nav.add_tower(cell, GameConfig.TOWER_SIZE)
+	grass.refresh(nav)
 	var t := Tower.new()
 	t.game = self
 	_towers_root.add_child(t)
@@ -988,11 +998,31 @@ func _unhandled_input(event: InputEvent) -> void:
 			pick_spell(spell_sel) if spell_sel != "" else null
 
 
+func _feed_grass() -> void:
+	## The grass bends away from ground enemies, Guards and the hands (all cosmetic).
+	if grass == null:
+		return
+	var pts: Array = []
+	for e in enemies:
+		if is_instance_valid(e) and e.alive and not e.flying and not e.underground:
+			pts.append(Vector4(e.global_position.x, e.global_position.y, e.global_position.z, 0.045))
+	for t in towers:
+		for gd in t.guards:
+			if is_instance_valid(gd):
+				pts.append(Vector4(gd.global_position.x, gd.global_position.y, gd.global_position.z, 0.03))
+	var hands: Array = [_mouse_hand] if _mouse_hand != null else _hands
+	for h in hands:
+		if is_instance_valid(h):
+			pts.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
+	grass.set_pushers(pts)
+
+
 func _process(delta: float) -> void:
 	var left := delta * speed
 	while left > 0.0:
 		step(minf(left, MAX_TICK))
 		left -= MAX_TICK
+	_feed_grass()
 	if not with_rig:
 		return
 	_update_mouse_hand()
