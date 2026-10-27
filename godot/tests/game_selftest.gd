@@ -937,7 +937,7 @@ func _warden() -> void:
 func _crews() -> void:
 	var g := await _make_game()
 	g.trust = 500
-	g.try_build("fire", Vector2i(6, 12))
+	g.try_build("fire", Vector2i(5, 12))  # (6,12) now holds village props
 	g.try_build("crossbow", Vector2i(11, 12))
 	g.try_build("airship", Vector2i(16, 12))
 	var kinds := g.towers.map(func(t): return t.crew.kind if t.crew else "")

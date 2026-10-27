@@ -43,6 +43,7 @@ var run_seed := 1
 
 var board: Node3D
 var nav: NavGrid
+var decor_cells: Array[Vector2i] = []  # cells under village props: they block towers, not enemies
 var houses: Array[House] = []
 var towers: Array[Tower] = []
 var enemies: Array[Enemy] = []
@@ -124,6 +125,7 @@ func _ready() -> void:
 	_enemies_root = _child(board, "Enemies")
 	shots_root = _child(board, "Shots")
 	_build_houses()
+	decor_cells = VillageDresser.build(board, 11)
 	_build_ghost()
 	spells = Spells.new()
 	spells.name = "Spells"
@@ -166,6 +168,8 @@ func _start_loop(message: String) -> void:
 	towers.clear()
 	_clear_night()
 	nav = NavGrid.new()
+	for c in decor_cells:
+		nav.kind[c] = "decor"
 	var sturdy := card("sturdy_homes")
 	for h in houses:
 		h.max_hp = GameConfig.HOUSE_HP * (1.0 + (Cards.value("sturdy_homes", sturdy) / 100.0 if sturdy >= 0 else 0.0))
