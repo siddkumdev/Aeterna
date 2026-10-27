@@ -322,3 +322,17 @@ static func toon_smoke(parent: Node, at: Vector3, size: float, life := 1.6) -> v
 	m.set_shader_parameter("shards", 0.0)
 	var tw := mi.create_tween()
 	tw.tween_property(mi, "global_position", at + Vector3(0.004, size * 0.7, 0), life)
+
+
+static func toon_dust(parent: Node, at: Vector3, size: float) -> void:
+	## A painted dust puff (path_stone and dirt bands, no spikes) that swells and fades at ground level.
+	var mi := toon_burst(parent, at, size, "burst", 0.7)
+	if mi == null:
+		return
+	var m := mi.material_override as ShaderMaterial
+	m.set_shader_parameter("c_core", Color("C2B49A"))
+	m.set_shader_parameter("c_mid", Color("A89878"))
+	m.set_shader_parameter("c_out", Color("7E6048"))
+	m.set_shader_parameter("c_ink", Color("7E6048"))
+	m.set_shader_parameter("shards", 0.0)
+	m.set_shader_parameter("depth_bias", 0.02)  # in front of the grass

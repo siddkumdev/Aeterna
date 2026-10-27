@@ -1141,6 +1141,28 @@ func _vfx() -> void:
 		g.step(0.05)
 	await process_frame
 	check("the effects never change a rule: the grunt still took damage from the shot", foe.hp < 99999.0)
+	g.queue_free()
+	await process_frame
+	var g2 := await _make_game()
+	g2.trust = 500
+	g2.try_build("guard", Vector2i(5, 12))
+	var gt: Tower = g2.towers[0]
+	check("the Guard Tower has its effects (banner and gate leaves found)", gt.fx != null and gt.fx._banner != null and gt.fx._door_l != null and gt.fx._door_r != null)
+	g2.start_night()
+	g2._spawn_queue.clear()
+	gt.fx._process(0.016)
+	var closed: Basis = gt.fx._door_l.basis
+	gt.guards[0].queue_free()
+	gt.guards.remove_at(0)
+	for i in 400:
+		g2.step(0.05)
+		gt.fx._process(0.05)
+		if gt.fx._door_open > 0.5:
+			break
+	check("a Guard stepping out swings the gate leaves open", gt.fx._door_open > 0.5 and not gt.fx._door_l.basis.is_equal_approx(closed))
+	g2.queue_free()
+	await process_frame
+	g = await _make_game()
 	var n := 0
 	for i in 60:
 		if VfxKit.burst(g.shots_root, Vector3.ZERO, Color.WHITE, Color.WHITE) != null:

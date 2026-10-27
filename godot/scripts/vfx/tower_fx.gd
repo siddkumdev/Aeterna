@@ -20,15 +20,21 @@ var _charge := 0.0
 const WISPS := 6
 
 
-static func attach(t: Tower, orb_anchor: Node3D) -> TowerFx:
-	if t.kind != "fire" or orb_anchor == null:
-		return null
+static func attach(t: Tower, orb_anchor: Node3D, parts := {}, gate: Node3D = null) -> TowerFx:
 	var fx := TowerFx.new()
 	fx.name = "Fx"
-	t.add_child(fx)
-	fx.tower = t
-	fx._build_wizard(orb_anchor)
-	return fx
+	if t.kind == "fire" and orb_anchor != null:
+		t.add_child(fx)
+		fx.tower = t
+		fx._build_wizard(orb_anchor)
+		return fx
+	if t.kind == "guard" and parts.has("banner"):
+		t.add_child(fx)
+		fx.tower = t
+		fx._build_guard(parts, gate)
+		return fx
+	fx.free()
+	return null
 
 
 func _build_wizard(orb_anchor: Node3D) -> void:
@@ -63,7 +69,12 @@ func _staff_pos() -> Vector3:
 
 
 func _process(delta: float) -> void:
-	if tower == null or orb == null:
+	if tower == null:
+		return
+	if tower.kind == "guard":
+		_process_guard(delta)
+		return
+	if orb == null:
 		return
 	_t += delta
 	_charge = 0.0
@@ -108,3 +119,53 @@ func _swirl() -> void:
 		_wisps[i].global_position = base + Vector3(cos(a) * r, 0.015 + k * top, sin(a) * r)
 		VfxKit.toon_set(_wisps[i], "energy", 0.15 + 0.85 * sin(PI * k) * (0.7 + 0.5 * _charge))
 		VfxKit.toon_set(_wisps[i], "size", Vector2.ONE * (0.014 + 0.010 * sin(PI * k)))
+
+
+# ---- Guard Tower: the gate leaves swing open as a Guard steps out, a dust puff, the banner flutters ----------------
+
+var _door_l: Node3D
+var _door_r: Node3D
+var _banner: Node3D
+var _gate: Node3D
+var _door_open := 0.0   # 0 shut .. 1 open
+var _door_hold := 0.0
+var _door_home: Array[Basis] = []
+var _banner_home := Basis.IDENTITY
+var _guards_seen := 0
+const DOOR_SWING := 1.7  # radians (about 100 degrees)
+
+
+func _build_guard(parts: Dictionary, gate: Node3D) -> void:
+	_banner = parts["banner"]
+	_banner_home = _banner.basis
+	_door_l = parts.get("door_l")
+	_door_r = parts.get("door_r")
+	_gate = gate
+	for d in [_door_l, _door_r]:
+		_door_home.append(d.basis if d != null else Basis.IDENTITY)
+	_guards_seen = tower.guards.size()
+
+
+func _process_guard(delta: float) -> void:
+	_t += delta
+	# the banner: a slow sway with a quicker ripple, stronger when a fight is on
+	var wind := 0.07 + (0.05 if tower.aiming else 0.0)
+	_banner.basis = _banner_home * Basis.from_euler(Vector3(sin(_t * 1.9) * wind * 0.5, 0.0, sin(_t * 1.3) * wind + sin(_t * 5.1) * wind * 0.25))
+	# a Guard stepping out opens the gate for a moment and puffs dust
+	var n := tower.guards.size()
+	if n > _guards_seen and tower.game.phase == Game.Phase.NIGHT:
+		_door_hold = 0.8
+		_dust()
+	_guards_seen = n
+	_door_hold = maxf(0.0, _door_hold - delta)
+	_door_open = move_toward(_door_open, 1.0 if _door_hold > 0.0 else 0.0, delta * 4.0)
+	if _door_l != null:
+		_door_l.basis = _door_home[0] * Basis.from_euler(Vector3(0, -DOOR_SWING * _door_open, 0))
+	if _door_r != null:
+		_door_r.basis = _door_home[1] * Basis.from_euler(Vector3(0, DOOR_SWING * _door_open, 0))
+
+
+func _dust() -> void:
+	if _gate == null or not _gate.is_inside_tree():
+		return
+	VfxKit.toon_dust(tower.game.shots_root, _gate.global_position + Vector3(0, 0.018, 0.01), 0.08)

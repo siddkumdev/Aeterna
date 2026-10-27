@@ -30,6 +30,10 @@ func _initialize() -> void:
 	var e: Enemy = g._spawn(foe_cell, "wisp" if air else "grunt", NavGrid.cell_centre(foe_cell) + Vector3(0, 0.06 if air else 0.0, 0))
 	e.slow(0.0001, 1000.0)
 	e.hp = 99999.0
+	if which == "guard" and not tw.guards.is_empty():  # one Guard falls so a new one steps out of the gate
+		tw.guards[0].queue_free()
+		tw.guards.remove_at(0)
+		tw._spawn_timer = 0.3
 	var cam := Camera3D.new()
 	root.add_child(cam)
 	cam.current = true
@@ -39,6 +43,10 @@ func _initialize() -> void:
 	g._msg.visible = false
 	var focus := tw.global_position + Vector3(0.05, 0.15, -0.05)
 	cam.global_position = focus + Vector3(-0.15, 0.03, 0.34)
+	if which == "guard":  # a low squat tower: look at the gate and banner from the front
+		focus = tw.global_position + Vector3(0.0, 0.07, 0.0)
+		cam.global_position = focus + Vector3(-0.05, 0.1, 0.3)
+		cam.fov = 28
 	if args.size() > 2 and args[2] == "shot":  # the flight and the impact instead of the tower top
 		focus = (tw.global_position + Vector3(0, 0.07, 0) + e.global_position) * 0.5
 		cam.fov = 32

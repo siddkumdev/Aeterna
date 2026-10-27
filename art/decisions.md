@@ -191,3 +191,6 @@ Newest at the bottom. Record every decision Siddharth makes, with the board ids 
 
 ## 2026-10-27 - Tower VFX look = moodboard section 35 (Siddharth)
 Soft glow halos rejected. Effects are hand-painted toon shaders: banded yellow/orange/red, ink cut-outs, swept comet tails, cel clouds with pale shards. Mistake noted: the moodboard VFX section was not consulted first.
+
+## 2026-10-27 - Wizard Tower VFX liked; Guard Tower VFX started (Siddharth)
+Siddharth: "I like this now" about the Wizard Tower effects (painted orb, charge flame, swirl, smoke). Next tower: Guard Tower (gate swing, dust puff, banner). Not yet marked approved in the tracker; awaiting his explicit approval.

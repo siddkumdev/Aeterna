@@ -64,7 +64,7 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 	if _turn:
 		_turn_home = _turn.basis
 	_add_crew(model)
-	fx = TowerFx.attach(self, _muzzle)
+	fx = TowerFx.attach(self, _muzzle, parts, _gate)
 	_apply_cards()
 	if cfg["kind"] == "spawner":
 		refill()
