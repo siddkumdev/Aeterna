@@ -1,5 +1,5 @@
 {
-  "_status": "Core palette APPROVED by Siddharth 2026-10-14 as the overall level vibe (he could not judge exact hex). Time-of-day strips sampled from moodboard #21 night, #22 dusk, #18 golden hour. 'materials' feed the palette atlas (max 64); atlas cell index = order in 'materials', so only APPEND new colours. 2026-10-17: additions from path_dirt onward, dawn_derived, day_derived and the 'lighting' presets APPROVED by Siddharth (jewel colours cut; hand tones added). 2026-10-20: changed grass 7FA84A->88BE45, APPROVED by Siddharth (Island grass was a muddy olive from the seat view; Siddharth OK 2026-10-20 (yes to all). grass is used by no exported asset, only island variants.). 2026-10-21: added dirt_light, dirt_dark, APPROVED by Siddharth (Path trail dirt in the reference screenshots is lighter and pinker than path_dirt, with darker and lighter cobble tones. Two new earth tones, appended at the end (nothing shifts).). 2026-10-21: added wood_mid, APPROVED by Siddharth (mid-wood tone for fences, signposts, posts (props critic round 2; Siddharth OK 2026-10-21)). 2026-10-21: added trust_blue, APPROVED by Siddharth (currency (trust) heart is blue per Siddharth 2026-10-21; must read differently from Foresights crystal_blue).",
+  "_status": "Core palette APPROVED by Siddharth 2026-10-14 as the overall level vibe (he could not judge exact hex). Time-of-day strips sampled from moodboard #21 night, #22 dusk, #18 golden hour. 'materials' feed the palette atlas (max 64); atlas cell index = order in 'materials', so only APPEND new colours. 2026-10-17: additions from path_dirt onward, dawn_derived, day_derived and the 'lighting' presets APPROVED by Siddharth (jewel colours cut; hand tones added). 2026-10-20: changed grass 7FA84A->88BE45, APPROVED by Siddharth (Island grass was a muddy olive from the seat view; Siddharth OK 2026-10-20 (yes to all). grass is used by no exported asset, only island variants.). 2026-10-21: added dirt_light, dirt_dark, APPROVED by Siddharth (Path trail dirt in the reference screenshots is lighter and pinker than path_dirt, with darker and lighter cobble tones. Two new earth tones, appended at the end (nothing shifts).). 2026-10-21: added wood_mid, APPROVED by Siddharth (mid-wood tone for fences, signposts, posts (props critic round 2; Siddharth OK 2026-10-21)). 2026-10-21: added trust_blue, APPROVED by Siddharth (currency (trust) heart is blue per Siddharth 2026-10-21; must read differently from Foresights crystal_blue). 2026-10-27: added flower_pink, flower_yellow, APPROVED by Siddharth (Tiny meadow flowers for the lush grass (Siddharth 2026-10-27, yes to flowers and clover). White reuses wall_cream and orange reuses roof_orange; pink and a clean buttercup yellow are missing. No blue (Foresight only) and no purple (the Warden).).",
   "time_of_day": {
     "night_21": [
       "5B2920",
@@ -90,7 +90,9 @@
     "dirt_light": "A98A72",
     "dirt_dark": "7E6048",
     "wood_mid": "9A6538",
-    "trust_blue": "6479E0"
+    "trust_blue": "6479E0",
+    "flower_pink": "EE8FA8",
+    "flower_yellow": "F6D65C"
   },
   "style": {
     "bevel_width_m": 0.004,

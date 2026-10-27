@@ -16,6 +16,7 @@ var _mm: MultiMesh
 var _mat: ShaderMaterial
 var _xf: Array[Transform3D] = []
 var _cell: Array[Vector2i] = []
+var flowers: FlowerField  # the meadow flowers and clover that ride along (they hide and bend with the grass)
 var _hidden: Dictionary = {}  # cells whose tufts are currently scaled to nothing
 var _gusts: Array = [null, null, null, null]  # {"start": Vector2, "dir": Vector2, "len": float, "age": float}
 const GUST_LIFE_EXTRA := 0.3  # seconds a gust lingers after its pulse reached the target
@@ -126,6 +127,7 @@ func _make(nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: i
 	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	inst.position.y = 0.0006  # a hair above the island so the roots never z-fight with the ground
 	add_child(inst)
+	flowers = FlowerField.build(self, nav, tiles, props, rng_seed)
 
 
 func tuft_count() -> int:
@@ -176,6 +178,7 @@ func _process(delta: float) -> void:
 
 func refresh(nav: NavGrid) -> void:
 	## Hide the tufts under standing towers, show them again once a tower is sold or the loop resets.
+	flowers.refresh(nav)
 	var now := {}
 	for c in nav.kind:
 		if nav.kind[c] == "tower":
@@ -198,3 +201,4 @@ func set_pushers(world_points: Array) -> void:
 		arr[i] = world_points[i]
 	_mat.set_shader_parameter("pushers", arr)
 	_mat.set_shader_parameter("push_count", n)
+	flowers.set_pushers(arr, n)

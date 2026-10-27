@@ -75,6 +75,7 @@ All are appended to `materials` in `palette.json` (appending keeps every existin
 | Effects | fire_red E8452C, fire_yellow FFD45A, heal_green 7FE08A | fireballs, Brazier, Fire Orb; Mend Vial |
 | Placement ghost | ghost_valid 5FD068, ghost_invalid E5484D | translucent ghost and grid cells |
 | Rarity | rarity_gold F2B630 | Legendary frame (7d) |
+| Meadow flowers (2026-10-27) | flower_pink EE8FA8, flower_yellow F6D65C (white = wall_cream, orange = roof_orange) | tiny flowers in the lush grass; never blue (Foresight) or purple (Warden) |
 
 **Lighting presets (board only)**, stored in `palette.json` under `lighting`: each has a key light colour, an ambient (shadow) colour, a rim colour and an energy.
 

@@ -1096,6 +1096,8 @@ func _grass() -> void:
 	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.TRIS_PER_TUFT], n > 1500 and n * GrassField.TRIS_PER_TUFT < 60000)
 	g.grass.gust(Vector3.ZERO, Vector3(0.2, 0, 0))
 	check("a Longbow gust is recorded, and a zero-length one is ignored", g.grass.gust_count() == 1 and (func(): g.grass.gust(Vector3.ZERO, Vector3.ZERO); return g.grass.gust_count() == 1).call())
+	var fl: FlowerField = g.grass.flowers
+	check("flowers and clover grow in the meadow (%d flowers, %d clover pads)" % [fl.flower_count(), fl.clover_count()], fl.flower_count() > 150 and fl.clover_count() > 150)
 	var cell := Vector2i(5, 12)
 	var under := 0
 	for i in g.grass._cell.size():
