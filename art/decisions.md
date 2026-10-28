@@ -237,3 +237,6 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - Still to do in this pass: night window/lantern glows (bloom alone barely shows in the mobile renderer), contact shadows, board shadow on the table.
 
 - 2026-10-28 (Siddharth: "the sun positions is changing so fast ... seems buggy"): the sun now travels one way only. A new dawn and every sun/moon swap fade the light out, move it in the dark and fade it back; dawn climbs slowly (8 s) from low front-right into the day position; dusk sinks over its 4 s. Largest turn in one frame while lit: 0.08 deg (measured).
+
+- 2026-10-28 (Siddharth: "rework the sun so that the only time it moves is when the player presses start night else it is static"): the sun stands at the day position all day; at Start night it sinks over dusk and fades out; a separate fixed moon fades in for the night and out at dawn; the sun is put back while dark. Dawn is now colours only (5 s). Measured: the lit sun moves only during dusk (30 deg).
+- 2026-10-28 (Siddharth): two more critics: code-critic (reviews code for real bugs) and player-critic (judges the game as a first-time player). Both run after changes, see AGENTS.md.

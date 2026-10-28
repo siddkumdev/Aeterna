@@ -2,11 +2,15 @@ class_name Lighting
 extends Node3D
 ## Board lighting and post-processing (M2 polish; plan decided by Claude 2026-10-28 on Siddharth's "go with what's
 ## best", his review to follow). Four moods from art/art_bible.md 6a / palette.json "lighting", moved through the game:
-##   dawn  at the start of every build day, easing into day
+##   dawn  at the start of every build day, easing into day (colours only)
 ##   day   the rest of the day (and the card screen)
 ##   dusk  the first seconds of a night ("the forest stirs"), easing into night
 ##   night moonlight; windows, lanterns and fire carry the scene
-## One sun (shadowed) + one rim light from behind (no shadow) + a colour ambient. The environment adds a filmic
+## The sun is STATIC (Siddharth 2026-10-28: "the only time it moves is when the player presses start night"):
+## it stands at the day position all day, and only when a night starts does it sink to the dusk position and fade
+## out. The moon is its own fixed light that fades in for the night and out at dawn; the sun is put back at the day
+## position while it is dark, so nobody sees it move back.
+## Lights: sun (shadowed), moon (no shadow), one rim light from behind (no shadow), a colour ambient. The environment adds a filmic
 ## tonemap, a per-mood saturation/contrast grade, bloom that only bright glowing things reach, and depth fog
 ## that tints the forest ring. Passthrough rule: nothing here touches the background, so the real room is never
 ## graded; the vignette is a desktop-only overlay (game.gd).
@@ -14,33 +18,36 @@ extends Node3D
 
 const PRESETS := {
 	# key = sun/moon colour, amb = ambient (shadow fill), rim = back light; *_e = energies
-	# elev/az = sun height and direction in degrees (az 0 = from the player's side, + = from the right)
 	# fog = colour the far forest fades toward; sat/con = colour grade; exp = exposure; glow = bloom strength; thr = how bright a pixel must be to bloom (low at night: only lit windows and fire are bright then)
 	"dawn": {"key": Color("FFD9B0"), "key_e": 1.1, "amb": Color("7E86B8"), "amb_e": 0.75, "rim": Color("F8CDB4"),
-		"rim_e": 0.45, "elev": 16.0, "az": 25.0, "fog": Color("F8CDB4"), "fog_d": 0.35, "sat": 0.95, "con": 1.0,
+		"rim_e": 0.45, "fog": Color("F8CDB4"), "fog_d": 0.35, "sat": 0.95, "con": 1.0,
 		"exp": 1.0, "glow": 0.25, "thr": 0.95},
 	"day": {"key": Color("FFD898"), "key_e": 1.35, "amb": Color("86B4BC"), "amb_e": 0.6, "rim": Color("FFD07A"),
-		"rim_e": 0.35, "elev": 48.0, "az": -35.0, "fog": Color("D6EBF5"), "fog_d": 0.2, "sat": 1.0, "con": 1.04,
+		"rim_e": 0.35, "fog": Color("D6EBF5"), "fog_d": 0.2, "sat": 1.0, "con": 1.04,
 		"exp": 1.0, "glow": 0.15, "thr": 1.1},
 	"dusk": {"key": Color("F29A9A"), "key_e": 0.7, "amb": Color("9C3EB0"), "amb_e": 1.0, "rim": Color("DA8990"),
-		"rim_e": 0.8, "elev": 24.0, "az": -55.0, "fog": Color("9C6A9E"), "fog_d": 0.45, "sat": 1.0, "con": 1.04,
+		"rim_e": 0.8, "fog": Color("9C6A9E"), "fog_d": 0.45, "sat": 1.0, "con": 1.04,
 		"exp": 0.95, "glow": 0.6, "thr": 0.75},
 	"night": {"key": Color("8FB0D8"), "key_e": 0.4, "amb": Color("3A5A9A"), "amb_e": 0.75, "rim": Color("5A86B0"),
-		"rim_e": 0.6, "elev": 55.0, "az": 25.0, "fog": Color("16203A"), "fog_d": 0.5, "sat": 0.55, "con": 1.08,
+		"rim_e": 0.6, "fog": Color("16203A"), "fog_d": 0.5, "sat": 0.55, "con": 1.08,
 		"exp": 0.8, "glow": 1.2, "thr": 0.55, "moon": true},
 }
+# light directions: (elevation, azimuth) in degrees; az 0 = from the player's side, + = from the right
+const SUN_DAY := Vector2(48.0, -35.0)
+const SUN_SET := Vector2(20.0, -50.0)  # where it has sunk to by the end of dusk
+const MOON := Vector2(55.0, 25.0)
 const BLEND := 1.5  # s to move from one mood to the next
-const DAWN_HOLD := 8.0  # s of dawn before the day light takes over
+const DAWN_HOLD := 5.0  # s of dawn before the day light takes over
 const DUSK_HOLD := 4.0  # s of dusk before night falls
 
 var env: Environment
 var sun: DirectionalLight3D
 var rim: DirectionalLight3D
+var moon: DirectionalLight3D
 var current := ""
 var _seq: Tween
 var _fade: Tween
-var _move: Tween  # sun <-> moon swap
-var _turn: Tween  # the sun's slow travel
+var _sink: Tween  # the sun going down at dusk: its only movement
 
 
 func build(fog_from: float) -> void:
@@ -73,87 +80,70 @@ func build(fog_from: float) -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 4.0
 	add_child(sun)
-	rim = DirectionalLight3D.new()  # a warm edge from behind the board, no shadow
+	sun.quaternion = _quat(SUN_DAY)
+	moon = DirectionalLight3D.new()  # fixed, fades in for the night
+	moon.light_specular = 0.0
+	moon.quaternion = _quat(MOON)
+	add_child(moon)
+	rim = DirectionalLight3D.new()  # a warm edge from behind the board, opposite the day sun, fixed; no shadow
 	rim.light_specular = 0.0
+	rim.quaternion = Quaternion(Vector3.UP, PI) * _quat(Vector2(25.0, SUN_DAY.y))
 	add_child(rim)
 	set_mood("day", 0.0)
 
 
-func set_mood(mood: String, seconds := BLEND, turn := -1.0) -> void:
-	## Moves the colours and the grade to a mood over `seconds` (instantly when 0), and the sun toward the mood's
-	## position over `turn` seconds (default: `seconds`). Between sun and moon (night <-> any other mood), and into a
-	## new dawn, the light never swings across the sky: it dims out, moves while dark, and comes back up.
-	var was_moon: bool = PRESETS.get(current, {}).get("moon", false)
-	var current_was := current
+func set_mood(mood: String, seconds := BLEND) -> void:
+	## Moves the colours, the grade and the sun/moon brightness to a mood over `seconds` (instantly when 0).
+	## Lights never turn here (see the header); dusk's sinking sun is started by play().
 	current = mood
 	var p: Dictionary = PRESETS[mood]
-	var colours := {
-		sun: {"light_color": p["key"]},
+	var night: bool = p.get("moon", false)
+	var to := {
+		sun: {"light_color": p["key"], "light_energy": 0.0 if night else p["key_e"]},
+		moon: {"light_color": p["key"], "light_energy": p["key_e"] if night else 0.0},
 		rim: {"light_color": p["rim"], "light_energy": p["rim_e"]},
 		env: {"ambient_light_color": p["amb"], "ambient_light_energy": p["amb_e"], "fog_light_color": p["fog"],
 			"fog_density": p["fog_d"], "adjustment_saturation": p["sat"], "adjustment_contrast": p["con"],
 			"glow_intensity": p["glow"], "tonemap_exposure": p["exp"], "glow_hdr_threshold": p["thr"]},
 	}
-	for t in [_fade, _move]:
-		if t and t.is_valid():
-			t.kill()
+	if not night and mood != "dusk" and not sun.quaternion.is_equal_approx(_quat(SUN_DAY)):
+		# back to the day position while it is dark, so nobody sees it move (after a very short night it may still
+		# be lit: then it goes dark first and fades back in from the day position)
+		_stop(_sink)
+		sun.light_energy = 0.0
+		sun.quaternion = _quat(SUN_DAY)
+	_stop(_fade)
 	if seconds <= 0.0 or not is_inside_tree():
-		for obj in colours:
-			for prop in colours[obj]:
-				obj.set(prop, colours[obj][prop])
-		sun.light_energy = p["key_e"]
-		_aim(_sun_quat(p), 0.0)
+		for obj in to:
+			for prop in to[obj]:
+				obj.set(prop, to[obj][prop])
 		return
 	_fade = create_tween().set_parallel().set_trans(Tween.TRANS_SINE)
-	for obj in colours:
-		for prop in colours[obj]:
-			_fade.tween_property(obj, prop, colours[obj][prop], seconds)
-	if was_moon != p.get("moon", false) or (mood == "dawn" and current_was != "dawn"):
-		# swap sun and moon (or start a new sunrise): fade the light out, move it in the dark, fade it back in
-		_move = create_tween().set_trans(Tween.TRANS_SINE)
-		_move.tween_property(sun, "light_energy", 0.0, seconds * 0.45)
-		_move.tween_callback(_aim.bind(_sun_quat(p), 0.0))
-		_move.tween_property(sun, "light_energy", p["key_e"], seconds * 0.55)
-	else:
-		_fade.tween_property(sun, "light_energy", p["key_e"], seconds)
-		_aim(_sun_quat(p), seconds if turn == -1.0 else turn)
+	for obj in to:
+		for prop in to[obj]:
+			_fade.tween_property(obj, prop, to[obj][prop], seconds)
 
 
 func play(first: String, then: String, hold: float) -> void:
 	## A mood that eases into the next after `hold` seconds (dawn -> day, dusk -> night). A later call cancels it.
-	## At dawn the sun keeps rising the whole time (one slow, steady climb from the east into the day position).
-	if _seq and _seq.is_valid():
-		_seq.kill()
-	var climb: bool = not PRESETS[first].get("moon", false) and not PRESETS[then].get("moon", false) and first == "dawn"
-	set_mood(first, BLEND * 1.5, -1.0 if climb else hold)  # at dusk the sun sinks slowly over the whole hold
+	## Dusk is the one time the sun moves: it sinks from the day position over the hold, then night fades it out.
+	_stop(_seq)
+	set_mood(first)
 	if not is_inside_tree():
 		return
+	if first == "dusk":
+		_stop(_sink)
+		_sink = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_sink.tween_property(sun, "quaternion", _quat(SUN_SET), hold + BLEND)
 	_seq = create_tween()
-	if climb:
-		_seq.tween_interval(BLEND * 1.5)  # the dawn colours settle, then the sun climbs steadily into the day
-		_seq.tween_callback(_aim.bind(_sun_quat(PRESETS[then]), hold + BLEND * 2.0 - BLEND * 1.5))
-		_seq.tween_interval(hold - BLEND * 1.5)
-		_seq.tween_callback(func(): set_mood(then, BLEND * 2.0, -2.0))
-	else:
-		_seq.tween_interval(hold)
-		_seq.tween_callback(set_mood.bind(then, BLEND * 2.0))
+	_seq.tween_interval(hold)
+	_seq.tween_callback(set_mood.bind(then, BLEND * 2.0))
 
 
-func _sun_quat(p: Dictionary) -> Quaternion:
-	return Basis.from_euler(Vector3(deg_to_rad(-p["elev"]), deg_to_rad(p["az"]), 0.0)).get_rotation_quaternion()
+func _quat(elev_az: Vector2) -> Quaternion:
+	return Basis.from_euler(Vector3(deg_to_rad(-elev_az.x), deg_to_rad(elev_az.y), 0.0)).get_rotation_quaternion()
 
 
-func _aim(q: Quaternion, seconds: float) -> void:
-	## Turns the sun (and the rim light, which always comes from opposite it) toward q. seconds < -1 = leave it.
-	if seconds < -1.0:
-		return
-	var rim_q := Quaternion(Vector3.UP, PI) * q  # same height, opposite side
-	if _turn and _turn.is_valid():
-		_turn.kill()
-	if seconds <= 0.0 or not is_inside_tree():
-		sun.quaternion = q
-		rim.quaternion = rim_q
-		return
-	_turn = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_turn.tween_property(sun, "quaternion", q, seconds)
-	_turn.tween_property(rim, "quaternion", rim_q, seconds)
+static func _stop(t: Tween) -> void:
+	if t and t.is_valid():
+		t.kill()
