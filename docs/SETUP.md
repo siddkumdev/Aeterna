@@ -53,3 +53,7 @@ Must end with `0 FAIL`.
 - **GitHub stays current:** Claude commits and pushes after every change (skill `github-sync`), with no Claude co-author lines. Pull before you start.
 - **Claude:** project rules are in `CLAUDE.md`; workflows are skills in `.claude/skills/` (start an asset with "make-asset"). They come with the repo, so both Claudes behave the same.
 - The repo stays **private**: the moodboard contains other people's images.
+
+## Ubuntu laptop (desktop mode, set and forget)
+Siddharth, 2026-10-28. Desktop mode only (mouse and keys): there is no Meta XR Simulator on Linux. Not yet tested on a real Ubuntu machine.
+`git clone` the private repo, then `bash tools/ubuntu/setup.sh` once. It installs git-lfs and Vulkan libraries, downloads Godot 4.7.2 into `~/.local/share/aeterna`, imports the project and adds an "Aeterna" app-menu icon (command `aeterna`). The icon runs `git pull --ff-only`, `git lfs pull`, an incremental import, then the game, so it is always the newest `main`.
