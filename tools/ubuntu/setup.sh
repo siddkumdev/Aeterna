@@ -38,7 +38,16 @@ cat > "$HOME/.local/bin/aeterna" <<LAUNCH
 #!/usr/bin/env bash
 # Update from GitHub (never fails the launch), re-import what changed, then start the game.
 cd "$REPO"
-git pull --ff-only -q 2>&1 || echo "aeterna: could not update (offline or local edits); starting the version you have"
+# This copy is for playing: if anything blocks the update (files Godot made itself, such as a new .uid, or an
+# edit), park it in a git stash (git stash list shows it, nothing is deleted) and update anyway.
+if ! git pull --ff-only -q 2>&1; then
+  git stash push --include-untracked -q -m "aeterna launcher \$(date '+%F %T')" 2>&1 || true
+  if ! git pull --ff-only -q 2>&1; then
+    msg="Could not update (offline?). Starting the version you have."
+    echo "aeterna: \$msg"
+    command -v notify-send >/dev/null && notify-send "Aeterna" "\$msg" || true
+  fi
+fi
 git lfs pull -q 2>&1 || true
 "$GODOT_BIN" --headless --xr-mode off --path "$REPO/godot" --import >/dev/null 2>&1 || true
 exec "$GODOT_BIN" --path "$REPO/godot" --xr-mode off --resolution 1600x900 "\$@"
