@@ -32,10 +32,7 @@ enum Phase { DAY, NIGHT, CARDS, DONE }
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
-# Lighting presets from art/art_bible.md (key colour, ambient colour, energy)
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
-const DAY_LIGHT := [Color("FFEBC8"), Color("9DBBD0"), 0.8]
-const NIGHT_LIGHT := [Color("8FB0D8"), Color("203C52"), 0.35]
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
@@ -104,8 +101,7 @@ var _hover_board_cell := Vector2i(-1, -1)  # the single cell under the pointer (
 var _buttons := {}  # id -> {"node", "mat", "label", "box": AABB (board-local)}
 var _hud: Label3D
 var _msg: Label3D
-var _sun: DirectionalLight3D
-var _env: Environment
+var lighting: Lighting  # the four moods, tonemap, bloom and fog (scripts/vfx/lighting.gd)
 var _camera: Camera3D
 var _hands: Array[GameHand] = []
 var _active_hand: GameHand
@@ -210,7 +206,7 @@ func _set_phase(p: int, message: String) -> void:
 		_post_requests()
 	elif _requests_root:
 		_clear_requests()
-	_set_light(NIGHT_LIGHT if p == Phase.NIGHT else DAY_LIGHT)
+	_set_light(p)
 	_refresh_ui()
 	phase_changed.emit(p)
 
@@ -1360,34 +1356,38 @@ func _refresh_buttons() -> void:
 # ---------------------------------------------------------------- world, light, rig
 
 func _build_lights() -> void:
-	var we := WorldEnvironment.new()
-	_env = Environment.new()
-	_env.background_mode = Environment.BG_COLOR
-	_env.background_color = Color8(0x80, 0x7E, 0x7A)  # stands in for passthrough
-	_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	we.environment = _env
-	add_child(we)
-	_sun = DirectionalLight3D.new()
-	_sun.shadow_enabled = true
-	_sun.rotation_degrees = Vector3(-50, -35, 0)
-	add_child(_sun)
+	lighting = Lighting.new()
+	lighting.name = "Lighting"
+	add_child(lighting)
+	# metres from the eye to the board's near edge: the fog starts past the board centre and tints the forest ring
+	lighting.build(0.52 if _xr else 1.12)
 
 
-func _set_light(preset: Array) -> void:
-	if _sun == null:
+func _set_light(p: int) -> void:
+	## Dawn eases into day at the start of a build day; dusk eases into night as the night begins.
+	if lighting == null:
 		return
-	var tw := create_tween().set_parallel() if is_inside_tree() else null
-	var key: Color = preset[0]
-	var amb: Color = preset[1]
-	var energy: float = preset[2] * 1.6
-	if tw:
-		tw.tween_property(_sun, "light_color", key, 1.2)
-		tw.tween_property(_sun, "light_energy", energy, 1.2)
-		tw.tween_property(_env, "ambient_light_color", amb, 1.2)
-	else:
-		_sun.light_color = key
-		_sun.light_energy = energy
-		_env.ambient_light_color = amb
+	match p:
+		Phase.DAY:
+			lighting.play("dawn", "day", Lighting.DAWN_HOLD)
+		Phase.NIGHT:
+			lighting.play("dusk", "night", Lighting.DUSK_HOLD)
+		_:
+			lighting.set_mood("day")
+
+
+func _build_vignette() -> void:
+	## Desktop only: a soft dark edge round the screen. In the headset it would darken the real room (passthrough).
+	var layer := CanvasLayer.new()
+	layer.layer = -1
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/vignette.gdshader")
+	rect.material = m
+	layer.add_child(rect)
 
 
 func _build_mouse_hand() -> void:
@@ -1453,6 +1453,7 @@ func _build_rig() -> void:
 		_camera.position = Vector3(0, 1.75, 0.25)
 		_camera.rotation_degrees.x = -47.0
 		_build_mouse_hand()
+		_build_vignette()
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)

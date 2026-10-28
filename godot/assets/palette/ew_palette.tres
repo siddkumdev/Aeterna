@@ -5,5 +5,10 @@
 [resource]
 resource_name = "ew_palette"
 albedo_texture = ExtResource("1_atlas")
-roughness = 1.0
+diffuse_mode = 3
+specular_mode = 2
+roughness = 0.55
+rim_enabled = true
+rim = 0.15
+rim_tint = 0.7
 texture_filter = 0

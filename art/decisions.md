@@ -228,3 +228,10 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 | 2026-10-28 | Siddharth | Rage spell effects approved by Siddharth (2026-10-28). Root Ward next. |
 
 | 2026-10-28 | Siddharth | Root Ward VFX first pass (roots grow out of the ground, wood brown with orange buds; no new palette colour). Roots now take 0.5 s to sink back, so the self-test waits 0.7 s instead of 0.2 s. Awaiting his look. |
+
+## 2026-10-28 - Lighting and post-processing pass (Claude decided, on Siddharth's "go with what's best"; awaiting his review)
+- Four moods from palette.json in the game: dawn at the start of each build day easing into day (5 s), dusk for the first 4 s of a night easing into night; card screen = day.
+- Shading: soft toon (StandardMaterial toon diffuse, roughness 0.55, rim 0.15) on the shared ew_palette material; between the soft island refs (#2, #3) and the bible's stepped toon.
+- Post: filmic tonemap, per-mood saturation/contrast/exposure, bloom with a per-mood threshold, depth fog that tints the forest ring, desktop-only vignette. Nothing touches the background (passthrough rule). No SSAO, SSR, volumetric fog, DoF or motion blur.
+- Outline pass: try later, after lighting. Shadows: keep the real sun shadow, add soft contact blobs later; judge cost on a Quest.
+- Still to do in this pass: night window/lantern glows (bloom alone barely shows in the mobile renderer), contact shadows, board shadow on the table.
