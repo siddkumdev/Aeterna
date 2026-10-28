@@ -825,6 +825,46 @@ func _spells() -> void:
 	_run(g, 8.2)
 	check("an unused ward fades after 8 s", g.houses[1].ward == 0.0)
 
+	# the critics' finds (2026-10-28): a second potion keeps its ward, a boulder's shadow never outlives it, Rage's ring is ticked
+	g.queue_free()
+	await process_frame
+	g = await _make_game()
+	_night_start(g)
+	g.cast_spell("roots", g.house_point(0))
+	_run(g, 1.0)
+	g.spells.cooldown["roots"] = 0.0
+	g.cast_spell("roots", g.house_point(0))
+	_run(g, 1.0)
+	check("a second Root Ward on the same house keeps its ward", is_equal_approx(g.houses[0].ward, 40.0) and g.spells._fx.filter(func(f): return f["kind"] == "roots").size() == 1)
+	g.cast_spell("boulder", _at(5, 5), 8.0)
+	g.spells.clear_effects()
+	var shadows := 0
+	for n in g.spells.get_children():
+		if n is MeshInstance3D and n.mesh is CylinderMesh and not n.is_queued_for_deletion():
+			shadows += 1
+	check("a boulder's ground shadow is removed with the rest when effects clear (%d left)" % shadows, shadows == 0)
+	g.cast_spell("rage", _at(8, 8))
+	var rage_before: float = ((g.spells._fx.filter(func(f): return f["kind"] == "rage")[0]["flame"] as MeshInstance3D).material_override as ShaderMaterial).get_shader_parameter("progress")
+	_run(g, 0.5)
+	var rage_after: float = ((g.spells._fx.filter(func(f): return f["kind"] == "rage")[0]["flame"] as MeshInstance3D).material_override as ShaderMaterial).get_shader_parameter("progress")
+	check("the Rage ring is ticked (its flame moves: %.2f -> %.2f)" % [rage_before, rage_after], not is_equal_approx(rage_before, rage_after))
+	g.cast_spell("storm", _at(10, 10))
+	var e := g._spawn(Vector2i(10, 10), "grunt", NavGrid.cell_centre(Vector2i(10, 10)))
+	e.slow(0.0001, 1000.0)
+	e.hp = 99999.0
+	_run(g, 0.55)  # the first strike comes at 0.5 s and lasts 0.22 s
+	var bolts := g.spells._fx.filter(func(f): return f["kind"] == "bolt")
+	var bolt_ok := not bolts.is_empty()
+	for bolt in bolts:
+		bolt_ok = bolt_ok and (bolt["node"] as Node3D).get_child_count() > 0 and (bolt["node"].get_child(bolt["node"].get_child_count() - 1) as Node3D).global_position.distance_to(e.chest()) < 0.1
+	check("storm bolts end on the enemy they hit (world space, not shifted by the board's position)", bolt_ok)
+	var l: Lighting = g.lighting
+	g._set_phase(Game.Phase.NIGHT, "")
+	g._set_phase(Game.Phase.CARDS, "")
+	_run(g, 0.0)
+	await process_frame
+	check("a night that ends inside the dusk leaves the day mood (no pending night)", l.current == "day" and (l._seq == null or not l._seq.is_valid()))
+
 	# Quick Hands card, night reset, the signs and the VR grab
 	g.queue_free()
 	await process_frame

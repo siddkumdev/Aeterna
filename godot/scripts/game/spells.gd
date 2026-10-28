@@ -27,6 +27,7 @@ var tokens := {}  # spell id -> Node3D on the table, for hand grabs in VR
 var _fx: Array = []  # timed effects: {"kind", "left", "node", ...}
 var _rng := RandomNumberGenerator.new()
 var _aim: MeshInstance3D  # the ring that shows where a spell will land
+var _bolt_mats: Array[StandardMaterial3D] = []
 
 
 func _ready() -> void:
@@ -49,8 +50,9 @@ func clear_effects() -> void:
 	for f in _fx:
 		if is_instance_valid(f["node"]):
 			f["node"].queue_free()
-		if f.has("potion") and is_instance_valid(f["potion"]):
-			f["potion"].queue_free()
+		for extra in ["potion", "shadow"]:  # pieces that are not the effect's main node
+			if f.has(extra) and is_instance_valid(f[extra]):
+				f[extra].queue_free()
 	_fx.clear()
 	hide_aim()
 
@@ -162,6 +164,7 @@ func _rage(pos: Vector3, cfg: Dictionary) -> void:
 	ring.position = pos + Vector3(0, 0.003, 0)
 	add_child(ring)
 	var flame := VfxKit.toon_ring(ring, r)
+	VfxKit.toon_set(flame, "alpha", 0.75)  # a see-through ring: the houses and the tower inside stay readable
 	VfxKit.toon_burst(self, to_global(pos), r * 2.4, "ring", 0.5)  # it sweeps out from where it lands
 	_fx.append({"kind": "rage", "node": ring, "left": cfg["duration"], "total": cfg["duration"], "pos": pos, "radius": r,
 		"haste": cfg["haste"], "flame": flame, "age": 0.0, "pulse": 0.4})
@@ -184,6 +187,7 @@ func _roots(pos: Vector3, cfg: Dictionary) -> bool:
 	for f in _fx:  # a second potion on the same house replaces the first
 		if f["kind"] == "roots" and f["house"] == best:
 			f["left"] = 0.0
+			f["replaced"] = true  # its expiry must not wipe the new ward
 	var cage := Node3D.new()
 	cage.position = game.house_point(best)
 	add_child(cage)
@@ -260,6 +264,8 @@ func step(delta: float) -> void:
 				while f["next"] <= 0.0 and f["left"] > 0.0:
 					f["next"] += f["cfg"]["interval"]
 					_strike(f)
+			"rage":
+				_step_rage(f, delta)
 			"roots":
 				_step_roots(f, delta)
 			"flash", "bolt":
@@ -269,12 +275,13 @@ func step(delta: float) -> void:
 				else:
 					f["node"].visible = int(f["left"] * 40.0) % 3 != 0  # a bolt flickers, then goes
 		if f["left"] <= 0.0:
-			if f["kind"] == "roots":
+			if f["kind"] == "roots" and not f.get("replaced", false):
 				game.houses[f["house"]].ward = 0.0
 			if is_instance_valid(f["node"]):
 				f["node"].queue_free()
-			if f.has("potion") and is_instance_valid(f["potion"]):
-				f["potion"].queue_free()
+			for extra in ["potion", "shadow"]:
+				if f.has(extra) and is_instance_valid(f[extra]):
+					f[extra].queue_free()
 			_fx.erase(f)
 
 
@@ -297,7 +304,7 @@ func _step_roots(f: Dictionary, delta: float) -> void:
 			VfxKit.toon_burst(self, at + Vector3(0, 0.02, 0), 0.1, "burst", 0.35)  # the glass bursts
 			VfxKit.burst(self, at + Vector3(0, 0.02, 0), Color("F4E4B8"), GLOW_COLOUR, 10, 0.08, 0.5, 0.004, -0.4)  # glass chips
 			VfxKit.toon_dust(self, at + Vector3(0, 0.01, 0), 0.1)
-	var wither := clampf(f["left"] / 0.7, 0.0, 1.0)
+	var wither := clampf(f["left"] / 0.5, 0.0, 1.0)
 	if house.ward <= 0.0 and f["left"] > 0.5:
 		f["left"] = 0.5  # the shield is spent: the roots sink back
 	var grown: Array = f["grow"]
@@ -319,13 +326,13 @@ func _step_rage(f: Dictionary, delta: float) -> void:
 	f["age"] += delta
 	var m := (f["flame"] as MeshInstance3D).material_override as ShaderMaterial
 	m.set_shader_parameter("progress", 0.5 + 0.2 * sin(f["age"] * 1.7) + 0.1 * sin(f["age"] * 4.3))
-	m.set_shader_parameter("alpha", clampf(f["left"] / 0.6, 0.0, 1.0))  # fades in its last moments
+	m.set_shader_parameter("alpha", 0.75 * clampf(f["left"] / 0.6, 0.0, 1.0))  # fades in its last moments
 	f["pulse"] -= delta
 	if f["pulse"] <= 0.0 and f["left"] > 0.3:
 		f["pulse"] = 0.7
 		for t in game.towers:  # a red pulse at the foot of every tower the ring is speeding up
 			if is_instance_valid(t) and _flat(t.position - f["pos"]) <= f["radius"]:
-				VfxKit.toon_burst(self, t.global_position + Vector3(0, 0.002, 0), 0.12, "ring", 0.45)
+				VfxKit.toon_burst(self, t.global_position + Vector3(0, 0.002, 0), 0.09, "ring", 0.45)
 				VfxKit.burst(self, t.global_position + Vector3(0, 0.01, 0), FIRE_RED, INK, 5, 0.03, 0.5, 0.004, 0.15)
 
 
@@ -389,7 +396,7 @@ func _strike(f: Dictionary) -> void:
 		var last: Vector3 = at.position
 		at = _nearest(last, cfg["chain_reach"] * GameConfig.CELL, hit)
 	for i in range(points.size() - 1):
-		_bolt(points[i] - position, points[i + 1] - position)
+		_bolt(points[i], points[i + 1])  # world points: look_at_from_position below places in world space
 		VfxKit.toon_burst(self, points[i + 1], 0.045, "burst", 0.3)  # a spark where it lands
 	if points.size() > 1:
 		VfxKit.toon_burst(self, from, 0.05, "burst", 0.2)  # and a flash in the cloud
@@ -408,8 +415,18 @@ func _nearest(centre: Vector3, reach: float, skip: Array) -> Enemy:
 	return best
 
 
+func _bolt_material(layer: int, colour: Color, unshaded: bool) -> StandardMaterial3D:
+	## One shared material per bolt layer (ink edge, orange body, yellow core), made once.
+	if _bolt_mats.size() <= layer:
+		var mat := ModelUtil.flat_material(colour, unshaded)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA  # drawn in layer order, so the thin core shows inside the ink edge
+		mat.render_priority = layer
+		_bolt_mats.append(mat)
+	return _bolt_mats[layer]
+
+
 func _bolt(a: Vector3, b: Vector3) -> void:
-	## One forked lightning link between two points: a zigzag of thin boxes, ink edge, orange body, yellow core.
+	## One forked lightning link between two WORLD points: a zigzag of thin boxes, ink edge, orange body, yellow core.
 	## It flickers for a moment (see step: "bolt").
 	var bolt := Node3D.new()
 	add_child(bolt)
@@ -436,10 +453,7 @@ func _bolt(a: Vector3, b: Vector3) -> void:
 			var bm := BoxMesh.new()
 			bm.size = Vector3(layer[0], layer[0], l + layer[0] * 0.6)
 			m.mesh = bm
-			var mat := ModelUtil.flat_material(layer[1], layer[2])
-			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA  # drawn in layer order, so the thin core shows inside the ink edge
-			mat.render_priority = li
-			m.material_override = mat
+			m.material_override = _bolt_material(li, layer[1], layer[2])
 			bolt.add_child(m)
 			m.position = (p0 + p1) / 2.0
 			if l > 0.001:

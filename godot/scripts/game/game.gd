@@ -1373,6 +1373,7 @@ func _set_light(p: int) -> void:
 		Phase.NIGHT:
 			lighting.play("dusk", "night", Lighting.DUSK_HOLD)
 		_:
+			lighting.stop_sequence()  # a night that ends within the dusk must not fall back into night light
 			lighting.set_mood("day")
 
 

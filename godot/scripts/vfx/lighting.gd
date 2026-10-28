@@ -19,8 +19,8 @@ extends Node3D
 const PRESETS := {
 	# key = sun/moon colour, amb = ambient (shadow fill), rim = back light; *_e = energies
 	# fog = colour the far forest fades toward; sat/con = colour grade; exp = exposure; glow = bloom strength; thr = how bright a pixel must be to bloom (low at night: only lit windows and fire are bright then)
-	"dawn": {"key": Color("FFD9B0"), "key_e": 1.1, "amb": Color("7E86B8"), "amb_e": 0.75, "rim": Color("F8CDB4"),
-		"rim_e": 0.45, "fog": Color("F8CDB4"), "fog_d": 0.35, "sat": 0.95, "con": 1.0,
+	"dawn": {"key": Color("FFB890"), "key_e": 1.05, "amb": Color("9A84C8"), "amb_e": 0.95, "rim": Color("F8A890"),
+		"rim_e": 0.45, "fog": Color("F8B0A0"), "fog_d": 0.5, "sat": 0.88, "con": 1.0,
 		"exp": 1.0, "glow": 0.25, "thr": 0.95},
 	"day": {"key": Color("FFD898"), "key_e": 1.35, "amb": Color("86B4BC"), "amb_e": 0.6, "rim": Color("FFD07A"),
 		"rim_e": 0.35, "fog": Color("D6EBF5"), "fog_d": 0.2, "sat": 1.0, "con": 1.04,
@@ -37,7 +37,7 @@ const SUN_DAY := Vector2(48.0, -35.0)
 const SUN_SET := Vector2(20.0, -50.0)  # where it has sunk to by the end of dusk
 const MOON := Vector2(55.0, 25.0)
 const BLEND := 1.5  # s to move from one mood to the next
-const DAWN_HOLD := 5.0  # s of dawn before the day light takes over
+const DAWN_HOLD := 6.0  # s of dawn before the day light takes over
 const DUSK_HOLD := 4.0  # s of dusk before night falls
 
 var env: Environment
@@ -92,6 +92,18 @@ func build(fog_from: float) -> void:
 	set_mood("day", 0.0)
 
 
+func _process(_delta: float) -> void:
+	## A light at zero energy is switched off, so the Quest never shades with it (the moon by day, the sun at night).
+	sun.visible = sun.light_energy > 0.01
+	moon.visible = moon.light_energy > 0.01
+
+
+func stop_sequence() -> void:
+	## Cancels a pending dusk -> night or dawn -> day, so a screen that ends the night keeps its own mood.
+	_stop(_seq)
+	_stop(_sink)
+
+
 func set_mood(mood: String, seconds := BLEND) -> void:
 	## Moves the colours, the grade and the sun/moon brightness to a mood over `seconds` (instantly when 0).
 	## Lights never turn here (see the header); dusk's sinking sun is started by play().
@@ -128,7 +140,7 @@ func play(first: String, then: String, hold: float) -> void:
 	## A mood that eases into the next after `hold` seconds (dawn -> day, dusk -> night). A later call cancels it.
 	## Dusk is the one time the sun moves: it sinks from the day position over the hold, then night fades it out.
 	_stop(_seq)
-	set_mood(first)
+	set_mood(first, BLEND * 2.0 if first == "dawn" else BLEND)  # a sunrise fades in gently
 	if not is_inside_tree():
 		return
 	if first == "dusk":
