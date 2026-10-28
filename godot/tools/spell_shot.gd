@@ -18,6 +18,8 @@ func _initialize() -> void:
 		await process_frame
 	g.trust = 500
 	g.cards = {}
+	if which == "rage":  # a tower inside the ring, so its pulse shows
+		print("SPELLSHOT tower ", g.try_build("fire", Vector2i(10, 12)))
 	g.night = 2
 	g.start_night()
 	g._spawn_queue.clear()
@@ -42,6 +44,9 @@ func _initialize() -> void:
 		focus += Vector3(0, 0.1, 0)
 		cam.fov = 44
 		cam.global_position = focus + Vector3(0.0, 0.2, 0.38)
+	if which == "rage":  # a wide, high view: the whole ring and the tower inside it
+		cam.fov = 40
+		cam.global_position = focus + Vector3(0.0, 0.5, 0.3)
 	cam.look_at(focus, Vector3.UP)
 	var ok: bool = g.spells.cast(which, at, 4.0)
 	print("SPELLSHOT cast ", which, " -> ", ok)

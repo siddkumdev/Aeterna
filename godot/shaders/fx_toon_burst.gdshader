@@ -11,6 +11,7 @@ uniform int mode = 0;
 uniform float progress : hint_range(0.0, 1.0) = 0.0;
 uniform float seed = 0.0;
 uniform float alpha = 1.0;
+uniform float hold = 0.0;  // 1 = a standing ring (Rage): thin, fixed radius, never fades; `progress` only moves its teeth
 uniform float shards = 1.0;  // 0 for smoke: no spikes
 uniform vec3 c_core : source_color = vec3(1.0, 0.831, 0.353);
 uniform vec3 c_mid : source_color = vec3(0.965, 0.643, 0.365);
@@ -78,16 +79,18 @@ void fragment() {
 		}
 	} else {
 		// the ring: an annulus of flame on the ground; its teeth lick outward
-		float R = mix(0.25, 0.85, ease);
+		bool st = hold > 0.5;
+		float R = st ? 0.82 : mix(0.25, 0.85, ease);
 		float teeth = (nz(vec2(a * 0.6 + seed, pr * 0.5)) - 0.5) * 0.3 + (nz(vec2(a * 1.7, pr * 0.8 + 2.0)) - 0.5) * 0.12;
-		float thick = mix(0.16, 0.03, pr);
+		teeth *= st ? 0.3 : 1.0;
+		float thick = st ? 0.05 : mix(0.16, 0.03, pr);
 		float rr = abs(r - R * (1.0 + teeth)) / max(thick, 0.005);
 		float body = 1.0 - smoothstep(1.0 - aa * 4.0, 1.0 + aa * 4.0, rr);
 		col = mix(c_out, c_mid, smoothstep(0.55, 0.6, 1.0 - rr));
 		col = mix(col, c_core, smoothstep(0.82, 0.86, 1.0 - rr));
 		float blot = smoothstep(0.7, 0.74, nz(vec2(a * 1.3 + seed, r * 3.0) + 5.0));
 		col = mix(col, c_ink, blot * 0.8);
-		vis = body * (1.0 - smoothstep(0.6, 1.0, pr));
+		vis = st ? body : body * (1.0 - smoothstep(0.6, 1.0, pr));
 	}
 	if (vis < 0.5) {
 		discard;

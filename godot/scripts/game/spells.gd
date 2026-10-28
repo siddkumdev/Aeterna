@@ -154,17 +154,15 @@ func _storm(pos: Vector3, cfg: Dictionary) -> void:
 
 
 func _rage(pos: Vector3, cfg: Dictionary) -> void:
-	var tm := TorusMesh.new()
+	## A ring of painted flame on the ground that licks while it lasts; towers inside get a red pulse (see step).
 	var r: float = cfg["radius"] * GameConfig.CELL
-	tm.inner_radius = r - 0.004
-	tm.outer_radius = r
-	var ring := MeshInstance3D.new()
-	ring.mesh = tm
-	ring.scale.y = 0.4
+	var ring := Node3D.new()
 	ring.position = pos + Vector3(0, 0.003, 0)
-	ring.material_override = ModelUtil.flat_material(FIRE_RED, true, 0.8)
 	add_child(ring)
-	_fx.append({"kind": "rage", "node": ring, "left": cfg["duration"], "pos": pos, "radius": r, "haste": cfg["haste"]})
+	var flame := VfxKit.toon_ring(ring, r)
+	VfxKit.toon_burst(self, to_global(pos), r * 2.4, "ring", 0.5)  # it sweeps out from where it lands
+	_fx.append({"kind": "rage", "node": ring, "left": cfg["duration"], "total": cfg["duration"], "pos": pos, "radius": r,
+		"haste": cfg["haste"], "flame": flame, "age": 0.0, "pulse": 0.4})
 
 
 func _roots(pos: Vector3, cfg: Dictionary) -> bool:
@@ -246,6 +244,20 @@ func step(delta: float) -> void:
 			if is_instance_valid(f["node"]):
 				f["node"].queue_free()
 			_fx.erase(f)
+
+
+func _step_rage(f: Dictionary, delta: float) -> void:
+	f["age"] += delta
+	var m := (f["flame"] as MeshInstance3D).material_override as ShaderMaterial
+	m.set_shader_parameter("progress", 0.5 + 0.2 * sin(f["age"] * 1.7) + 0.1 * sin(f["age"] * 4.3))
+	m.set_shader_parameter("alpha", clampf(f["left"] / 0.6, 0.0, 1.0))  # fades in its last moments
+	f["pulse"] -= delta
+	if f["pulse"] <= 0.0 and f["left"] > 0.3:
+		f["pulse"] = 0.7
+		for t in game.towers:  # a red pulse at the foot of every tower the ring is speeding up
+			if is_instance_valid(t) and _flat(t.position - f["pos"]) <= f["radius"]:
+				VfxKit.toon_burst(self, t.global_position + Vector3(0, 0.002, 0), 0.12, "ring", 0.45)
+				VfxKit.burst(self, t.global_position + Vector3(0, 0.01, 0), FIRE_RED, INK, 5, 0.03, 0.5, 0.004, 0.15)
 
 
 func _step_ball(f: Dictionary) -> void:

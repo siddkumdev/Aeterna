@@ -220,3 +220,7 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 | 2026-10-28 | Siddharth | Boulder spell effects approved by Siddharth (2026-10-28). Storm Cloud next. |
 
 | 2026-10-28 | Siddharth | Storm Cloud VFX first pass (dark painted cloud, jagged orange/yellow chain lightning with ink edge; no blue). Also fixed: the first bolt used to start at the wrong place (cloud position was board-local, enemies world). Awaiting his look. |
+
+| 2026-10-28 | Siddharth | Storm Cloud spell effects approved by Siddharth (2026-10-28). Rage next. |
+
+| 2026-10-28 | Siddharth | Rage VFX first pass: held flaming ring on the ground (new `hold` mode in fx_toon_burst: thin, fixed radius, no fade), pulse at hasted towers. Red/orange, no purple. Awaiting his look. |

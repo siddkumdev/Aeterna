@@ -114,3 +114,5 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | 2026-10-28 | Boulder spell, painted (first pass) | Siddharth: "do the boulder next" | faceted tumbling rock, ground shadow, dust ring and cloud, grey chips; token still plain | X02 |
 | 2026-10-28 | Boulder spell effects APPROVED by Siddharth | Siddharth: "Approved, do the storm cloud next" | - | X02 |
 | 2026-10-28 | Storm Cloud spell, painted (first pass) | Siddharth: "do the storm cloud next" | cloud: 5 overlapping ink blobs; bolts: zigzag, ink edge, orange body, yellow core, spark where it lands, flash in the cloud; token still plain | X02 |
+| 2026-10-28 | Storm Cloud spell effects APPROVED by Siddharth | Siddharth: "Approved, do Rage next" | - | X02 |
+| 2026-10-28 | Rage ring spell, painted (first pass) | Siddharth: "do Rage next" | thin steady flaming ring (red/orange) that licks, sweeps out when cast, fades in its last 0.6 s; red pulse and embers at the foot of every tower inside; token still plain | X02 |

@@ -354,6 +354,26 @@ static func build_pop(parent: Node, at: Vector3) -> void:
 	burst(parent, at + Vector3(0, 0.01, 0), FIRE_ORANGE, INK, 8, 0.04, 0.4, 0.004)
 
 
+static func toon_ring(parent: Node3D, radius: float) -> MeshInstance3D:
+	## A standing flaming ring on the ground (the burst shader's ring in its held mode: thin, steady), `radius` metres out to its flame.
+	## Its teeth lick when `progress` moves a little (the caller wobbles it). The quad lies flat, so the node must stay level.
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = BURST_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", 1)
+	m.set_shader_parameter("size", Vector2.ONE * radius / 0.41)  # a held ring sits at 0.82 of the half-size
+	m.set_shader_parameter("hold", 1.0)
+	m.set_shader_parameter("seed", randf() * 40.0)
+	m.set_shader_parameter("progress", 0.5)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
 static func toon_cloud(parent: Node3D, size: float) -> MeshInstance3D:
 	## A standing painted storm cloud blob (the burst shader held at one lumpy frame): ink and smoky greys, no spikes.
 	var mi := MeshInstance3D.new()
