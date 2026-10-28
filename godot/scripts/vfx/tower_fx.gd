@@ -204,6 +204,8 @@ var _flag_home := Basis.IDENTITY
 var _burner: MeshInstance3D
 var _burner_at: Node3D  # the model's burner_anchor, in the balloon's mouth
 var _muzzle_at: Node3D  # the model's muzzle_anchor on the barrel
+var _puff_in := 0.0
+var _puff_side := 1.0
 
 
 func _build_ship(parts: Dictionary) -> void:
@@ -217,7 +219,7 @@ func _build_ship(parts: Dictionary) -> void:
 			_burner_at = n
 		elif n is Marker3D and str(n.name).ends_with("muzzle_anchor"):
 			_muzzle_at = n
-	_burner = VfxKit.toon_fire(self, 1, Vector2(0.014, 0.024), 0.5, 1.6)
+	_burner = VfxKit.toon_fire(self, 1, Vector2(0.04, 0.06), 0.8, 1.6)
 	VfxKit.toon_set(_burner, "depth_bias", 0.012)
 	_shots = tower.shots_fired
 
@@ -235,9 +237,16 @@ func _process_ship(delta: float) -> void:
 		_flag.basis = _flag_home * Basis.from_euler(Vector3(0.0, sin(_t * 3.1) * 0.2 + sin(_t * 7.3) * 0.05, sin(_t * 2.2) * 0.06))
 	# the burner: a small steady flame, roaring up as the cannon charges a shot
 	if _burner_at != null:
-		_burner.global_position = _burner_at.global_position
-	VfxKit.toon_set(_burner, "energy", 0.4 + 0.5 * charge + 0.08 * sin(_t * 8.0))
-	VfxKit.toon_set(_burner, "size", Vector2(0.012 + 0.008 * charge, 0.02 + 0.014 * charge))
+		_burner.global_position = _burner_at.global_position + Vector3(0, -0.012, 0)  # hangs in the gap under the balloon
+	VfxKit.toon_set(_burner, "energy", 0.75 + 0.4 * charge + 0.08 * sin(_t * 8.0))
+	VfxKit.toon_set(_burner, "size", Vector2(0.04 + 0.012 * charge, 0.06 + 0.02 * charge))
+	# hot exhaust: a grey puff leaves the flame now and then and drifts out sideways, alternating left and right
+	_puff_in -= delta
+	if _puff_in <= 0.0 and _burner_at != null:
+		_puff_in = 0.55 - 0.2 * charge
+		_puff_side = -_puff_side
+		var at := _burner_at.global_position + Vector3(0.0, -0.004, 0.0)
+		VfxKit.toon_smoke(tower.game.shots_root, at, 0.04, 2.0, Vector3(0.055 * _puff_side, 0.03, 0.0))
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
 		if _muzzle_at != null:
