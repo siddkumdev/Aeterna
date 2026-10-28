@@ -354,6 +354,29 @@ static func build_pop(parent: Node, at: Vector3) -> void:
 	burst(parent, at + Vector3(0, 0.01, 0), FIRE_ORANGE, INK, 8, 0.04, 0.4, 0.004)
 
 
+static func toon_cloud(parent: Node3D, size: float) -> MeshInstance3D:
+	## A standing painted storm cloud blob (the burst shader held at one lumpy frame): ink and smoky greys, no spikes.
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := ShaderMaterial.new()
+	m.shader = BURST_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", 0)
+	m.set_shader_parameter("size", Vector2(size, size))
+	m.set_shader_parameter("seed", randf() * 40.0)
+	m.set_shader_parameter("progress", 0.3)
+	m.set_shader_parameter("shards", 0.0)
+	m.set_shader_parameter("c_core", Color("5B4F50"))
+	m.set_shader_parameter("c_mid", Color("2E2A33"))
+	m.set_shader_parameter("c_out", Color("111C30"))
+	m.set_shader_parameter("c_ink", Color("111C30"))
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
 static func toon_smoke(parent: Node, at: Vector3, size: float, life := 1.6) -> void:
 	## A painted ink-smoke puff (ink, stone_dark and stone bands, same cloud shape as the burst) that drifts up and thins out.
 	var mi := toon_burst(parent, at, size, "burst", life)

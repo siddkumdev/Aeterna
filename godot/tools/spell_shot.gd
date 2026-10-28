@@ -38,6 +38,10 @@ func _initialize() -> void:
 	g._msg.visible = false
 	var focus := g.board.to_global(at) + Vector3(0, 0.04, 0)
 	cam.global_position = focus + Vector3(0.0, 0.28, 0.3)  # from above, like the player leaning over the board
+	if which == "storm":  # the cloud hangs high: frame it and the ground below
+		focus += Vector3(0, 0.1, 0)
+		cam.fov = 44
+		cam.global_position = focus + Vector3(0.0, 0.2, 0.38)
 	cam.look_at(focus, Vector3.UP)
 	var ok: bool = g.spells.cast(which, at, 4.0)
 	print("SPELLSHOT cast ", which, " -> ", ok)

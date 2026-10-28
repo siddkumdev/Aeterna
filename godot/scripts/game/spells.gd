@@ -141,20 +141,16 @@ func _throw(pos: Vector3, damage: float, radius: float, flight: float, from_heig
 
 
 func _storm(pos: Vector3, cfg: Dictionary) -> void:
+	## The cloud: five overlapping painted ink blobs that bob a little, hung over the drop point.
 	var cloud := Node3D.new()
 	cloud.position = pos + Vector3(0, cfg["height"] * GameConfig.CELL, 0)
 	add_child(cloud)
-	var mat := ModelUtil.flat_material(INK)
-	for i in range(4):
-		var m := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 0.018 - 0.002 * (i % 2)
-		sm.height = sm.radius * 2.0
-		m.mesh = sm
-		m.material_override = mat
-		m.position = Vector3(cos(i * TAU / 4.0) * 0.016, 0.004 * (i % 2), sin(i * TAU / 4.0) * 0.016)
-		cloud.add_child(m)
-	_fx.append({"kind": "storm", "node": cloud, "left": cfg["duration"], "pos": pos, "next": 0.5, "cfg": cfg})
+	for i in range(5):
+		var blob := VfxKit.toon_cloud(cloud, 0.12 - 0.025 * (i % 2))
+		blob.position = Vector3(cos(i * TAU / 5.0) * 0.026, 0.006 * (i % 2), sin(i * TAU / 5.0) * 0.014)
+		VfxKit.toon_set(blob, "depth_bias", 0.004 + 0.003 * i)
+	_fx.append({"kind": "storm", "node": cloud, "left": cfg["duration"], "pos": pos, "next": 0.5, "cfg": cfg,
+		"base_y": cloud.position.y, "age": 0.0})
 
 
 func _rage(pos: Vector3, cfg: Dictionary) -> void:
@@ -231,6 +227,8 @@ func step(delta: float) -> void:
 			"ball":
 				_step_ball(f)
 			"storm":
+				f["age"] += delta
+				f["node"].position.y = f["base_y"] + 0.003 * sin(f["age"] * 2.0)
 				f["next"] -= delta
 				while f["next"] <= 0.0 and f["left"] > 0.0:
 					f["next"] += f["cfg"]["interval"]
@@ -299,7 +297,7 @@ func _strike(f: Dictionary) -> void:
 	## One lightning strike: the nearest enemy under the cloud, then on to the nearest enemies near the last.
 	var cfg: Dictionary = f["cfg"]
 	var cloud: Vector3 = f["pos"]
-	var from: Vector3 = f["node"].position
+	var from: Vector3 = to_global(f["node"].position + Vector3(0, -0.006, 0))
 	var hit: Array = []
 	var at := _nearest(cloud, cfg["reach"] * GameConfig.CELL, hit)
 	var points: Array[Vector3] = [from]
@@ -311,6 +309,9 @@ func _strike(f: Dictionary) -> void:
 		at = _nearest(last, cfg["chain_reach"] * GameConfig.CELL, hit)
 	for i in range(points.size() - 1):
 		_bolt(points[i] - position, points[i + 1] - position)
+		VfxKit.toon_burst(self, points[i + 1], 0.045, "burst", 0.3)  # a spark where it lands
+	if points.size() > 1:
+		VfxKit.toon_burst(self, from, 0.05, "burst", 0.2)  # and a flash in the cloud
 
 
 func _nearest(centre: Vector3, reach: float, skip: Array) -> Enemy:
@@ -327,17 +328,42 @@ func _nearest(centre: Vector3, reach: float, skip: Array) -> Enemy:
 
 
 func _bolt(a: Vector3, b: Vector3) -> void:
-	## A thin orange bolt between two points, shown for a moment.
-	var m := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(0.004, 0.004, maxf(a.distance_to(b), 0.001))
-	m.mesh = bm
-	m.material_override = ModelUtil.flat_material(ORB_COLOUR, true)
-	add_child(m)
-	m.position = (a + b) / 2.0
-	if a.distance_to(b) > 0.001:
-		m.look_at_from_position(m.position, b, Vector3.UP if absf((b - a).normalized().y) < 0.99 else Vector3.RIGHT)
-	_fx.append({"kind": "bolt", "node": m, "left": 0.18, "total": 0.18})
+	## One forked lightning link between two points: a zigzag of thin boxes, ink edge, orange body, yellow core.
+	## It flickers for a moment (see step: "bolt").
+	var bolt := Node3D.new()
+	add_child(bolt)
+	var dir := b - a
+	var len := dir.length()
+	var side := dir.cross(Vector3.UP)
+	if side.length() < 0.001:
+		side = Vector3.RIGHT
+	side = side.normalized()
+	var n := maxi(3, int(len / 0.02))
+	var pts: Array[Vector3] = [a]
+	for i in range(1, n):
+		var j := _rng.randf_range(-1.0, 1.0) * minf(0.012, len * 0.18)
+		pts.append(a + dir * (float(i) / n) + side * j + Vector3(0, _rng.randf_range(-0.003, 0.003), 0))
+	pts.append(b)
+	var layers := [[0.0085, INK, false], [0.0052, GLOW_COLOUR, true], [0.0022, ORB_COLOUR, true]]
+	for k in range(pts.size() - 1):
+		var p0 := pts[k]
+		var p1 := pts[k + 1]
+		var l := maxf(p0.distance_to(p1), 0.001)
+		for li in range(layers.size()):
+			var layer: Array = layers[li]
+			var m := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(layer[0], layer[0], l + layer[0] * 0.6)
+			m.mesh = bm
+			var mat := ModelUtil.flat_material(layer[1], layer[2])
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA  # drawn in layer order, so the thin core shows inside the ink edge
+			mat.render_priority = li
+			m.material_override = mat
+			bolt.add_child(m)
+			m.position = (p0 + p1) / 2.0
+			if l > 0.001:
+				m.look_at_from_position(m.position, p1, Vector3.UP if absf((p1 - p0).normalized().y) < 0.99 else Vector3.RIGHT)
+	_fx.append({"kind": "bolt", "node": bolt, "left": 0.22, "total": 0.22})
 
 
 # ---------------------------------------------------------------- aiming and tokens

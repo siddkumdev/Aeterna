@@ -216,3 +216,7 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 | 2026-10-28 | Siddharth | Fire Orb spell effects approved by Siddharth (2026-10-28). Boulder next. |
 
 | 2026-10-28 | Siddharth | Boulder spell VFX first pass: tumbling faceted grey rock with a shadow that tightens on the landing spot; landing = dust cloud, ring of dust out to the blast radius, grey chips. Not magic, so no fire colours. Awaiting his look. |
+
+| 2026-10-28 | Siddharth | Boulder spell effects approved by Siddharth (2026-10-28). Storm Cloud next. |
+
+| 2026-10-28 | Siddharth | Storm Cloud VFX first pass (dark painted cloud, jagged orange/yellow chain lightning with ink edge; no blue). Also fixed: the first bolt used to start at the wrong place (cloud position was board-local, enemies world). Awaiting his look. |
