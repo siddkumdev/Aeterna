@@ -48,6 +48,12 @@ func _initialize() -> void:
 		cam.fov = 40
 		cam.global_position = focus + Vector3(0.0, 0.5, 0.3)
 	cam.look_at(focus, Vector3.UP)
+	if which == "roots":  # the drop point is a standing house
+		var hs: Array = g.standing_houses()
+		at = g.house_point(hs[0])
+		focus = g.board.to_global(at) + Vector3(0, 0.05, 0)
+		cam.global_position = focus + Vector3(0.0, 0.3, 0.3)
+		cam.look_at(focus, Vector3.UP)
 	var ok: bool = g.spells.cast(which, at, 4.0)
 	print("SPELLSHOT cast ", which, " -> ", ok)
 	var frames: Array[Image] = []

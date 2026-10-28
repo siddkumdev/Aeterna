@@ -116,3 +116,5 @@ See section X of `docs/ASSET_LIST.md` (hit sparks, build pop, trust sparkle, tim
 | 2026-10-28 | Storm Cloud spell, painted (first pass) | Siddharth: "do the storm cloud next" | cloud: 5 overlapping ink blobs; bolts: zigzag, ink edge, orange body, yellow core, spark where it lands, flash in the cloud; token still plain | X02 |
 | 2026-10-28 | Storm Cloud spell effects APPROVED by Siddharth | Siddharth: "Approved, do Rage next" | - | X02 |
 | 2026-10-28 | Rage ring spell, painted (first pass) | Siddharth: "do Rage next" | thin steady flaming ring (red/orange) that licks, sweeps out when cast, fades in its last 0.6 s; red pulse and embers at the foot of every tower inside; token still plain | X02 |
+| 2026-10-28 | Rage spell effects APPROVED by Siddharth | Siddharth: "Approved, do Root Ward next" | - | X02 |
+| 2026-10-28 | Root Ward spell, animated (first pass) | Siddharth: "do Root Ward next" | potion drops and shatters (glass chips, dust); 12 curved tapering roots grow one after another into a dome; orange bud flashes when the shield soaks a hit; roots sink back when spent or timed out; token still plain | X02 |

@@ -49,6 +49,8 @@ func clear_effects() -> void:
 	for f in _fx:
 		if is_instance_valid(f["node"]):
 			f["node"].queue_free()
+		if f.has("potion") and is_instance_valid(f["potion"]):
+			f["potion"].queue_free()
 	_fx.clear()
 	hide_aim()
 
@@ -187,30 +189,57 @@ func _roots(pos: Vector3, cfg: Dictionary) -> bool:
 	add_child(cage)
 	var wood := ModelUtil.flat_material(ROOT_WOOD)
 	var tip := ModelUtil.flat_material(GLOW_COLOUR, true)
-	# a dome: each root rises from the ground outside the house walls and bends in over the roof to one point
+	# the potion falls onto the house and shatters (see _step_roots), then the roots grow: each one rises out of the
+	# ground outside the house walls, arches over the roof and meets the others at the top. Curved, tapering, each a
+	# small group scaled up from its foot so it grows out of the ground.
 	var top := Vector3(0, ROOT_DOME_HEIGHT, 0)
-	for i in range(12):
-		var a := i * TAU / 12.0
-		var foot := Vector3(cos(a), 0, sin(a)) * ROOT_DOME_RADIUS
-		var root := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.0012
-		cm.bottom_radius = 0.0032
-		cm.height = foot.distance_to(top)
-		root.mesh = cm
-		root.material_override = wood
-		root.look_at_from_position((foot + top) / 2.0, top, Vector3.UP)
-		root.rotate_object_local(Vector3.RIGHT, -PI / 2.0)  # the cylinder's +Y now runs from the foot to the top
-		cage.add_child(root)
-		var glow := MeshInstance3D.new()  # an orange bud near each foot
+	var grow: Array = []
+	var buds: Array = []
+	var n_roots := 12
+	for i in range(n_roots):
+		var a := i * TAU / n_roots + _rng.randf_range(-0.1, 0.1)
+		var out := Vector3(cos(a), 0, sin(a))
+		var swirl := Vector3(-sin(a), 0, cos(a))
+		var foot := out * ROOT_DOME_RADIUS
+		var pivot := Node3D.new()
+		pivot.position = foot
+		pivot.scale = Vector3.ZERO
+		cage.add_child(pivot)
+		var prev := Vector3.ZERO
+		var segs := 4
+		for k in range(1, segs + 1):
+			var u := float(k) / segs
+			var at := (top - foot) * u + out * sin(u * PI) * 0.018 + swirl * sin(u * PI) * 0.014 * (1.0 if i % 2 == 0 else -1.0)
+			var seg := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = lerpf(0.0052, 0.0018, u)
+			cm.bottom_radius = lerpf(0.0052, 0.0018, (k - 1.0) / segs)
+			cm.height = maxf(prev.distance_to(at), 0.001)
+			cm.radial_segments = 5
+			seg.mesh = cm
+			seg.material_override = wood
+			seg.look_at_from_position((prev + at) / 2.0, at, Vector3.UP)
+			seg.rotate_object_local(Vector3.RIGHT, -PI / 2.0)
+			pivot.add_child(seg)
+			prev = at
+		var bud := MeshInstance3D.new()  # an orange bud a little way up each root
 		var sm := SphereMesh.new()
-		sm.radius = 0.0028
-		sm.height = 0.0056
-		glow.mesh = sm
-		glow.material_override = tip
-		glow.position = foot.lerp(top, 0.18)
-		cage.add_child(glow)
-	_fx.append({"kind": "roots", "node": cage, "left": cfg["duration"], "house": best})
+		sm.radius = 0.003
+		sm.height = 0.006
+		sm.radial_segments = 6
+		sm.rings = 3
+		bud.mesh = sm
+		bud.material_override = tip
+		bud.position = (top - foot) * 0.22 + out * 0.012
+		pivot.add_child(bud)
+		grow.append(pivot)
+		buds.append(bud)
+	# the potion bottle drops in from above
+	var potion := make_token("roots")
+	potion.position = game.house_point(best) + Vector3(0, ROOT_DOME_HEIGHT + 0.12, 0)
+	add_child(potion)
+	_fx.append({"kind": "roots", "node": cage, "left": cfg["duration"], "total": cfg["duration"], "house": best, "age": 0.0,
+		"grow": grow, "buds": buds, "potion": potion, "shattered": false, "ward": h.ward, "pulse": 0.0})
 	return true
 
 
@@ -232,18 +261,58 @@ func step(delta: float) -> void:
 					f["next"] += f["cfg"]["interval"]
 					_strike(f)
 			"roots":
-				if game.houses[f["house"]].ward <= 0.0:
-					f["left"] = 0.0
+				_step_roots(f, delta)
 			"flash", "bolt":
 				var k: float = clampf(f["left"] / f["total"], 0.0, 1.0)
 				if f["kind"] == "flash":
 					f["node"].scale = Vector3.ONE * (1.0 + (1.0 - k) * 1.5) * Vector3(1, 0.3, 1)
+				else:
+					f["node"].visible = int(f["left"] * 40.0) % 3 != 0  # a bolt flickers, then goes
 		if f["left"] <= 0.0:
 			if f["kind"] == "roots":
 				game.houses[f["house"]].ward = 0.0
 			if is_instance_valid(f["node"]):
 				f["node"].queue_free()
+			if f.has("potion") and is_instance_valid(f["potion"]):
+				f["potion"].queue_free()
 			_fx.erase(f)
+
+
+func _step_roots(f: Dictionary, delta: float) -> void:
+	## The potion drops and shatters, the roots grow out one after another, a bud flashes when the shield soaks a hit,
+	## and the roots wither back into the ground when it runs out or its time is up.
+	f["age"] += delta
+	var house: House = game.houses[f["house"]]
+	var cage: Node3D = f["node"]
+	const FALL := 0.3
+	if not f["shattered"]:
+		var potion: Node3D = f["potion"]
+		var k: float = clampf(f["age"] / FALL, 0.0, 1.0)
+		potion.position.y = cage.position.y + lerpf(ROOT_DOME_HEIGHT + 0.12, 0.02, k * k)
+		potion.rotation.z = k * 3.0
+		if k >= 1.0:
+			f["shattered"] = true
+			potion.queue_free()
+			var at := cage.global_position
+			VfxKit.toon_burst(self, at + Vector3(0, 0.02, 0), 0.1, "burst", 0.35)  # the glass bursts
+			VfxKit.burst(self, at + Vector3(0, 0.02, 0), Color("F4E4B8"), GLOW_COLOUR, 10, 0.08, 0.5, 0.004, -0.4)  # glass chips
+			VfxKit.toon_dust(self, at + Vector3(0, 0.01, 0), 0.1)
+	var wither := clampf(f["left"] / 0.7, 0.0, 1.0)
+	if house.ward <= 0.0 and f["left"] > 0.5:
+		f["left"] = 0.5  # the shield is spent: the roots sink back
+	var grown: Array = f["grow"]
+	for i in range(grown.size()):
+		var g: float = clampf((f["age"] - FALL - i * 0.05) / 0.5, 0.0, 1.0)
+		g = 1.0 - pow(1.0 - g, 3.0)
+		(grown[i] as Node3D).scale = Vector3.ONE * g * wither
+	# a bud flashes when the shield soaks damage
+	if house.ward < f["ward"] - 0.01:
+		f["pulse"] = 1.0
+	f["ward"] = house.ward
+	f["pulse"] = maxf(0.0, f["pulse"] - delta * 3.0)
+	for b in f["buds"]:
+		(b as Node3D).scale = Vector3.ONE * (1.0 + 1.2 * f["pulse"])
+	cage.rotation.y = sin(f["age"] * 0.8) * 0.03  # a slow creak
 
 
 func _step_rage(f: Dictionary, delta: float) -> void:

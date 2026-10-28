@@ -815,7 +815,7 @@ func _spells() -> void:
 	check("30 damage is soaked: HP unchanged, 10 left", is_equal_approx(g.houses[0].hp, g.houses[0].max_hp) and is_equal_approx(g.houses[0].ward, 10.0))
 	g.houses[0].damage(30.0)
 	check("then the rest gets through: 20 damage", is_equal_approx(g.houses[0].hp, g.houses[0].max_hp - 20.0) and g.houses[0].ward == 0.0)
-	_run(g, 0.2)
+	_run(g, 0.7)  # the roots take half a second to sink back
 	check("a used-up ward removes its roots", g.spells._fx.filter(func(f): return f["kind"] == "roots").is_empty())
 	g.queue_free()
 	await process_frame

@@ -224,3 +224,7 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 | 2026-10-28 | Siddharth | Storm Cloud spell effects approved by Siddharth (2026-10-28). Rage next. |
 
 | 2026-10-28 | Siddharth | Rage VFX first pass: held flaming ring on the ground (new `hold` mode in fx_toon_burst: thin, fixed radius, no fade), pulse at hasted towers. Red/orange, no purple. Awaiting his look. |
+
+| 2026-10-28 | Siddharth | Rage spell effects approved by Siddharth (2026-10-28). Root Ward next. |
+
+| 2026-10-28 | Siddharth | Root Ward VFX first pass (roots grow out of the ground, wood brown with orange buds; no new palette colour). Roots now take 0.5 s to sink back, so the self-test waits 0.7 s instead of 0.2 s. Awaiting his look. |
