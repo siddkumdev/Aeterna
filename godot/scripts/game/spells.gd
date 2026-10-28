@@ -110,6 +110,10 @@ func _throw(pos: Vector3, damage: float, radius: float, flight: float, from_heig
 	var sm := SphereMesh.new()
 	sm.radius = size * (0.7 if fire else 1.0)
 	sm.height = sm.radius * 2.0
+	if not fire:  # a chunky faceted rock, not a ball
+		sm.radial_segments = 6
+		sm.rings = 3
+		core.scale = Vector3(1.0, 0.85, 1.1)
 	core.mesh = sm
 	core.material_override = ModelUtil.flat_material(INK if fire else colour)
 	ball.add_child(core)
@@ -119,6 +123,20 @@ func _throw(pos: Vector3, damage: float, radius: float, flight: float, from_heig
 	if fire:
 		rec["glow"] = VfxKit.toon_fire(ball, 0, Vector2(0.04, 0.04), 1.0, 1.4)
 		rec["trail"] = VfxKit.toon_fire(ball, 2, Vector2(0.1, 0.04), 1.0, 1.2)
+	else:
+		# a soft dark shadow on the ground that tightens onto the landing spot as the rock comes down
+		var sh := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = radius
+		cm.bottom_radius = radius
+		cm.height = 0.0006
+		cm.radial_segments = 24
+		sh.mesh = cm
+		sh.material_override = ModelUtil.flat_material(INK, true, 0.4)
+		sh.position = Vector3(pos.x, 0.0035, pos.z)
+		add_child(sh)
+		rec["shadow"] = sh
+		rec["spin"] = Vector3(_rng.randf_range(-5, 5), _rng.randf_range(-5, 5), _rng.randf_range(-5, 5))
 	_fx.append(rec)
 
 
@@ -244,10 +262,15 @@ func _step_ball(f: Dictionary) -> void:
 		p.y = maxf(0.0, f["up"] - 0.5 * GRAVITY * pow(t * f["total"], 2.0))  # toy gravity (spec 12)
 	var v: Vector3 = p - f["node"].position
 	f["node"].position = p
+	if f.has("spin"):
+		f["node"].rotation = f["spin"] * t * f["total"]
+		f["shadow"].scale = Vector3.ONE * (1.6 - 0.6 * t) * Vector3(1, 1, 1)
 	if f.has("trail") and v.length() > 0.0001 and f["last"] != Vector3.ZERO:
 		VfxKit.toon_set(f["trail"], "axis", v.normalized())
 	f["last"] = p
 	if f["left"] <= 0.0:
+		if f.has("shadow") and is_instance_valid(f["shadow"]):
+			f["shadow"].queue_free()
 		_burst(pos, f["dmg"], f["radius"], f["fire"])
 
 
@@ -259,16 +282,17 @@ func _burst(pos: Vector3, damage: float, radius: float, fire := false) -> void:
 		VfxKit.toon_burst(self, to_global(pos + Vector3(0, 0.03, 0)), maxf(0.12, radius * 3.2), "burst", 0.5)
 		VfxKit.toon_burst(self, to_global(Vector3(pos.x, 0.0, pos.z)), maxf(0.1, radius * 2.3), "ring", 0.55)
 		return
-	var tm := TorusMesh.new()
-	tm.inner_radius = maxf(radius - 0.003, 0.001)
-	tm.outer_radius = radius
-	var ring := MeshInstance3D.new()
-	ring.mesh = tm
-	ring.position = pos + Vector3(0, 0.003, 0)
-	ring.scale.y = 0.3
-	ring.material_override = ModelUtil.flat_material(GLOW_COLOUR, true, 0.8)
-	add_child(ring)
-	_fx.append({"kind": "flash", "node": ring, "left": 0.25, "total": 0.25})
+	# the rock lands: a dust cloud and a ring of dust racing out to the blast radius, and grey chips thrown up
+	var at := to_global(Vector3(pos.x, 0.0, pos.z))
+	VfxKit.toon_dust(self, at + Vector3(0, 0.012, 0), maxf(0.1, radius * 2.4))
+	var ring := VfxKit.toon_burst(self, at, maxf(0.12, radius * 2.5), "ring", 0.55)
+	if ring != null:
+		var m := ring.material_override as ShaderMaterial
+		m.set_shader_parameter("c_core", Color("C2B49A"))
+		m.set_shader_parameter("c_mid", Color("A89878"))
+		m.set_shader_parameter("c_out", Color("7E6048"))
+		m.set_shader_parameter("c_ink", Color("7E6048"))
+	VfxKit.burst(self, at + Vector3(0, 0.01, 0), Color("8C9096"), INK, 10, 0.09, 0.5, 0.005, -0.5)
 
 
 func _strike(f: Dictionary) -> void:

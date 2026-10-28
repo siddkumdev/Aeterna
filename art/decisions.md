@@ -212,3 +212,7 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 | 2026-10-28 | Siddharth | Airship effects approved by Siddharth (2026-10-28). The bigger burner flame with exhaust puffs was tried and reverted at his request; burner stays small. |
 
 | 2026-10-28 | Siddharth | Spell VFX started, one spell at a time, Fire Orb first: dark core wrapped in toon fire with comet tail, painted burst and flaming ground ring on landing (same look as the Wizard fireball). Awaiting his look in the game. |
+
+| 2026-10-28 | Siddharth | Fire Orb spell effects approved by Siddharth (2026-10-28). Boulder next. |
+
+| 2026-10-28 | Siddharth | Boulder spell VFX first pass: tumbling faceted grey rock with a shadow that tightens on the landing spot; landing = dust cloud, ring of dust out to the blast radius, grey chips. Not magic, so no fire colours. Awaiting his look. |
