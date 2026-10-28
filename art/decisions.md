@@ -235,3 +235,5 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - Post: filmic tonemap, per-mood saturation/contrast/exposure, bloom with a per-mood threshold, depth fog that tints the forest ring, desktop-only vignette. Nothing touches the background (passthrough rule). No SSAO, SSR, volumetric fog, DoF or motion blur.
 - Outline pass: try later, after lighting. Shadows: keep the real sun shadow, add soft contact blobs later; judge cost on a Quest.
 - Still to do in this pass: night window/lantern glows (bloom alone barely shows in the mobile renderer), contact shadows, board shadow on the table.
+
+- 2026-10-28 (Siddharth: "the sun positions is changing so fast ... seems buggy"): the sun now travels one way only. A new dawn and every sun/moon swap fade the light out, move it in the dark and fade it back; dawn climbs slowly (8 s) from low front-right into the day position; dusk sinks over its 4 s. Largest turn in one frame while lit: 0.08 deg (measured).
