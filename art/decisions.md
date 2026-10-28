@@ -208,5 +208,3 @@ Siddharth: "Approved, skip the torch, start the Longbow Tower." Guard Tower v02 
 Siddharth: "Yes approve both, start the Airship." Approved by Siddharth (2026-10-27): Wizard Tower effects (painted orb, charge flame, release, swirl, smoke, build pop) and Longbow Tower effects (gust streaks behind the bolt only; vortex, release spark and hit slash removed). Guard Tower effects and model v02 were approved earlier the same day. Next: Airship.
 ## 2026-10-27 - Airship VFX started (Siddharth)
 Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and smoke, flaming cannonball, balloon bob and flag flutter. Kept small and plain after the Longbow feedback (less is more). Awaiting his feedback in the game.
-
-| 2026-10-28 | Siddharth | Airship burner flame and hot-air smoke were not visible in the game: flame enlarged (4 x 6 cm, hangs in the gap under the balloon) and grey exhaust puffs now drift out sideways every half second (faster while charging). Awaiting his look. |

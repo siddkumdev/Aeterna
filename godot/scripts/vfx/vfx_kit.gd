@@ -354,7 +354,7 @@ static func build_pop(parent: Node, at: Vector3) -> void:
 	burst(parent, at + Vector3(0, 0.01, 0), FIRE_ORANGE, INK, 8, 0.04, 0.4, 0.004)
 
 
-static func toon_smoke(parent: Node, at: Vector3, size: float, life := 1.6, drift := Vector3.ZERO) -> void:
+static func toon_smoke(parent: Node, at: Vector3, size: float, life := 1.6) -> void:
 	## A painted ink-smoke puff (ink, stone_dark and stone bands, same cloud shape as the burst) that drifts up and thins out.
 	var mi := toon_burst(parent, at, size, "burst", life)
 	if mi == null:
@@ -366,7 +366,7 @@ static func toon_smoke(parent: Node, at: Vector3, size: float, life := 1.6, drif
 	m.set_shader_parameter("c_ink", Color("111C30"))
 	m.set_shader_parameter("shards", 0.0)
 	var tw := mi.create_tween()
-	tw.tween_property(mi, "global_position", at + Vector3(0.004, size * 0.7, 0) + drift, life)
+	tw.tween_property(mi, "global_position", at + Vector3(0.004, size * 0.7, 0), life)
 
 
 static func toon_dust(parent: Node, at: Vector3, size: float) -> void:

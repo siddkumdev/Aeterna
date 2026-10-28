@@ -51,10 +51,6 @@ func _initialize() -> void:
 		focus = (tw.global_position + Vector3(0, 0.07, 0) + e.global_position) * 0.5
 		cam.fov = 32
 		cam.global_position = focus + Vector3(0.0, 0.3, 0.17)  # from above, like the player leaning over the board
-	if args.size() > 2 and args[2] == "top":  # the player's leaning-over view of the tower itself
-		focus = tw.global_position + Vector3(0, 0.08, 0)
-		cam.fov = 34
-		cam.global_position = focus + Vector3(0.0, 0.3, 0.3)
 	cam.look_at(focus, Vector3.UP)
 	tw.cooldown = 0.25
 	var frames: Array[Image] = []
@@ -65,7 +61,7 @@ func _initialize() -> void:
 		t += 1.0 / 60.0
 		await process_frame
 		if t >= next:
-			next += float(OS.get_environment("VFX_STEP")) if OS.get_environment("VFX_STEP") != "" else STEP
+			next += STEP
 			var img := root.get_viewport().get_texture().get_image()
 			frames.append(img)
 	if OS.get_environment("VFX_DEBUG") == "1":
