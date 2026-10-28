@@ -103,15 +103,23 @@ func cast(id: String, pos: Vector3, height := 4.0) -> bool:
 
 func _throw(pos: Vector3, damage: float, radius: float, flight: float, from_height: float, colour: Color, size: float) -> void:
 	## Fire Orb and Boulder: a ball falls (the orb arcs in from the player's side) and bursts on landing.
-	var ball := MeshInstance3D.new()
+	## The orb is a dark core wrapped in painted fire with a swept comet tail (like the Wizard's fireball); the boulder is a plain rock.
+	var fire := colour == ORB_COLOUR
+	var ball := Node3D.new()
+	var core := MeshInstance3D.new()
 	var sm := SphereMesh.new()
-	sm.radius = size
-	sm.height = size * 2.0
-	ball.mesh = sm
-	ball.material_override = ModelUtil.flat_material(colour, colour == ORB_COLOUR)
+	sm.radius = size * (0.7 if fire else 1.0)
+	sm.height = sm.radius * 2.0
+	core.mesh = sm
+	core.material_override = ModelUtil.flat_material(INK if fire else colour)
+	ball.add_child(core)
 	add_child(ball)
-	_fx.append({"kind": "ball", "node": ball, "left": flight, "total": flight, "pos": pos, "dmg": damage,
-		"radius": radius, "up": from_height, "arc": colour == ORB_COLOUR})
+	var rec := {"kind": "ball", "node": ball, "left": flight, "total": flight, "pos": pos, "dmg": damage,
+		"radius": radius, "up": from_height, "arc": fire, "fire": fire, "last": Vector3.ZERO}
+	if fire:
+		rec["glow"] = VfxKit.toon_fire(ball, 0, Vector2(0.04, 0.04), 1.0, 1.4)
+		rec["trail"] = VfxKit.toon_fire(ball, 2, Vector2(0.1, 0.04), 1.0, 1.2)
+	_fx.append(rec)
 
 
 func _storm(pos: Vector3, cfg: Dictionary) -> void:
@@ -234,15 +242,23 @@ func _step_ball(f: Dictionary) -> void:
 		p.y = 0.3 * 4.0 * t * (1.0 - t) * 0.6 + (1.0 - t) * 0.02
 	else:
 		p.y = maxf(0.0, f["up"] - 0.5 * GRAVITY * pow(t * f["total"], 2.0))  # toy gravity (spec 12)
+	var v: Vector3 = p - f["node"].position
 	f["node"].position = p
+	if f.has("trail") and v.length() > 0.0001 and f["last"] != Vector3.ZERO:
+		VfxKit.toon_set(f["trail"], "axis", v.normalized())
+	f["last"] = p
 	if f["left"] <= 0.0:
-		_burst(pos, f["dmg"], f["radius"])
+		_burst(pos, f["dmg"], f["radius"], f["fire"])
 
 
-func _burst(pos: Vector3, damage: float, radius: float) -> void:
+func _burst(pos: Vector3, damage: float, radius: float, fire := false) -> void:
 	for e in game.enemies.duplicate():
 		if is_instance_valid(e) and e.targetable(true, true) and _flat(e.position - pos) <= radius:
 			e.take_damage(damage)
+	if fire:  # painted fireball burst and a flaming ring the size of the blast
+		VfxKit.toon_burst(self, to_global(pos + Vector3(0, 0.03, 0)), maxf(0.12, radius * 3.2), "burst", 0.5)
+		VfxKit.toon_burst(self, to_global(Vector3(pos.x, 0.0, pos.z)), maxf(0.1, radius * 2.3), "ring", 0.55)
+		return
 	var tm := TorusMesh.new()
 	tm.inner_radius = maxf(radius - 0.003, 0.001)
 	tm.outer_radius = radius
