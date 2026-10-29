@@ -43,6 +43,10 @@ for e in [o for o in scene.objects if o.type == "EMPTY"]:
         bpy.ops.mesh.primitive_cone_add(vertices=8, radius1=r * 0.08, radius2=r * 0.55, depth=h * 0.8, location=(pos.x, pos.y, pos.z - h * 0.4))
         g = bpy.context.active_object
         g.data.materials.append(er._glow_mat("thrust_standin2", "fire_yellow", "lantern_glow", 2.2))
+    elif "_energy_anchor" in base:
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.009, segments=10, ring_count=6, location=pos)
+        s = bpy.context.active_object
+        s.data.materials.append(er._glow_mat("energy_standin", "fire_yellow", "lantern_glow", 2.5))
     elif "__rune_anchor" in base:
         bpy.ops.mesh.primitive_uv_sphere_add(radius=r * 0.5, segments=12, ring_count=6, location=pos)
         s = bpy.context.active_object
@@ -54,7 +58,7 @@ for o in meshes:
     for c in o.bound_box:
         w = o.matrix_world @ Vector(c)
         lo, hi = Vector(map(min, lo, w)), Vector(map(max, hi, w))
-center = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, -0.07))
+center = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, -0.15))
 size = max(hi.x - lo.x, hi.y - lo.y)
 
 er.setup_engine(scene, 520, 380)
@@ -76,8 +80,8 @@ for name, az_d, el_d, preset in views:
     az, el = math.radians(az_d), math.radians(el_d)
     d = size * 4
     cam.location = center + Vector((d * math.cos(el) * math.sin(az), -d * math.cos(el) * math.cos(az), d * math.sin(el)))
-    tgt = Vector((0.18, -0.2, -0.21)) if name == "close" else center
-    cam.data.ortho_scale = 0.75 if name == "close" else size * 1.12
+    tgt = Vector((0.15, -0.57, -0.2)) if name == "close" else center
+    cam.data.ortho_scale = 0.7 if name == "close" else size * 1.12
     if name == "focus":
         tgt, cam.data.ortho_scale = Vector((fx, fy, fz)), fs
     cam.location = tgt + (cam.location - center)
