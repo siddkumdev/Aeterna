@@ -91,7 +91,9 @@ func _check(cat: String, path: String) -> void:
 		budget = 1200  # forest ring clumps (W22, ~1k each), same override as tools/validate_asset.py
 	if path.contains("ew_vfx_rewind_hourglass"):
 		budget = 1000  # rewind hourglass hero prop (X11, asset list <1k), same override as tools/validate_asset.py
-	if path.contains("ew_world_island"):
+	if path.contains("ew_world_island_underside"):
+		budget = 7000  # hanging rock + propulsion + crew (Siddharth picked F, 2026-10-30), same override as tools/validate_asset.py
+	elif path.contains("ew_world_island"):
 		budget = 4000  # lush grass (Siddharth 2026-10-20), same override as tools/validate_asset.py
 	print("   size      %.1f x %.1f cells footprint, %.1f cells tall (%.3f x %.3f x %.3f m)"
 			% [aabb.size.x / CELL, aabb.size.z / CELL, aabb.size.y / CELL, aabb.size.x, aabb.size.z, aabb.size.y])
@@ -103,7 +105,9 @@ func _check(cat: String, path: String) -> void:
 	for pp in pose_parts:
 		if not pp in parts:
 			_fail("pose marker for part '%s', but no such part" % pp)
-	if absf(aabb.position.y) > 0.002:
+	if absf(aabb.end.y) > 0.002 and path.contains("ew_world_island_underside"):
+		_fail("underside must hang below its origin (attach plane): highest point at y = %.4f m" % aabb.end.y)
+	elif absf(aabb.position.y) > 0.002 and not path.contains("ew_world_island_underside"):
 		_fail("origin not on the ground: lowest point at y = %.4f m" % aabb.position.y)
 	if absf(aabb.get_center().x) > 0.01 or absf(aabb.get_center().z) > 0.01:
 		print("   note      footprint centre is off the origin by (%.3f, %.3f) m" % [aabb.get_center().x, aabb.get_center().z])

@@ -34,6 +34,7 @@ ROCK_DEPTH = 0.26
 ZB = -ROCK_DEPTH          # the rock's bottom plane
 ZH = ZB - 0.04            # where the propulsion hangs (below the keel's neck)
 MAX_DEPTH = 0.52          # everything hangs inside this
+NAME_FINAL = "ew_world_island_underside_v01"
 NAME = "ew_world_island_underside_v02"
 CONTRAST = {"roof_orange": "wall_cream", "roof_teal": "wall_cream", "roof_terracotta": "wall_cream", "wall_cream": "roof_terracotta"}
 
@@ -213,7 +214,7 @@ def variant_e():
         ring.append(st)
         ring.append(bc.box("rrune%d" % k, (0.005, 0.030, 0.046), (x + 0.0285 * math.cos(a), y + 0.0285 * math.sin(a), zz), "ink", math.degrees(a)))
         anchors["rune_anchor_%d" % (k + 1)] = ((x, y, zz), "ring", 0.02)
-    people, arm_groups, arm_anchors = crew("E", (("roof_orange", "cloth", "skin_light", None), ("roof_teal", "brush", "skin_dark", "hair_dark"),
+    people, arm_groups, arm_anchors = crew("e", (("roof_orange", "cloth", "skin_light", None), ("roof_teal", "brush", "skin_dark", "hair_dark"),
                                                  ("roof_terracotta", "brush", "skin_mid", None)))
     anchors.update(arm_anchors)
     return [("", parts + people, (0, 0, 0), None), ("ring", ring, (0, 0, zc), ""), ("drift", debris(5), (0, 0, ZH - 0.09), "")] + arm_groups, anchors
@@ -242,7 +243,7 @@ def variant_f():
     parts.append(bc.cone("crack", 0.036, 0.028, 0.010, (0, 0, zs - 0.0665), "ink", 8))
     fins = [bc.cone("fin%d" % k, 0.004, 0.040, 0.066, (0.170 * math.cos(2 * math.pi * k / 6), 0.170 * math.sin(2 * math.pi * k / 6), zs - 0.010),
                     "leaf_yellow", 5, math.degrees(2 * math.pi * k / 6)) for k in range(6)]
-    people, arm_groups, anchors = crew("F", (("roof_teal", "hammer", "skin_mid", None), ("roof_orange", "cloth", "skin_light", "hair_blonde"),
+    people, arm_groups, anchors = crew("f", (("roof_teal", "hammer", "skin_mid", None), ("roof_orange", "cloth", "skin_light", "hair_blonde"),
                                              ("wall_cream", "brush", "skin_dark", None)))
     anchors["thrust_anchor"] = ((0, 0, zs - 0.0715), "", 0.05)
     return [("", parts + people, (0, 0, 0), None), ("fins", fins, (0, 0, zs), ""), ("drift", debris(6), (0, 0, ZH - 0.09), "")] + arm_groups, anchors
@@ -261,7 +262,12 @@ def build(v, name=NAME):
 
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    v = args[0] if args else "E"
+    v = args[0] if args else "F"
     bc.clear_scene()
-    obj = build(v)
-    print("BLEND", bc.save_blend(obj, "island_underside_" + v))
+    if "final" in args:  # the chosen design (F, root and seed), exported as the real asset
+        obj = build("F", NAME_FINAL)
+        print("BLEND", bc.save_blend(obj, "island_underside"))
+        print("GLB", bc.export_glb(obj, "world"))
+    else:
+        obj = build(v)
+        print("BLEND", bc.save_blend(obj, "island_underside_" + v))
