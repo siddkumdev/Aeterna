@@ -118,6 +118,7 @@ func _ready() -> void:
 	board.position = BOARD_POS
 	add_child(board)
 	WorldBuilder.build_island(board)
+	WorldBuilder.build_underside(board)
 	WorldBuilder.build_forest(board, 7)
 	_grid_lines = WorldBuilder.build_grid_lines(board)
 	_towers_root = _child(board, "Towers")

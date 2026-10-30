@@ -6,6 +6,7 @@ extends RefCounted
 ## low and sparse so it does not hide the village. Seeded, so a run always looks the same.
 
 const ISLAND := "res://assets/world/ew_world_island_v01.glb"
+const UNDERSIDE := "res://assets/world/ew_world_island_underside_v02.glb"
 const CLUMPS: Array[String] = [
 	"res://assets/world/ew_world_forest_clump_dark_v02.glb",
 	"res://assets/world/ew_world_forest_clump_mix_v02.glb",
@@ -23,6 +24,25 @@ static func build_island(board: Node3D) -> void:
 	var s := float(GameConfig.SIZE) / ISLAND_CELLS
 	island.scale = Vector3(s, 1.0, s)
 	board.add_child(island)
+
+
+## The floating sky-island rock under the island (W02). Its origin is the attach plane = the island's base, and it is built
+## for the stretched 24 x 24 island (0.57 m half width), so it is not scaled. The drifting rocks bob and the leaf fins turn
+## slowly; the villager arms and the thrust / energy anchors are left for the VFX pass.
+static func build_underside(board: Node3D) -> Node3D:
+	var under: Node3D = load(UNDERSIDE).instantiate()
+	under.position.y = -ISLAND_HEIGHT
+	board.add_child(under)
+	for n in under.find_children("*", "Node3D", true, false):
+		var part := str(n.get_meta("ew_part", ""))
+		if part == "drift":
+			var tw := n.create_tween().set_loops()
+			tw.tween_property(n, "position:y", n.position.y + 0.012, 3.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			tw.tween_property(n, "position:y", n.position.y - 0.012, 3.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		elif part == "fins":
+			var tw2 := n.create_tween().set_loops()
+			tw2.tween_property(n, "rotation:y", TAU, 24.0).as_relative()
+	return under
 
 
 static func build_forest(board: Node3D, rng_seed: int) -> void:
