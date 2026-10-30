@@ -28,7 +28,7 @@ static func build_island(board: Node3D) -> void:
 
 ## The floating sky-island rock under the island (W02). Its origin is the attach plane = the island's base, and it is built
 ## for the stretched 24 x 24 island (0.57 m half width), so it is not scaled. The drifting rocks bob and the leaf fins turn
-## slowly; the villager arms and the thrust / energy anchors are left for the VFX pass.
+## slowly; the thrust anchor carries the IslandThrust propulsion effect; the villager arms and energy anchors are left for the next VFX step.
 static func build_underside(board: Node3D) -> Node3D:
 	var under: Node3D = load(UNDERSIDE).instantiate()
 	under.position.y = -ISLAND_HEIGHT
@@ -42,6 +42,11 @@ static func build_underside(board: Node3D) -> Node3D:
 		elif part == "fins":
 			var tw2 := n.create_tween().set_loops()
 			tw2.tween_property(n, "rotation:y", TAU, 24.0).as_relative()
+	for a in under.find_children("*", "Marker3D", true, false):
+		if a.name.ends_with("thrust_anchor"):
+			var thrust := IslandThrust.new()
+			a.add_child(thrust)
+			thrust.setup(float(a.get_meta("ew_size", 0.06)))
 	return under
 
 
