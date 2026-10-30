@@ -250,3 +250,4 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 
 - 2026-10-30 (Siddharth, island underside W02): picked variant F, root and seed. Final build ew_world_island_underside_v01 (6780 tris; budget override 7000; origin = attach plane, so it hangs below the origin). Villager part names lowercase (vf1..vf3) because part names must be [a-z0-9_].
 - 2026-10-30 (Siddharth, island underside): v01 'still a bit small, make the under-cliff/bottom grander, bigger and more natural'. v02: rock 0.50 m deep, total about 0.95 m with the propulsion (hover height from the calibration step must be at least that); budget override raised to 8500.
+- 2026-10-30 (Siddharth): island underside ew_world_island_underside_v02 APPROVED and imported to Godot (not yet placed under the board; hover-height calibration step still to be specced).
