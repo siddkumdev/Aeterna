@@ -294,15 +294,18 @@ def variant_f():
         parts.append(strut("root%da" % k, p0, p1, 0.032, 0.026, "wood_dark", 6))
         parts.append(strut("root%db" % k, p1, p2, 0.026, 0.017, "wood_mid", 6))
         parts.append(bc.blob("knot%d" % k, 0.028, p1, "wood_dark", 1))
-        parts.append(bc.cone("leaf%d" % k, 0.030, 0.005, 0.050, (p1[0], p1[1], p1[2] + 0.014), "leaf_green", 5, math.degrees(a2)))
+        parts.append(bc.cone("leaf%d" % k, 0.030, 0.005, 0.050, (p1[0], p1[1], p1[2] + 0.014), "dirt_light", 5, math.degrees(a2)))
+    # a rock collar that overlaps both the keel's lower end and the seed's top, so the engine grows out of the rock
+    parts.append(bc.cone("collar", 0.100, 0.125, 0.090, (0, 0, ZH - 0.010), "stone_dark", 10))
     parts.append(bc.blob("seed", 0.095 * P, (0, 0, zs), "wood_light", 2, (1, 1, 0.72)))
     for k in range(8):
         a = 2 * math.pi * k / 8
         parts.append(bc.box("ridge%d" % k, (0.014, 0.016, 0.085 * P), (0.090 * P * math.cos(a), 0.090 * P * math.sin(a), zs + 0.002), "wood_mid", math.degrees(a)))
     parts.append(bc.cone("tip", 0.056 * P, 0.036 * P, 0.016 * P, (0, 0, zs - 0.058 * P), "wood_dark", 8))
     parts.append(bc.cone("crack", 0.036 * P, 0.028 * P, 0.010 * P, (0, 0, zs - 0.0665 * P), "ink", 8))
-    fins = [bc.cone("fin%d" % k, 0.005, 0.050, 0.085, (0.200 * P * math.cos(2 * math.pi * k / 6), 0.200 * P * math.sin(2 * math.pi * k / 6), zs - 0.010 * P),
-                    "leaf_yellow", 5, math.degrees(2 * math.pi * k / 6)) for k in range(6)]
+    # fins: bark-coloured petals set against the seed's flank (their wide ends overlap the seed), the group turns slowly
+    fins = [bc.cone("fin%d" % k, 0.006, 0.042, 0.080, (0.140 * math.cos(2 * math.pi * k / 6 + 0.5), 0.140 * math.sin(2 * math.pi * k / 6 + 0.5), zs - 0.015),
+                    "dirt_light", 5, math.degrees(2 * math.pi * k / 6)) for k in range(6)]
     people, arm_groups, anchors = crew("f", (("roof_teal", "hammer", "skin_mid", None), ("roof_orange", "cloth", "skin_light", "hair_blonde"),
                                              ("wall_cream", "brush", "skin_dark", None)))
     anchors["thrust_anchor"] = ((0, 0, zs - 0.0715 * P), "", 0.06)
