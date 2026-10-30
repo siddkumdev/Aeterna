@@ -58,8 +58,8 @@ for o in meshes:
     for c in o.bound_box:
         w = o.matrix_world @ Vector(c)
         lo, hi = Vector(map(min, lo, w)), Vector(map(max, hi, w))
-center = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, -0.15))
-size = max(hi.x - lo.x, hi.y - lo.y)
+center = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2 * 0.8))  # frame the whole depth
+size = max(hi.x - lo.x, hi.y - lo.y, (hi.z - lo.z) * 1.25)
 
 er.setup_engine(scene, 520, 380)
 cam_data = bpy.data.cameras.new("cam")
