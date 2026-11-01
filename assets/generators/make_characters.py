@@ -337,7 +337,7 @@ def item_parts(c, hx, hz_):
         p += [seg("shaft", (hx, 0, hz_ - 0.014), (hx, 0, hz_ + 0.038), 0.0011, 0.0013, "wood_light", 8)]
         for dz in (0.0, 0.0030):  # curled top: two prongs holding a dark socket
             pass
-        p += [bc.blob("socket", 0.0034, (hx, 0, hz_ + 0.0425), "ink", 2),
+        p += [bc.blob("socket", 0.0034, (hx, 0, hz_ + 0.0425), "ink", 1),
               seg("prong", (hx + 0.0022, 0, hz_ + 0.036), (hx + 0.0034, 0, hz_ + 0.0465), 0.0009, 0.0004, "wood_dark", 6),
               seg("prong", (hx - 0.0022, 0, hz_ + 0.036), (hx - 0.0034, 0, hz_ + 0.0465), 0.0009, 0.0004, "wood_dark", 6)]
     elif kind == "spear":
@@ -348,6 +348,10 @@ def item_parts(c, hx, hz_):
         pts = [V(hx, 0, hz_ - 0.013), V(hx - 0.0026, -0.0042, hz_ - 0.0065), V(hx - 0.0034, -0.0050, hz_), V(hx - 0.0026, -0.0042, hz_ + 0.0065), V(hx, 0, hz_ + 0.013)]
         p += chain("limb", pts, [0.0006, 0.0011, 0.0014, 0.0011, 0.0006], "wood_mid", 6)
         p += [seg("string", pts[0], pts[-1], 0.00035, 0.00035, "bone", 4)]
+    elif kind == "dipper":  # bee kid's honey dipper: short shaft, ridged golden knob
+        p += [seg("shaft", (hx, 0, hz_ - 0.004), (hx, 0, hz_ + 0.014), 0.0010, 0.0011, "wood_light", 8)]
+        for i, (rr, col) in enumerate(((0.0030, "fire_yellow"), (0.0036, "lantern_glow"), (0.0031, "fire_yellow"), (0.0024, "lantern_glow"))):
+            p.append(bc.cone("ridge", rr, rr * 0.92, 0.0016, (hx, 0, hz_ + 0.0150 + i * 0.0017), col, 10))
     elif kind == "club":
         p += [seg("shaft", (hx, 0, hz_ - 0.004), (hx, 0, hz_ + 0.012), 0.0012, 0.0022, "wood_mid", 7),
               bc.blob("knob", 0.0034, (hx, 0, hz_ + 0.0145), "wood_mid", 1)]
@@ -378,6 +382,13 @@ def build(name, key):
     else:
         root += [bc.cone("torso", br * 1.25, br * 0.9, bh, (0, 0, lh + bh / 2), c["top"], 12),
                  bc.cone("hem", br * 1.30, br * 1.22, bh * 0.20, (0, 0, lh + bh * 0.10), c["bottom"], 12)]
+    if "quiver" in c["extras"]:  # arrows on the back, tipped over the left shoulder
+        q0, q1 = V(br * 0.55, br * 1.25, neck - 0.0085), V(br * 0.95, br * 1.55, neck + 0.0012)
+        root.append(seg("quiver", q0, q1, 0.0030, 0.0036, "wood_mid", 8))
+        for dx in (-0.0009, 0.0006, 0.0021):
+            a0 = q1 + V(dx, 0, -0.001)
+            root.append(seg("arrow", a0, a0 + V(0.0009, 0.0004, 0.0062), 0.00045, 0.00045, "bone", 4))
+            root.append(bc.blob("fletch", 0.0013, a0 + V(0.0009, 0.0004, 0.0062), "leaf_light", 1, (0.7, 0.7, 1.3)))
     if c["scarf"]:
         root.append(bc.cone("scarf", br * 1.05, br * 0.95, bh * 0.20, (0, 0, neck - bh * 0.06), c["scarf"], 12))
     if c["body"] != "robe":
@@ -467,7 +478,7 @@ def build(name, key):
     return obj
 
 
-ITEM_TILT = {"staff": (18, -24, 0), "spear": (8, -14, 0), "bow": (0, -12, 0), "club": (24, -34, 0)}
+ITEM_TILT = {"staff": (18, -24, 0), "spear": (8, -14, 0), "bow": (0, -12, 0), "club": (24, -34, 0), "dipper": (14, -22, 0)}
 
 
 def smooth(root, angle_deg=38):
@@ -493,7 +504,7 @@ def tri_count(root):
 CHARACTERS = {
     # kid villager: bee. Striped, fluffy, tiny wings, ball-tip antennae.
     "bee_kid": dict(cat="village", head_r=0.0148, squash=(1.08, 0.97, 0.94), leg=0.0070, body_h=0.0110, body="cone",
-                    skin="skin_mid", hair="flower_yellow", hair_style="fluff", top="fire_yellow", bottom="ink",
+                    skin="skin_mid", hair="flower_yellow", hair_style="fluff", top="fire_yellow", bottom="ink", item="dipper",
                     scarf="ink", boots="ink", cheeks="flower_pink",
                     ants=("ink", "fire_yellow"), wings=("insect", "bone", None), extras=()),
     # villager girl: cat with a leaf sprout, striped tail, soft ears
@@ -506,7 +517,7 @@ CHARACTERS = {
                        ear_in="wall_cream", tail=("fox", "roof_orange", "wall_cream"), body="robe",
                        hat=("wizard", "ink", "fire_red"), item="staff", hands_energy=True),
     # witch: curled horns, mini hat, imp tail, black / orange / red
-    "horn_witch": dict(cat="village", skin="skin_light", hair="fire_red", hair_style="bob", top="ink",
+    "horn_witch": dict(cat="village", skin="skin_light", hair="fire_red", hair_style="bob", top="ink", item="staff",
                        bottom="roof_terracotta", scarf="lantern_glow", boots="ink", cheeks="fire_red",
                        horns=("ram", "bone"), tail=("imp", "ink", "fire_red"), body="dress",
                        hat=("mini", "ink", "lantern_glow"), hands_energy=True, eyes="ink"),
@@ -517,7 +528,7 @@ CHARACTERS = {
                            shield=("wall_cream", "roof_teal"), item="spear", smile=False),
     # archer (ours): antlered leaf hood, bow, green and gold
     "antler_archer": dict(cat="village", skin="skin_mid", hair="hair_dark", hair_style="bob", top="wood_mid",
-                          bottom="wood_light", scarf="leaf_yellow", boots="wood_dark", horns=("antler", "bone"),
+                          bottom="wood_light", scarf="leaf_yellow", boots="wood_dark", horns=("antler", "bone"), extras=("quiver",),
                           hat=("hood", "leaf_green", "leaf_light"), item="bow"),
     # goblin (enemy): mushroom-cap hat, tusks, huge ears, club
     "shroom_goblin": dict(cat="enemy", skin="leaf_light", hair=None, top="wood_mid", bottom="wood_dark",
