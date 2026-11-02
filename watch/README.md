@@ -27,7 +27,7 @@ python watch/watch_bridge.py record take1
 Desktop mode only: the Meta XR Simulator cannot take outside input. The watch moves the mouse cursor and a pinch is a left click.
 1. Watch on the right wrist, on the same Wi-Fi as the laptop, wireless debugging connected (`connect`, above).
 2. `python watch/watch_bridge.py live` (starts a background service on the watch; Ctrl+C stops it, or run `stop`).
-3. `powershell -File godotun_watch.ps1` (the game in desktop mode with `AETERNA_WATCH=1`).
+3. `powershell -File godot\run_watch.ps1` (the game in desktop mode with `AETERNA_WATCH=1`).
 4. Point your forearm at the middle of the board and press **C** to centre. Pinch to press, hold to grab, open the fingers to let go. **X** lets go if a release was missed.
 Tuning: `AETERNA_WATCH_SPAN=50,35` (degrees of wrist turn across the window, sideways and up-down), `AETERNA_WATCH_AXIS=-x` (if left and right feel mirrored the other way round, try `-x`; `y` and `-y` also exist).
 Test without a watch: `godot --xr-mode off --resolution 960x600 --path godot -s res://tools/watch_link_test.gd` (opens a window for a moment, prints PASS).
