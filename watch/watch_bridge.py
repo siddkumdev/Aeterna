@@ -1,0 +1,354 @@
+"""Reach the Galaxy Watch through the laptop on its network (the watch cannot reach this PC directly).
+
+    python watch/watch_bridge.py pair <ip:pairing_port> <code>   pair once, from the watch's Wireless debugging screen
+    python watch/watch_bridge.py connect <ip:port>               connect adb on the laptop to the watch
+    python watch/watch_bridge.py install                         install the built app, point it at the laptop, open it
+    python watch/watch_bridge.py listen                          print the line rate only, to test the link first
+    python watch/watch_bridge.py live                            play: watch -> pinch detector -> the game (AETERNA_WATCH=1)
+    python watch/watch_bridge.py stop                            stop the live service on the watch (if the bridge was killed)
+    python watch/watch_bridge.py record <name>                   save a take to _work/watch/<name>.csv
+
+record exits non-zero and saves <name>.incomplete.csv if the take did not finish, or cues or data were lost.
+WATCH_BRIDGE in local.env is the laptop's ssh login (default: the-tank@100.95.40.122).
+"""
+import math
+import os
+import queue
+import re
+import subprocess
+import sys
+import threading
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import ew_env  # noqa: E402,F401  (loads local.env into the environment)
+
+BRIDGE = os.environ.get("WATCH_BRIDGE", "the-tank@100.95.40.122")
+SSH_OPTIONS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"]
+SSH = ["ssh"] + SSH_OPTIONS + [BRIDGE]
+APK = os.path.join(ROOT, "watch", "build", "outputs", "apk", "debug", "aeterna-watch-debug.apk")
+PACKAGE = "com.aeterna.watch"
+PORT = 9100
+STALL_SECONDS = 5  # silence after data has started means the take died
+CLOCK_TOLERANCE_US = 200_000  # sensors run until the end line, so every sensor's last sample should be this close to it
+MAX_SAMPLE_GAP_US = 250_000  # the shortest cue lasts 700 ms
+MAX_LOST_FRACTION = 0.05
+
+# Runs on the laptop: every UDP datagram from the watch goes to stdout, so ssh carries it here with no inbound firewall rule.
+# It stops when ssh closes its stdin, so no stale receiver keeps the port.
+RECEIVER = """
+import select, socket, sys
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(("0.0.0.0", %d))
+sys.stdout.buffer.write(b"ready\\n")
+sys.stdout.buffer.flush()
+while True:
+    got = select.select([s, sys.stdin], [], [])[0]
+    if sys.stdin in got:
+        break
+    sys.stdout.buffer.write(s.recv(65535))
+    sys.stdout.buffer.flush()
+""" % PORT
+
+
+def remote(command):
+    return subprocess.run(SSH + [command], capture_output=True, text=True, timeout=120)
+
+
+def watch_serial():
+    """The watch's ip:port as adb on the laptop knows it. Wireless debugging can also list it under a second name."""
+    devices = remote("adb devices").stdout
+    found = re.findall(r"^(\d+\.\d+\.\d+\.\d+:\d+)\s+device\b", devices, re.M)
+    if not found:
+        sys.exit("The laptop has no watch connected. Run: python watch/watch_bridge.py connect <ip:port>\n" + devices)
+    return found[0]
+
+
+def laptop_ip(watch_ip):
+    """The laptop's address on the interface that faces the watch."""
+    ip = remote("ip -4 route get %s | sed -n 's/.* src \\([0-9.]*\\).*/\\1/p'" % watch_ip).stdout.strip()
+    if not ip:
+        sys.exit("Could not find the laptop's address towards the watch at " + watch_ip)
+    return ip
+
+
+def run_adb(command):
+    result = remote("adb " + command)
+    print((result.stdout + result.stderr).strip())
+    return result.returncode == 0
+
+
+def install():
+    if not os.path.exists(APK):
+        sys.exit("Build it first (see watch/README.md): " + APK)
+    serial = watch_serial()
+    subprocess.run(["scp", "-q"] + SSH_OPTIONS + [APK, BRIDGE + ":/tmp/aeterna-watch.apk"], check=True)
+    if not run_adb("-s %s install -r /tmp/aeterna-watch.apk" % serial):
+        sys.exit(1)
+    if not run_adb("-s %s shell am start -S -n %s/.MainActivity --es host %s" % (serial, PACKAGE, laptop_ip(serial.split(":")[0]))):
+        sys.exit(1)
+
+
+def open_stream():
+    """Start the receiver and wait until the port is really open. Returns the process and a queue of lines (None at the end)."""
+    proc = subprocess.Popen(SSH + ["python3 -u -c '%s'" % RECEIVER], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    lines = queue.Queue()
+
+    def pump():
+        for line in proc.stdout:
+            lines.put(line)
+        lines.put(None)
+
+    threading.Thread(target=pump, daemon=True).start()
+    try:
+        first = lines.get(timeout=30)
+    except queue.Empty:
+        first = None
+    if first != b"ready\n":
+        proc.kill()
+        sys.exit("The laptop's receiver did not start. Port %d may be in use there, or ssh failed." % PORT)
+    return proc, lines
+
+
+def listen():
+    proc, lines = open_stream()
+    print("Listening on port %d. Open the app on the watch: a hello should arrive. Ctrl+C to stop." % PORT)
+    start, count, seen = time.time(), 0, False
+    try:
+        while True:
+            line = lines.get()
+            if line is None:
+                print("The connection to the laptop ended.")
+                return
+            if line.startswith(b"s,"):
+                continue
+            count += 1
+            if not seen:
+                seen = True
+                print("First data: " + line.decode("ascii", "replace").strip())
+            if time.time() - start >= 2:
+                print("%.0f lines/s" % (count / (time.time() - start)))
+                start, count = time.time(), 0
+    except KeyboardInterrupt:
+        pass
+    finally:
+        proc.kill()
+
+
+SENSORS = (("a", "accelerometer"), ("g", "gyroscope"), ("r", "rotation"))
+
+
+GAME_PORT = 9101  # the game's WatchLink listens here on this PC
+
+
+def live():
+    """Play: the watch streams from a background service, the pinch detector runs here, and the game gets the aim and the pinch."""
+    import socket
+    from pinch_detector import PinchDetector
+    serial = watch_serial()
+    host = laptop_ip(serial.split(":")[0])
+    proc, lines = open_stream()
+    run_adb("-s %s shell pm grant %s android.permission.POST_NOTIFICATIONS" % (serial, PACKAGE))
+    if not run_adb("-s %s shell am start-foreground-service -n %s/.LiveService --es host %s" % (serial, PACKAGE, host)):
+        proc.kill()
+        sys.exit("Could not start the live service on the watch.")
+    game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    detector = PinchDetector()
+    folder = os.path.join(ROOT, "_work", "watch")
+    os.makedirs(folder, exist_ok=True)
+    log = open(os.path.join(folder, "live_%s.csv" % time.strftime("%H%M%S")), "wb")
+    print("Live. Wear the watch, start the game with AETERNA_WATCH=1, press C in the game while pointing at the board. Ctrl+C stops.")
+    counts = {"a": 0, "r": 0, "down": 0, "up": 0}
+    shown, last_data = time.time(), None
+    try:
+        while True:
+            try:
+                line = lines.get(timeout=1)
+            except queue.Empty:
+                line = b""
+            now = time.time()
+            if line is None:
+                print("The connection to the laptop ended.")
+                break
+            if line and not line.startswith((b"s,", b"c,")):
+                log.write(line)
+                parts = line.decode("ascii", "replace").strip().split(",")
+                try:
+                    if parts[0] == "a" and len(parts) >= 5:
+                        counts["a"] += 1
+                        last_data = now
+                        for event in detector.feed(int(parts[1]) / 1e6, (float(parts[2]), float(parts[3]), float(parts[4]))):
+                            counts[event] += 1
+                            game.sendto(("p," + event).encode(), ("127.0.0.1", GAME_PORT))
+                            print("pinch " + event)
+                    elif parts[0] == "r" and len(parts) >= 5:
+                        counts["r"] += 1
+                        x, y, z = float(parts[2]), float(parts[3]), float(parts[4])
+                        w = float(parts[5]) if len(parts) > 5 else math.sqrt(max(0.0, 1.0 - x * x - y * y - z * z))  # w is optional on Android
+                        game.sendto(("q,%s,%s,%s,%s" % (x, y, z, w)).encode(), ("127.0.0.1", GAME_PORT))
+                except ValueError:
+                    pass
+            if now - shown >= 5:
+                state = "NO DATA from the watch" if last_data is None or now - last_data > 3 else "ok"
+                print("%s | accel %d, aim %d, presses %d, releases %d" % (state, counts["a"], counts["r"], counts["down"], counts["up"]))
+                shown = now
+    except KeyboardInterrupt:
+        pass
+    finally:
+        game.sendto(b"p,up", ("127.0.0.1", GAME_PORT))  # first, and before anything that can hang: never leave something held
+        proc.kill()
+        log.close()
+        try:
+            run_adb("-s %s shell am stopservice -n %s/.LiveService" % (serial, PACKAGE))
+        except Exception as err:  # noqa: BLE001 (the laptop may be unreachable; the service stops itself after 3 hours)
+            print("Could not stop the watch service (%s). Run: python watch/watch_bridge.py stop" % err)
+
+
+class Take:
+    """What arrived, and what the watch says should have arrived."""
+
+    def __init__(self):
+        self.counts = {}
+        self.first = {}
+        self.last = {}
+        self.cues = set()
+        self.sequences = set()
+        self.gaps = {}  # the longest hole between samples, per sensor
+        self.malformed = 0
+        self.end = None  # [time_us, cues_sent, send_failures, reason]
+
+    def add_sample(self, tag, stamp):
+        self.counts[tag] = self.counts.get(tag, 0) + 1
+        self.first.setdefault(tag, stamp)
+        if tag in self.last and stamp > self.last[tag]:
+            self.gaps[tag] = max(self.gaps.get(tag, 0), stamp - self.last[tag])
+        self.last[tag] = max(stamp, self.last.get(tag, stamp))
+
+    def lost_fraction(self):
+        if not self.sequences:
+            return 0.0
+        span = max(self.sequences) - min(self.sequences) + 1
+        return (span - len(self.sequences)) / span
+
+    def problems(self, ssh_code):
+        found = []
+        if self.end is None:
+            found.append("The end of the take never arrived (ssh exit code %s). The app may have stopped." % ssh_code)
+        else:
+            if self.end[3] != "complete":
+                found.append("The take ended early: " + self.end[3])
+            missing = sorted(set(range(int(self.end[1]))) - self.cues)
+            if missing:
+                found.append("%d cue(s) lost, so labels are wrong. Indexes: %s" % (len(missing), missing[:20]))
+            if self.end[2] != "0":
+                found.append("The watch failed to send %s time(s)." % self.end[2])
+            for tag, name in SENSORS:
+                if tag in self.last and abs(int(self.end[0]) - self.last[tag]) > CLOCK_TOLERANCE_US:
+                    found.append("The last %s sample is %.1f s from the end of the take: it stopped early, or its clock is off and labels would be misaligned." % (name, abs(int(self.end[0]) - self.last[tag]) / 1e6))
+        for tag, name in SENSORS:
+            if tag not in self.first:
+                found.append("No %s data." % name)
+            elif self.gaps.get(tag, 0) > MAX_SAMPLE_GAP_US:
+                found.append("The %s data has a %.2f s hole." % (name, self.gaps[tag] / 1e6))
+        if self.lost_fraction() > MAX_LOST_FRACTION:
+            found.append("%.1f%% of datagrams were lost." % (100 * self.lost_fraction()))
+        if self.malformed:
+            found.append("%d line(s) could not be read." % self.malformed)
+        return found
+
+    def summary(self):
+        for tag, name in SENSORS:
+            if tag in self.first and self.last[tag] > self.first[tag]:
+                print("%s: %d samples, %.0f Hz, longest hole %.0f ms" % (name, self.counts[tag], self.counts[tag] / ((self.last[tag] - self.first[tag]) / 1e6), self.gaps.get(tag, 0) / 1e3))
+        if self.sequences:
+            print("Datagrams lost: %.1f%%" % (100 * self.lost_fraction()))
+
+
+def record(name):
+    folder = os.path.join(ROOT, "_work", "watch")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, name + ".csv")
+    bad_path = os.path.join(folder, name + ".incomplete.csv")
+    part = path + ".part"
+    if os.path.exists(path):
+        sys.exit("%s already exists. Pick another name." % path)
+    proc, lines = open_stream()
+    print("Ready. Tap the watch to start. Ctrl+C stops early.")
+    take = Take()
+    newest = None
+    try:
+        with open(part, "wb") as out:
+            while take.end is None:
+                try:
+                    line = lines.get(timeout=1)
+                except queue.Empty:
+                    if newest is not None and time.time() - newest > STALL_SECONDS:
+                        print("No data for %d s." % STALL_SECONDS)
+                        break
+                    continue
+                if line is None:
+                    break
+                parts = line.decode("ascii", "replace").strip().split(",")
+                tag = parts[0]
+                try:
+                    if tag == "s" and len(parts) == 2:
+                        take.sequences.add(int(parts[1]))
+                    elif tag == "c" and len(parts) == 4:
+                        index = int(parts[2])
+                        if index >= 0:  # -1 is the hello
+                            newest = time.time()
+                            if index not in take.cues:  # cues arrive three times
+                                take.cues.add(index)
+                                out.write(line)
+                                print("cue %d: %s" % (index, parts[3]))
+                    elif tag == "e" and len(parts) == 5:
+                        int(parts[1]), int(parts[2]), int(parts[3])
+                        take.end = parts[1:]
+                    elif tag in ("a", "g", "r") and len(parts) >= 5:
+                        take.add_sample(tag, int(parts[1]))
+                        newest = time.time()
+                        out.write(line)
+                    else:
+                        take.malformed += 1
+                except ValueError:
+                    take.malformed += 1
+    except KeyboardInterrupt:
+        print("Stopped early.")
+    finally:
+        proc.kill()
+    take.summary()
+    problems = take.problems(proc.poll())
+    if problems:
+        os.replace(part, bad_path)
+        print("INCOMPLETE, saved as " + bad_path)
+        for problem in problems:
+            print("- " + problem)
+        sys.exit(1)
+    os.replace(part, path)
+    print("OK, saved as " + path)
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) == 3 and args[0] == "pair":
+        sys.exit(0 if run_adb("pair %s %s" % (args[1], args[2])) else 1)
+    if len(args) == 2 and args[0] == "connect":
+        run_adb("connect " + args[1])
+        run_adb("devices -l")
+    elif args == ["install"]:
+        install()
+    elif args == ["listen"]:
+        listen()
+    elif args == ["live"]:
+        live()
+    elif args == ["stop"]:
+        run_adb("-s %s shell am stopservice -n %s/.LiveService" % (watch_serial(), PACKAGE))
+    elif len(args) == 2 and args[0] == "record":
+        record(args[1])
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

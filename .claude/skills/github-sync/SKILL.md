@@ -20,7 +20,7 @@ Standing instruction from Siddharth (2026-10-19): **after every addition or chan
 6. `git push`. If git has no stored GitHub login, a plain push hangs on a hidden login prompt; push with the GitHub CLI's login for that one command instead (changes no saved config):
    `GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin main`
    (needs `gh auth status` to show you logged in). Never force-push. If the push is rejected, pull and retry; never overwrite the teammate's work.
-7. Check: `git log -1 --format='%an | %s%n%b'` shows the user as author and no Claude trailer; `git status` is clean for the committed paths.
+7. Check: `git rev-list --left-right --count HEAD...origin/main` prints `0 0` (local and GitHub match). `git log -1 --format='%an | %s%n%b'` shows the user as author and no Claude trailer; `git status` is clean for the committed paths.
 
 ## Report
 Tell the user the short commit hash, the summary line, and the repo link (https://github.com/siddkumdev/Aeterna). If something was not pushed (conflict, auth, LFS), say so plainly.
