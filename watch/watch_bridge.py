@@ -4,6 +4,8 @@
     python watch/watch_bridge.py connect <ip:port>               connect adb on the laptop to the watch
     python watch/watch_bridge.py install                         install the built app, point it at the laptop, open it
     python watch/watch_bridge.py listen                          print the line rate only, to test the link first
+    python watch/watch_bridge.py live                            play: watch -> pinch detector -> the game (AETERNA_WATCH=1)
+    python watch/watch_bridge.py stop                            stop the live service on the watch (if the bridge was killed)
     python watch/watch_bridge.py record <name>                   save a take to _work/watch/<name>.csv
 
 record exits non-zero and saves <name>.incomplete.csv if the take did not finish, or cues or data were lost.
@@ -134,6 +136,68 @@ def listen():
 
 
 SENSORS = (("a", "accelerometer"), ("g", "gyroscope"), ("r", "rotation"))
+
+
+GAME_PORT = 9101  # the game's WatchLink listens here on this PC
+
+
+def live():
+    """Play: the watch streams from a background service, the pinch detector runs here, and the game gets the aim and the pinch."""
+    import socket
+    from pinch_detector import PinchDetector
+    serial = watch_serial()
+    host = laptop_ip(serial.split(":")[0])
+    proc, lines = open_stream()
+    run_adb("-s %s shell pm grant %s android.permission.POST_NOTIFICATIONS" % (serial, PACKAGE))
+    if not run_adb("-s %s shell am start-foreground-service -n %s/.LiveService --es host %s" % (serial, PACKAGE, host)):
+        proc.kill()
+        sys.exit("Could not start the live service on the watch.")
+    game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    detector = PinchDetector()
+    folder = os.path.join(ROOT, "_work", "watch")
+    os.makedirs(folder, exist_ok=True)
+    log = open(os.path.join(folder, "live_%s.csv" % time.strftime("%H%M%S")), "wb")
+    print("Live. Wear the watch, start the game with AETERNA_WATCH=1, press C in the game while pointing at the board. Ctrl+C stops.")
+    counts = {"a": 0, "r": 0, "down": 0, "up": 0}
+    shown, last_data = time.time(), None
+    try:
+        while True:
+            try:
+                line = lines.get(timeout=1)
+            except queue.Empty:
+                line = b""
+            now = time.time()
+            if line is None:
+                print("The connection to the laptop ended.")
+                break
+            if line and not line.startswith((b"s,", b"c,")):
+                log.write(line)
+                parts = line.decode("ascii", "replace").strip().split(",")
+                try:
+                    if parts[0] == "a" and len(parts) >= 5:
+                        counts["a"] += 1
+                        last_data = now
+                        event = detector.feed(int(parts[1]) / 1e6, (float(parts[2]), float(parts[3]), float(parts[4])))
+                        if event:
+                            counts[event] += 1
+                            game.sendto(("p," + event).encode(), ("127.0.0.1", GAME_PORT))
+                            print("pinch " + event)
+                    elif parts[0] == "r" and len(parts) >= 5:
+                        counts["r"] += 1
+                        game.sendto(("q," + ",".join(parts[2:6])).encode(), ("127.0.0.1", GAME_PORT))
+                except ValueError:
+                    pass
+            if now - shown >= 5:
+                state = "NO DATA from the watch" if last_data is None or now - last_data > 3 else "ok"
+                print("%s | accel %d, aim %d, presses %d, releases %d" % (state, counts["a"], counts["r"], counts["down"], counts["up"]))
+                shown = now
+    except KeyboardInterrupt:
+        pass
+    finally:
+        proc.kill()
+        log.close()
+        run_adb("-s %s shell am stopservice -n %s/.LiveService" % (serial, PACKAGE))
+        game.sendto(b"p,up", ("127.0.0.1", GAME_PORT))  # never leave something held
 
 
 class Take:
@@ -271,6 +335,10 @@ def main():
         install()
     elif args == ["listen"]:
         listen()
+    elif args == ["live"]:
+        live()
+    elif args == ["stop"]:
+        run_adb("-s %s shell am stopservice -n %s/.LiveService" % (watch_serial(), PACKAGE))
     elif len(args) == 2 and args[0] == "record":
         record(args[1])
     else:

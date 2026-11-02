@@ -1456,6 +1456,10 @@ func _build_rig() -> void:
 		_camera.rotation_degrees.x = -47.0
 		_build_mouse_hand()
 		_build_vignette()
+		if OS.get_environment("AETERNA_WATCH") == "1":
+			var watch := WatchLink.new()  # the Galaxy Watch drives the mouse hand (scripts/game/watch_link.gd)
+			watch.name = "watch_link"
+			add_child(watch)
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)
