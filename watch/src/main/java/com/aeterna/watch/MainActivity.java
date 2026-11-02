@@ -43,6 +43,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private static final long FLUSH_US = 10_000;
     private static final int MAX_DATAGRAM = 1200;
     private static final int WIFI_TIMEOUT_MS = 20_000;
+    private static final int PARTS = 3;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final Object cueTimers = new Object();
@@ -94,6 +95,15 @@ public class MainActivity extends Activity implements SensorEventListener {
                 cues.add(new Cue("pinch", "PINCH", Color.rgb(0, 150, 60), 1500));
                 cues.add(new Cue("open", "OPEN", Color.BLACK, 1500 + rnd.nextInt(1000)));
             }
+        } else if (part == 2) {
+            // How the game will use it: grab, carry while holding, let go, rest. The release is the weak signal, so it needs its own data.
+            cues.add(new Cue("still", "HOLD STILL", Color.DKGRAY, 5_000));
+            for (int i = 0; i < 14; i++) {
+                cues.add(new Cue("grab", "GRAB\n(pinch, keep holding)", Color.rgb(0, 150, 60), 600));
+                cues.add(new Cue("carry", "CARRY\nmove arm, keep pinching", Color.rgb(0, 110, 130), 1800 + rnd.nextInt(700)));
+                cues.add(new Cue("release", "LET GO", Color.BLACK, 1000));
+                cues.add(new Cue("rest", "REST", Color.DKGRAY, 800 + rnd.nextInt(600)));
+            }
         } else {
             cues.add(new Cue("move", "MOVE ARM\nno pinching", Color.rgb(170, 100, 0), 25_000));  // what must NOT count as a pinch
             for (int i = 0; i < 12; i++) {  // the real case: aiming and pinching together
@@ -107,7 +117,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     private String idleText() {
-        return "TAP TO START\npart " + (nextPart + 1) + " of 2\n" + host;
+        return "TAP TO START\npart " + (nextPart + 1) + " of " + PARTS + "\n" + host;
     }
 
     @Override
@@ -120,6 +130,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             prefs.edit().putString("host", extra).apply();
         }
         host = prefs.getString("host", "");
+        nextPart = Math.max(0, Math.min(PARTS - 1, getIntent().getIntExtra("part", 0)));  // adb: --ei part 2 starts at part 3
         label = new TextView(this);
         label.setGravity(Gravity.CENTER);
         label.setTextSize(26);
@@ -231,7 +242,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
         running = false;
         if (reason.equals("complete")) {
-            nextPart = (nextPart + 1) % 2;
+            nextPart = (nextPart + 1) % PARTS;
         }
         ui.removeCallbacksAndMessages(cueTimers);
         sensors.unregisterListener(this);
