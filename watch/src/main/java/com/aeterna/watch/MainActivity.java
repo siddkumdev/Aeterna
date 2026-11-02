@@ -11,6 +11,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -44,6 +45,8 @@ public class MainActivity extends Activity implements SensorEventListener {
     private static final int WIFI_TIMEOUT_MS = 20_000;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private final Object cueTimers = new Object();
+    private WifiManager.WifiLock wifiLock;  // Wi-Fi power saving would drop bursts of the stream
     private HandlerThread sensorThread;
     private Handler sensorHandler;
     private SensorManager sensors;
@@ -115,6 +118,8 @@ public class MainActivity extends Activity implements SensorEventListener {
         setContentView(label);
         connectivity = getSystemService(ConnectivityManager.class);
         sensors = getSystemService(SensorManager.class);
+        wifiLock = getSystemService(WifiManager.class).createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "aeterna:stream");
+        wifiLock.setReferenceCounted(false);
         sensorThread = new HandlerThread("sensors");
         sensorThread.start();
         sensorHandler = new Handler(sensorThread.getLooper());
@@ -176,6 +181,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
         running = true;
         cuesSent = 0;
+        wifiLock.acquire();
         for (int type : new int[]{Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE, Sensor.TYPE_GAME_ROTATION_VECTOR}) {
             Sensor sensor = sensors.getDefaultSensor(type);
             if (sensor != null) {
@@ -199,10 +205,10 @@ public class MainActivity extends Activity implements SensorEventListener {
         sensorHandler.postDelayed(() -> send(line), 30);
         sensorHandler.postDelayed(() -> send(line), 60);
         if (index + 1 == cues.size()) {
-            ui.postDelayed(() -> stopRun("complete"), 500);
+            ui.postDelayed(() -> stopRun("complete"), cueTimers, 500);
             return;
         }
-        ui.postDelayed(() -> runCue(cues, index + 1), cue.ms);
+        ui.postDelayed(() -> runCue(cues, index + 1), cueTimers, cue.ms);
     }
 
     private void stopRun(String reason) {
@@ -210,8 +216,11 @@ public class MainActivity extends Activity implements SensorEventListener {
             return;
         }
         running = false;
-        ui.removeCallbacksAndMessages(null);
+        ui.removeCallbacksAndMessages(cueTimers);
         sensors.unregisterListener(this);
+        if (wifiLock.isHeld()) {
+            wifiLock.release();
+        }
         int cues = cuesSent;
         sensorHandler.post(() -> {
             flush();
@@ -286,6 +295,12 @@ public class MainActivity extends Activity implements SensorEventListener {
     protected void onPause() {
         stopRun("aborted");  // cues nobody can see must not keep labelling the take
         super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        finish();  // reopening starts fresh, so a timed-out Wi-Fi request cannot leave the screen stuck on NO WIFI
     }
 
     @Override

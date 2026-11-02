@@ -28,7 +28,9 @@ APK = os.path.join(ROOT, "watch", "build", "outputs", "apk", "debug", "aeterna-w
 PACKAGE = "com.aeterna.watch"
 PORT = 9100
 STALL_SECONDS = 5  # silence after data has started means the take died
-CLOCK_TOLERANCE_US = 1_000_000
+CLOCK_TOLERANCE_US = 200_000  # sensors run until the end line, so every sensor's last sample should be this close to it
+MAX_SAMPLE_GAP_US = 250_000  # the shortest cue lasts 700 ms
+MAX_LOST_FRACTION = 0.05
 
 # Runs on the laptop: every UDP datagram from the watch goes to stdout, so ssh carries it here with no inbound firewall rule.
 # It stops when ssh closes its stdin, so no stale receiver keeps the port.
@@ -131,6 +133,9 @@ def listen():
         proc.kill()
 
 
+SENSORS = (("a", "accelerometer"), ("g", "gyroscope"), ("r", "rotation"))
+
+
 class Take:
     """What arrived, and what the watch says should have arrived."""
 
@@ -140,7 +145,22 @@ class Take:
         self.last = {}
         self.cues = set()
         self.sequences = set()
+        self.gaps = {}  # the longest hole between samples, per sensor
+        self.malformed = 0
         self.end = None  # [time_us, cues_sent, send_failures, reason]
+
+    def add_sample(self, tag, stamp):
+        self.counts[tag] = self.counts.get(tag, 0) + 1
+        self.first.setdefault(tag, stamp)
+        if tag in self.last and stamp > self.last[tag]:
+            self.gaps[tag] = max(self.gaps.get(tag, 0), stamp - self.last[tag])
+        self.last[tag] = max(stamp, self.last.get(tag, stamp))
+
+    def lost_fraction(self):
+        if not self.sequences:
+            return 0.0
+        span = max(self.sequences) - min(self.sequences) + 1
+        return (span - len(self.sequences)) / span
 
     def problems(self, ssh_code):
         found = []
@@ -154,21 +174,26 @@ class Take:
                 found.append("%d cue(s) lost, so labels are wrong. Indexes: %s" % (len(missing), missing[:20]))
             if self.end[2] != "0":
                 found.append("The watch failed to send %s time(s)." % self.end[2])
-            newest = max(self.last.values(), default=None)
-            if newest is not None and abs(int(self.end[0]) - newest) > CLOCK_TOLERANCE_US:
-                found.append("Sensor and cue clocks differ by %.1f s, so labels would be misaligned." % (abs(int(self.end[0]) - newest) / 1e6))
-        for tag, name in (("a", "accelerometer"), ("g", "gyroscope"), ("r", "rotation")):
+            for tag, name in SENSORS:
+                if tag in self.last and abs(int(self.end[0]) - self.last[tag]) > CLOCK_TOLERANCE_US:
+                    found.append("The last %s sample is %.1f s from the end of the take: it stopped early, or its clock is off and labels would be misaligned." % (name, abs(int(self.end[0]) - self.last[tag]) / 1e6))
+        for tag, name in SENSORS:
             if tag not in self.first:
                 found.append("No %s data." % name)
+            elif self.gaps.get(tag, 0) > MAX_SAMPLE_GAP_US:
+                found.append("The %s data has a %.2f s hole." % (name, self.gaps[tag] / 1e6))
+        if self.lost_fraction() > MAX_LOST_FRACTION:
+            found.append("%.1f%% of datagrams were lost." % (100 * self.lost_fraction()))
+        if self.malformed:
+            found.append("%d line(s) could not be read." % self.malformed)
         return found
 
     def summary(self):
-        for tag, name in (("a", "accelerometer"), ("g", "gyroscope"), ("r", "rotation")):
+        for tag, name in SENSORS:
             if tag in self.first and self.last[tag] > self.first[tag]:
-                print("%s: %d samples, %.0f Hz" % (name, self.counts[tag], self.counts[tag] / ((self.last[tag] - self.first[tag]) / 1e6)))
+                print("%s: %d samples, %.0f Hz, longest hole %.0f ms" % (name, self.counts[tag], self.counts[tag] / ((self.last[tag] - self.first[tag]) / 1e6), self.gaps.get(tag, 0) / 1e3))
         if self.sequences:
-            span = max(self.sequences) - min(self.sequences) + 1
-            print("Datagrams lost: %d of %d (%.1f%%)" % (span - len(self.sequences), span, 100 * (span - len(self.sequences)) / span))
+            print("Datagrams lost: %.1f%%" % (100 * self.lost_fraction()))
 
 
 def record(name):
@@ -197,23 +222,28 @@ def record(name):
                     break
                 parts = line.decode("ascii", "replace").strip().split(",")
                 tag = parts[0]
-                if tag == "s" and len(parts) == 2 and parts[1].isdigit():
-                    take.sequences.add(int(parts[1]))
-                elif tag == "c" and len(parts) == 4:
-                    index = int(parts[2])
-                    if index >= 0 and index not in take.cues:  # cues arrive three times
-                        take.cues.add(index)
+                try:
+                    if tag == "s" and len(parts) == 2:
+                        take.sequences.add(int(parts[1]))
+                    elif tag == "c" and len(parts) == 4:
+                        index = int(parts[2])
+                        if index >= 0:  # -1 is the hello
+                            newest = time.time()
+                            if index not in take.cues:  # cues arrive three times
+                                take.cues.add(index)
+                                out.write(line)
+                                print("cue %d: %s" % (index, parts[3]))
+                    elif tag == "e" and len(parts) == 5:
+                        int(parts[1]), int(parts[2]), int(parts[3])
+                        take.end = parts[1:]
+                    elif tag in ("a", "g", "r") and len(parts) >= 5:
+                        take.add_sample(tag, int(parts[1]))
+                        newest = time.time()
                         out.write(line)
-                        print("cue %d: %s" % (index, parts[3]))
-                elif tag == "e" and len(parts) == 5:
-                    take.end = parts[1:]
-                elif tag in ("a", "g", "r") and len(parts) >= 5:
-                    stamp = int(parts[1])
-                    take.counts[tag] = take.counts.get(tag, 0) + 1
-                    take.first.setdefault(tag, stamp)
-                    take.last[tag] = stamp
-                    newest = time.time()
-                    out.write(line)
+                    else:
+                        take.malformed += 1
+                except ValueError:
+                    take.malformed += 1
     except KeyboardInterrupt:
         print("Stopped early.")
     finally:

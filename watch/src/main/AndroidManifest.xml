@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <application android:label="Aeterna Watch" android:theme="@android:style/Theme.DeviceDefault">
         <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
         <activity android:name=".MainActivity" android:exported="true">
