@@ -1,0 +1,19 @@
+plugins {
+    id "com.android.application" version "9.2.1"
+}
+
+android {
+    namespace = "com.aeterna.watch"
+    compileSdk = 36
+    defaultConfig {
+        applicationId = "com.aeterna.watch"
+        minSdk = 30  // Wear OS 3, what the Galaxy Watch 4 shipped with
+        targetSdk = 36
+        versionCode = 1
+        versionName = "0.1"
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}

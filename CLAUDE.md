@@ -68,4 +68,5 @@ _work/      scratch input (git-ignored)
 - GitHub sync (commit + push after every change, on `main`, no Claude credit): skill `github-sync`.
 - Tracker sync (regenerate + republish the live asset tracker, move built items' status forward): `python tools/sync_tracker.py` then the tracker-sync skill steps.
 - Generate headless: `blender -b -P assets/generators/make_<name>.py` (Blender = `BLENDER_EXE` from `local.env`)
+- Watch input test (Galaxy Watch through the bridge laptop, `WATCH_BRIDGE` in `local.env`): `python watch/watch_bridge.py` (see `watch/README.md`)
 - Machine check: `python tools/doctor.py`

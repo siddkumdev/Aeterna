@@ -10,3 +10,6 @@ __pycache__/
 godot/.godot/
 # personal Claude Code settings (shared ones are in .claude/settings.json)
 .claude/settings.local.json
+watch/build/
+watch/.gradle/
+watch/local.properties
