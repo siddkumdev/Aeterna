@@ -6,7 +6,7 @@ that aiming does not count as a pinch. While a pinch is held the game already kn
 release uses a lower threshold than the press (the release burst is about half as strong).
 
     d = PinchDetector()
-    event = d.feed(t_seconds, (ax, ay, az))   # None, "down" or "up"
+    events = d.feed(t_seconds, (ax, ay, az))   # a list: [], ["down"], ["up"] or ["up", "down"]
 """
 import math
 from collections import deque
@@ -21,8 +21,9 @@ REFRACTORY = 0.4  # s between events
 
 
 class PinchDetector:
-    def __init__(self, down_ratio=DOWN_RATIO, up_ratio=UP_RATIO):
-        self.down_ratio, self.up_ratio = down_ratio, up_ratio
+    def __init__(self, down_ratio=DOWN_RATIO, up_ratio=UP_RATIO, resync=True):
+        self.down_ratio, self.up_ratio, self.resync = down_ratio, up_ratio, resync
+        self._last_t = -1.0
         self.held = False
         self._prev = None
         self._raw = deque(maxlen=SMOOTH)
@@ -35,9 +36,12 @@ class PinchDetector:
         return values[len(values) // 2] if values else None
 
     def feed(self, t, acc):
+        if t <= self._last_t:  # a late or duplicate datagram
+            return []
+        self._last_t = t
         if self._prev is None:
             self._prev = acc
-            return None
+            return []
         jerk = math.sqrt(sum((a - b) ** 2 for a, b in zip(acc, self._prev)))
         self._prev = acc
         self._raw.append(jerk)
@@ -47,15 +51,21 @@ class PinchDetector:
             self._history.popleft()
         base = self._baseline(t)
         if base is None or t - self._last_event < REFRACTORY:
-            return None
+            return []
         ratio = smooth / (base + BASE_FLOOR)
         if not self.held and ratio > self.down_ratio:
             self.held, self._held_since, self._last_event = True, t, t
-            return "down"
+            return ["down"]
         if self.held and t - self._held_since >= MIN_HOLD and ratio > self.up_ratio:
-            self.held, self._last_event = False, t
-            return "up"
-        return None
+            self._last_event = t
+            if self.resync and ratio > self.down_ratio:
+                # as strong as a press: the release before it was probably missed, so this is a new press. Let go and
+                # grab again, which puts the detector back in step with the hand.
+                self._held_since = t
+                return ["up", "down"]
+            self.held = False
+            return ["up"]
+        return []
 
 
 def load_take(path):
@@ -77,7 +87,7 @@ def replay(path, **kwargs):
     """Run a take through the detector. Returns the events [(t, 'down'|'up')] and the cues."""
     samples, cues = load_take(path)
     d = PinchDetector(**kwargs)
-    events = [(t, e) for t, acc in samples for e in [d.feed(t, acc)] if e]
+    events = [(t, e) for t, acc in samples for e in d.feed(t, acc)]
     return events, cues, samples[-1][0] - samples[0][0]
 
 
@@ -105,6 +115,6 @@ def score(events, cues, duration):
 if __name__ == "__main__":
     import sys
     for path in sys.argv[1:]:
-        for down, up in ((3.0, 1.7), (3.0, 1.4), (3.0, 2.0)):
-            events, cues, duration = replay(path, down_ratio=down, up_ratio=up)
-            print("%-22s down>%.1f up>%.1f  %s" % (path.replace("\\", "/").split("/")[-1], down, up, score(events, cues, duration)))
+        for resync in (False, True):
+            events, cues, duration = replay(path, resync=resync)
+            print("%-22s resync=%-5s %s" % (path.replace("\\", "/").split("/")[-1], resync, score(events, cues, duration)))

@@ -29,6 +29,7 @@ var _status: Label
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS  # keep reading packets while the game is paused
 	var err := _udp.bind(PORT, "127.0.0.1")
 	if err != OK:
 		push_warning("WatchLink: could not listen on port %d (error %d); is another game running?" % [PORT, err])
@@ -57,6 +58,9 @@ func _process(delta: float) -> void:
 	while _udp.get_available_packet_count() > 0:
 		_since_packet = 0.0
 		_handle(_udp.get_packet().get_string_from_ascii().strip_edges())
+	if held and _since_packet > SIGNAL_TIMEOUT:
+		print("[watch] no packets for %.1f s while holding: letting go" % SIGNAL_TIMEOUT)
+		_button(false)  # a dead stream must never leave the button down
 	if _have_rotation:
 		_aim()
 	_status.text = _status_text()
@@ -123,6 +127,11 @@ func _button(down: bool) -> void:
 	click.global_position = _position
 	click.button_mask = MOUSE_BUTTON_MASK_LEFT if down else 0
 	Input.parse_input_event(click)
+
+
+func _notification(what: int) -> void:
+	if (what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_FOCUS_OUT) and held:
+		_button(false)
 
 
 func _input(event: InputEvent) -> void:

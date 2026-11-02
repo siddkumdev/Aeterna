@@ -78,6 +78,15 @@ func _initialize() -> void:
 		await process_frame
 	_check(_releases == 2 and not link.held, "X lets go when a release was missed")
 
+	tx.put_packet("p,down".to_ascii_buffer())
+	for i in 3:
+		await process_frame
+	_check(link.held, "pinched again for the stall test")
+	var started := Time.get_ticks_msec()
+	while link.held and Time.get_ticks_msec() - started < 3000:
+		await process_frame
+	_check(not link.held, "a stream that goes quiet while holding lets go")
+
 	await send_q.call(Quaternion(Vector3.BACK, deg_to_rad(-30.0)))
 	link._input(_key(KEY_C))
 	await send_q.call(Quaternion(Vector3.BACK, deg_to_rad(-30.0)))

@@ -19,7 +19,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".LiveService" android:exported="true" android:foregroundServiceType="specialUse">
+        <service android:name=".LiveService" android:exported="true" android:permission="android.permission.DUMP" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="streams motion sensors to a PC as a game controller during development" />
         </service>
     </application>

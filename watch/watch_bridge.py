@@ -11,6 +11,7 @@
 record exits non-zero and saves <name>.incomplete.csv if the take did not finish, or cues or data were lost.
 WATCH_BRIDGE in local.env is the laptop's ssh login (default: the-tank@100.95.40.122).
 """
+import math
 import os
 import queue
 import re
@@ -177,14 +178,15 @@ def live():
                     if parts[0] == "a" and len(parts) >= 5:
                         counts["a"] += 1
                         last_data = now
-                        event = detector.feed(int(parts[1]) / 1e6, (float(parts[2]), float(parts[3]), float(parts[4])))
-                        if event:
+                        for event in detector.feed(int(parts[1]) / 1e6, (float(parts[2]), float(parts[3]), float(parts[4]))):
                             counts[event] += 1
                             game.sendto(("p," + event).encode(), ("127.0.0.1", GAME_PORT))
                             print("pinch " + event)
                     elif parts[0] == "r" and len(parts) >= 5:
                         counts["r"] += 1
-                        game.sendto(("q," + ",".join(parts[2:6])).encode(), ("127.0.0.1", GAME_PORT))
+                        x, y, z = float(parts[2]), float(parts[3]), float(parts[4])
+                        w = float(parts[5]) if len(parts) > 5 else math.sqrt(max(0.0, 1.0 - x * x - y * y - z * z))  # w is optional on Android
+                        game.sendto(("q,%s,%s,%s,%s" % (x, y, z, w)).encode(), ("127.0.0.1", GAME_PORT))
                 except ValueError:
                     pass
             if now - shown >= 5:
@@ -194,10 +196,13 @@ def live():
     except KeyboardInterrupt:
         pass
     finally:
+        game.sendto(b"p,up", ("127.0.0.1", GAME_PORT))  # first, and before anything that can hang: never leave something held
         proc.kill()
         log.close()
-        run_adb("-s %s shell am stopservice -n %s/.LiveService" % (serial, PACKAGE))
-        game.sendto(b"p,up", ("127.0.0.1", GAME_PORT))  # never leave something held
+        try:
+            run_adb("-s %s shell am stopservice -n %s/.LiveService" % (serial, PACKAGE))
+        except Exception as err:  # noqa: BLE001 (the laptop may be unreachable; the service stops itself after 3 hours)
+            print("Could not stop the watch service (%s). Run: python watch/watch_bridge.py stop" % err)
 
 
 class Take:

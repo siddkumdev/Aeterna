@@ -56,15 +56,16 @@ public class LiveService extends Service implements SensorEventListener {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        goForeground();  // always first: a service started as a foreground service that never calls it is killed with a crash
         String host = intent == null ? null : intent.getStringExtra("host");
-        if (host == null || host.isEmpty() || started) {
-            if (!started) {
-                stopSelf();
-            }
+        if (host == null || host.isEmpty()) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (started) {
             return START_NOT_STICKY;
         }
         started = true;
-        goForeground();
         connectivity = getSystemService(ConnectivityManager.class);
         sensors = getSystemService(SensorManager.class);
         PowerManager power = getSystemService(PowerManager.class);
@@ -175,6 +176,13 @@ public class LiveService extends Service implements SensorEventListener {
         }
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
+        }
+        if (handler != null) {
+            handler.post(() -> {
+                if (socket != null) {
+                    socket.close();
+                }
+            });
         }
         if (thread != null) {
             thread.quitSafely();
