@@ -32,27 +32,36 @@ import java.util.Random;
 /**
  * Pinch feasibility recorder: streams the raw motion sensors over UDP and shows timed cues, so the recording says when each
  * pinch and unpinch was asked for. Cues are on screen only: a vibration would shake the same sensors we are measuring.
- * Lines: a/g/r,time_us,values (accelerometer, gyroscope, game rotation vector), c,time_us,cue.
+ * Each datagram starts with s,seq. Then lines: a/g/r,time_us,values (accelerometer, gyroscope, game rotation vector),
+ * c,time_us,index,cue (sent three times, because a lost cue would mislabel the take), and at the end
+ * e,time_us,cues_sent,send_failures,reason (sent five times). watch_bridge.py removes duplicates and reports anything lost.
  * Tap the screen to start. Host comes from the launch extra "host" (see watch/watch_bridge.py) and is remembered.
  */
 public class MainActivity extends Activity implements SensorEventListener {
     private static final int PORT = 9100;
     private static final long FLUSH_US = 10_000;
     private static final int MAX_DATAGRAM = 1200;
+    private static final int WIFI_TIMEOUT_MS = 20_000;
 
-    private final StringBuilder pending = new StringBuilder();  // touched on the sensor thread only
     private final Handler ui = new Handler(Looper.getMainLooper());
     private HandlerThread sensorThread;
     private Handler sensorHandler;
     private SensorManager sensors;
     private ConnectivityManager connectivity;
     private ConnectivityManager.NetworkCallback wifiCallback;
+    private String host = "";
+    private TextView label;
+    // UI thread only
+    private boolean wifiReady;
+    private boolean running;
+    private int cuesSent;
+    // sensor thread only
+    private final StringBuilder pending = new StringBuilder();
     private DatagramSocket socket;
     private InetAddress target;
-    private String host = "";
     private long lastFlushUs;
-    private TextView label;
-    private boolean running;
+    private long sequence;
+    private int sendFailures;
 
     private static final class Cue {
         final String name;
@@ -101,7 +110,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         label.setTextSize(26);
         label.setTextColor(Color.WHITE);
         label.setBackgroundColor(Color.BLACK);
-        label.setText(host.isEmpty() ? "NO HOST\nsee watch_bridge.py" : "TAP TO START\n" + host);
+        label.setText(host.isEmpty() ? "NO HOST\nsee watch_bridge.py" : "WAITING FOR WIFI");
         label.setOnClickListener(v -> start());
         setContentView(label);
         connectivity = getSystemService(ConnectivityManager.class);
@@ -109,8 +118,9 @@ public class MainActivity extends Activity implements SensorEventListener {
         sensorThread = new HandlerThread("sensors");
         sensorThread.start();
         sensorHandler = new Handler(sensorThread.getLooper());
-        sensorHandler.post(this::openSocket);
-        useWifi();
+        if (!host.isEmpty()) {
+            useWifi();
+        }
     }
 
     /** Wear OS sends traffic through the phone's Bluetooth by default; a local UDP stream needs the watch's own Wi-Fi. */
@@ -121,38 +131,58 @@ public class MainActivity extends Activity implements SensorEventListener {
                 connectivity.bindProcessToNetwork(network);
                 sensorHandler.post(MainActivity.this::openSocket);
             }
+
+            @Override
+            public void onUnavailable() {
+                ui.post(() -> setIdle(false, "NO WIFI\nconnect the watch\nand reopen"));
+            }
+
+            @Override
+            public void onLost(Network network) {
+                ui.post(() -> setIdle(false, "WAITING FOR WIFI"));
+            }
         };
         NetworkRequest wifi = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-        connectivity.requestNetwork(wifi, wifiCallback);
+        connectivity.requestNetwork(wifi, wifiCallback, WIFI_TIMEOUT_MS);
+    }
+
+    private void setIdle(boolean ready, String text) {
+        wifiReady = ready;
+        if (!running) {
+            label.setText(text);
+            label.setBackgroundColor(Color.BLACK);
+        }
     }
 
     private void openSocket() {
-        if (host.isEmpty()) {
-            return;
-        }
         try {
             if (socket != null) {
                 socket.close();
             }
+            socket = null;
             target = InetAddress.getByName(host);
             socket = new DatagramSocket();
-            send("c," + nowUs() + ",hello\n");
+            send("c," + nowUs() + ",-1,hello\n");
+            ui.post(() -> setIdle(true, "TAP TO START\n" + host));
         } catch (IOException e) {
-            showOnUi("NETWORK ERROR\n" + e.getMessage());
+            socket = null;
+            ui.post(() -> setIdle(false, "NETWORK ERROR\n" + e.getMessage()));
         }
     }
 
     private void start() {
-        if (running || host.isEmpty()) {
+        if (running || !wifiReady) {
             return;
         }
         running = true;
+        cuesSent = 0;
         for (int type : new int[]{Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE, Sensor.TYPE_GAME_ROTATION_VECTOR}) {
             Sensor sensor = sensors.getDefaultSensor(type);
             if (sensor != null) {
                 sensors.registerListener(this, sensor, SensorManager.SENSOR_DELAY_FASTEST, sensorHandler);
             }
         }
+        sensorHandler.post(() -> sendFailures = 0);
         runCue(script(), 0);
     }
 
@@ -160,25 +190,41 @@ public class MainActivity extends Activity implements SensorEventListener {
         Cue cue = cues.get(index);
         label.setText(cue.text);
         label.setBackgroundColor(cue.color);
-        long now = nowUs();
+        cuesSent = index + 1;
+        String line = "c," + nowUs() + "," + index + "," + cue.name + "\n";
         sensorHandler.post(() -> {
-            pending.append("c,").append(now).append(',').append(cue.name).append('\n');
+            pending.append(line);
             flush();
         });
+        sensorHandler.postDelayed(() -> send(line), 30);
+        sensorHandler.postDelayed(() -> send(line), 60);
         if (index + 1 == cues.size()) {
-            ui.postDelayed(this::stopStream, 500);
+            ui.postDelayed(() -> stopRun("complete"), 500);
             return;
         }
         ui.postDelayed(() -> runCue(cues, index + 1), cue.ms);
     }
 
-    private void stopStream() {
-        sensors.unregisterListener(this);
-        sensorHandler.post(() -> {
-            pending.append("c,").append(nowUs()).append(",end\n");
-            flush();
-        });
+    private void stopRun(String reason) {
+        if (!running) {
+            return;
+        }
         running = false;
+        ui.removeCallbacksAndMessages(null);
+        sensors.unregisterListener(this);
+        int cues = cuesSent;
+        sensorHandler.post(() -> {
+            flush();
+            String end = "e," + nowUs() + "," + cues + "," + sendFailures + "," + reason + "\n";
+            for (int i = 0; i < 5; i++) {
+                sensorHandler.postDelayed(() -> send(end), i * 50L);
+            }
+            int failures = sendFailures;
+            ui.post(() -> {
+                label.setText((reason.equals("complete") ? "DONE" : "STOPPED") + "\n" + failures + " send errors");
+                label.setBackgroundColor(Color.DKGRAY);
+            });
+        });
     }
 
     @Override
@@ -217,22 +263,15 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void send(String text) {
         if (socket == null) {
+            sendFailures++;
             return;
         }
-        byte[] data = text.getBytes(StandardCharsets.US_ASCII);
+        byte[] data = ("s," + (sequence++) + "\n" + text).getBytes(StandardCharsets.US_ASCII);
         try {
             socket.send(new DatagramPacket(data, data.length, target, PORT));
         } catch (IOException e) {
-            showOnUi("SEND ERROR\n" + e.getMessage());
+            sendFailures++;
         }
-    }
-
-    private void showOnUi(String text) {
-        ui.post(() -> {
-            if (!running) {
-                label.setText(text);
-            }
-        });
     }
 
     private static long nowUs() {
@@ -244,10 +283,21 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     @Override
+    protected void onPause() {
+        stopRun("aborted");  // cues nobody can see must not keep labelling the take
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
-        sensors.unregisterListener(this);
         ui.removeCallbacksAndMessages(null);
-        connectivity.unregisterNetworkCallback(wifiCallback);
+        if (wifiCallback != null) {
+            try {
+                connectivity.unregisterNetworkCallback(wifiCallback);
+            } catch (IllegalArgumentException e) {
+                // a timed-out request was already released
+            }
+        }
         connectivity.bindProcessToNetwork(null);
         sensorThread.quitSafely();
         super.onDestroy();
