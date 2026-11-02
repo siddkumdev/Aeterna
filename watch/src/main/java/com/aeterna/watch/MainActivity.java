@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private boolean wifiReady;
     private boolean running;
     private int cuesSent;
+    private int nextPart;
     // sensor thread only
     private final StringBuilder pending = new StringBuilder();
     private DatagramSocket socket;
@@ -80,22 +81,33 @@ public class MainActivity extends Activity implements SensorEventListener {
         }
     }
 
-    private static List<Cue> script() {
+    /**
+     * Two parts, each about 80 s: Wear OS takes an app off the screen after roughly 150 s (seen on the Galaxy Watch 4 in
+     * the first long take), which ends a longer run. Each tap runs the next part; a part that ends early is repeated.
+     */
+    private static List<Cue> script(int part) {
         Random rnd = new Random();
         List<Cue> cues = new ArrayList<>();
-        cues.add(new Cue("still", "HOLD STILL", Color.DKGRAY, 10_000));
-        for (int i = 0; i < 20; i++) {  // arm at rest: the cleanest signal a pinch can give
-            cues.add(new Cue("pinch", "PINCH", Color.rgb(0, 150, 60), 1500));
-            cues.add(new Cue("open", "OPEN", Color.BLACK, 1500 + rnd.nextInt(1000)));
-        }
-        cues.add(new Cue("move", "MOVE ARM\nno pinching", Color.rgb(170, 100, 0), 30_000));  // what must NOT count as a pinch
-        for (int i = 0; i < 15; i++) {  // the real case: aiming and pinching together
-            cues.add(new Cue("aim", "AIM AROUND", Color.rgb(170, 100, 0), 2000 + rnd.nextInt(1000)));
-            cues.add(new Cue("pinch_moving", "PINCH", Color.rgb(0, 150, 60), 1500));
-            cues.add(new Cue("open_moving", "OPEN", Color.BLACK, 700));
+        if (part == 0) {
+            cues.add(new Cue("still", "HOLD STILL", Color.DKGRAY, 8_000));
+            for (int i = 0; i < 20; i++) {  // arm at rest: the cleanest signal a pinch can give
+                cues.add(new Cue("pinch", "PINCH", Color.rgb(0, 150, 60), 1500));
+                cues.add(new Cue("open", "OPEN", Color.BLACK, 1500 + rnd.nextInt(1000)));
+            }
+        } else {
+            cues.add(new Cue("move", "MOVE ARM\nno pinching", Color.rgb(170, 100, 0), 25_000));  // what must NOT count as a pinch
+            for (int i = 0; i < 12; i++) {  // the real case: aiming and pinching together
+                cues.add(new Cue("aim", "AIM AROUND", Color.rgb(170, 100, 0), 2000 + rnd.nextInt(1000)));
+                cues.add(new Cue("pinch_moving", "PINCH", Color.rgb(0, 150, 60), 1500));
+                cues.add(new Cue("open_moving", "OPEN", Color.BLACK, 700));
+            }
         }
         cues.add(new Cue("done", "DONE", Color.DKGRAY, 0));
         return cues;
+    }
+
+    private String idleText() {
+        return "TAP TO START\npart " + (nextPart + 1) + " of 2\n" + host;
     }
 
     @Override
@@ -153,7 +165,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     private void setIdle(boolean ready, String text) {
         wifiReady = ready;
-        if (!running) {
+        if (!running && !label.getText().toString().startsWith("DONE") && !label.getText().toString().startsWith("STOPPED")) {
             label.setText(text);
             label.setBackgroundColor(Color.BLACK);
         }
@@ -168,7 +180,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             target = InetAddress.getByName(host);
             socket = new DatagramSocket();
             send("c," + nowUs() + ",-1,hello\n");
-            ui.post(() -> setIdle(true, "TAP TO START\n" + host));
+            ui.post(() -> setIdle(true, idleText()));
         } catch (IOException e) {
             socket = null;
             ui.post(() -> setIdle(false, "NETWORK ERROR\n" + e.getMessage()));
@@ -189,7 +201,7 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
         }
         sensorHandler.post(() -> sendFailures = 0);
-        runCue(script(), 0);
+        runCue(script(nextPart), 0);
     }
 
     private void runCue(List<Cue> cues, int index) {
@@ -216,6 +228,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             return;
         }
         running = false;
+        if (reason.equals("complete")) {
+            nextPart = (nextPart + 1) % 2;
+        }
         ui.removeCallbacksAndMessages(cueTimers);
         sensors.unregisterListener(this);
         if (wifiLock.isHeld()) {
@@ -230,7 +245,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
             int failures = sendFailures;
             ui.post(() -> {
-                label.setText((reason.equals("complete") ? "DONE" : "STOPPED") + "\n" + failures + " send errors");
+                boolean complete = reason.equals("complete");
+                label.setText((complete ? "DONE" : "STOPPED EARLY\n" + reason) + "\n" + failures + " send errors\n\ntap: " + (complete ? "next part" : "repeat part")
+                        + " " + (nextPart + 1));
                 label.setBackgroundColor(Color.DKGRAY);
             });
         });
