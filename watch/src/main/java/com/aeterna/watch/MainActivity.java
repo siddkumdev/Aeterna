@@ -214,8 +214,10 @@ public class MainActivity extends Activity implements SensorEventListener {
             pending.append(line);
             flush();
         });
-        sensorHandler.postDelayed(() -> send(line), 30);
-        sensorHandler.postDelayed(() -> send(line), 60);
+        // Copies spread over a second: one Wi-Fi hiccup at the start of a part took out all three copies sent within 60 ms.
+        sensorHandler.postDelayed(() -> send(line), 150);
+        sensorHandler.postDelayed(() -> send(line), 500);
+        sensorHandler.postDelayed(() -> send(line), 1000);
         if (index + 1 == cues.size()) {
             ui.postDelayed(() -> stopRun("complete"), cueTimers, 500);
             return;

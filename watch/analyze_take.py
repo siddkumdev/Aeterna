@@ -37,9 +37,15 @@ def auc(pos, neg):
 by = {}
 for i, t, n in cues:
     by.setdefault(n, []).append(t)
+if "move" not in by and cues and cues[0][2] == "aim":
+    # the first cue (start of the free-movement section) was lost: it began when the take did, so infer it from the first sample
+    by["move"] = [min(ta[0], tg[0])]
+    print("NOTE: the 'move' cue was lost; its start is inferred from the first sample.")
 print({k: len(v) for k, v in by.items()})
 
 def triggered(times, label):
+    if not times:
+        return
     edges = np.arange(-0.5, 2.01, 0.1)
     jr, gr = [], []
     for t in times:
