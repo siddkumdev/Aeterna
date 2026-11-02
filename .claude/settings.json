@@ -9,5 +9,31 @@
   },
   "enabledPlugins": {
     "i-have-adhd@i-have-adhd": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/tools/repo_freshness.py\"",
+            "timeout": 180,
+            "statusMessage": "Checking GitHub for updates"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/tools/repo_freshness.py\"",
+            "timeout": 180,
+            "statusMessage": "Checking GitHub for updates"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -24,6 +24,7 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - Claim an asset in the tracker (owner) before working on it; one owner per asset at a time.
 - Work on `main`; no new branches unless really needed (Siddharth, 2026-10-19), e.g. a risky experiment that could break `main`, and only after asking. Pull before starting, push when done. Unapproved assets are fine on `main`: their status in `ASSETS.md` says "awaiting approval".
 - Never hand-edit `.blend` or `.glb`: change the generator and regenerate (binaries cannot be merged). Shared logs (`ASSETS.md`, `decisions.md`, `VFX_NOTES.md`, `ASSET_LIST.md`) are append-a-row files; on a merge conflict keep both rows.
+- Keep the local repo in step with GitHub (Siddharth, 2026-11-02). Before starting any task, and before relying on a file after a break, confirm `main` matches `origin/main`. A hook (`tools/repo_freshness.py`, set in `.claude/settings.json`) checks at session start and on each prompt: it fast-forwards when that is safe, and otherwise prints why it did not. Act on any `[repo]` message before doing other work. It never merges, stashes or pushes. Check by hand: `python tools/repo_freshness.py --force`.
 - After every addition or change, commit and push (skill: `github-sync`; standing instruction from Siddharth, 2026-10-19). Everything goes on `main`. Never force-push.
 - Never credit Claude in git: no `Co-Authored-By: Claude` trailer and no "Generated with Claude Code" line in commits or PRs (Siddharth, 2026-10-19).
 
