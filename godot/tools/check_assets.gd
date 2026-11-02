@@ -8,9 +8,10 @@ extends SceneTree
 const CELL := 0.05
 const PALETTE_PATH := "res://assets/palette/ew_palette.tres"
 const GLOW_PATH := "res://assets/palette/ew_palette_glow.tres"
+const PALETTE_B_PATH := "res://assets/palette/ew_palette_b.tres"
 # Starting budgets from CLAUDE.md (tune on a real Quest).
 const BUDGET := {"defense": 2000, "village": 2000, "enemy": 2000, "world": 800, "portal": 2000, "vr": 2000,
-		"foresight": 800, "ui": 800, "vfx": 800}
+		"foresight": 800, "ui": 800, "vfx": 800, "boss": 20000}
 const SKIP_DIRS := ["palette", "_old"]
 
 var fails := 0
@@ -63,7 +64,7 @@ func _check(cat: String, path: String) -> void:
 				tris += (idx.size() if idx else arr[Mesh.ARRAY_VERTEX].size()) / 3
 				var mat: Material = node.get_active_material(i)
 				var mp: String = mat.resource_path if mat else "<none>"
-				if mp != PALETTE_PATH and mp != GLOW_PATH:
+				if mp != PALETTE_PATH and mp != GLOW_PATH and mp != PALETTE_B_PATH:
 					bad_mats[mp] = true
 			var box: AABB = xf * mesh.get_aabb()
 			aabb = box if first else aabb.merge(box)

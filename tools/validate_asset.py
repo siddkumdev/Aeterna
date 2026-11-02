@@ -18,7 +18,9 @@ BLENDER = ew_env.require("BLENDER_EXE")
 BUDGETS = {"world": 800, "village": 2000, "defense": 2000, "enemy": 2000, "boss": 6000,
            "portal": 2000, "vr": 800, "foresight": 800, "ui": 800, "vfx": 800}
 # per-asset budgets that differ from the category default (the 12 x 12 board is one big model: ASSET_LIST W01 says 1-2k)
-BUDGET_OVERRIDES = {"ew_world_island": 4000, "ew_world_path_plaza": 1500, "ew_world_forest_clump_mix": 1200, "ew_world_forest_clump_dark": 1200, "ew_world_forest_clump_low": 1200, "ew_vfx_rewind_hourglass": 1000, "ew_world_island_underside": 8500}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
+BUDGET_OVERRIDES = {"ew_world_island": 4000, "ew_world_path_plaza": 1500, "ew_world_forest_clump_mix": 1200, "ew_world_forest_clump_dark": 1200, "ew_world_forest_clump_low": 1200, "ew_vfx_rewind_hourglass": 1000, "ew_world_island_underside": 8500,
+                    # creature bosses (Durva 2026-11-02: "extreme detail", try a bigger budget): 20000 until tested on a Quest
+                    "ew_boss_lich_wyrm": 20000, "ew_boss_calavera_lich": 20000, "ew_boss_deathhead_moth": 20000}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
 NAME = re.compile(r"^ew_(world|village|defense|enemy|boss|portal|vr|foresight|ui|vfx)_[a-z0-9_]+_v\d{2}$")
 
 INNER = r'''
@@ -32,10 +34,11 @@ for o in bpy.context.scene.objects:
     zs = [v.co.z for v in me.vertices]
     cells = sorted({min(7, max(0, int((1 - l.uv[1]) * 8))) * 8 + min(7, max(0, int(l.uv[0] * 8)))
                     for l in me.uv_layers.active.data}) if me.uv_layers else []
+    on_b = any(m and m.name.startswith("ew_palette_b") for m in me.materials)  # palette B (second atlas): same grid, other image
     res.append(dict(name=o.name, parent=o.parent.name if o.parent else None, tris=len(me.loop_triangles), loc=list(o.location),
                     rot=list(o.rotation_euler), scale=list(o.scale), min_z=min(zs), starts_hidden=bool(o.get("ew_starts_hidden")),
-                    materials=len(me.materials), modifiers=len(o.modifiers), cells=cells,
-                    has_atlas=bool(me.uv_layers) and any(m and m.node_tree and any(n.type == "TEX_IMAGE" and n.image and n.image.name == "ew_palette_atlas" for n in m.node_tree.nodes) for m in me.materials)))
+                    materials=len(me.materials), modifiers=len(o.modifiers), cells=[] if on_b else cells, cells_b=cells if on_b else [],
+                    has_atlas=bool(me.uv_layers) and any(m and m.node_tree and any(n.type == "TEX_IMAGE" and n.image and n.image.name in ("ew_palette_atlas", "ew_palette_atlas_b") for n in m.node_tree.nodes) for m in me.materials)))
 print("VALIDATE_JSON" + json.dumps(res))
 '''
 
@@ -91,7 +94,8 @@ def main(blend):
         bad.append("%s: %d tris in total > budget %d for '%s'" % (root, total, budget, cat))
     pal = json.load(open(os.path.join(ROOT, "art", "palette.json"), encoding="utf-8"))
     names = list(pal["materials"])
-    used = {names[c] for o in objs for c in o.get("cells", []) if c < len(names)}
+    names_b = list(pal.get("materials_b", {}))
+    used = {names[c] for o in objs for c in o.get("cells", []) if c < len(names)} | {names_b[c] for o in objs for c in o.get("cells_b", []) if c < len(names_b)}
     print("colours: " + ", ".join(sorted(used)))
     for r in sorted(used & set(pal.get("retired", []))):
         print("WARNING: uses retired colour '%s' (see art/palette.json 'retired')" % r)

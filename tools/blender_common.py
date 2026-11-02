@@ -35,7 +35,8 @@ def palette():
 
 def color(name_or_hex):
     """Palette material name or 'RRGGBB' hex -> linear RGBA tuple (for lights/helpers; models use paint())."""
-    hx = palette()["materials"].get(name_or_hex, name_or_hex).lstrip("#")
+    pal = palette()
+    hx = pal["materials"].get(name_or_hex, pal.get("materials_b", {}).get(name_or_hex, name_or_hex)).lstrip("#")
     srgb = [int(hx[i:i + 2], 16) / 255 for i in (0, 2, 4)]
     lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
     return (*lin, 1.0)
@@ -54,6 +55,14 @@ ATLAS_CELL = 16  # px per swatch; 8x8 grid = 128 px texture
 ATLAS_PATH = (os.environ.get("EW_ATLAS_PATH")
               or (os.path.splitext(os.environ["EW_PALETTE_JSON"])[0] + "_atlas.png" if os.environ.get("EW_PALETTE_JSON") else None)
               or os.path.join(ROOT, "art", "palette_atlas.png"))  # a proposal never overwrites the real atlas
+
+
+ATLAS_PATH_B = os.path.join(ROOT, "art", "palette_atlas_b.png")  # second atlas (palette B, 2026-11-02): same layout, own image and material
+
+
+def atlas_names_b():
+    """Palette B colour names (second atlas, material ew_palette_b); index = swatch cell in that atlas."""
+    return list(palette().get("materials_b", {}).keys())
 
 
 def atlas_names():
@@ -103,6 +112,46 @@ def atlas_image():
     return img
 
 
+def atlas_image_b():
+    img = bpy.data.images.get("ew_palette_atlas_b")
+    if img:
+        return img
+    names = atlas_names_b()
+    size = ATLAS_COLS * ATLAS_CELL
+    rows = []
+    for y in range(size):
+        row = []
+        for x in range(size):
+            i = (y // ATLAS_CELL) * ATLAS_COLS + (x // ATLAS_CELL)
+            hx = palette()["materials_b"][names[i]].lstrip("#") if i < len(names) else "000000"
+            row += [int(hx[k:k + 2], 16) for k in (0, 2, 4)]
+        rows.append(row)
+    _write_png(ATLAS_PATH_B, size, rows)
+    img = bpy.data.images.load(ATLAS_PATH_B)
+    img.name = "ew_palette_atlas_b"
+    img.colorspace_settings.name = "sRGB"
+    img.pack()
+    return img
+
+
+def atlas_material_b():
+    """Shared material for palette B colours (same look as ew_palette, sampling the second atlas)."""
+    mat = bpy.data.materials.get("ew_palette_b")
+    if mat:
+        return mat
+    mat = bpy.data.materials.new("ew_palette_b")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = atlas_image_b()
+    tex.interpolation = "Closest"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.85
+    bsdf.inputs["Metallic"].default_value = 0.0
+    return mat
+
+
 def atlas_material():
     """One shared material sampling the palette atlas (nearest filter)."""
     mat = bpy.data.materials.get("ew_palette")
@@ -145,8 +194,12 @@ def paint(obj, name, glow=False):
     """Colour the whole object with one palette swatch by pointing every UV at that cell's centre.
     glow=True uses the emissive ew_palette_glow material instead of ew_palette."""
     names = atlas_names()
+    use_b = False
     if name not in names:
-        raise ValueError("'%s' is not a palette colour; add it to art/palette.json first" % name)
+        names_b = atlas_names_b()
+        if name not in names_b:
+            raise ValueError("'%s' is not a palette colour; add it to art/palette.json first" % name)
+        names, use_b = names_b, True
     i = names.index(name)
     size = ATLAS_COLS * ATLAS_CELL
     u = ((i % ATLAS_COLS) + 0.5) * ATLAS_CELL / size
@@ -154,7 +207,7 @@ def paint(obj, name, glow=False):
     me = obj.data
     uv = me.uv_layers.get("UVMap") or me.uv_layers.new(name="UVMap")
     uv.data.foreach_set("uv", [u, v] * len(me.loops))
-    mat = glow_material() if glow else atlas_material()
+    mat = atlas_material_b() if use_b else (glow_material() if glow else atlas_material())
     if me.materials:
         me.materials[0] = mat
     else:

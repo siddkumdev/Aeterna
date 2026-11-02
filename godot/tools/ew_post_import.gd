@@ -14,14 +14,17 @@ extends EditorScenePostImport
 
 const PALETTE_PATH := "res://assets/palette/ew_palette.tres"
 const GLOW_PATH := "res://assets/palette/ew_palette_glow.tres"
+const PALETTE_B_PATH := "res://assets/palette/ew_palette_b.tres"  # second atlas (palette B, 2026-11-02)
 
 var palette: Material
 var glow: Material
+var palette_b: Material
 
 
 func _post_import(scene: Node) -> Object:
 	palette = load(PALETTE_PATH)
 	glow = load(GLOW_PATH)
+	palette_b = load(PALETTE_B_PATH)
 	if palette == null or glow == null:
 		push_error("ew_post_import: shared materials missing (%s, %s)" % [PALETTE_PATH, GLOW_PATH])
 		return scene
@@ -59,6 +62,8 @@ func _swap_materials(mi: MeshInstance3D) -> void:
 		var mname := old.resource_name if old else ""
 		if mname.begins_with("ew_palette_glow"):
 			mesh.surface_set_material(i, glow)
+		elif mname.begins_with("ew_palette_b") and palette_b != null:
+			mesh.surface_set_material(i, palette_b)
 		else:
 			if not mname.begins_with("ew_palette"):
 				push_warning("ew_post_import: %s surface %d has material '%s', using ew_palette" % [mi.name, i, mname])

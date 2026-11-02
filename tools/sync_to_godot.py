@@ -70,6 +70,9 @@ def main(args):
         sys.exit(__doc__)
     copy_with_import(os.path.join(ROOT, "art", "palette_atlas.png"),
                      os.path.join(GODOT_PROJECT, "assets", "palette", "palette_atlas.png"), ATLAS_IMPORT)
+    atlas_b = os.path.join(ROOT, "art", "palette_atlas_b.png")  # palette B (second atlas): copied too, used by ew_palette_b.tres
+    if os.path.exists(atlas_b):
+        copy_with_import(atlas_b, os.path.join(GODOT_PROJECT, "assets", "palette", "palette_atlas_b.png"), ATLAS_IMPORT)
     names = []
     for g in glbs:
         base = os.path.basename(g)
