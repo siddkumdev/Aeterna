@@ -17,6 +17,8 @@ func _check(ok: bool, what: String) -> void:
 
 func _initialize() -> void:
 	OS.set_environment("AETERNA_WATCH", "1")
+	OS.set_environment("AETERNA_WATCH_PORT", "9199")  # not the real port: a bridge that is running must not feed the test
+	OS.set_environment("AETERNA_WATCH_AXIS", "x")  # a saved calibration must not change what the test expects
 	var g: Game = load("res://scripts/game/game.gd").new()
 	root.add_child(g)
 	for i in 10:
@@ -29,7 +31,7 @@ func _initialize() -> void:
 	g._mouse_hand.pressed.connect(func(_h): _presses += 1)
 	g._mouse_hand.released.connect(func(_h): _releases += 1)
 	var tx := PacketPeerUDP.new()
-	tx.set_dest_address("127.0.0.1", WatchLink.PORT)
+	tx.set_dest_address("127.0.0.1", link.port)
 
 	var send_q := func(q: Quaternion):
 		for i in 12:  # the smoothing needs a few packets to settle
@@ -92,6 +94,27 @@ func _initialize() -> void:
 	await send_q.call(Quaternion(Vector3.BACK, deg_to_rad(-30.0)))
 	_check(root.get_mouse_position().distance_to(size / 2.0) < 6.0, "C makes the current aim the middle again")
 
+	# calibration: whichever way round the strap is worn, the two moves must find the forearm axis in the watch's frame
+	link.calib_seconds = 0.8
+	link.config_path = "user://watch_link_test.cfg"  # never overwrite the real calibration
+	for a in [Vector3(0, 1, 0), Vector3(1, 0, 0), Vector3(0.6, 0.8, 0), Vector3(0, -0.99, 0.1), Vector3(-0.8, 0, 0.6)]:
+		a = a.normalized()
+		link.calibrate()
+		var t0 := Time.get_ticks_msec()
+		while Time.get_ticks_msec() - t0 < 2000 and link._calib_stage > 0:
+			var t := (Time.get_ticks_msec() - t0) / 1000.0
+			var yaw := 0.0
+			var pitch := 0.0
+			if link._calib_stage == 1:
+				pitch = deg_to_rad(25.0) * (1.0 - cos(TAU * 1.5 * t / 0.8)) / 2.0
+			else:
+				yaw = deg_to_rad(25.0) * sin(TAU * 1.5 * (t - 0.8) / 0.8)
+			var q := _forearm(a, yaw, pitch, deg_to_rad(6.0) * sin(t * 5.0))
+			tx.put_packet(("q,%f,%f,%f,%f" % [q.x, q.y, q.z, q.w]).to_ascii_buffer())
+			await process_frame
+		print("calibrated for ", a, " -> ", link.axis, "  ", link._calib_message)
+		_check(link.axis.dot(a) > 0.97, "calibration finds the forearm axis " + str(a))
+
 	print("PASS" if _failures.is_empty() else "FAILED: %d" % _failures.size())
 	quit(0 if _failures.is_empty() else 1)
 
@@ -101,3 +124,12 @@ func _key(code: Key) -> InputEventKey:
 	e.keycode = code
 	e.pressed = true
 	return e
+
+
+func _forearm(a: Vector3, yaw: float, pitch: float, roll: float) -> Quaternion:
+	## The watch rotation when its axis a points along (yaw, pitch) in the world (x east, y north, z up), twisted by roll:
+	## a rigid forearm, so it is the level pose turned by the pitch about east, then by the yaw about the vertical.
+	var level := Quaternion(a.normalized(), Vector3(0, 1, 0))
+	var turned := Quaternion(Vector3.BACK, -yaw) * Quaternion(Vector3.RIGHT, pitch) * level
+	var d := turned * a.normalized()
+	return Quaternion(d, roll) * turned

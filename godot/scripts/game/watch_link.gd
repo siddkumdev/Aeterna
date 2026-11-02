@@ -6,7 +6,7 @@ extends Node
 ##   p,down / p,up   the pinch and the release, found by the bridge's detector
 ## The wrist aims: the forearm direction becomes a pointer on the window, and the pinch is a left click, so everything the
 ## mouse does in the game (hover, press, hold, release) works unchanged. Keys: C centres the aim (point at the board first),
-## X lets go if a release was missed. The watch moves the real mouse cursor, so leave the physical mouse alone while using it.
+## X lets go if a release was missed, K calibrates which way the forearm points in the watch's own frame (see below). The watch moves the real mouse cursor, so leave the physical mouse alone while using it.
 
 const PORT := 9101
 const SMOOTHING := 0.35  # 1 = no smoothing; lower is steadier but lags
@@ -14,7 +14,10 @@ const SIGNAL_TIMEOUT := 1.0  # seconds without a packet before the status says s
 
 var span := Vector2(50.0, 35.0)  # degrees of wrist turn that cross the whole window, sideways and up-down
 var axis := Vector3(1, 0, 0)  # the forearm in the watch's frame: +x points at the fingers on the right wrist with the buttons toward the hand
+var port := PORT  # AETERNA_WATCH_PORT overrides it (the test uses another so a live bridge cannot disturb it)
 var held := false
+var config_path := "user://watch_link.cfg"  # where the calibrated axis is kept
+var calib_seconds := 6.0  # length of each of the two calibration moves
 
 var _udp := PacketPeerUDP.new()
 var _rotation := Quaternion.IDENTITY
@@ -26,15 +29,26 @@ var _pitch0 := 0.0
 var _position := Vector2.ZERO
 var _since_packet := 99.0
 var _status: Label
+var _calib_stage := 0  # 0 off, 1 raise and lower the forearm, 2 sweep it left and right
+var _calib_time := 0.0
+var _calib_prev := Quaternion.IDENTITY
+var _calib_have_prev := false
+var _calib_rows: Array = []  # covariance of the turning axis, as three rows
+var _calib_pitch_axis := Vector3.ZERO
+var _calib_quats: Array[Quaternion] = []
+var _calib_message := ""
 
 
 func _ready() -> void:
+	if OS.get_environment("AETERNA_WATCH_PORT") != "":
+		port = int(OS.get_environment("AETERNA_WATCH_PORT"))
 	process_mode = Node.PROCESS_MODE_ALWAYS  # keep reading packets while the game is paused
-	var err := _udp.bind(PORT, "127.0.0.1")
+	var err := _udp.bind(port, "127.0.0.1")
 	if err != OK:
-		push_warning("WatchLink: could not listen on port %d (error %d); is another game running?" % [PORT, err])
+		push_warning("WatchLink: could not listen on port %d (error %d); is another game running?" % [port, err])
 		set_process(false)
 		return
+	_load_axis()
 	var env_span := OS.get_environment("AETERNA_WATCH_SPAN").split(",")
 	if env_span.size() == 2:
 		span = Vector2(float(env_span[0]), float(env_span[1]))
@@ -42,6 +56,7 @@ func _ready() -> void:
 		"-x": axis = Vector3(-1, 0, 0)
 		"y": axis = Vector3(0, 1, 0)
 		"-y": axis = Vector3(0, -1, 0)
+		"x": axis = Vector3(1, 0, 0)
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	_status = Label.new()
@@ -50,7 +65,7 @@ func _ready() -> void:
 	_status.add_theme_color_override("font_outline_color", Color.BLACK)
 	_status.add_theme_constant_override("outline_size", 6)
 	layer.add_child(_status)
-	print("[watch] listening on localhost:%d (span %s degrees, forearm axis %s)" % [PORT, span, axis])
+	print("[watch] listening on localhost:%d (span %s degrees, forearm axis %s)" % [port, span, axis])
 
 
 func _process(delta: float) -> void:
@@ -61,6 +76,10 @@ func _process(delta: float) -> void:
 	if held and _since_packet > SIGNAL_TIMEOUT:
 		print("[watch] no packets for %.1f s while holding: letting go" % SIGNAL_TIMEOUT)
 		_button(false)  # a dead stream must never leave the button down
+	if _calib_stage > 0:
+		_calib_time += delta
+		if _calib_time >= calib_seconds:
+			_calib_next()
 	if _have_rotation:
 		_aim()
 	_status.text = _status_text()
@@ -72,6 +91,8 @@ func _handle(line: String) -> void:
 		var q := Quaternion(float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4]))
 		if q.length_squared() > 0.5:
 			_rotation = q.normalized()
+			if _calib_stage > 0:
+				_calib_feed(_rotation)
 			if not _have_rotation:
 				_have_rotation = true
 				_yaw = _pointing_yaw()
@@ -142,7 +163,120 @@ func _input(event: InputEvent) -> void:
 			_button(false)
 
 
+func calibrate() -> void:
+	## Finds which way the forearm points in the watch's own frame, so the strap can be worn any way round. Two moves of
+	## calib_seconds each: raise and lower the forearm (turns about the sideways axis), then sweep it left and right (turns
+	## about the vertical axis). The forearm is perpendicular to both turning axes, so it is their cross product.
+	if not _have_rotation:
+		_calib_message = "Calibration needs the watch signal first."
+		return
+	_button(false)
+	_calib_stage = 0
+	_calib_next()
+
+
+func _calib_next() -> void:
+	var finished := _calib_stage
+	var axis_found := _calib_top_axis() if finished > 0 else Vector3.ZERO  # before the sums are cleared
+	_calib_time = 0.0
+	_calib_have_prev = false
+	_calib_rows = [Vector3.ZERO, Vector3.ZERO, Vector3.ZERO]
+	if finished == 0:
+		_calib_stage = 1
+		_calib_quats.clear()
+	elif finished == 1:
+		_calib_pitch_axis = axis_found
+		_calib_stage = 2
+	else:
+		_calib_stage = 0
+		_calib_finish(axis_found)
+
+
+func _calib_feed(q: Quaternion) -> void:
+	if _calib_stage == 1:
+		_calib_quats.append(q)
+	if _calib_have_prev:
+		var dq := _calib_prev.inverse() * q  # the turn since the last sample, in the watch's own frame
+		if dq.w < 0.0:
+			dq = -dq
+		var w := Vector3(dq.x, dq.y, dq.z) * 2.0  # small-angle turning vector
+		for i in 3:
+			_calib_rows[i] += w * w[i]
+	_calib_prev = q
+	_calib_have_prev = true
+
+
+func _calib_top_axis() -> Vector3:
+	var v := Vector3(1.0, 0.7, 0.3).normalized()
+	for i in 40:
+		var nv := Vector3(_calib_rows[0].dot(v), _calib_rows[1].dot(v), _calib_rows[2].dot(v))
+		if nv.length() < 1e-9:
+			return Vector3.ZERO
+		v = nv.normalized()
+	return v
+
+
+func _calib_finish(yaw_axis: Vector3) -> void:
+	var cross := _calib_pitch_axis.cross(yaw_axis)
+	if _calib_pitch_axis == Vector3.ZERO or yaw_axis == Vector3.ZERO or cross.length() < 0.4:
+		_calib_message = "Calibration failed: the two moves looked alike. Press K and try again (raise-lower, then left-right)."
+		return
+	var a := cross.normalized()
+	# the first moves start level: the side the pitch went further to is up
+	var n := mini(10, _calib_quats.size())
+	if n < 10:
+		_calib_message = "Calibration failed: too few samples."
+		return
+	var start := 0.0
+	for i in n:
+		start += _pitch_of(_calib_quats[i], a)
+	start /= n
+	var hi := start
+	var lo := start
+	for q in _calib_quats:
+		var p := _pitch_of(q, a)
+		hi = maxf(hi, p)
+		lo = minf(lo, p)
+	if hi - lo < deg_to_rad(5.0):
+		_calib_message = "Calibration failed: the forearm barely moved up and down. Press K and try again."
+		return
+	if start - lo > hi - start:
+		a = -a
+	axis = a
+	_save_axis()
+	_calib_message = "Calibrated: forearm axis (%.2f, %.2f, %.2f), saved." % [a.x, a.y, a.z]
+	print("[watch] ", _calib_message)
+	_yaw = _pointing_yaw()
+	_pitch = _pointing_pitch()
+	centre()
+
+
+func _pitch_of(q: Quaternion, a: Vector3) -> float:
+	return asin(clampf((q * a).z, -1.0, 1.0))
+
+
+func _load_axis() -> void:
+	if OS.get_environment("AETERNA_WATCH_AXIS") != "":
+		return  # an explicit setting wins over the saved calibration
+	var cfg := ConfigFile.new()
+	if cfg.load(config_path) == OK:
+		var saved: Variant = cfg.get_value("watch", "axis", null)
+		if saved is Vector3 and (saved as Vector3).length() > 0.5:
+			axis = (saved as Vector3).normalized()
+
+
+func _save_axis() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("watch", "axis", axis)
+	cfg.save(config_path)
+
+
 func _status_text() -> String:
+	if _calib_stage == 1:
+		return "CALIBRATING 1/2: start level, slowly raise your forearm up and lower it back, again and again (%.0f s)" % maxf(calib_seconds - _calib_time, 0.0)
+	if _calib_stage == 2:
+		return "CALIBRATING 2/2: keep it level and sweep your forearm left and right (%.0f s)" % maxf(calib_seconds - _calib_time, 0.0)
 	if _since_packet > SIGNAL_TIMEOUT:
 		return "Watch: no signal (is watch_bridge.py live running?)"
-	return "Watch: %s | C centres the aim, X lets go" % ("holding" if held else "pointing")
+	return "Watch: %s | C centres, X lets go, K calibrates%s" % ["holding" if held else "pointing", ("
+" + _calib_message) if _calib_message != "" else ""]
