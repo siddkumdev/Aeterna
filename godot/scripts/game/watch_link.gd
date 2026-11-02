@@ -80,7 +80,7 @@ func _process(delta: float) -> void:
 		_calib_time += delta
 		if _calib_time >= calib_seconds:
 			_calib_next()
-	if _have_rotation:
+	if _have_rotation and _calib_stage == 0:  # during calibration the big moves must not drive the game
 		_aim()
 	_status.text = _status_text()
 
@@ -138,6 +138,8 @@ func _aim() -> void:
 
 
 func _button(down: bool) -> void:
+	if down and _calib_stage > 0:
+		return  # no clicks while calibrating
 	if down == held:
 		return
 	held = down
@@ -161,6 +163,8 @@ func _input(event: InputEvent) -> void:
 			centre()
 		elif event.keycode == KEY_X and held:
 			_button(false)
+		elif event.keycode == KEY_K:
+			calibrate()
 
 
 func calibrate() -> void:
@@ -218,7 +222,7 @@ func _calib_top_axis() -> Vector3:
 
 func _calib_finish(yaw_axis: Vector3) -> void:
 	var cross := _calib_pitch_axis.cross(yaw_axis)
-	if _calib_pitch_axis == Vector3.ZERO or yaw_axis == Vector3.ZERO or cross.length() < 0.4:
+	if _calib_pitch_axis == Vector3.ZERO or yaw_axis == Vector3.ZERO or cross.length() < 0.8:
 		_calib_message = "Calibration failed: the two moves looked alike. Press K and try again (raise-lower, then left-right)."
 		return
 	var a := cross.normalized()
@@ -272,8 +276,10 @@ func _save_axis() -> void:
 
 
 func _status_text() -> String:
+	if _since_packet > SIGNAL_TIMEOUT:
+		return "Watch: no signal (is watch_bridge.py live running?)"
 	if _calib_stage == 1:
-		return "CALIBRATING 1/2: start level, slowly raise your forearm up and lower it back, again and again (%.0f s)" % maxf(calib_seconds - _calib_time, 0.0)
+		return "CALIBRATING 1/2: start level, FIRST raise your forearm up, then lower it back, again and again (%.0f s)" % maxf(calib_seconds - _calib_time, 0.0)
 	if _calib_stage == 2:
 		return "CALIBRATING 2/2: keep it level and sweep your forearm left and right (%.0f s)" % maxf(calib_seconds - _calib_time, 0.0)
 	if _since_packet > SIGNAL_TIMEOUT:
