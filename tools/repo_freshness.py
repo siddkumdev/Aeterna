@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +43,10 @@ def git(*args, timeout=FETCH_TIMEOUT, kill_on_timeout=True):
                 subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True)
             else:
                 proc.kill()
-            proc.wait()
+            try:
+                proc.wait(10)
+            except subprocess.TimeoutExpired:
+                pass
         out.seek(0)
         err.seek(0)
         stdout = out.read().decode("utf-8", "replace")
@@ -62,18 +66,35 @@ def fetch_due():
 
 
 def is_dirty():
-    status = git("status", "--porcelain", "--untracked-files=no")
+    status = git("status", "--porcelain", "--untracked-files=no", timeout=60)
     return status.returncode != 0 or bool(status.stdout.strip())
 
 
 def session_id():
-    """The hook passes JSON on stdin; a run by hand has no session."""
+    """The hook passes JSON on stdin; a run by hand has no session. Read on a thread, from the raw descriptor, so a pipe that
+    never closes cannot hold the check up or block interpreter shutdown."""
     if "--force" in sys.argv or sys.stdin is None or sys.stdin.isatty():
         return ""
+    chunks = []
+
+    def read():
+        try:
+            while True:
+                chunk = os.read(0, 65536)
+                if not chunk:
+                    return
+                chunks.append(chunk)
+        except OSError:
+            pass
+
+    thread = threading.Thread(target=read, daemon=True)
+    thread.start()
+    thread.join(1)
     try:
-        return re.sub(r"[^A-Za-z0-9_-]", "", str(json.loads(sys.stdin.read()).get("session_id", "")))
+        data = json.loads(b"".join(chunks).decode("utf-8", "replace"))
     except ValueError:
         return ""
+    return re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("session_id", ""))) if isinstance(data, dict) else ""
 
 
 def recent(rev_range):
@@ -97,58 +118,79 @@ def report_moved(session, reported):
         f.write(head)
 
 
+def write_marker(path, text):
+    with open(path, "w", encoding="utf-8", errors="replace") as f:
+        f.write(text)
+
+
 def pull(behind):
-    """Fast-forward. Returns True if the checkout moved and that was reported."""
+    """Fast-forward to the fetched origin/main. No network phase of its own beyond the LFS downloads. The marker goes down
+    first, so a second session, or a run after this one is killed, can tell a half-done checkout from real work.
+    Returns True if the checkout moved and that was reported."""
     marker = git_dir_file("ew_freshness_pull")
-    result = git("pull", "--ff-only", "origin", "main", timeout=PULL_TIMEOUT, kill_on_timeout=False)
+    old = git("rev-parse", "HEAD").stdout.strip()
+    write_marker(marker, "started, not finished")
+    result = git("merge", "--ff-only", "origin/main", timeout=PULL_TIMEOUT, kill_on_timeout=False)
     if result is None:
-        with open(marker, "w") as f:
-            f.write("timed out")
         print("[repo] The pull of %d commit(s) is still running in the background. Do not edit files yet." % behind)
         return False
     if result.returncode != 0:
         reason = result.stderr.strip()[-300:]
         if is_dirty():
-            with open(marker, "w") as f:
-                f.write(reason)
+            write_marker(marker, reason)
+        else:
+            os.remove(marker)
         print("[repo] %d commit(s) behind GitHub and the pull failed: %s" % (behind, reason))
         return False
-    print("[repo] Pulled %d new commit(s) from GitHub. Files may have changed since you last read them." % behind)
-    print(recent("HEAD~%d..HEAD" % behind))
+    os.remove(marker)
+    count = git("rev-list", "--count", old + "..HEAD").stdout.strip()
+    print("[repo] Pulled %s new commit(s) from GitHub. Files may have changed since you last read them." % count)
+    print(recent(old + "..HEAD"))
     return True
 
 
 def check():
     force = "--force" in sys.argv
     session = session_id()
+    fetch_failed = False
     if force or fetch_due():
         fetch = git("fetch", "origin", "main")
         if fetch.returncode == 0:
             with open(git_dir_file("ew_freshness_stamp"), "w"):
                 pass
         else:  # no stamp: try again on the next prompt, and compare against the last known GitHub state below
-            print("[repo] Could not reach GitHub, so this checkout may be out of date: " + fetch.stderr.strip()[-200:])
-    counts = git("rev-list", "--left-right", "--count", "HEAD...origin/main").stdout.split()
-    ahead, behind = int(counts[0]), int(counts[1])
+            fetch_failed = True
+            print("[repo] Could not fetch from GitHub, so this checkout may be out of date: " + fetch.stderr.strip()[-200:])
+    compare = git("rev-list", "--left-right", "--count", "HEAD...origin/main")
+    if compare.returncode != 0:
+        print("[repo] Could not compare with origin/main: " + (compare.stderr.strip()[-200:] or "no result"))
+        return
+    ahead, behind = (int(n) for n in compare.stdout.split())
     branch = git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     dirty = is_dirty()
-
-    # An earlier pull stopped partway or is still going: what `git status` shows may not be anyone's work.
-    marker = git_dir_file("ew_freshness_pull")
-    if os.path.exists(marker):
-        with open(marker) as f:
-            reason = f.read().strip()
-        if os.path.exists(git_dir_file("index.lock")) or (behind and dirty):
-            print("[repo] An earlier pull stopped partway or is still running (%s). Files in `git status` may be leftovers from it, not real work. Ask the user before changing them. %s" % (reason, NOT_YOURS))
-            report_moved(session, False)
-            return
-        os.remove(marker)
-
     if ahead:
         print("[repo] %d local commit(s) are not on GitHub yet: run the github-sync skill." % ahead)
+
+    # A pull stopped partway or is still going: what `git status` shows may not be anyone's work.
+    marker = git_dir_file("ew_freshness_pull")
+    locked = os.path.exists(git_dir_file("index.lock"))
+    if os.path.exists(marker) or locked:
+        reason = "a git operation holds .git/index.lock"
+        if os.path.exists(marker):
+            with open(marker, encoding="utf-8", errors="replace") as f:
+                reason = f.read().strip()
+        if locked or (behind and dirty):
+            print("[repo] A pull or other git operation stopped partway or is still running (%s). Files in `git status` may be leftovers from it, not real work. Ask the user before changing them. %s If they confirm nothing there is real work and no git process is running: delete .git/index.lock if present, run `git restore .`, and the next prompt retries." % (reason, NOT_YOURS))
+            report_moved(session, False)
+            return
+        if os.path.exists(marker):
+            os.remove(marker)
+
     reported = False
     if behind:
-        if branch != "main":
+        if fetch_failed:
+            print("[repo] %d commit(s) behind the last known GitHub state, NOT pulled because the fetch failed." % behind)
+        elif branch != "main":
             print("[repo] %d commit(s) behind GitHub main, NOT pulled (on branch %s). Ask the user how to proceed." % (behind, branch))
         elif ahead:
             print("[repo] %d commit(s) behind GitHub, NOT pulled (local commits exist). The github-sync skill rebases and pushes them." % behind)
