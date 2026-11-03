@@ -100,7 +100,7 @@ func _add_crew(model: Node3D) -> void:
 			at = t.origin
 	crew = CrewMember.new()
 	add_child(crew)
-	crew.setup(cfg["crew"])
+	crew.setup(cfg["crew"], game.with_rig)
 	crew.position = at
 
 

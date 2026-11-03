@@ -31,7 +31,7 @@ func setup(t, post_index: int, health: float, cfg: Dictionary) -> void:
 	_cfg = cfg
 	_crew = CrewMember.new()
 	add_child(_crew)
-	_crew.setup("guard")
+	_crew.setup("guard", tower.game.with_rig)
 
 
 func post() -> Vector3:

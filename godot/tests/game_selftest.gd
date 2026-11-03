@@ -30,6 +30,7 @@ func _initialize() -> void:
 	await _decor()
 	await _grass()
 	await _vfx()
+	await _village_life()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -975,6 +976,94 @@ func _warden() -> void:
 	_run(g, 0.1)
 	check("Warden: empty phase-3 HP kills it", not boss.alive and g.warden == null)
 	g.queue_free()
+
+
+func _village_life() -> void:
+	var g: Game = load("res://scripts/game/game.gd").new()
+	g.with_rig = false
+	g.with_life = true
+	root.add_child(g)
+	await process_frame
+	var life: VillageLife = g.life
+	check("12 villagers, 2 to a house", life.villagers.size() == 12 and range(6).all(func(h): return life.villagers.filter(func(v): return v.home == h).size() == 2))
+	check("they are all out on the first day", life.villagers.all(func(v): return v.visible))
+	check("every model has a head, arms and legs", life.villagers.all(func(v): return v.rig.parts.has("head") and v.rig.parts.has("arm_l") and v.rig.parts.has("arm_r") and v.rig.parts.has("leg_l") and v.rig.parts.has("leg_r")))
+	check("the forest's watchers wait by day", life.lurkers.size() >= 4)
+	var trees_only := func(): return life.lurkers.all(func(l): return l["cell"].x in [1, GameConfig.SIZE - 2] or l["cell"].y in [1, GameConfig.SIZE - 2])
+	var on_solid := false
+	for i in 1200:  # a minute of the day
+		life.tick(0.05)
+		for v in life.villagers:
+			if v.state == "go" and v._path.size() > 1:
+				var c := NavGrid.local_to_cell(NavGrid.cell_centre(v._path[0]))
+				on_solid = on_solid or (g.nav.kind.has(c) and g.nav.kind[c] != "spawn")
+	check("a minute later the watchers are still by the tree line", trees_only.call())
+	check("no one's route crosses a house, prop or the forest", not on_solid)
+	var trust := g.trust
+	var hp: float = g.houses[0].hp
+	g.start_night()
+	check("at nightfall the watchers go", life.lurkers.is_empty())
+	check("at nightfall everyone runs", life.villagers.all(func(v): return v.state == "startle" or v.state == "inside"))
+	for i in 200:  # 10 seconds is plenty at 6 cells a second
+		life.tick(0.05)
+	check("within 10 s all 12 are inside", life.villagers.all(func(v): return v.state == "inside" and not v.visible))
+	check("running home changes no rule", g.trust == trust and g.houses[0].hp == hp)
+	g.houses[0].damage(99999.0)
+	g._end_night()
+	check("after dawn the watchers are back", life.lurkers.size() >= 4)
+	for i in 120:
+		life.tick(0.05)
+	check("at dawn all 12 come back out, a shuttered home too", life.villagers.all(func(v): return v.visible and v.state != "inside"))
+	CharacterRig.step_legs = true
+	var r: CharacterRig = life.villagers[2].rig
+	r.anim = "walk"
+	r.gait = 1.1
+	var before: Transform3D = r.parts["leg_l"].transform
+	r.tick(0.1)
+	check("stepping legs move the leg parts", not r.parts["leg_l"].transform.is_equal_approx(before))
+	CharacterRig.step_legs = false
+	# someone halfway through a door when the day comes back still comes out
+	g.start_night()
+	var v: Villager = life.villagers[0]
+	v.state = "enter"
+	g.new_run(5)
+	for i in 120:
+		life.tick(0.05)
+	check("whoever was at the door when day came back is out again", v.visible and v.state != "inside")
+	g.queue_free()
+	await process_frame
+	await _real_models()
+
+
+func _real_models() -> void:
+	## With the rig on: enemies and crews wear Durva's models, die as bodies left behind, and the rules are the same.
+	var g: Game = load("res://scripts/game/game.gd").new()
+	root.add_child(g)
+	await process_frame
+	g.trust = 900
+	g.cards = {}
+	g.try_build("fire", Vector2i(5, 12))
+	g.try_build("guard", Vector2i(18, 12))
+	check("the wizard wears a model and shoots from its staff tip", g.towers[0].crew._rig != null and g.towers[0].crew._tip != null)
+	check("the Guards wear models", g.towers[1].guards.all(func(gd): return gd._crew._rig != null))
+	g.start_night()
+	g._spawn_queue.clear()
+	var all_rigged := true
+	for k in ["grunt", "scout", "splitter", "splitling", "wisp", "tunneler", "fog"]:
+		var e: Enemy = g._spawn(Vector2i(12, 2), k)
+		all_rigged = all_rigged and e._rig != null
+		var hp0: float = GameConfig.ENEMIES[k]["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * g.night)
+		check("%s: the model leaves its HP alone" % k, is_equal_approx(e.hp, hp0))
+	check("every enemy kind wears its model", all_rigged)
+	var boss: Enemy = g._spawn(Vector2i(12, 2), "boss")
+	check("the Warden stays a stand-in until Durva picks one", boss._rig == null)
+	var victim: Enemy = g.enemies[0]
+	victim.take_damage(99999.0)
+	check("a dead enemy leaves its toppling body behind", g._enemies_root.get_children().any(func(c): return c is CharacterRig))
+	check("the body is not counted as an enemy", not g.enemies.has(victim))
+	await process_frame
+	g.queue_free()
+	await process_frame
 
 
 func _crews() -> void:

@@ -17,7 +17,7 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - Never estimate how long a task takes (no hours/days/effort sizes, in chat or docs). Describe order, dependencies and priority; the deadline 2026-11-18 12:00 PM PT may be cited as a date.
 - Magic is black / orange / red (ink bodies, fire_red / lantern_glow / fire_yellow glows), never blue. Blue is only Foresight (Crystal Lens), purple is the Warden. Exception: the wind crossbow tower's wind is pale green, whiter than heal_green, drawn as streaks. See `art/art_bible.md` section 6.
 - VFX: log every effect anyone mentions in `docs/VFX_NOTES.md` (effect, their words, anchor, asset-list id). Models get dark sockets plus `__<name>_anchor` empties, never glowing geometry for magic. Build VFX in Godot only after all towers and major assets are modelled.
-- Reminders to raise at the right moment: (1) DONE 2026-10-22: community Godot skills reviewed; `godot-gdscript-patterns` (wshobson, MIT) and `godot-development` (omer-metin, Apache-2.0) installed in `.claude/skills/` with a project note on top; fenixnix/Godot-Skills (Godot 3) and struktured-labs/godot-mcp (Linux-only, duplicates our tools) skipped; (2) before the first villager/troop/enemy, build a "character kit" skill (shared body kit, swappable parts, tween animations, pose sheet).
+- Reminders to raise at the right moment: (1) DONE 2026-10-22: community Godot skills reviewed; `godot-gdscript-patterns` (wshobson, MIT) and `godot-development` (omer-metin, Apache-2.0) installed in `.claude/skills/` with a project note on top; fenixnix/Godot-Skills (Godot 3) and struktured-labs/godot-mcp (Linux-only, duplicates our tools) skipped; (2) DONE 2026-11-03: skill `character-kit` (how models get parts, the CharacterRig animations, the pose sheets).
 
 ## Sharing (git)
 - Private GitHub repo. Binaries (`.blend`, `.glb`, `.png`, `.jpg`) go through Git LFS (`.gitattributes`). Ignored: `local.env`, `_work/`, `*.blend1`, `godot/.godot/`.
@@ -70,4 +70,5 @@ _work/      scratch input (git-ignored)
 - Tracker sync (regenerate + republish the live asset tracker, move built items' status forward): `python tools/sync_tracker.py` then the tracker-sync skill steps.
 - Generate headless: `blender -b -P assets/generators/make_<name>.py` (Blender = `BLENDER_EXE` from `local.env`)
 - ARCHIVED 2026-11-03 (headset permission arrived; nice-to-have only) watch input test (Galaxy Watch through the bridge laptop, `WATCH_BRIDGE` in `local.env`): `python watch/watch_bridge.py` (see `watch/README.md`)
+- Characters: `blender --factory-startup -b -P tools/export_characters.py` then sync; pose sheets `godot/tools/village_shot.gd` (skill: character-kit)
 - Machine check: `python tools/doctor.py`

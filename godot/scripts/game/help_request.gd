@@ -26,6 +26,7 @@ var _goal := Vector3.ZERO  # lantern: where it is returned to
 var _marker: Node3D
 var _prop_marker: Node3D  # a second "!" that rides on a lantern or cart, so it can be found even behind a tall tower
 var _villager: Node3D
+var _helper: Villager
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -65,10 +66,16 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 			_prop_marker.scale = Vector3.ONE * MARK_SCALE
 			prop.add_child(_prop_marker)
 			_prop_marker.position = Vector3(0, ModelUtil.bounds(prop).end.y + 0.004, 0)
-	_villager = _stand_in_villager(house)
-	add_child(_villager)
-	_villager.position = _beside_door(h, 1.2) + h.basis.x * GameConfig.CELL * 0.8
-	_villager.rotation.y = h.rotation.y
+	if kind == "chimney":
+		h.chimney_blocked = true
+	var stand := _beside_door(h, 1.2) + h.basis.x * GameConfig.CELL * 0.8
+	if game.life != null:
+		_helper = game.life.help_wanted(house, stand)  # one of the house's own people walks over and waves
+	else:
+		_villager = _stand_in_villager(house)
+		add_child(_villager)
+		_villager.position = stand
+		_villager.rotation.y = h.rotation.y
 
 
 func grab_point() -> Vector3:
@@ -152,6 +159,13 @@ func _finish() -> void:
 		_marker.visible = false
 	if _prop_marker:
 		_prop_marker.visible = false
+	if kind == "chimney":
+		var h: House = game.houses[house]
+		h.chimney_blocked = false
+		if h.fx and is_inside_tree() and h._smoke_at != null:
+			VfxKit.toon_smoke(h.get_parent(), h._smoke_at.global_position, 0.05, 1.8)  # the stuck smoke comes out at once
+	if _helper:
+		_helper.thank()
 	if _villager and _villager.is_inside_tree():
 		var tw := _villager.create_tween()  # a happy hop
 		tw.tween_property(_villager, "position:y", 0.02, 0.15).set_trans(Tween.TRANS_SINE)

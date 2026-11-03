@@ -16,6 +16,13 @@ const TEAL := Color(0.184, 0.561, 0.541)
 const TUNIC := Color(0.878, 0.608, 0.306)
 const WOOD := Color(0.357, 0.161, 0.125)
 const ACT_TIME := 0.4  # seconds one shot animation lasts
+# Durva's characters take turns at each post (test import 2026-11-03); the Airship's pilot stays a stand-in.
+const MODELS := {"wizard": ["fox_wizard", "horn_witch"], "archer": ["antler_archer", "moth_ranger"], "guard": ["beetle_soldier", "beetle_soldier", "jewel_captain"]}
+const MODEL_SCALE := {"wizard": 0.55, "archer": 0.5, "guard": 0.6}
+
+static var _picked := {}
+var _rig: CharacterRig
+var _tip: Marker3D  # where a wizard's shots leave from (read every frame by the effects)
 
 var kind := "wizard"
 var _t := 0.0
@@ -34,8 +41,18 @@ var _idle_kind := 0
 const IDLE_BEAT := 1.4
 
 
-func setup(crew_kind: String) -> void:
+func setup(crew_kind: String, real_model := false) -> void:
 	kind = crew_kind
+	if real_model and MODELS.has(kind):
+		_picked[kind] = _picked.get(kind, -1) + 1
+		var pick: Array = MODELS[kind]
+		_rig = CharacterRig.new()
+		add_child(_rig)
+		_rig.setup(pick[_picked[kind] % pick.size()])
+		_rig.scale = Vector3.ONE * MODEL_SCALE[kind]
+		_rig.anim = "crew_" + kind
+		_tip = _rig.marker("staff_tip_anchor")
+		return
 	_body = Node3D.new()
 	add_child(_body)
 	var robe_col := TEAL if (kind == "wizard" or kind == "guard") else TUNIC
@@ -133,6 +150,8 @@ func set_facing(yaw: float) -> void:
 
 func hand_point() -> Vector3:
 	## World position shots leave from (the wizard's staff tip).
+	if _rig:
+		return _tip.global_position if _tip else global_position + Vector3(0, 0.02, 0)
 	if _staff:
 		return _staff.to_global(Vector3(0, 0.0285, 0))  # wizard staff / guard spear tip
 	return global_position + Vector3(0, 0.02, 0)
@@ -144,6 +163,10 @@ func _process(delta: float) -> void:
 	if _act > 0.0:
 		_act = maxf(0.0, _act - delta)
 	var k := sin(PI * (1.0 - _act / ACT_TIME)) if _act > 0.0 else 0.0  # 0 -> 1 -> 0 over the shot
+	if _rig:
+		_rig.act_k = k
+		_rig.gait = 1.4 if walking else 0.0
+		return
 	_body.position.y = 0.0006 * sin(_t * 2.2)  # breathing
 	match kind:
 		"guard":

@@ -14,6 +14,13 @@ var hp := GameConfig.HOUSE_HP
 var hold_check: Callable
 var is_shuttered := false
 var ward := 0.0  # damage still soaked up by Root Ward roots
+var fx := false  # the game turns the effects on (chimney smoke, dust); logic-only games stay without them
+var chimney_blocked := false  # a blocked-chimney request: no smoke until the rubble is out
+
+var _smoke_at: Marker3D
+var _dust_at: Marker3D
+var _smoke_t := 0.0
+var _hurt_t := 0.0
 
 var _parts := {}  # part -> MeshInstance3D
 var _home := {}  # part -> Transform3D (standing pose)
@@ -35,6 +42,11 @@ func setup(scene: PackedScene, house_index: int, top_left: Vector2i) -> void:
 	for n in ModelUtil.walk(model):
 		if n is Marker3D and n.is_in_group("ew_pose") and String(n.name).ends_with("_broken"):
 			_broken[str(n.get_meta("ew_pose_of"))] = n.transform
+		if n is Marker3D and str(n.name).ends_with("smoke_anchor"):
+			_smoke_at = n
+		if n is Marker3D and str(n.name).ends_with("dust_anchor"):
+			_dust_at = n
+	_smoke_t = randf() * 3.0
 	_build_bar(ModelUtil.bounds(model).end.y + 0.02)
 	_apply(false, false)
 
@@ -58,6 +70,35 @@ func _build_bar(height: float) -> void:
 	_bar.visible = false
 
 
+func _process(delta: float) -> void:
+	if not fx or is_shuttered:
+		return
+	_smoke_t -= delta
+	if _smoke_t <= 0.0:
+		_smoke_t = randf_range(2.6, 4.0)
+		if not chimney_blocked and _smoke_at != null and VfxKit.active_bursts() <= VfxKit.MAX_BURSTS - 10:
+			VfxKit.toon_smoke(get_parent(), _smoke_at.global_position, 0.026, 2.2)
+	if hp < max_hp * 0.5:  # a badly hurt house smoulders
+		_hurt_t -= delta
+		if _hurt_t <= 0.0:
+			_hurt_t = randf_range(0.9, 1.5)
+			if _dust_at != null and VfxKit.active_bursts() <= VfxKit.MAX_BURSTS - 10:
+				VfxKit.ink_puff(get_parent(), _dust_at.global_position, 0.03, 0.9)
+
+
+func _break_fx() -> void:
+	if fx and _dust_at != null and is_inside_tree():
+		VfxKit.toon_dust(get_parent(), _dust_at.global_position, 0.09)
+		VfxKit.burst(get_parent(), _dust_at.global_position, Color("7E6048"), Color("C2B49A"), 12, 0.07, 0.6, 0.006, -0.18, false)
+
+
+func _repair_fx() -> void:
+	## Dawn: the house puts itself back like a rewind, with a little dust and a sparkle.
+	if fx and _dust_at != null and is_inside_tree():
+		VfxKit.toon_dust(get_parent(), _dust_at.global_position, 0.05)
+		VfxKit.burst(get_parent(), _dust_at.global_position + Vector3(0, 0.03, 0), VfxKit.FIRE_YELLOW, VfxKit.FIRE_ORANGE, 8, 0.05, 0.7, 0.005, 0.02)
+
+
 func damage(amount: float) -> void:
 	if is_shuttered:
 		return
@@ -74,6 +115,7 @@ func damage(amount: float) -> void:
 	if hp <= 0.0:
 		is_shuttered = true
 		_apply(true, true)
+		_break_fx()
 		shuttered.emit(self)
 
 
@@ -84,6 +126,7 @@ func heal(amount: float) -> void:
 	if is_shuttered and hp > 0.0:
 		is_shuttered = false
 		_apply(false, true)
+		_repair_fx()
 
 
 func repair() -> void:
@@ -92,6 +135,7 @@ func repair() -> void:
 	if is_shuttered:
 		is_shuttered = false
 		_apply(false, true)
+		_repair_fx()
 
 
 func _update_bar() -> void:

@@ -37,6 +37,9 @@ const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothin
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
+## the villagers and forest watchers (always with the rig; the tests can ask for them without one)
+var with_life := false
+var life: VillageLife
 var run_seed := 1
 
 var board: Node3D
@@ -145,6 +148,11 @@ func _ready() -> void:
 	_build_lens()
 	if with_rig:
 		_build_rig()
+	if with_rig or with_life:
+		life = VillageLife.new()
+		life.name = "VillageLife"
+		board.add_child(life)
+		life.setup(self, dressing["landmarks"])
 	new_run(run_seed)
 
 
@@ -375,6 +383,10 @@ func _clear_requests() -> void:
 	for r in requests:
 		r.queue_free()
 	requests.clear()
+	for h in houses:
+		h.chimney_blocked = false
+	if life:
+		life.clear_claims()
 
 
 func reach(metres: float) -> float:
@@ -429,9 +441,16 @@ func release_request() -> bool:
 	if not r.release():
 		return false
 	trust += r.reward
+	if with_rig:
+		_trust_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
 	last_message = "%s: thank you! +%d trust" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
 	_refresh_ui()
 	return true
+
+
+func _trust_sparkle(at: Vector3) -> void:
+	## Trust earned: a little rise of gold (X08).
+	VfxKit.burst(shots_root, at, VfxKit.FIRE_YELLOW, VfxKit.FIRE_ORANGE, 10, 0.05, 0.8, 0.006, 0.06)
 
 
 func _update_held() -> void:
@@ -484,6 +503,8 @@ func _end_night() -> void:
 		income += 5  # Deep Pockets Legendary: no house shuttered tonight
 	trust += income
 	for h in houses:
+		if with_rig and not h.is_shuttered:
+			_trust_sparkle(h.global_position + Vector3(0, 0.1, 0))  # the dawn income, house by house
 		h.heal(GameConfig.DAWN_REPAIR)  # damage carries over (Siddharth 2026-10-23)
 	for t in towers:
 		if t.cfg["kind"] == "spawner":
@@ -760,6 +781,7 @@ func _build_houses() -> void:
 		var d := centre - (Vector2(c) + Vector2.ONE)
 		h.rotation.y = (PI / 2.0 if d.x > 0 else -PI / 2.0) if absf(d.x) > absf(d.y) else (0.0 if d.y > 0 else PI)
 		h.setup(scenes[i % scenes.size()], i, c)
+		h.fx = with_rig
 		h.shuttered.connect(_on_house_shuttered)
 		h.hold_check = _hold_check
 		houses.append(h)
@@ -988,6 +1010,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					set_speed(1.0 if speed == 50.0 else 50.0)
 			KEY_R:
 				new_run(run_seed + 1)
+			KEY_G:  # compare the two ways of walking (Siddharth is choosing, 2026-11-03)
+				CharacterRig.step_legs = not CharacterRig.step_legs
+				last_message = "Walking: %s (G switches)." % ("stepping legs" if CharacterRig.step_legs else "hopping")
+				_refresh_ui()
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_hand:
 		_mouse_hand.release()
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _mouse_hand:
@@ -1025,6 +1051,8 @@ func _feed_grass() -> void:
 	for h in hands:
 		if is_instance_valid(h):
 			pts.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
+	if life:
+		pts.append_array(life.pushers())
 	grass.set_pushers(pts)
 
 
