@@ -96,6 +96,7 @@ var _grid_lines: MeshInstance3D
 var _ghost: Node3D
 var _ghost_plate: MeshInstance3D
 var _ghost_models := {}
+var _ghost_mat: StandardMaterial3D
 var _ghost_ring: MeshInstance3D
 var _hover_cell := Vector2i(-1, -1)
 var _hover_board_cell := Vector2i(-1, -1)  # the single cell under the pointer (for selling)
@@ -770,13 +771,17 @@ func _build_ghost() -> void:
 	var pm := BoxMesh.new()
 	pm.size = Vector3(GameConfig.CELL * 2 - 0.004, 0.002, GameConfig.CELL * 2 - 0.004)
 	_ghost_plate.mesh = pm
+	_ghost_mat = ModelUtil.flat_material(Color.GREEN, true, 0.4)  # the see-through tint on the ghost model
 	_ghost_plate.position.y = 0.001
 	_ghost_plate.material_override = ModelUtil.flat_material(Color.GREEN, true, 0.45)
 	_ghost.add_child(_ghost_plate)
 	for k in GameConfig.TOWER_ORDER:
 		var m: Node3D = load(GameConfig.TOWERS[k]["scene"]).instantiate()
 		m.visible = false
+		m.scale = Vector3.ONE * 1.04  # a hair bigger, so it never z-fights a tower it hovers over
 		_ghost.add_child(m)
+		for mi in m.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = _ghost_mat
 		_ghost_models[k] = m
 	_ghost_ring = MeshInstance3D.new()
 	_ghost_ring.material_override = ModelUtil.flat_material(Color8(0xFF, 0xF4, 0xDC), true, 0.7)
@@ -817,6 +822,7 @@ func _update_ghost() -> void:
 	_ghost.position = NavGrid.footprint_centre(_hover_cell, GameConfig.TOWER_SIZE)
 	var ok := can_build(selected, _hover_cell)
 	(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.3, 0.9, 0.35, 0.45) if ok else Color(0.95, 0.25, 0.2, 0.45)
+	_ghost_mat.albedo_color = Color(0.3, 0.9, 0.35, 0.4) if ok else Color(0.95, 0.25, 0.2, 0.4)
 
 
 # ---------------------------------------------------------------- pointer (mouse or hand ray)
