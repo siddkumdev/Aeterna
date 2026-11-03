@@ -59,6 +59,7 @@ _work/      scratch input (git-ignored)
 - Preview: `python tools/make_sheet.py assets/blend/<asset>.blend assets/previews/<asset>`
 - Validate: `python tools/validate_asset.py assets/blend/<asset>.blend`
 - Lighting presets: `python tools/render_lighting.py assets/blend/<asset>.blend assets/previews/<asset>`
+- Greyscale readability check (value, not hue): `python tools/greyscale_check.py palette|image <png>` (Dorfromantik lesson; run on every new render and palette change)
 - Palette sheet: `python tools/make_palette_preview.py`
 - Palette change (add / tweak / retire a colour; propose, the user OKs, apply): `python tools/palette_change.py usage|propose <file>|apply` (skill: palette-change)
 - Diorama shot (real assets on the board, all presets, board budget): `python tools/render_diorama.py` (skill: diorama-shot; layout in `assets/diorama/layout_mock.json`, a MOCK)

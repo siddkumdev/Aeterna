@@ -44,6 +44,21 @@ var aiming := false  # a target is in range this tick (the effects read it; noth
 var fx: TowerFx  # this tower's visual effects, when it has them yet
 
 
+func settle() -> void:
+	## Set down like a toy on a table (Dorfromantik lesson: the action done most gets the nicest feel): drops a few
+	## millimetres, squashes on landing, springs back past its height and rests. The origin is the base, so it squashes
+	## into the ground. Purely visual; the tower is already built and targetable.
+	var rest_y := position.y
+	position.y = rest_y + 0.03
+	scale = Vector3(0.94, 1.1, 0.94)
+	var tw := create_tween()
+	tw.tween_property(self, "position:y", rest_y, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(self, "scale", Vector3.ONE, 0.09)
+	tw.tween_property(self, "scale", Vector3(1.12, 0.84, 1.12), 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(self, "scale", Vector3(0.97, 1.05, 0.97), 0.1).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(self, "scale", Vector3.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
 func setup(tower_kind: String, top_left: Vector2i) -> void:
 	kind = tower_kind
 	cfg = GameConfig.TOWERS[kind]

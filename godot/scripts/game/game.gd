@@ -26,6 +26,7 @@ extends Node3D
 ## Everything moving is ticked from step(), so tests/game_selftest.gd can play whole nights headless.
 
 signal phase_changed(phase: int)
+signal tower_placed(kind: String, at: Vector3)  # for the sound and feel hooks (audio is not built yet)
 
 enum Phase { DAY, NIGHT, CARDS, DONE }
 
@@ -728,6 +729,9 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.built_night = night
 	towers.append(t)
 	VfxKit.build_pop(shots_root, t.global_position)
+	if with_rig:
+		t.settle()
+	tower_placed.emit(kind, t.global_position)
 	for r in requests:
 		r.dodge(NavGrid.footprint(cell, GameConfig.TOWER_SIZE))
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
