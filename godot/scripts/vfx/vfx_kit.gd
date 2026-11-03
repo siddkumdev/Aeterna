@@ -95,13 +95,13 @@ static func set_halo(mi: MeshInstance3D, size: float, color: Color) -> void:
 	(mi.material_override as StandardMaterial3D).albedo_color = color
 
 
-static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, size: float, speed: float) -> CPUParticles3D:
+static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, size: float, speed: float, additive := true) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.amount = amount
 	p.lifetime = life
 	p.local_coords = false
 	p.mesh = quad(1.0)
-	p.material_override = material("disc", true)
+	p.material_override = material("disc", true, additive)
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.direction = Vector3.UP
 	p.spread = 180.0
@@ -121,11 +121,11 @@ static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, s
 	return p
 
 
-static func burst(at_parent: Node, world_pos: Vector3, color_a: Color, color_b: Color, count := 12, speed := 0.06, life := 0.45, size := 0.006, gravity := -0.12) -> CPUParticles3D:
+static func burst(at_parent: Node, world_pos: Vector3, color_a: Color, color_b: Color, count := 12, speed := 0.06, life := 0.45, size := 0.006, gravity := -0.12, additive := true) -> CPUParticles3D:
 	## A one-shot puff of embers at world_pos. Skipped (returns null) when MAX_BURSTS are already alive.
 	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
 		return null
-	var p := _emitter(color_a, color_b, count, life, size, speed)
+	var p := _emitter(color_a, color_b, count, life, size, speed, additive)
 	p.one_shot = true
 	p.explosiveness = 0.95
 	p.gravity = Vector3(0, gravity, 0)
@@ -424,3 +424,64 @@ static func toon_dust(parent: Node, at: Vector3, size: float) -> void:
 	m.set_shader_parameter("c_ink", Color("7E6048"))
 	m.set_shader_parameter("shards", 0.0)
 	m.set_shader_parameter("depth_bias", 0.02)  # in front of the grass
+
+static func hit_spark(parent: Node, at: Vector3) -> void:
+	## The most frequent effect in the game: a tiny snap of yellow-orange chips where a shot lands. Skipped when the cap is
+	## nearly full, so a crowd under fire never starves the tower and spell effects of their bursts.
+	if _active > MAX_BURSTS - 8:
+		return
+	burst(parent, at, FIRE_YELLOW, FIRE_ORANGE, 5, 0.05, 0.18, 0.0045, 0.0)
+
+
+static func ink_puff(parent: Node, at: Vector3, size: float, life := 0.6) -> void:
+	## A painted puff of near-black ink (no grey, so it reads as the enemy's own body coming apart, not as stone) that thins out
+	## as it rises.
+	var mi := toon_burst(parent, at, size, "burst", life)
+	if mi == null:
+		return
+	var m := mi.material_override as ShaderMaterial
+	m.set_shader_parameter("c_core", Color("2B2535"))
+	m.set_shader_parameter("c_mid", Color("1C1826"))
+	m.set_shader_parameter("c_out", INK)
+	m.set_shader_parameter("c_ink", INK)
+	m.set_shader_parameter("shards", 0.0)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "global_position", at + Vector3(0.0, size * 0.35, 0), life)
+
+
+static func ink_flecks(parent: Node, at: Vector3, count: int, speed: float, life: float, size: float, gravity := 0.0) -> void:
+	## Dark flecks (drawn without the additive blend, which would make dark colours vanish).
+	burst(parent, at, INK, Color("3A3342"), count, speed, life, size, gravity, false)
+
+
+static func enemy_death(parent: Node, at: Vector3, kind: String, flying: bool, height: float) -> void:
+	## An enemy going down, by kind (asset list X17, X23). `at` is its feet, board-world. Black ink plus bright orange
+	## embers (magic colours); the embers are big enough to read from the player's distance.
+	var mid := at + Vector3(0, height * 0.5, 0)
+	if flying:  # a Wisp: its ink comes apart and drifts up like feathers
+		ink_puff(parent, mid, 0.03, 0.55)
+		ink_flecks(parent, mid, 12, 0.04, 0.7, 0.008, 0.05)
+		burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 8, 0.06, 0.4, 0.008, 0.0)
+		return
+	match kind:
+		"splitter":  # the cap bursts: a bigger puff, the splitlings step out of it
+			ink_puff(parent, mid, 0.04, 0.5)
+			ink_flecks(parent, mid, 10, 0.06, 0.45, 0.008)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 10, 0.07, 0.4, 0.008)
+		"tunneler":
+			toon_dust(parent, at, 0.05)
+			burst(parent, mid, Color("7E6048"), Color("C2B49A"), 10, 0.05, 0.45, 0.006, -0.12, false)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 6, 0.06, 0.35, 0.007)
+		"scout", "splitling":
+			ink_puff(parent, mid, 0.024, 0.45)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 7, 0.06, 0.35, 0.007)
+		_:
+			ink_puff(parent, mid, 0.032, 0.5)
+			ink_flecks(parent, mid, 6, 0.05, 0.4, 0.007)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 9, 0.07, 0.4, 0.008)
+
+
+static func troop_poof(parent: Node, at: Vector3) -> void:
+	## A Guard falling: a small cream-coloured poof (asset list X23).
+	toon_dust(parent, at, 0.035)
+	burst(parent, at + Vector3(0, 0.015, 0), Color("F4E9D2"), Color("C2B49A"), 6, 0.04, 0.35, 0.004)

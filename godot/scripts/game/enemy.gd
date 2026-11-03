@@ -50,6 +50,8 @@ var slow_factor := 1.0
 
 var _mats: Array[StandardMaterial3D] = []
 var _flash := 0.0
+var _spark_ms := 0  # last hit spark, so a fast tower does not spam them
+var _dust_t := 0.0  # a Tunneler's mound drops a puff of dirt now and then
 var _body: Node3D
 var _mound: MeshInstance3D
 var _surface := Vector2i.ZERO  # where a Tunneler comes up
@@ -254,6 +256,12 @@ func step(delta: float) -> void:
 		take_damage(burn_dps * delta, false)
 		if not alive:
 			return
+	if underground and _mound != null and game != null and game.with_rig and is_inside_tree():
+		_dust_t -= delta
+		if _dust_t <= 0.0:
+			_dust_t = 0.5
+			if VfxKit.active_bursts() <= VfxKit.MAX_BURSTS - 8:  # keep room for the towers and spells
+				VfxKit.toon_dust(get_parent(), global_position, 0.022)
 	if slow_left > 0.0:
 		slow_left -= delta
 		if slow_left <= 0.0:
@@ -315,6 +323,9 @@ func _move_straight(stride: float) -> void:
 
 func _pop_up() -> void:
 	underground = false
+	if game != null and game.with_rig and is_inside_tree():
+		VfxKit.toon_dust(get_parent(), global_position, 0.05)
+		VfxKit.burst(get_parent(), global_position + Vector3(0, 0.01, 0), Color("7E6048"), Color("C2B49A"), 8, 0.05, 0.4, 0.005)
 	cell = _surface
 	_body.visible = true
 	_mound.visible = false
@@ -335,10 +346,15 @@ func take_damage(amount: float, flash := true) -> void:
 		for m in _mats:
 			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
 		_flash = 0.08
+		if game != null and game.with_rig and is_inside_tree() and Time.get_ticks_msec() - _spark_ms >= 120:
+			_spark_ms = Time.get_ticks_msec()
+			VfxKit.hit_spark(get_parent(), chest())
 	if hp <= 0.0:
 		if on_zero.is_valid() and on_zero.call():
 			return  # a phase ended, the Warden lives on
 		alive = false
+		if game != null and game.with_rig and is_inside_tree() and not is_boss and kind != "crystal":
+			VfxKit.enemy_death(get_parent(), global_position, kind, flying, height)
 		died.emit(self)
 		queue_free()
 

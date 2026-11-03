@@ -138,5 +138,7 @@ func die() -> void:
 	for e in tower.game.enemies:  # whoever was fighting it is free again
 		if is_instance_valid(e) and e.blocked_by == self:
 			e.blocked_by = null
+	if tower.game.with_rig and is_inside_tree():
+		VfxKit.troop_poof(get_parent(), global_position)
 	died.emit(self)
 	queue_free()
