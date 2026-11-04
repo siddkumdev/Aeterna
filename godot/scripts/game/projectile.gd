@@ -63,6 +63,15 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 		_glow = VfxKit.toon_fire(self, 0, Vector2(0.05, 0.05) * k, 1.0, 1.4)
 		_trail = VfxKit.toon_fire(self, 2, Vector2(0.14, 0.05) * k, 1.0, 1.2)
 		_last = from
+	elif _fx_kind == "wizard":
+		# moodboard #44: a ball of strands with a long comet tail, which grows from nothing so it never reaches back past the orb
+		var k := _fx_scale
+		_glow = VfxKit.paint(self, 0, Vector2(0.06, 0.06) * k, 1.0, 1.6)
+		VfxKit.toon_set(_glow, "depth_bias", 0.02)
+		_trail = VfxKit.paint(self, 2, Vector2(0.03, 0.05) * k, 1.0, 1.4)
+		VfxKit.toon_set(_trail, "depth_bias", 0.012)
+		VfxKit.toon_set(_trail, "axis", (_to - from).normalized())  # before the first step, or it points along +X for a frame
+		_last = from
 	elif _fx_kind == "wind":
 		# the bolt rides a gust: three swept pale-green streaks behind it (moodboard #33; streaks, never sparkles)
 		_trail = VfxKit.toon_wind(self, 1, Vector2(0.14, 0.035) * _fx_scale, 1.0, 1.4)
@@ -121,6 +130,8 @@ func _aim_tail() -> void:
 	_last = global_position
 	if v.length() > 0.0001:
 		VfxKit.toon_set(_trail, "axis", v.normalized())
+	if _fx_kind == "wizard":
+		VfxKit.toon_set(_trail, "size", Vector2(clampf(global_position.distance_to(_from) * 1.1, 0.03, 0.2), 0.05) * _fx_scale)
 
 
 func _can_hit(e: Enemy) -> bool:
@@ -146,6 +157,13 @@ func _finish() -> void:
 
 func _impact_fx() -> void:
 	if game == null or not is_inside_tree():
+		return
+	if _fx_kind == "wizard":
+		var w := _fx_scale
+		VfxKit.paint_cloud(game.shots_root, global_position, 0.11 * w, 0.5)
+		VfxKit.burst(game.shots_root, global_position, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 8, 0.06, 0.5, 0.004, -0.08, false)
+		if not (is_instance_valid(target) and target.flying):
+			VfxKit.paint_ring(game.shots_root, Vector3(global_position.x, game.board.global_position.y + 0.003, global_position.z), 0.11 * w, 0.4)
 		return
 	if _fx_kind == "fireball":
 		var s := _fx_scale

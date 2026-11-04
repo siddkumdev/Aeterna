@@ -1059,7 +1059,7 @@ func _real_models() -> void:
 	g.cards = {}
 	g.try_build("fire", Vector2i(5, 12))
 	g.try_build("guard", Vector2i(18, 12))
-	check("the wizard wears a model and shoots from its staff tip", g.towers[0].crew._rig != null and g.towers[0].crew._tip != null)
+	check("the wizard wears a model, with a staff tip for its flame", g.towers[0].crew._rig != null and g.towers[0].crew._tip != null)
 	check("the Guards wear models", g.towers[1].guards.all(func(gd): return gd._crew._rig != null))
 	var iw: IslandWorkers = g.island_workers
 	check("3 of Durva's characters work under the island", iw.workers.size() == 3 and iw.workers.all(func(r): return r.is_inside_tree()))
@@ -1121,7 +1121,7 @@ func _crews() -> void:
 	wiz.cooldown = 0.0
 	g.step(0.05)
 	check("firing starts the crew's shot animation", wiz.crew._act > 0.0)
-	check("a wizard's fireball leaves from his staff tip", wiz.last_from.distance_to(wiz.crew.hand_point()) < 0.001 and not g.shots.is_empty() and target != null)
+	check("a wizard's fireball leaves from the floating orb", wiz.last_from.distance_to(wiz._muzzle.global_position) < 0.001 and not g.shots.is_empty() and target != null)
 	g.queue_free()
 
 
@@ -1298,7 +1298,7 @@ func _vfx() -> void:
 	wiz.cooldown = 0.5
 	g.step(0.05)
 	wiz.fx._process(0.016)
-	check("while aiming, the orb gives its power to the staff (it dims below full)", wiz.fx.orb.level < 1.0)
+	check("while aiming, the orb charges up", wiz.fx.orb.charge > 0.0)
 	wiz.cooldown = 0.0
 	g.step(0.05)
 	check("a shot sends a fireball with a glow and an ember trail", not g.shots.is_empty() and g.shots[0]._trail != null and g.shots[0]._glow != null)

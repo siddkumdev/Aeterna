@@ -206,8 +206,6 @@ func step(delta: float) -> void:
 		var from := _muzzle.global_position if _muzzle and _muzzle.is_inside_tree() else global_position + Vector3(0, _muzzle_h, 0)
 		if crew:
 			crew.react(target.global_position)
-			if cfg.get("shoot_from_crew", false):
-				from = crew.hand_point()
 		last_from = from
 		if kind == "crossbow" and game.grass != null:
 			game.grass.gust(from, target.global_position)  # the bolt's pale-green wind runs through the grass

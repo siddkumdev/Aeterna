@@ -14,6 +14,7 @@ const MAX_BURSTS := 24
 const FIRE_SHADER := preload("res://shaders/fx_toon_fire.gdshader")
 const BURST_SHADER := preload("res://shaders/fx_toon_burst.gdshader")
 const WIND_SHADER := preload("res://shaders/fx_toon_wind.gdshader")
+const PAINT_SHADER := preload("res://shaders/fx_painted_fire.gdshader")
 static var _noise: ImageTexture
 
 static var _tex := {}
@@ -272,6 +273,105 @@ static func toon_fire(parent: Node3D, mode: int, size: Vector2, energy := 1.0, f
 	mi.extra_cull_margin = 2.0
 	parent.add_child(mi)
 	return mi
+
+
+static func paint(parent: Node3D, mode: int, size: Vector2, energy := 1.0, flow := 1.0) -> MeshInstance3D:
+	## Moodboard #44 fire: mode 0 orb, 1 flat ring, 2 comet, 3 cloud (see fx_painted_fire.gdshader). size = world size, metres.
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	mi.material_override = _paint_material(mode, size, energy, flow)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func _paint_material(mode: int, size: Vector2, energy: float, flow: float) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = PAINT_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", mode)
+	m.set_shader_parameter("size", size)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("flow", flow)
+	m.set_shader_parameter("seed", randf() * 40.0)
+	return m
+
+
+static func paint_ribbon(parent: Node3D, points: PackedVector3Array, width: float, flow := 1.0) -> MeshInstance3D:
+	## A flame that runs along a line (mode 4): the strip turns to face the camera in the shader, so it reads from every side.
+	var verts := PackedVector3Array()
+	var dirs := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	var n := points.size()
+	for i in n:
+		var along := (points[mini(i + 1, n - 1)] - points[maxi(i - 1, 0)]).normalized()
+		for side in 2:
+			verts.append(points[i])
+			dirs.append(along)
+			uvs.append(Vector2(float(i) / (n - 1), float(side)))
+		if i < n - 1:
+			var a := i * 2
+			idx.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = dirs
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = _paint_material(4, Vector2(width, width), 1.0, flow)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func paint_cloud(at_parent: Node, world_pos: Vector3, size: float, life := 0.6) -> void:
+	## A one-shot puffy fire cloud that swells and burns away (moodboard #44).
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := _paint_material(3, Vector2(size, size), 1.0, 1.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	_paint_once(at_parent, mi, world_pos, life)
+	m.set_shader_parameter("depth_bias", 0.04)
+	mi.create_tween().tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
+
+
+static func paint_ring(at_parent: Node, world_pos: Vector3, size: float, life := 0.4, face_camera := false) -> void:
+	## A one-shot ring of flame, flat in the world, that runs outward and thins away (moodboard #44).
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := _paint_material(1, Vector2(size, size), 1.0, 1.0)
+	m.set_shader_parameter("face_camera", face_camera)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	_paint_once(at_parent, mi, world_pos, life)
+	var run := func(k: float):
+		var out := 1.0 - pow(1.0 - k, 3.0)
+		m.set_shader_parameter("radius", lerpf(0.15, 0.72, out))
+		m.set_shader_parameter("energy", lerpf(1.0, 0.0, k * k))
+	run.call(0.0)
+	mi.create_tween().tween_method(run, 0.0, 1.0, life)
+
+
+static func _paint_once(at_parent: Node, mi: MeshInstance3D, world_pos: Vector3, life: float) -> void:
+	at_parent.add_child(mi)
+	mi.global_position = world_pos
+	_active += 1
+	mi.tree_exited.connect(_burst_gone)
+	_free_after(mi, life)
 
 
 static func toon_set(mi: MeshInstance3D, param: String, value: Variant) -> void:

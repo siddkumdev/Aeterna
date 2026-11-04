@@ -12,6 +12,7 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var prefix := args[0] if args.size() > 0 else "vfx_shot"
 	var which := args[1] if args.size() > 1 else "fire"
+	var count := int(args[3]) if args.size() > 3 else FRAMES  # a longer strip: -- PREFIX fire shot 24
 	var g: Game = load("res://scripts/game/game.gd").new()
 	root.add_child(g)
 	for i in 5:
@@ -52,13 +53,22 @@ func _initialize() -> void:
 		cam.fov = 32
 		cam.global_position = focus + Vector3(0.0, 0.3, 0.17)  # from above, like the player leaning over the board
 	cam.look_at(focus, Vector3.UP)
+	var settle_from := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - settle_from < (int(args[4]) if args.size() > 4 else 6500):  # the tower lands and dusk turns to real night, the hardest light. 1200 here films dusk
+		await process_frame
+	if args.size() > 5:  # try a night colour grade: -- PREFIX fire shot 20 6500 0.85
+		g.find_children("*", "WorldEnvironment", true, false)[0].environment.adjustment_saturation = float(args[5])
 	tw.cooldown = 0.25
 	var frames: Array[Image] = []
 	var next := 0.0
 	var t := 0.0
-	while frames.size() < FRAMES:
-		g.step(1.0 / 60.0)
-		t += 1.0 / 60.0
+	var last_ms := Time.get_ticks_msec()
+	while frames.size() < count:
+		var now := Time.get_ticks_msec()  # real time: the effects run on it, so a fixed step would make them seem to linger
+		var dt := clampf((now - last_ms) / 1000.0, 0.001, 0.1)
+		last_ms = now
+		g.step(dt)
+		t += dt
 		await process_frame
 		if t >= next:
 			next += STEP
@@ -73,7 +83,7 @@ func _initialize() -> void:
 	var cw := int(w * 0.5)
 	var ch := int(h * 0.5)
 	var cols := 4
-	var sheet := Image.create(cw * cols, ch * ((FRAMES + cols - 1) / cols), false, Image.FORMAT_RGBA8)
+	var sheet := Image.create(cw * cols, ch * ((count + cols - 1) / cols), false, Image.FORMAT_RGBA8)
 	for i in frames.size():
 		var f := frames[i]
 		f.convert(Image.FORMAT_RGBA8)
