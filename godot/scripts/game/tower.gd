@@ -67,12 +67,17 @@ func tint(mat: Material) -> void:
 		if is_instance_valid(m):
 			m.material_override = _tinted[m]
 	_tinted.clear()
+	if fx:
+		fx.visible = mat == null  # its flames and glows are not part of the tower: they would cross the red body
 	if mat == null:
 		return
+	var plain: Material = mat.duplicate()
+	if plain is StandardMaterial3D:
+		plain.albedo_texture = null
 	for n in ModelUtil.walk(self):
 		if n is MeshInstance3D and n.visible and n.mesh != null and _is_body(n):
 			_tinted[n] = n.material_override
-			n.material_override = mat
+			n.material_override = plain if n.material_override != null else mat  # primitives (a stand-in pilot) have no atlas UVs
 
 
 func _is_body(m: MeshInstance3D) -> bool:

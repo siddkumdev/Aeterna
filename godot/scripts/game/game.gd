@@ -31,6 +31,7 @@ signal tower_placed(kind: String, at: Vector3)  # for the sound and feel hooks (
 enum Phase { DAY, NIGHT, CARDS, DONE }
 
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
+const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
@@ -101,7 +102,8 @@ var _ghost: Node3D
 var _ghost_plate: MeshInstance3D
 var _ghost_models := {}
 var _ghost_mat: StandardMaterial3D
-var _sell_mat: StandardMaterial3D  # the see-through red on the tower about to be sold
+var _sell_mat: StandardMaterial3D  # the solid red on the tower about to be sold
+var _sell_ring: MeshInstance3D  # the bright ring round it
 var _sell_target: Tower
 var _ghost_ring: MeshInstance3D
 var _hover_cell := Vector2i(-1, -1)
@@ -204,6 +206,7 @@ func _start_loop(message: String) -> void:
 	night = 0
 	closed_spawn = ""
 	_set_phase(Phase.DAY, message)
+	select("")  # a new run starts with nothing picked: no sell ring left on the empty ground
 
 
 func card(id: String) -> int:
@@ -805,6 +808,20 @@ func _build_ghost() -> void:
 	_ghost_plate.position.y = 0.001
 	_ghost_plate.material_override = ModelUtil.flat_material(Color.GREEN, true, 0.45)
 	_ghost.add_child(_ghost_plate)
+	_sell_ring = MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.outer_radius = GameConfig.CELL * 1.62  # round the 2 x 2 footprint's corners, hugging the tower
+	ring.inner_radius = GameConfig.CELL * 1.48
+	ring.rings = 32
+	ring.ring_segments = 6
+	_sell_ring.mesh = ring
+	_sell_ring.scale = Vector3(1, 0.5, 1)
+	_sell_ring.position.y = SELL_RING_Y
+	var ring_mat := ModelUtil.flat_material(Color(1.0, 0.22, 0.14), true)
+	_sell_ring.material_override = ring_mat
+	_sell_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sell_ring.visible = false
+	_ghost.add_child(_sell_ring)
 	for k in GameConfig.TOWER_ORDER:
 		var m: Node3D = load(GameConfig.TOWERS[k]["scene"]).instantiate()
 		m.visible = false
@@ -838,28 +855,31 @@ func _tint_sell_target() -> void:
 	_sell_target = hot
 	if hot:
 		if _sell_mat == null:
-			_sell_mat = ModelUtil.flat_material(Color(0.95, 0.2, 0.15), false, 0.6)  # shaded, so it keeps its shape
-			_sell_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS  # front faces only, not a blot of every part at once
+			_sell_mat = ModelUtil.flat_material(Color(1.0, 0.3, 0.24))  # solid red (Siddharth 2026-11-04): over the palette's own colours, so a tower's parts stay readable
+			_sell_mat.albedo_texture = load("res://assets/palette/palette_atlas.png")
+			_sell_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			_sell_mat.emission_enabled = true
+			_sell_mat.emission = Color(0.42, 0.04, 0.03)  # lifts the black hat and the dark parts into red too
 		hot.tint(_sell_mat)
 
 
 func _update_ghost() -> void:
 	_tint_sell_target()
 	if selected == "sell":
-		# a red plate under the tower under the pointer, which turns see-through red (_tint_sell_target)
-		# a plate wider than the tower's base so its rim shows round it, and the refund in the message line
+		# the tower under the pointer turns solid red (_tint_sell_target) inside a bright ring, with the refund in the message line
 		var t := tower_at(_hover_board_cell)
 		_ghost.visible = t != null
-		_ghost_plate.scale = Vector3(1.6, 1, 1.6)
+		_ghost_plate.visible = false
+		_sell_ring.visible = true
 		if t:
 			_ghost.position = NavGrid.footprint_centre(t.cell, GameConfig.TOWER_SIZE)
-			(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.95, 0.25, 0.2, 0.6)
 			var when := "built today: full cost" if t.built_night == night else "half cost after a night"
 			_msg.text = "Sell %s: +%d trust (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
 		elif _msg:
 			_msg.text = "Pick a tower to sell. Full cost back on the day it was built, half after that."
 		return
-	_ghost_plate.scale = Vector3.ONE
+	_ghost_plate.visible = true
+	_sell_ring.visible = false
 	var show := selected != "" and _hover_cell.x >= 0
 	_ghost.visible = show
 	if not show:

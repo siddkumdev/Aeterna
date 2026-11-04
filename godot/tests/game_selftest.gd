@@ -576,7 +576,7 @@ func _sell() -> void:
 	var own: Array = meshes.map(func(n): return n.material_override)
 	g._hover_board_cell = Vector2i(12, 5)
 	g._update_ghost()
-	check("the tower under the pointer turns see-through red", g._sell_mat != null and g._sell_mat.albedo_color.a < 1.0 and meshes.any(func(n): return n.material_override == g._sell_mat))
+	check("the tower under the pointer turns solid red inside a ring", g._sell_mat != null and g._sell_mat.albedo_color.a == 1.0 and g._sell_ring.is_visible_in_tree() and not g._ghost_plate.visible and meshes.any(func(n): return n.material_override == g._sell_mat))
 	check("the other tower does not", not ModelUtil.walk(g.towers[1]).any(func(n): return n is MeshInstance3D and n.material_override == g._sell_mat))
 	g._hover_board_cell = Vector2i(0, 0)
 	g._update_ghost()
@@ -1307,6 +1307,12 @@ func _vfx() -> void:
 	await process_frame
 	check("the effects never change a rule: the grunt still took damage from the shot", foe.hp < 99999.0)
 	g.queue_free()
+	await process_frame
+	var gr := await _make_game()
+	gr.select("sell")
+	gr.new_run()
+	check("a new run clears sell mode and its ring", gr.selected == "" and not gr._sell_ring.is_visible_in_tree())
+	gr.queue_free()
 	await process_frame
 	var g2 := await _make_game()
 	g2.trust = 500

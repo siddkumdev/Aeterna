@@ -160,14 +160,14 @@ void fragment() {
 	// Held below full brightness on purpose: the night's bloom bleaches anything brighter to cream.
 	vec3 deep = mix(c_red, vec3(0.067, 0.11, 0.188), 0.3) * 0.8;
 	vec3 red = c_red * 0.82;
-	vec3 orange = vec3(0.86, 0.40, 0.09);
-	vec3 yellow = vec3(0.92, 0.64, 0.14);
-	vec3 pale = vec3(1.0, 0.82, 0.38);
+	vec3 orange = vec3(0.88, 0.34, 0.07);
+	vec3 yellow = vec3(0.96, 0.58, 0.08);
+	vec3 pale = vec3(1.0, 0.76, 0.26);
 	float w = v - line * 0.2;
 	vec3 col = deep;
 	col = mix(col, red, smoothstep(0.07 - aa, 0.07 + aa, w));
 	col = mix(col, orange, smoothstep(0.17 - aa, 0.17 + aa, w));
-	col = mix(col, yellow, smoothstep(0.46 - aa, 0.46 + aa, w));
+	col = mix(col, yellow, smoothstep(0.54 - aa, 0.54 + aa, w));
 	col = mix(col, pale, smoothstep(0.98 - aa, 0.98 + aa, w));
 	ALBEDO = mix(red, col, inside);
 	float fade = mode == 3 ? 1.0 - smoothstep(0.78, 1.0, progress) : 1.0;  // the cloud thins away instead of vanishing

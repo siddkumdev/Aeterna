@@ -160,10 +160,7 @@ func _impact_fx() -> void:
 		return
 	if _fx_kind == "wizard":
 		var w := _fx_scale
-		VfxKit.paint_cloud(game.shots_root, global_position, 0.11 * w, 0.5)
-		VfxKit.burst(game.shots_root, global_position, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 8, 0.06, 0.5, 0.004, -0.08, false)
-		if not (is_instance_valid(target) and target.flying):
-			VfxKit.paint_ring(game.shots_root, Vector3(global_position.x, game.board.global_position.y + 0.003, global_position.z), 0.11 * w, 0.4)
+		VfxKit.paint_cloud(game.shots_root, global_position, 0.055 * w, 0.28)  # small and quick (Siddharth 2026-11-04: "it is too much"); the enemy's own hit spark and flash do the rest
 		return
 	if _fx_kind == "fireball":
 		var s := _fx_scale

@@ -343,6 +343,7 @@ static func paint_cloud(at_parent: Node, world_pos: Vector3, size: float, life :
 	mi.extra_cull_margin = 2.0
 	_paint_once(at_parent, mi, world_pos, life)
 	m.set_shader_parameter("depth_bias", 0.04)
+	m.set_shader_parameter("alpha", 0.8)  # the enemy shows through it
 	mi.create_tween().tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
 
 
