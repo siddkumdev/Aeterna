@@ -1310,7 +1310,7 @@ func _vfx() -> void:
 	await process_frame
 	var gr := await _make_game()
 	gr.select("sell")
-	gr.new_run()
+	gr.new_run(1)
 	check("a new run clears sell mode and its ring", gr.selected == "" and not gr._sell_ring.is_visible_in_tree())
 	gr.queue_free()
 	await process_frame

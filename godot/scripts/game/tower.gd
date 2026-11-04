@@ -61,7 +61,7 @@ func settle() -> void:
 
 
 func tint(mat: Material) -> void:
-	## Sell mode: the tower and its people turn see-through in `mat`; null puts their own look back.
+	## Sell mode: the tower and its people turn solid `mat`; null puts their own look back.
 	## Effects keep theirs (shader flames, additive glows).
 	for m in _tinted:
 		if is_instance_valid(m):
