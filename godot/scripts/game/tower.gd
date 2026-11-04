@@ -40,6 +40,7 @@ var _gate: Node3D  # the model's spawn_anchor: where a new Guard steps out
 
 var last_from := Vector3.ZERO  # where the latest shot left the tower (world)
 var crew: CrewMember  # the villager manning it (a stand-in body, animated)
+var _tinted := {}  # sell mode: mesh -> its own material_override, to put back
 var aiming := false  # a target is in range this tick (the effects read it; nothing in the rules does)
 var fx: TowerFx  # this tower's visual effects, when it has them yet
 
@@ -57,6 +58,28 @@ func settle() -> void:
 	tw.tween_property(self, "scale", Vector3(1.12, 0.84, 1.12), 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "scale", Vector3(0.97, 1.05, 0.97), 0.1).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(self, "scale", Vector3.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func tint(mat: Material) -> void:
+	## Sell mode: the tower and its people turn see-through in `mat`; null puts their own look back.
+	## Effects keep theirs (shader flames, additive glows).
+	for m in _tinted:
+		if is_instance_valid(m):
+			m.material_override = _tinted[m]
+	_tinted.clear()
+	if mat == null:
+		return
+	for n in ModelUtil.walk(self):
+		if n is MeshInstance3D and n.visible and n.mesh != null and _is_body(n):
+			_tinted[n] = n.material_override
+			n.material_override = mat
+
+
+func _is_body(m: MeshInstance3D) -> bool:
+	if m.material_override == null:
+		return true
+	var own := m.material_override as StandardMaterial3D
+	return own != null and own.blend_mode == BaseMaterial3D.BLEND_MODE_MIX and not (m.mesh is QuadMesh)
 
 
 func setup(tower_kind: String, top_left: Vector2i) -> void:

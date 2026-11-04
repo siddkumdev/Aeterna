@@ -571,6 +571,21 @@ func _sell() -> void:
 	g.try_build("guard", Vector2i(4, 11))
 	g.select("sell")
 	check("Sell sign selects sell mode", g.selected == "sell")
+	var sold: Tower = g.tower_at(Vector2i(12, 5))
+	var meshes := ModelUtil.walk(sold).filter(func(n): return n is MeshInstance3D and n.mesh != null)
+	var own: Array = meshes.map(func(n): return n.material_override)
+	g._hover_board_cell = Vector2i(12, 5)
+	g._update_ghost()
+	check("the tower under the pointer turns see-through red", g._sell_mat != null and g._sell_mat.albedo_color.a < 1.0 and meshes.any(func(n): return n.material_override == g._sell_mat))
+	check("the other tower does not", not ModelUtil.walk(g.towers[1]).any(func(n): return n is MeshInstance3D and n.material_override == g._sell_mat))
+	g._hover_board_cell = Vector2i(0, 0)
+	g._update_ghost()
+	check("pointing away gives the tower its own look back", range(meshes.size()).all(func(i): return meshes[i].material_override == own[i]))
+	g._hover_board_cell = Vector2i(12, 5)
+	g._update_ghost()
+	g.select("")
+	check("leaving sell mode does too", range(meshes.size()).all(func(i): return meshes[i].material_override == own[i]))
+	g.select("sell")
 	g.start_night()
 	check("no selling during the night", not g.sell(g.towers[0]) and g.towers.size() == 2)
 	g._clear_night()
@@ -1046,6 +1061,27 @@ func _real_models() -> void:
 	g.try_build("guard", Vector2i(18, 12))
 	check("the wizard wears a model and shoots from its staff tip", g.towers[0].crew._rig != null and g.towers[0].crew._tip != null)
 	check("the Guards wear models", g.towers[1].guards.all(func(gd): return gd._crew._rig != null))
+	var iw: IslandWorkers = g.island_workers
+	check("3 of Durva's characters work under the island", iw.workers.size() == 3 and iw.workers.all(func(r): return r.is_inside_tree()))
+	var pulses_before := iw.channels
+	iw.channel_now(1)
+	check("a channelling worker raises its tool", iw.workers[1].anim == "channel")
+	var tool_raised := true
+	for w in iw.workers:
+		var keep: String = w.anim
+		w.anim = "idle"
+		w.tick(0.0)
+		var low := iw._tool_tip(w).y
+		w.anim = "channel"
+		w.tick(0.0)
+		tool_raised = tool_raised and iw._tool_tip(w).y > low + 0.005
+		w.anim = keep
+	iw.workers[1].anim = "channel"
+	check("every worker's tool really goes up when it channels", tool_raised)
+	for i in 40:
+		iw.tick(0.05)
+	check("the thread reaches the seed and the propulsion flares", iw.channels == pulses_before + 1 and iw._thrust._flare > 0.0)
+	check("then the worker goes back to work", iw.workers[1].anim == "hammer" and not iw._thread.visible)
 	g.start_night()
 	g._spawn_queue.clear()
 	var all_rigged := true

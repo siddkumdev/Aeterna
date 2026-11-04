@@ -40,6 +40,7 @@ var with_rig := true
 ## the villagers and forest watchers (always with the rig; the tests can ask for them without one)
 var with_life := false
 var life: VillageLife
+var island_workers: IslandWorkers  # the villagers on the planks under the island (with the rig only)
 var run_seed := 1
 
 var board: Node3D
@@ -100,6 +101,8 @@ var _ghost: Node3D
 var _ghost_plate: MeshInstance3D
 var _ghost_models := {}
 var _ghost_mat: StandardMaterial3D
+var _sell_mat: StandardMaterial3D  # the see-through red on the tower about to be sold
+var _sell_target: Tower
 var _ghost_ring: MeshInstance3D
 var _hover_cell := Vector2i(-1, -1)
 var _hover_board_cell := Vector2i(-1, -1)  # the single cell under the pointer (for selling)
@@ -123,7 +126,12 @@ func _ready() -> void:
 	board.position = BOARD_POS
 	add_child(board)
 	WorldBuilder.build_island(board)
-	WorldBuilder.build_underside(board)
+	var under := WorldBuilder.build_underside(board)
+	if with_rig:
+		island_workers = IslandWorkers.new()
+		island_workers.name = "IslandWorkers"
+		board.add_child(island_workers)
+		island_workers.setup(under)
 	WorldBuilder.build_forest(board, 7)
 	_grid_lines = WorldBuilder.build_grid_lines(board)
 	_towers_root = _child(board, "Towers")
@@ -821,16 +829,31 @@ func _draw_ring(r: float) -> void:
 	_ghost_ring.mesh = im
 
 
+func _tint_sell_target() -> void:
+	var hot: Tower = tower_at(_hover_board_cell) if selected == "sell" else null
+	if hot == _sell_target:
+		return
+	if is_instance_valid(_sell_target):
+		_sell_target.tint(null)
+	_sell_target = hot
+	if hot:
+		if _sell_mat == null:
+			_sell_mat = ModelUtil.flat_material(Color(0.95, 0.2, 0.15), false, 0.6)  # shaded, so it keeps its shape
+			_sell_mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS  # front faces only, not a blot of every part at once
+		hot.tint(_sell_mat)
+
+
 func _update_ghost() -> void:
+	_tint_sell_target()
 	if selected == "sell":
-		# an orange plate over the tower under the pointer
+		# a red plate under the tower under the pointer, which turns see-through red (_tint_sell_target)
 		# a plate wider than the tower's base so its rim shows round it, and the refund in the message line
 		var t := tower_at(_hover_board_cell)
 		_ghost.visible = t != null
 		_ghost_plate.scale = Vector3(1.6, 1, 1.6)
 		if t:
 			_ghost.position = NavGrid.footprint_centre(t.cell, GameConfig.TOWER_SIZE)
-			(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.95, 0.6, 0.2, 0.6)
+			(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.95, 0.25, 0.2, 0.6)
 			var when := "built today: full cost" if t.built_night == night else "half cost after a night"
 			_msg.text = "Sell %s: +%d trust (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
 		elif _msg:

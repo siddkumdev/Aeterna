@@ -42,7 +42,8 @@ func _process(delta: float) -> void:
 	_flare = maxf(0.0, _flare - delta * 1.6)
 	var breath := 0.85 + 0.15 * sin(_t * 1.3)
 	var lv := clampf(level * breath + _flare * 0.6, 0.0, 1.5)
-	VfxKit.toon_set(_core, "energy", 0.5 + 0.7 * lv)
-	VfxKit.toon_set(_plume, "energy", 0.35 + 0.75 * lv)
+	var body := minf(lv, 1.0)  # past this the painted flame fills its whole quad and shows as a hard-edged square
+	VfxKit.toon_set(_core, "energy", 0.5 + 0.7 * body)
+	VfxKit.toon_set(_plume, "energy", 0.35 + 0.75 * body)
 	VfxKit.set_halo(_halo, size * 2.0 * (3.6 + 0.7 * lv), Color(VfxKit.FIRE_ORANGE, clampf(0.18 + 0.22 * lv, 0.0, 0.7)))
 	_embers.emitting = level > 0.05

@@ -3,7 +3,7 @@ extends Node3D
 ## One of Durva's models with its tween-free procedural animation (no skinned rig: each moving part is turned about its
 ## pivot every frame). Purely cosmetic, it never changes a gameplay number. Forward is +Z. Whoever owns it sets `anim` and
 ## `gait`; hit(), rise(), sink() and die() are one-shots.
-##   anim for people   idle, walk, startle, fork, hammer, roll, dance, read, sew, water, sweep, tend, talk, wave, cheer,
+##   anim for people   idle, walk, startle, fork, hammer, roll, dance, read, sew, water, sweep, tend, talk, wave, cheer, channel,
 ##                     crew_wizard, crew_archer, crew_guard (these read `act_k`, 0 -> 1 -> 0 over a shot)
 ##   anim for enemies  walk, attack, idle
 ## Walking people either hop (the art bible's way) or step their legs: `step_legs`, press G in the game to compare.
@@ -283,6 +283,15 @@ func _person(delta: float) -> void:
 			_al.z = 1.6 + 0.3 * sin(t * 16.0)
 			_ar.z = -1.6 + 0.3 * sin(t * 16.0)
 			_hd.x = -0.25
+		"channel":  # raises its tool high and holds it, sending energy to the seed under the island
+			_ar.x = -1.75 + 0.08 * sin(t * 9.0)
+			_ar.z = -0.8  # out to the side: straight up would hide it behind the big head
+			_it = Basis.from_euler(_ar).inverse().get_euler()  # the tool stays upright in the raised hand, or the arm tips it flat
+			_al.x = -0.9
+			_al.z = 0.5
+			_hd.x = -0.12
+			_sq = 1.03
+			_lift = 0.0012 * sin(t * 6.0)
 		"crew_wizard":
 			_al.x = -0.5 + 0.45 * sin(t * 1.4) - 1.0 * act_k
 			_al.z = 0.35 + 0.2 * sin(t * 0.9)
