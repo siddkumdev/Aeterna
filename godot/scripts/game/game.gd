@@ -26,16 +26,22 @@ extends Node3D
 ## Everything moving is ticked from step(), so tests/game_selftest.gd can play whole nights headless.
 
 signal phase_changed(phase: int)
+signal tower_placed(kind: String, at: Vector3)  # for the sound and feel hooks (audio is not built yet)
 
 enum Phase { DAY, NIGHT, CARDS, DONE }
 
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
+const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
+## the villagers and forest watchers (always with the rig; the tests can ask for them without one)
+var with_life := false
+var life: VillageLife
+var island_workers: IslandWorkers  # the villagers on the planks under the island (with the rig only)
 var run_seed := 1
 
 var board: Node3D
@@ -95,6 +101,10 @@ var _grid_lines: MeshInstance3D
 var _ghost: Node3D
 var _ghost_plate: MeshInstance3D
 var _ghost_models := {}
+var _ghost_mat: StandardMaterial3D
+var _sell_mat: StandardMaterial3D  # the solid red on the tower about to be sold
+var _sell_ring: MeshInstance3D  # the bright ring round it
+var _sell_target: Tower
 var _ghost_ring: MeshInstance3D
 var _hover_cell := Vector2i(-1, -1)
 var _hover_board_cell := Vector2i(-1, -1)  # the single cell under the pointer (for selling)
@@ -118,7 +128,12 @@ func _ready() -> void:
 	board.position = BOARD_POS
 	add_child(board)
 	WorldBuilder.build_island(board)
-	WorldBuilder.build_underside(board)
+	var under := WorldBuilder.build_underside(board)
+	if with_rig:
+		island_workers = IslandWorkers.new()
+		island_workers.name = "IslandWorkers"
+		board.add_child(island_workers)
+		island_workers.setup(under)
 	WorldBuilder.build_forest(board, 7)
 	_grid_lines = WorldBuilder.build_grid_lines(board)
 	_towers_root = _child(board, "Towers")
@@ -143,6 +158,11 @@ func _ready() -> void:
 	_build_lens()
 	if with_rig:
 		_build_rig()
+	if with_rig or with_life:
+		life = VillageLife.new()
+		life.name = "VillageLife"
+		board.add_child(life)
+		life.setup(self, dressing["landmarks"])
 	new_run(run_seed)
 
 
@@ -186,6 +206,7 @@ func _start_loop(message: String) -> void:
 	night = 0
 	closed_spawn = ""
 	_set_phase(Phase.DAY, message)
+	select("")  # a new run starts with nothing picked: no sell ring left on the empty ground
 
 
 func card(id: String) -> int:
@@ -373,6 +394,10 @@ func _clear_requests() -> void:
 	for r in requests:
 		r.queue_free()
 	requests.clear()
+	for h in houses:
+		h.chimney_blocked = false
+	if life:
+		life.clear_claims()
 
 
 func reach(metres: float) -> float:
@@ -427,9 +452,16 @@ func release_request() -> bool:
 	if not r.release():
 		return false
 	trust += r.reward
+	if with_rig:
+		_trust_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
 	last_message = "%s: thank you! +%d trust" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
 	_refresh_ui()
 	return true
+
+
+func _trust_sparkle(at: Vector3) -> void:
+	## Trust earned: a little rise of gold (X08).
+	VfxKit.burst(shots_root, at, VfxKit.FIRE_YELLOW, VfxKit.FIRE_ORANGE, 10, 0.05, 0.8, 0.006, 0.06)
 
 
 func _update_held() -> void:
@@ -482,6 +514,8 @@ func _end_night() -> void:
 		income += 5  # Deep Pockets Legendary: no house shuttered tonight
 	trust += income
 	for h in houses:
+		if with_rig and not h.is_shuttered:
+			_trust_sparkle(h.global_position + Vector3(0, 0.1, 0))  # the dawn income, house by house
 		h.heal(GameConfig.DAWN_REPAIR)  # damage carries over (Siddharth 2026-10-23)
 	for t in towers:
 		if t.cfg["kind"] == "spawner":
@@ -728,6 +762,9 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.built_night = night
 	towers.append(t)
 	VfxKit.build_pop(shots_root, t.global_position)
+	if with_rig:
+		t.settle()
+	tower_placed.emit(kind, t.global_position)
 	for r in requests:
 		r.dodge(NavGrid.footprint(cell, GameConfig.TOWER_SIZE))
 	last_message = "%s built. %d trust left." % [GameConfig.TOWERS[kind]["name"], trust]
@@ -755,6 +792,7 @@ func _build_houses() -> void:
 		var d := centre - (Vector2(c) + Vector2.ONE)
 		h.rotation.y = (PI / 2.0 if d.x > 0 else -PI / 2.0) if absf(d.x) > absf(d.y) else (0.0 if d.y > 0 else PI)
 		h.setup(scenes[i % scenes.size()], i, c)
+		h.fx = with_rig
 		h.shuttered.connect(_on_house_shuttered)
 		h.hold_check = _hold_check
 		houses.append(h)
@@ -766,13 +804,31 @@ func _build_ghost() -> void:
 	var pm := BoxMesh.new()
 	pm.size = Vector3(GameConfig.CELL * 2 - 0.004, 0.002, GameConfig.CELL * 2 - 0.004)
 	_ghost_plate.mesh = pm
+	_ghost_mat = ModelUtil.flat_material(Color.GREEN, true, 0.4)  # the see-through tint on the ghost model
 	_ghost_plate.position.y = 0.001
 	_ghost_plate.material_override = ModelUtil.flat_material(Color.GREEN, true, 0.45)
 	_ghost.add_child(_ghost_plate)
+	_sell_ring = MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.outer_radius = GameConfig.CELL * 1.62  # round the 2 x 2 footprint's corners, hugging the tower
+	ring.inner_radius = GameConfig.CELL * 1.48
+	ring.rings = 32
+	ring.ring_segments = 6
+	_sell_ring.mesh = ring
+	_sell_ring.scale = Vector3(1, 0.5, 1)
+	_sell_ring.position.y = SELL_RING_Y
+	var ring_mat := ModelUtil.flat_material(Color(1.0, 0.22, 0.14), true)
+	_sell_ring.material_override = ring_mat
+	_sell_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sell_ring.visible = false
+	_ghost.add_child(_sell_ring)
 	for k in GameConfig.TOWER_ORDER:
 		var m: Node3D = load(GameConfig.TOWERS[k]["scene"]).instantiate()
 		m.visible = false
+		m.scale = Vector3.ONE * 1.04  # a hair bigger, so it never z-fights a tower it hovers over
 		_ghost.add_child(m)
+		for mi in m.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = _ghost_mat
 		_ghost_models[k] = m
 	_ghost_ring = MeshInstance3D.new()
 	_ghost_ring.material_override = ModelUtil.flat_material(Color8(0xFF, 0xF4, 0xDC), true, 0.7)
@@ -790,22 +846,40 @@ func _draw_ring(r: float) -> void:
 	_ghost_ring.mesh = im
 
 
+func _tint_sell_target() -> void:
+	var hot: Tower = tower_at(_hover_board_cell) if selected == "sell" else null
+	if hot == _sell_target:
+		return
+	if is_instance_valid(_sell_target):
+		_sell_target.tint(null)
+	_sell_target = hot
+	if hot:
+		if _sell_mat == null:
+			_sell_mat = ModelUtil.flat_material(Color(1.0, 0.3, 0.24))  # solid red (Siddharth 2026-11-04): over the palette's own colours, so a tower's parts stay readable
+			_sell_mat.albedo_texture = load("res://assets/palette/palette_atlas.png")
+			_sell_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			_sell_mat.emission_enabled = true
+			_sell_mat.emission = Color(0.42, 0.04, 0.03)  # lifts the black hat and the dark parts into red too
+		hot.tint(_sell_mat)
+
+
 func _update_ghost() -> void:
+	_tint_sell_target()
 	if selected == "sell":
-		# an orange plate over the tower under the pointer
-		# a plate wider than the tower's base so its rim shows round it, and the refund in the message line
+		# the tower under the pointer turns solid red (_tint_sell_target) inside a bright ring, with the refund in the message line
 		var t := tower_at(_hover_board_cell)
 		_ghost.visible = t != null
-		_ghost_plate.scale = Vector3(1.6, 1, 1.6)
+		_ghost_plate.visible = false
+		_sell_ring.visible = true
 		if t:
 			_ghost.position = NavGrid.footprint_centre(t.cell, GameConfig.TOWER_SIZE)
-			(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.95, 0.6, 0.2, 0.6)
 			var when := "built today: full cost" if t.built_night == night else "half cost after a night"
 			_msg.text = "Sell %s: +%d trust (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
 		elif _msg:
 			_msg.text = "Pick a tower to sell. Full cost back on the day it was built, half after that."
 		return
-	_ghost_plate.scale = Vector3.ONE
+	_ghost_plate.visible = true
+	_sell_ring.visible = false
 	var show := selected != "" and _hover_cell.x >= 0
 	_ghost.visible = show
 	if not show:
@@ -813,6 +887,7 @@ func _update_ghost() -> void:
 	_ghost.position = NavGrid.footprint_centre(_hover_cell, GameConfig.TOWER_SIZE)
 	var ok := can_build(selected, _hover_cell)
 	(_ghost_plate.material_override as StandardMaterial3D).albedo_color = Color(0.3, 0.9, 0.35, 0.45) if ok else Color(0.95, 0.25, 0.2, 0.45)
+	_ghost_mat.albedo_color = Color(0.3, 0.9, 0.35, 0.4) if ok else Color(0.95, 0.25, 0.2, 0.4)
 
 
 # ---------------------------------------------------------------- pointer (mouse or hand ray)
@@ -978,6 +1053,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					set_speed(1.0 if speed == 50.0 else 50.0)
 			KEY_R:
 				new_run(run_seed + 1)
+			KEY_G:  # compare the two ways of walking (Siddharth is choosing, 2026-11-03)
+				CharacterRig.step_legs = not CharacterRig.step_legs
+				last_message = "Walking: %s (G switches)." % ("stepping legs" if CharacterRig.step_legs else "hopping")
+				_refresh_ui()
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_hand:
 		_mouse_hand.release()
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _mouse_hand:
@@ -1015,6 +1094,8 @@ func _feed_grass() -> void:
 	for h in hands:
 		if is_instance_valid(h):
 			pts.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
+	if life:
+		pts.append_array(life.pushers())
 	grass.set_pushers(pts)
 
 

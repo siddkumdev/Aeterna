@@ -141,8 +141,8 @@ const TOWERS := {
 	"fire": {
 		"name": "Wizard Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
 		"scene": "res://assets/defense/ew_defense_wizard_tower_v02.glb", "turn_part": "",  # the hat does not turn to aim
-		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0, "fx": "fireball",
-		"crew": "wizard", "shoot_from_crew": true,  # stands at the model's crew_anchor; fireballs leave from his staff tip
+		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0, "fx": "wizard",
+		"crew": "wizard",  # stands at the model's crew_anchor; fireballs leave from the floating orb (Siddharth 2026-11-04)
 	},
 	# The Guard Tower (Siddharth 2026-10-26, replaces the Blast Brazier): spawns Guards that stand in a ring touching
 	# it and fight only what comes into their sight. Numbers are the old Watch Hut / Guard ones he chose; the rest are

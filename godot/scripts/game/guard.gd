@@ -31,7 +31,7 @@ func setup(t, post_index: int, health: float, cfg: Dictionary) -> void:
 	_cfg = cfg
 	_crew = CrewMember.new()
 	add_child(_crew)
-	_crew.setup("guard")
+	_crew.setup("guard", tower.game.with_rig)
 
 
 func post() -> Vector3:
@@ -138,5 +138,7 @@ func die() -> void:
 	for e in tower.game.enemies:  # whoever was fighting it is free again
 		if is_instance_valid(e) and e.blocked_by == self:
 			e.blocked_by = null
+	if tower.game.with_rig and is_inside_tree():
+		VfxKit.troop_poof(get_parent(), global_position)
 	died.emit(self)
 	queue_free()

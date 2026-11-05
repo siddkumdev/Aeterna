@@ -14,6 +14,7 @@ const MAX_BURSTS := 24
 const FIRE_SHADER := preload("res://shaders/fx_toon_fire.gdshader")
 const BURST_SHADER := preload("res://shaders/fx_toon_burst.gdshader")
 const WIND_SHADER := preload("res://shaders/fx_toon_wind.gdshader")
+const PAINT_SHADER := preload("res://shaders/fx_painted_fire.gdshader")
 static var _noise: ImageTexture
 
 static var _tex := {}
@@ -95,13 +96,13 @@ static func set_halo(mi: MeshInstance3D, size: float, color: Color) -> void:
 	(mi.material_override as StandardMaterial3D).albedo_color = color
 
 
-static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, size: float, speed: float) -> CPUParticles3D:
+static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, size: float, speed: float, additive := true) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.amount = amount
 	p.lifetime = life
 	p.local_coords = false
 	p.mesh = quad(1.0)
-	p.material_override = material("disc", true)
+	p.material_override = material("disc", true, additive)
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.direction = Vector3.UP
 	p.spread = 180.0
@@ -121,11 +122,11 @@ static func _emitter(color_a: Color, color_b: Color, amount: int, life: float, s
 	return p
 
 
-static func burst(at_parent: Node, world_pos: Vector3, color_a: Color, color_b: Color, count := 12, speed := 0.06, life := 0.45, size := 0.006, gravity := -0.12) -> CPUParticles3D:
+static func burst(at_parent: Node, world_pos: Vector3, color_a: Color, color_b: Color, count := 12, speed := 0.06, life := 0.45, size := 0.006, gravity := -0.12, additive := true) -> CPUParticles3D:
 	## A one-shot puff of embers at world_pos. Skipped (returns null) when MAX_BURSTS are already alive.
 	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
 		return null
-	var p := _emitter(color_a, color_b, count, life, size, speed)
+	var p := _emitter(color_a, color_b, count, life, size, speed, additive)
 	p.one_shot = true
 	p.explosiveness = 0.95
 	p.gravity = Vector3(0, gravity, 0)
@@ -272,6 +273,106 @@ static func toon_fire(parent: Node3D, mode: int, size: Vector2, energy := 1.0, f
 	mi.extra_cull_margin = 2.0
 	parent.add_child(mi)
 	return mi
+
+
+static func paint(parent: Node3D, mode: int, size: Vector2, energy := 1.0, flow := 1.0) -> MeshInstance3D:
+	## Moodboard #44 fire: mode 0 orb, 1 flat ring, 2 comet, 3 cloud (see fx_painted_fire.gdshader). size = world size, metres.
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	mi.material_override = _paint_material(mode, size, energy, flow)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func _paint_material(mode: int, size: Vector2, energy: float, flow: float) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = PAINT_SHADER
+	m.set_shader_parameter("noise", noise())
+	m.set_shader_parameter("mode", mode)
+	m.set_shader_parameter("size", size)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("flow", flow)
+	m.set_shader_parameter("seed", randf() * 40.0)
+	return m
+
+
+static func paint_ribbon(parent: Node3D, points: PackedVector3Array, width: float, flow := 1.0) -> MeshInstance3D:
+	## A flame that runs along a line (mode 4): the strip turns to face the camera in the shader, so it reads from every side.
+	var verts := PackedVector3Array()
+	var dirs := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	var n := points.size()
+	for i in n:
+		var along := (points[mini(i + 1, n - 1)] - points[maxi(i - 1, 0)]).normalized()
+		for side in 2:
+			verts.append(points[i])
+			dirs.append(along)
+			uvs.append(Vector2(float(i) / (n - 1), float(side)))
+		if i < n - 1:
+			var a := i * 2
+			idx.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = dirs
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = _paint_material(4, Vector2(width, width), 1.0, flow)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	parent.add_child(mi)
+	return mi
+
+
+static func paint_cloud(at_parent: Node, world_pos: Vector3, size: float, life := 0.6) -> void:
+	## A one-shot puffy fire cloud that swells and burns away (moodboard #44).
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := _paint_material(3, Vector2(size, size), 1.0, 1.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	_paint_once(at_parent, mi, world_pos, life)
+	m.set_shader_parameter("depth_bias", 0.04)
+	m.set_shader_parameter("alpha", 0.8)  # the enemy shows through it
+	mi.create_tween().tween_method(func(k: float): m.set_shader_parameter("progress", k), 0.0, 1.0, life)
+
+
+static func paint_ring(at_parent: Node, world_pos: Vector3, size: float, life := 0.4, face_camera := false) -> void:
+	## A one-shot ring of flame, flat in the world, that runs outward and thins away (moodboard #44).
+	if _active >= MAX_BURSTS or at_parent == null or not at_parent.is_inside_tree():
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = quad(1.0)
+	var m := _paint_material(1, Vector2(size, size), 1.0, 1.0)
+	m.set_shader_parameter("face_camera", face_camera)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 2.0
+	_paint_once(at_parent, mi, world_pos, life)
+	var run := func(k: float):
+		var out := 1.0 - pow(1.0 - k, 3.0)
+		m.set_shader_parameter("radius", lerpf(0.15, 0.72, out))
+		m.set_shader_parameter("energy", lerpf(1.0, 0.0, k * k))
+	run.call(0.0)
+	mi.create_tween().tween_method(run, 0.0, 1.0, life)
+
+
+static func _paint_once(at_parent: Node, mi: MeshInstance3D, world_pos: Vector3, life: float) -> void:
+	at_parent.add_child(mi)
+	mi.global_position = world_pos
+	_active += 1
+	mi.tree_exited.connect(_burst_gone)
+	_free_after(mi, life)
 
 
 static func toon_set(mi: MeshInstance3D, param: String, value: Variant) -> void:
@@ -424,3 +525,64 @@ static func toon_dust(parent: Node, at: Vector3, size: float) -> void:
 	m.set_shader_parameter("c_ink", Color("7E6048"))
 	m.set_shader_parameter("shards", 0.0)
 	m.set_shader_parameter("depth_bias", 0.02)  # in front of the grass
+
+static func hit_spark(parent: Node, at: Vector3) -> void:
+	## The most frequent effect in the game: a tiny snap of yellow-orange chips where a shot lands. Skipped when the cap is
+	## nearly full, so a crowd under fire never starves the tower and spell effects of their bursts.
+	if _active > MAX_BURSTS - 8:
+		return
+	burst(parent, at, FIRE_YELLOW, FIRE_ORANGE, 5, 0.05, 0.18, 0.0045, 0.0)
+
+
+static func ink_puff(parent: Node, at: Vector3, size: float, life := 0.6) -> void:
+	## A painted puff of near-black ink (no grey, so it reads as the enemy's own body coming apart, not as stone) that thins out
+	## as it rises.
+	var mi := toon_burst(parent, at, size, "burst", life)
+	if mi == null:
+		return
+	var m := mi.material_override as ShaderMaterial
+	m.set_shader_parameter("c_core", Color("2B2535"))
+	m.set_shader_parameter("c_mid", Color("1C1826"))
+	m.set_shader_parameter("c_out", INK)
+	m.set_shader_parameter("c_ink", INK)
+	m.set_shader_parameter("shards", 0.0)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "global_position", at + Vector3(0.0, size * 0.35, 0), life)
+
+
+static func ink_flecks(parent: Node, at: Vector3, count: int, speed: float, life: float, size: float, gravity := 0.0) -> void:
+	## Dark flecks (drawn without the additive blend, which would make dark colours vanish).
+	burst(parent, at, INK, Color("3A3342"), count, speed, life, size, gravity, false)
+
+
+static func enemy_death(parent: Node, at: Vector3, kind: String, flying: bool, height: float) -> void:
+	## An enemy going down, by kind (asset list X17, X23). `at` is its feet, board-world. Black ink plus bright orange
+	## embers (magic colours); the embers are big enough to read from the player's distance.
+	var mid := at + Vector3(0, height * 0.5, 0)
+	if flying:  # a Wisp: its ink comes apart and drifts up like feathers
+		ink_puff(parent, mid, 0.03, 0.55)
+		ink_flecks(parent, mid, 12, 0.04, 0.7, 0.008, 0.05)
+		burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 8, 0.06, 0.4, 0.008, 0.0)
+		return
+	match kind:
+		"splitter":  # the cap bursts: a bigger puff, the splitlings step out of it
+			ink_puff(parent, mid, 0.04, 0.5)
+			ink_flecks(parent, mid, 10, 0.06, 0.45, 0.008)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 10, 0.07, 0.4, 0.008)
+		"tunneler":
+			toon_dust(parent, at, 0.05)
+			burst(parent, mid, Color("7E6048"), Color("C2B49A"), 10, 0.05, 0.45, 0.006, -0.12, false)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 6, 0.06, 0.35, 0.007)
+		"scout", "splitling":
+			ink_puff(parent, mid, 0.024, 0.45)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 7, 0.06, 0.35, 0.007)
+		_:
+			ink_puff(parent, mid, 0.032, 0.5)
+			ink_flecks(parent, mid, 6, 0.05, 0.4, 0.007)
+			burst(parent, mid, FIRE_YELLOW, FIRE_ORANGE, 9, 0.07, 0.4, 0.008)
+
+
+static func troop_poof(parent: Node, at: Vector3) -> void:
+	## A Guard falling: a small cream-coloured poof (asset list X23).
+	toon_dust(parent, at, 0.035)
+	burst(parent, at + Vector3(0, 0.015, 0), Color("F4E9D2"), Color("C2B49A"), 6, 0.04, 0.35, 0.004)

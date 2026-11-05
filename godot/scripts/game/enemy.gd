@@ -22,6 +22,9 @@ signal died(enemy: Enemy)
 const INK := Color(0.118, 0.102, 0.133)
 const MIST := Color(0.62, 0.62, 0.64)
 const DIRT := Color(0.36, 0.25, 0.17)
+const MODELS := {"grunt": ["blightbark", "bark"], "fog": ["blightbark", "bark"], "scout": ["veilrunner", "veil"], "splitter": ["sporebloom", "spore"],
+	"splitling": ["sporebud", "spore"], "wisp": ["lantern_spirit", "lantern"], "tunneler": ["mawdrill", "drill"]}
+const MODEL_SCALE := 0.75
 
 var game  # Game
 var kind := "grunt"
@@ -50,7 +53,10 @@ var slow_factor := 1.0
 
 var _mats: Array[StandardMaterial3D] = []
 var _flash := 0.0
+var _spark_ms := 0  # last hit spark, so a fast tower does not spam them
+var _dust_t := 0.0  # a Tunneler's mound drops a puff of dirt now and then
 var _body: Node3D
+var _rig: CharacterRig  # the real model and its animation (null when effects are off, or for the Warden and its crystals)
 var _mound: MeshInstance3D
 var _surface := Vector2i.ZERO  # where a Tunneler comes up
 
@@ -115,6 +121,21 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 		_:
 			_capsule(0.012, 0.045)
 			_eyes(0.0045, 0.032, 0.0102)
+	if game != null and game.with_rig and MODELS.has(kind):
+		_use_model()
+
+
+func _use_model() -> void:
+	## Durva's model instead of the stand-in shapes (test import 2026-11-03, her designs are awaiting approval).
+	for c in _body.get_children():
+		c.free()
+	_mats.clear()
+	_rig = CharacterRig.new()
+	_body.add_child(_rig)
+	_rig.setup(MODELS[kind][0], MODELS[kind][1])
+	_rig.scale = Vector3.ONE * MODEL_SCALE
+	if stats.get("hidden", false):
+		_rig.set_misty()
 
 
 func _capsule(r: float, h: float) -> void:
@@ -212,6 +233,8 @@ func spawn_at(spawn_cell: Vector2i, at := Vector3.INF) -> void:
 	position = NavGrid.cell_centre(cell) + offset if at == Vector3.INF else at
 	if flying:
 		position.y = 1.5 * GameConfig.CELL  # rises out of the tree line
+	elif _rig and at == Vector3.INF and not underground:
+		_rig.rise(0.5)  # comes up out of the ground at the forest's edge
 	_reroute()
 
 
@@ -244,6 +267,9 @@ func _reroute() -> void:
 func step(delta: float) -> void:
 	if not alive:
 		return
+	if _rig:
+		_rig.anim = "attack" if attacking or blocked_by != null else ("idle" if target_house == -1 else "walk")
+		_rig.gait = stats["speed"] * slow_factor
 	if _flash > 0.0:
 		_flash -= delta
 		if _flash <= 0.0:
@@ -254,6 +280,12 @@ func step(delta: float) -> void:
 		take_damage(burn_dps * delta, false)
 		if not alive:
 			return
+	if underground and _mound != null and game != null and game.with_rig and is_inside_tree():
+		_dust_t -= delta
+		if _dust_t <= 0.0:
+			_dust_t = 0.5
+			if VfxKit.active_bursts() <= VfxKit.MAX_BURSTS - 8:  # keep room for the towers and spells
+				VfxKit.toon_dust(get_parent(), global_position, 0.022)
 	if slow_left > 0.0:
 		slow_left -= delta
 		if slow_left <= 0.0:
@@ -315,9 +347,14 @@ func _move_straight(stride: float) -> void:
 
 func _pop_up() -> void:
 	underground = false
+	if game != null and game.with_rig and is_inside_tree():
+		VfxKit.toon_dust(get_parent(), global_position, 0.05)
+		VfxKit.burst(get_parent(), global_position + Vector3(0, 0.01, 0), Color("7E6048"), Color("C2B49A"), 8, 0.05, 0.4, 0.005)
 	cell = _surface
 	_body.visible = true
 	_mound.visible = false
+	if _rig:
+		_rig.rise(0.35)
 	_reroute()
 
 
@@ -335,10 +372,21 @@ func take_damage(amount: float, flash := true) -> void:
 		for m in _mats:
 			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
 		_flash = 0.08
+		if _rig:
+			_rig.hit()
+		if game != null and game.with_rig and is_inside_tree() and Time.get_ticks_msec() - _spark_ms >= 120:
+			_spark_ms = Time.get_ticks_msec()
+			VfxKit.hit_spark(get_parent(), chest())
 	if hp <= 0.0:
 		if on_zero.is_valid() and on_zero.call():
 			return  # a phase ended, the Warden lives on
 		alive = false
+		if game != null and game.with_rig and is_inside_tree() and not is_boss and kind != "crystal":
+			VfxKit.enemy_death(get_parent(), global_position, kind, flying, height)
+		if _rig and is_inside_tree():  # the body stays behind a moment and topples
+			_rig.reparent(get_parent())
+			_rig.die()
+			_rig = null
 		died.emit(self)
 		queue_free()
 

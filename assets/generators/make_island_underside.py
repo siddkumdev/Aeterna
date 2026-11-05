@@ -34,7 +34,7 @@ ROCK_DEPTH = 0.50
 ZB = -ROCK_DEPTH          # the rock's bottom plane
 ZH = ZB - 0.22            # where the propulsion hangs (below the keel's neck)
 MAX_DEPTH = 1.10          # everything hangs inside this
-NAME_FINAL = "ew_world_island_underside_v02"
+NAME_FINAL = "ew_world_island_underside_v03"
 NAME = "ew_world_island_underside_v03"
 P = 1.3                   # scale of the propulsion cluster (seed, roots, fins) relative to round 2
 CONTRAST = {"roof_orange": "wall_cream", "roof_teal": "wall_cream", "roof_terracotta": "wall_cream", "wall_cream": "roof_terracotta"}
@@ -240,12 +240,17 @@ ZP = -0.24
 SPOTS = ((0.575, -0.10, 90, 180), (0.10, -0.575, 0, 90), (-0.26, -0.575, 0, 90))   # x, y, plank rot, face_deg
 
 
-def crew(prefix, specs):
-    """Planks + villagers for SPOTS. specs: (cloth, tool, skin, hair). Returns (static parts, arm groups, anchors)."""
+def crew(prefix, specs, stand_ins=True):
+    """Planks + villagers for SPOTS. specs: (cloth, tool, skin, hair). Returns (static parts, arm groups, anchors).
+    Without stand-ins (v03, Siddharth 2026-11-04) only the planks stay, each with a worker_anchor: Godot stands Durva's
+    characters there and animates them."""
     parts, groups, anchors = [], [], {}
     for i, ((x, y, rot, face), (cloth, tool, skin, hair)) in enumerate(zip(SPOTS, specs)):
         tag = "%s%d" % (prefix, i + 1)
         parts += plank("p" + tag, x, y, ZP, 0.17, 0.09, rot)
+        if not stand_ins:
+            anchors["v%s_worker_anchor" % tag] = ((x, y, ZP), "", 0.02)
+            continue
         body, arm, shoulder, tip = villager("v" + tag, x, y, ZP, face, cloth, tool, skin, hair)
         parts += body
         groups.append(("v%s_arm" % tag, arm, shoulder, ""))
@@ -307,7 +312,7 @@ def variant_f():
     fins = [bc.cone("fin%d" % k, 0.006, 0.042, 0.080, (0.140 * math.cos(2 * math.pi * k / 6 + 0.5), 0.140 * math.sin(2 * math.pi * k / 6 + 0.5), zs - 0.015),
                     "dirt_light", 5, math.degrees(2 * math.pi * k / 6)) for k in range(6)]
     people, arm_groups, anchors = crew("f", (("roof_teal", "hammer", "skin_mid", None), ("roof_orange", "cloth", "skin_light", "hair_blonde"),
-                                             ("wall_cream", "brush", "skin_dark", None)))
+                                             ("wall_cream", "brush", "skin_dark", None)), stand_ins=False)
     anchors["thrust_anchor"] = ((0, 0, zs - 0.0715 * P), "", 0.06)
     return [("", parts + people, (0, 0, 0), None), ("fins", fins, (0, 0, zs), ""), ("drift", debris(6), (0, 0, ZH - 0.15), "")] + arm_groups, anchors
 

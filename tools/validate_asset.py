@@ -75,8 +75,10 @@ def main(blend):
         else:
             if any(abs(v) > 1e-4 for v in o["loc"] + o["rot"]) or any(abs(s - 1) > 1e-4 for s in o["scale"]):
                 bad.append("%s: transforms not applied / object not at origin" % n)
-            if abs(o["min_z"]) > 1e-3 and not root.startswith("ew_world_island_underside_v"):  # hangs below its origin on purpose: origin = attach plane under the island
-                bad.append("%s: origin not at base (min z = %.4f)" % (n, o["min_z"]))
+            # the base is the lowest point of the root and its direct parts (a character's feet are parts)
+            base = min([o["min_z"]] + [p["min_z"] + p["loc"][2] for p in objs if p["parent"] == n])
+            if abs(base) > 1e-3 and not root.startswith("ew_world_island_underside_v"):  # hangs below its origin on purpose: origin = attach plane under the island
+                bad.append("%s: origin not at base (min z = %.4f)" % (n, base))
         if o["modifiers"]:
             bad.append("%s: %d leftover modifiers" % (n, o["modifiers"]))
         if o["materials"] > 2:

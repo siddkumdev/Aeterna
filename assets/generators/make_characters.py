@@ -676,13 +676,14 @@ def build(name, key):
             root.append(bc.cone("tutu", br * rr, br * rr * 0.80, 0.0012, (0, 0, lh + bh * 0.28 + dz), col, 14))
     if c["scarf"]:
         root.append(bc.cone("scarf", br * 1.05, br * 0.95, bh * 0.20, (0, 0, neck - bh * 0.06), c["scarf"], 12))
+    leg_groups = []  # legs and boots are parts (same geometry), so Godot can step them or keep them still for a hop
     if c["body"] not in ("robe", "gown"):
-        for s in (-1, 1):
-            root += [seg("leg", (s * br * 0.55, 0, 0.002), (s * br * 0.55, 0, lh), 0.0026, 0.0028, c["skin"], 8),
-                     bc.box("boot", (0.0058, 0.0085, 0.0034), (s * br * 0.55, -0.0012, 0.0017), c["boots"])]
+        for s, side in ((-1, "r"), (1, "l")):
+            leg_groups.append(("leg_" + side, [seg("leg", (s * br * 0.55, 0, 0.002), (s * br * 0.55, 0, lh), 0.0026, 0.0028, c["skin"], 8),
+                                               bc.box("boot", (0.0058, 0.0085, 0.0034), (s * br * 0.55, -0.0012, 0.0017), c["boots"])], (s * br * 0.55, 0, lh), ""))
     else:
-        for s in (-1, 1):
-            root.append(bc.box("boot", (0.0058, 0.0085, 0.0034), (s * br * 0.55, -0.0014, 0.0017), c["boots"]))
+        for s, side in ((-1, "r"), (1, "l")):
+            leg_groups.append(("leg_" + side, [bc.box("boot", (0.0058, 0.0085, 0.0034), (s * br * 0.55, -0.0014, 0.0017), c["boots"])], (s * br * 0.55, 0, 0.0034), ""))
     for s in (-1, 1):  # stub shoulders so the sleeves meet the body
         pass
 
@@ -691,7 +692,7 @@ def build(name, key):
         head += horns(c, hz)
     if c["hat"] and c["hat"][0] == "helm":
         pass
-    groups = [("", root, (0, 0, 0), ""), ("head", head, (0, 0, neck), "")]
+    groups = [("", root, (0, 0, 0), ""), ("head", head, (0, 0, neck), "")] + leg_groups
     hb = hair_back(c, hz)
     if hb:
         groups.append(("hair_back", hb, (0, ry * 0.7, hz), "head"))

@@ -31,6 +31,7 @@ var _rng := RandomNumberGenerator.new()
 var _scenes := {}
 var _tiles: Array[Rect2] = []  # footprints of every path tile, in cell coordinates (corner origin)
 var _props: Array[Vector2] = []  # where every prop stands, in cell coordinates (the grass clears a ring round each)
+var _landmarks_at := {}  # prop name -> the first cell it stands on (where the villagers do their jobs)
 var _root: Node3D
 var _nav: NavGrid
 var _z := 0
@@ -53,7 +54,7 @@ static func build(board: Node3D, rng_seed: int) -> Dictionary:
 	for c in d._nav.kind:
 		if d._nav.kind[c] == "decor":
 			out.append(c)
-	return {"decor": out, "tiles": d._tiles, "props": d._props}
+	return {"decor": out, "tiles": d._tiles, "props": d._props, "landmarks": d._landmarks_at}
 
 
 func _scene(path: String) -> PackedScene:
@@ -153,6 +154,8 @@ func _place(name: String, cell: Vector2i, facing: float, scale := 1.0) -> void:
 	n.rotation.y = facing + _rng.randf_range(-0.45, 0.45)
 	n.scale = Vector3.ONE * scale * _rng.randf_range(0.95, 1.05)
 	_nav.kind[cell] = "decor"
+	if not _landmarks_at.has(name):
+		_landmarks_at[name] = cell
 
 
 func _house_props() -> void:

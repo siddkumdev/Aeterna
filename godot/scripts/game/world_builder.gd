@@ -6,7 +6,7 @@ extends RefCounted
 ## low and sparse so it does not hide the village. Seeded, so a run always looks the same.
 
 const ISLAND := "res://assets/world/ew_world_island_v01.glb"
-const UNDERSIDE := "res://assets/world/ew_world_island_underside_v02.glb"
+const UNDERSIDE := "res://assets/world/ew_world_island_underside_v03.glb"
 const CLUMPS: Array[String] = [
 	"res://assets/world/ew_world_forest_clump_dark_v02.glb",
 	"res://assets/world/ew_world_forest_clump_mix_v02.glb",
@@ -28,7 +28,7 @@ static func build_island(board: Node3D) -> void:
 
 ## The floating sky-island rock under the island (W02). Its origin is the attach plane = the island's base, and it is built
 ## for the stretched 24 x 24 island (0.57 m half width), so it is not scaled. The drifting rocks bob and the leaf fins turn
-## slowly; the thrust anchor carries the IslandThrust propulsion effect; the villager arms and energy anchors are left for the next VFX step.
+## slowly; the thrust anchor carries the IslandThrust propulsion effect; IslandWorkers stands the characters at the worker anchors.
 static func build_underside(board: Node3D) -> Node3D:
 	var under: Node3D = load(UNDERSIDE).instantiate()
 	under.position.y = -ISLAND_HEIGHT

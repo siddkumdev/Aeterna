@@ -30,6 +30,7 @@ func _initialize() -> void:
 	await _decor()
 	await _grass()
 	await _vfx()
+	await _village_life()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -570,6 +571,21 @@ func _sell() -> void:
 	g.try_build("guard", Vector2i(4, 11))
 	g.select("sell")
 	check("Sell sign selects sell mode", g.selected == "sell")
+	var sold: Tower = g.tower_at(Vector2i(12, 5))
+	var meshes := ModelUtil.walk(sold).filter(func(n): return n is MeshInstance3D and n.mesh != null)
+	var own: Array = meshes.map(func(n): return n.material_override)
+	g._hover_board_cell = Vector2i(12, 5)
+	g._update_ghost()
+	check("the tower under the pointer turns solid red inside a ring", g._sell_mat != null and g._sell_mat.albedo_color.a == 1.0 and g._sell_ring.is_visible_in_tree() and not g._ghost_plate.visible and meshes.any(func(n): return n.material_override == g._sell_mat))
+	check("the other tower does not", not ModelUtil.walk(g.towers[1]).any(func(n): return n is MeshInstance3D and n.material_override == g._sell_mat))
+	g._hover_board_cell = Vector2i(0, 0)
+	g._update_ghost()
+	check("pointing away gives the tower its own look back", range(meshes.size()).all(func(i): return meshes[i].material_override == own[i]))
+	g._hover_board_cell = Vector2i(12, 5)
+	g._update_ghost()
+	g.select("")
+	check("leaving sell mode does too", range(meshes.size()).all(func(i): return meshes[i].material_override == own[i]))
+	g.select("sell")
 	g.start_night()
 	check("no selling during the night", not g.sell(g.towers[0]) and g.towers.size() == 2)
 	g._clear_night()
@@ -977,6 +993,115 @@ func _warden() -> void:
 	g.queue_free()
 
 
+func _village_life() -> void:
+	var g: Game = load("res://scripts/game/game.gd").new()
+	g.with_rig = false
+	g.with_life = true
+	root.add_child(g)
+	await process_frame
+	var life: VillageLife = g.life
+	check("12 villagers, 2 to a house", life.villagers.size() == 12 and range(6).all(func(h): return life.villagers.filter(func(v): return v.home == h).size() == 2))
+	check("they are all out on the first day", life.villagers.all(func(v): return v.visible))
+	check("every model has a head, arms and legs", life.villagers.all(func(v): return v.rig.parts.has("head") and v.rig.parts.has("arm_l") and v.rig.parts.has("arm_r") and v.rig.parts.has("leg_l") and v.rig.parts.has("leg_r")))
+	check("the forest's watchers wait by day", life.lurkers.size() >= 4)
+	var trees_only := func(): return life.lurkers.all(func(l): return l["cell"].x in [1, GameConfig.SIZE - 2] or l["cell"].y in [1, GameConfig.SIZE - 2])
+	var on_solid := false
+	for i in 1200:  # a minute of the day
+		life.tick(0.05)
+		for v in life.villagers:
+			if v.state == "go" and v._path.size() > 1:
+				var c := NavGrid.local_to_cell(NavGrid.cell_centre(v._path[0]))
+				on_solid = on_solid or (g.nav.kind.has(c) and g.nav.kind[c] != "spawn")
+	check("a minute later the watchers are still by the tree line", trees_only.call())
+	check("no one's route crosses a house, prop or the forest", not on_solid)
+	var trust := g.trust
+	var hp: float = g.houses[0].hp
+	g.start_night()
+	check("at nightfall the watchers go", life.lurkers.is_empty())
+	check("at nightfall everyone runs", life.villagers.all(func(v): return v.state == "startle" or v.state == "inside"))
+	for i in 200:  # 10 seconds is plenty at 6 cells a second
+		life.tick(0.05)
+	check("within 10 s all 12 are inside", life.villagers.all(func(v): return v.state == "inside" and not v.visible))
+	check("running home changes no rule", g.trust == trust and g.houses[0].hp == hp)
+	g.houses[0].damage(99999.0)
+	g._end_night()
+	check("after dawn the watchers are back", life.lurkers.size() >= 4)
+	for i in 120:
+		life.tick(0.05)
+	check("at dawn all 12 come back out, a shuttered home too", life.villagers.all(func(v): return v.visible and v.state != "inside"))
+	CharacterRig.step_legs = true
+	var r: CharacterRig = life.villagers[2].rig
+	r.anim = "walk"
+	r.gait = 1.1
+	var before: Transform3D = r.parts["leg_l"].transform
+	r.tick(0.1)
+	check("stepping legs move the leg parts", not r.parts["leg_l"].transform.is_equal_approx(before))
+	CharacterRig.step_legs = false
+	# someone halfway through a door when the day comes back still comes out
+	g.start_night()
+	var v: Villager = life.villagers[0]
+	v.state = "enter"
+	g.new_run(5)
+	for i in 120:
+		life.tick(0.05)
+	check("whoever was at the door when day came back is out again", v.visible and v.state != "inside")
+	g.queue_free()
+	await process_frame
+	await _real_models()
+
+
+func _real_models() -> void:
+	## With the rig on: enemies and crews wear Durva's models, die as bodies left behind, and the rules are the same.
+	var g: Game = load("res://scripts/game/game.gd").new()
+	root.add_child(g)
+	await process_frame
+	g.trust = 900
+	g.cards = {}
+	g.try_build("fire", Vector2i(5, 12))
+	g.try_build("guard", Vector2i(18, 12))
+	check("the wizard wears a model, with a staff tip for its flame", g.towers[0].crew._rig != null and g.towers[0].crew._tip != null)
+	check("the Guards wear models", g.towers[1].guards.all(func(gd): return gd._crew._rig != null))
+	var iw: IslandWorkers = g.island_workers
+	check("3 of Durva's characters work under the island", iw.workers.size() == 3 and iw.workers.all(func(r): return r.is_inside_tree()))
+	var pulses_before := iw.channels
+	iw.channel_now(1)
+	check("a channelling worker raises its tool", iw.workers[1].anim == "channel")
+	var tool_raised := true
+	for w in iw.workers:
+		var keep: String = w.anim
+		w.anim = "idle"
+		w.tick(0.0)
+		var low := iw._tool_tip(w).y
+		w.anim = "channel"
+		w.tick(0.0)
+		tool_raised = tool_raised and iw._tool_tip(w).y > low + 0.005
+		w.anim = keep
+	iw.workers[1].anim = "channel"
+	check("every worker's tool really goes up when it channels", tool_raised)
+	for i in 40:
+		iw.tick(0.05)
+	check("the thread reaches the seed and the propulsion flares", iw.channels == pulses_before + 1 and iw._thrust._flare > 0.0)
+	check("then the worker goes back to work", iw.workers[1].anim == "hammer" and not iw._thread.visible)
+	g.start_night()
+	g._spawn_queue.clear()
+	var all_rigged := true
+	for k in ["grunt", "scout", "splitter", "splitling", "wisp", "tunneler", "fog"]:
+		var e: Enemy = g._spawn(Vector2i(12, 2), k)
+		all_rigged = all_rigged and e._rig != null
+		var hp0: float = GameConfig.ENEMIES[k]["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * g.night)
+		check("%s: the model leaves its HP alone" % k, is_equal_approx(e.hp, hp0))
+	check("every enemy kind wears its model", all_rigged)
+	var boss: Enemy = g._spawn(Vector2i(12, 2), "boss")
+	check("the Warden stays a stand-in until Durva picks one", boss._rig == null)
+	var victim: Enemy = g.enemies[0]
+	victim.take_damage(99999.0)
+	check("a dead enemy leaves its toppling body behind", g._enemies_root.get_children().any(func(c): return c is CharacterRig))
+	check("the body is not counted as an enemy", not g.enemies.has(victim))
+	await process_frame
+	g.queue_free()
+	await process_frame
+
+
 func _crews() -> void:
 	var g := await _make_game()
 	g.trust = 500
@@ -996,7 +1121,7 @@ func _crews() -> void:
 	wiz.cooldown = 0.0
 	g.step(0.05)
 	check("firing starts the crew's shot animation", wiz.crew._act > 0.0)
-	check("a wizard's fireball leaves from his staff tip", wiz.last_from.distance_to(wiz.crew.hand_point()) < 0.001 and not g.shots.is_empty() and target != null)
+	check("a wizard's fireball leaves from the floating orb", wiz.last_from.distance_to(wiz._muzzle.global_position) < 0.001 and not g.shots.is_empty() and target != null)
 	g.queue_free()
 
 
@@ -1173,7 +1298,7 @@ func _vfx() -> void:
 	wiz.cooldown = 0.5
 	g.step(0.05)
 	wiz.fx._process(0.016)
-	check("while aiming, the orb gives its power to the staff (it dims below full)", wiz.fx.orb.level < 1.0)
+	check("while aiming, the orb charges up", wiz.fx.orb.charge > 0.0)
 	wiz.cooldown = 0.0
 	g.step(0.05)
 	check("a shot sends a fireball with a glow and an ember trail", not g.shots.is_empty() and g.shots[0]._trail != null and g.shots[0]._glow != null)
@@ -1182,6 +1307,12 @@ func _vfx() -> void:
 	await process_frame
 	check("the effects never change a rule: the grunt still took damage from the shot", foe.hp < 99999.0)
 	g.queue_free()
+	await process_frame
+	var gr := await _make_game()
+	gr.select("sell")
+	gr.new_run(1)
+	check("a new run clears sell mode and its ring", gr.selected == "" and not gr._sell_ring.is_visible_in_tree())
+	gr.queue_free()
 	await process_frame
 	var g2 := await _make_game()
 	g2.trust = 500

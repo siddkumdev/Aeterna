@@ -40,8 +40,51 @@ var _gate: Node3D  # the model's spawn_anchor: where a new Guard steps out
 
 var last_from := Vector3.ZERO  # where the latest shot left the tower (world)
 var crew: CrewMember  # the villager manning it (a stand-in body, animated)
+var _tinted := {}  # sell mode: mesh -> its own material_override, to put back
 var aiming := false  # a target is in range this tick (the effects read it; nothing in the rules does)
 var fx: TowerFx  # this tower's visual effects, when it has them yet
+
+
+func settle() -> void:
+	## Set down like a toy on a table (Dorfromantik lesson: the action done most gets the nicest feel): drops a few
+	## millimetres, squashes on landing, springs back past its height and rests. The origin is the base, so it squashes
+	## into the ground. Purely visual; the tower is already built and targetable.
+	var rest_y := position.y
+	position.y = rest_y + 0.03
+	scale = Vector3(0.94, 1.1, 0.94)
+	var tw := create_tween()
+	tw.tween_property(self, "position:y", rest_y, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(self, "scale", Vector3.ONE, 0.09)
+	tw.tween_property(self, "scale", Vector3(1.12, 0.84, 1.12), 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(self, "scale", Vector3(0.97, 1.05, 0.97), 0.1).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(self, "scale", Vector3.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func tint(mat: Material) -> void:
+	## Sell mode: the tower and its people turn solid `mat`; null puts their own look back.
+	## Effects keep theirs (shader flames, additive glows).
+	for m in _tinted:
+		if is_instance_valid(m):
+			m.material_override = _tinted[m]
+	_tinted.clear()
+	if fx:
+		fx.visible = mat == null  # its flames and glows are not part of the tower: they would cross the red body
+	if mat == null:
+		return
+	var plain: Material = mat.duplicate()
+	if plain is StandardMaterial3D:
+		plain.albedo_texture = null
+	for n in ModelUtil.walk(self):
+		if n is MeshInstance3D and n.visible and n.mesh != null and _is_body(n):
+			_tinted[n] = n.material_override
+			n.material_override = plain if n.material_override != null else mat  # primitives (a stand-in pilot) have no atlas UVs
+
+
+func _is_body(m: MeshInstance3D) -> bool:
+	if m.material_override == null:
+		return true
+	var own := m.material_override as StandardMaterial3D
+	return own != null and own.blend_mode == BaseMaterial3D.BLEND_MODE_MIX and not (m.mesh is QuadMesh)
 
 
 func setup(tower_kind: String, top_left: Vector2i) -> void:
@@ -85,7 +128,7 @@ func _add_crew(model: Node3D) -> void:
 			at = t.origin
 	crew = CrewMember.new()
 	add_child(crew)
-	crew.setup(cfg["crew"])
+	crew.setup(cfg["crew"], game.with_rig)
 	crew.position = at
 
 
@@ -168,8 +211,6 @@ func step(delta: float) -> void:
 		var from := _muzzle.global_position if _muzzle and _muzzle.is_inside_tree() else global_position + Vector3(0, _muzzle_h, 0)
 		if crew:
 			crew.react(target.global_position)
-			if cfg.get("shoot_from_crew", false):
-				from = crew.hand_point()
 		last_from = from
 		if kind == "crossbow" and game.grass != null:
 			game.grass.gust(from, target.global_position)  # the bolt's pale-green wind runs through the grass

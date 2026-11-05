@@ -1,5 +1,9 @@
 # Aeterna Watch (test input, not part of the game)
 
+> **ARCHIVED 2026-11-03 (Siddharth).** The team got permission to use a headset, so the watch stand-in is no longer needed; it stays as a nice-to-have.
+> Nothing here is maintained or on the roadmap. The code is kept as it is (the game only loads it when `AETERNA_WATCH=1`). Open items when it was parked:
+> calibration not tried on the real watch, front/back direction and range unconfirmed, release detection about 50-70%.
+
 Goal (Siddharth, 2026-11-02): a stand-in for hand tracking while there is no headset. The Galaxy Watch 4 Classic aims with
 the wrist and detects pinch and unpinch. This folder holds step 1: a recorder that proves whether a pinch can be seen in
 the sensors at all.

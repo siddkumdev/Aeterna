@@ -2,22 +2,22 @@ class_name TowerFx
 extends Node3D
 ## The effects of one tower (M2, Siddharth 2026-10-27), built one tower at a time and approved in the game.
 ## Watches the tower: it changes nothing in it, so it can never alter a gameplay number.
-##   Wizard Tower ("fire"): the floating orb is the power source. While the tower aims, the orb dims as the staff
-##   charges (a glow growing at the staff knob and a stream of embers running orb -> staff); on the shot the staff
-##   flashes and sheds embers, and the orb flares back to full. Without a target the orb idles full and the staff
-##   keeps a faint glow. Magic stays black / orange / red.
+##   Wizard Tower ("fire", redone 2026-11-04 in the style of moodboard #44): the floating orb is the source. Flames climb round
+##   the tower to it; while the tower aims the orb swells and spins faster and a ring of flame closes in on it; on the shot the
+##   fireball leaves the orb, which collapses and fills up again, and a ring runs outward. Magic stays black / orange / red.
 
 var tower: Tower
 var orb: OrbGlow
 var _staff: MeshInstance3D
-var _plume: MeshInstance3D  # the painted flame wrapping the staff while it charges
-var _wisps: Array[MeshInstance3D] = []  # painted flame wisps spiralling from the base up to the orb
-var _smoke_t := 0.0
-var _idle: CPUParticles3D   # embers drifting off the hat at rest
+var _ring: MeshInstance3D   # the flame ring that closes in on the orb as the shot nears
+var _licks: Array[MeshInstance3D] = []  # flames climbing round the tower from the base to the orb
+var _orb_size := 0.012
+var _lick_phase := 0.0
 var _t := 0.0
 var _shots := 0
 var _charge := 0.0
-const WISPS := 6
+const LICKS := 2
+const LICK_POINTS := 28
 
 
 static func attach(t: Tower, orb_anchor: Node3D, parts := {}, gate: Node3D = null) -> TowerFx:
@@ -49,21 +49,27 @@ func _build_wizard(orb_anchor: Node3D) -> void:
 	if orb_anchor.has_meta("ew_size"):
 		d = float(orb_anchor.get_meta("ew_size"))
 	orb.setup(d)
-	_staff = VfxKit.toon_fire(self, 0, Vector2.ONE * 0.02, 0.3, 1.6)  # the painted charge at the staff knob
-	VfxKit.toon_set(_staff, "depth_bias", 0.02)  # nearer the camera so the hat and pillars never hide it
-	_plume = VfxKit.toon_fire(self, 1, Vector2(0.02, 0.05), 0.0, 1.8)
-	VfxKit.toon_set(_plume, "depth_bias", 0.02)
-	for i in WISPS:
-		var w := VfxKit.toon_fire(self, 0, Vector2.ONE * 0.012, 0.8, 1.5)
-		VfxKit.toon_set(w, "depth_bias", 0.012)
-		_wisps.append(w)
-	_idle = VfxKit.trail(orb_anchor, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 14, 1.6, 0.009)  # ember shower off the orb, clear of the hat
-	_idle.position = Vector3(0, -0.004, 0)
-	_idle.direction = Vector3.UP
-	_idle.spread = 80.0
-	_idle.initial_velocity_min = 0.01
-	_idle.initial_velocity_max = 0.025
-	_idle.gravity = Vector3.ZERO
+	_orb_size = d
+	_staff = VfxKit.paint(self, 0, Vector2.ONE * 0.022, 0.9, 1.2)  # a small flame in the staff's socket: the wizard feeds the orb
+	VfxKit.toon_set(_staff, "depth_bias", 0.01)
+	_ring = VfxKit.paint(orb_anchor, 1, Vector2.ONE * d * 3.6, 0.0, 1.2)  # a flame ring closes in on the orb as the shot nears
+	VfxKit.toon_set(_ring, "depth_bias", 0.015)
+	VfxKit.toon_set(_ring, "face_camera", true)  # always a circle round the orb: lying flat it shrinks to a scratch from the side
+	_ring.visible = false
+	var orb_at := tower.to_local(orb_anchor.global_position)
+	var top := orb_at.y - 0.02
+	for i in LICKS:
+		var pts := PackedVector3Array()
+		for j in LICK_POINTS:
+			var k := float(j) / (LICK_POINTS - 1)
+			var a := TAU * i / LICKS + k * TAU * 1.25
+			var r := lerpf(0.066, 0.014, k)  # clears the hat's brim, then follows the cone in to the orb
+			var centre := Vector3(orb_at.x, 0, orb_at.z) * k  # the orb sits off the tower's axis: the flames end in it
+			pts.append(centre + Vector3(cos(a) * r, 0.015 + k * top, sin(a) * r))
+		var lick := VfxKit.paint_ribbon(self, pts, 0.01, 1.0)
+		VfxKit.toon_set(lick, "depth_bias", 0.012)
+		VfxKit.toon_set(lick, "lick_len", 0.2)
+		_licks.append(lick)
 	_shots = tower.shots_fired
 
 
@@ -88,45 +94,27 @@ func _process(delta: float) -> void:
 	_charge = 0.0
 	if tower.aiming:
 		_charge = clampf(1.0 - tower.cooldown / maxf(tower.interval, 0.01), 0.0, 1.0)
-	orb.level = 1.0 - 0.75 * _charge  # the orb gives its power to the staff
-	var sp := _staff_pos()
-	var idle := 0.5 + 0.08 * sin(_t * 3.0)
-	var glow := maxf(idle, _charge)
-	_staff.global_position = sp
-	VfxKit.toon_set(_staff, "size", Vector2.ONE * (0.012 + 0.03 * glow))
-	VfxKit.toon_set(_staff, "energy", 0.15 + 1.0 * glow)
-	_plume.global_position = sp + Vector3(0, 0.006 + 0.012 * _charge, 0)
-	VfxKit.toon_set(_plume, "size", Vector2(0.014 + 0.026 * glow, 0.012 + 0.028 * glow))
-	VfxKit.toon_set(_plume, "energy", 0.45 + 0.65 * _charge)  # a small steady flame at rest, full when charged  # grows as the staff fills, gone when idle
-	_swirl()
-	_smoke_t -= delta
-	if _smoke_t <= 0.0:
-		_smoke_t = 1.3 + randf() * 0.5
-		VfxKit.toon_smoke(tower.game.shots_root, orb.global_position - Vector3(0.006, 0.03, 0), 0.04, 2.4)
+	orb.charge = _charge
+	_staff.global_position = _staff_pos()
+	var closing := smoothstep(0.6, 1.0, _charge)
+	_ring.visible = closing > 0.0
+	if _ring.visible:
+		VfxKit.toon_set(_ring, "radius", lerpf(0.82, 0.2, closing * closing))
+		VfxKit.toon_set(_ring, "energy", lerpf(0.3, 1.0, closing))
+	_lick_phase += delta * (0.2 + 0.25 * _charge)
+	for i in _licks.size():  # each flame climbs from the foot of the tower to the orb, one after another
+		var k := fmod(_lick_phase + float(i) / LICKS, 1.0)
+		VfxKit.toon_set(_licks[i], "head", -0.2 + 1.6 * k)
 	if tower.shots_fired != _shots:
 		_shots = tower.shots_fired
-		_fired(sp)
+		_fired(orb.global_position)
 
 
-func _fired(staff_pos: Vector3) -> void:
-	orb.flare()
+func _fired(at: Vector3) -> void:
+	orb.fired()
 	var fx_root: Node = tower.game.shots_root
-	VfxKit.toon_burst(fx_root, staff_pos, 0.1, "burst", 0.3)
-	VfxKit.toon_burst(fx_root, staff_pos, 0.1, "ring", 0.3)  # a hard flat ring snaps out of the staff on release
-	VfxKit.burst(fx_root, staff_pos, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 8, 0.05, 0.35, 0.004)
-
-
-func _swirl() -> void:
-	## The whole tower breathes magic: wisps spiral up round it from the base to the orb, widest at the foot.
-	var base := tower.global_position
-	var top := orb.global_position.y - base.y - 0.02
-	for i in _wisps.size():
-		var k := fmod(_t * 0.22 + float(i) / WISPS, 1.0)
-		var a := _t * 1.5 + TAU * i / WISPS + k * 4.0
-		var r := lerpf(0.04, 0.012, k)
-		_wisps[i].global_position = base + Vector3(cos(a) * r, 0.015 + k * top, sin(a) * r)
-		VfxKit.toon_set(_wisps[i], "energy", 0.15 + 0.85 * sin(PI * k) * (0.7 + 0.5 * _charge))
-		VfxKit.toon_set(_wisps[i], "size", Vector2.ONE * (0.014 + 0.010 * sin(PI * k)))
+	VfxKit.paint_ring(fx_root, at, _orb_size * 5.0, 0.3, true)
+	VfxKit.burst(fx_root, at, VfxKit.FIRE_YELLOW, VfxKit.FIRE_RED, 8, 0.05, 0.4, 0.004, 0.0, false)  # not additive: on pale ground that burns out to white
 
 
 # ---- Guard Tower: the gate leaves swing open as a Guard steps out, a dust puff, the banner flutters ----------------

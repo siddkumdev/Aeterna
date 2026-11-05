@@ -17,7 +17,7 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - Never estimate how long a task takes (no hours/days/effort sizes, in chat or docs). Describe order, dependencies and priority; the deadline 2026-11-18 12:00 PM PT may be cited as a date.
 - Magic is black / orange / red (ink bodies, fire_red / lantern_glow / fire_yellow glows), never blue. Blue is only Foresight (Crystal Lens), purple is the Warden. Exception: the wind crossbow tower's wind is pale green, whiter than heal_green, drawn as streaks. See `art/art_bible.md` section 6.
 - VFX: log every effect anyone mentions in `docs/VFX_NOTES.md` (effect, their words, anchor, asset-list id). Models get dark sockets plus `__<name>_anchor` empties, never glowing geometry for magic. Build VFX in Godot only after all towers and major assets are modelled.
-- Reminders to raise at the right moment: (1) DONE 2026-10-22: community Godot skills reviewed; `godot-gdscript-patterns` (wshobson, MIT) and `godot-development` (omer-metin, Apache-2.0) installed in `.claude/skills/` with a project note on top; fenixnix/Godot-Skills (Godot 3) and struktured-labs/godot-mcp (Linux-only, duplicates our tools) skipped; (2) before the first villager/troop/enemy, build a "character kit" skill (shared body kit, swappable parts, tween animations, pose sheet).
+- Reminders to raise at the right moment: (1) DONE 2026-10-22: community Godot skills reviewed; `godot-gdscript-patterns` (wshobson, MIT) and `godot-development` (omer-metin, Apache-2.0) installed in `.claude/skills/` with a project note on top; fenixnix/Godot-Skills (Godot 3) and struktured-labs/godot-mcp (Linux-only, duplicates our tools) skipped; (2) DONE 2026-11-03: skill `character-kit` (how models get parts, the CharacterRig animations, the pose sheets).
 
 ## Sharing (git)
 - Private GitHub repo. Binaries (`.blend`, `.glb`, `.png`, `.jpg`) go through Git LFS (`.gitattributes`). Ignored: `local.env`, `_work/`, `*.blend1`, `godot/.godot/`.
@@ -59,6 +59,7 @@ _work/      scratch input (git-ignored)
 - Preview: `python tools/make_sheet.py assets/blend/<asset>.blend assets/previews/<asset>`
 - Validate: `python tools/validate_asset.py assets/blend/<asset>.blend`
 - Lighting presets: `python tools/render_lighting.py assets/blend/<asset>.blend assets/previews/<asset>`
+- Greyscale readability check (value, not hue): `python tools/greyscale_check.py palette|image <png>` (Dorfromantik lesson; run on every new render and palette change)
 - Palette sheet: `python tools/make_palette_preview.py`
 - Palette change (add / tweak / retire a colour; propose, the user OKs, apply): `python tools/palette_change.py usage|propose <file>|apply` (skill: palette-change)
 - Diorama shot (real assets on the board, all presets, board budget): `python tools/render_diorama.py` (skill: diorama-shot; layout in `assets/diorama/layout_mock.json`, a MOCK)
@@ -68,5 +69,6 @@ _work/      scratch input (git-ignored)
 - GitHub sync (commit + push after every change, on `main`, no Claude credit): skill `github-sync`.
 - Tracker sync (regenerate + republish the live asset tracker, move built items' status forward): `python tools/sync_tracker.py` then the tracker-sync skill steps.
 - Generate headless: `blender -b -P assets/generators/make_<name>.py` (Blender = `BLENDER_EXE` from `local.env`)
-- Watch input test (Galaxy Watch through the bridge laptop, `WATCH_BRIDGE` in `local.env`): `python watch/watch_bridge.py` (see `watch/README.md`)
+- ARCHIVED 2026-11-03 (headset permission arrived; nice-to-have only) watch input test (Galaxy Watch through the bridge laptop, `WATCH_BRIDGE` in `local.env`): `python watch/watch_bridge.py` (see `watch/README.md`)
+- Characters: `blender --factory-startup -b -P tools/export_characters.py` then sync; pose sheets `godot/tools/village_shot.gd` (skill: character-kit)
 - Machine check: `python tools/doctor.py`
