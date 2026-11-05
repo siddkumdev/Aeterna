@@ -28,6 +28,35 @@ stop, tag, shift, keep_phase = b4.stop, b4.tag, b4.shift, b4.keep_phase
 
 FLAME = ["blood_red", "ember", "marigold_deep", "saffron", "ember", "crimson"]
 
+# v02 (user 2026-11-05: "less spiky, more smooth"): every point becomes a short blunt, rounded tip; fur is fewer, shorter, fatter tufts.
+_seg0, _chain0 = bk.seg, bk.chain
+
+
+STUDS = ("spine", "collarspike", "pspike", "kneespike", "flailspike", "rivet")
+
+
+def seg(name, p0, p1, r0, r1, col, segs=10):  # noqa: F811
+    p0, p1 = V(p0), V(p1)
+    if name in STUDS:  # spikes become low rounded studs
+        return bc.blob(name, max(r0, 0.0012) * 1.25, tuple(p0 + (p1 - p0) * 0.35), col, 1, (1.0, 1.0, 1.0))
+    if r1 < r0 * 0.3 and r0 > 0.0008:  # any other point: shorter, blunt
+        p1 = p0 + (p1 - p0) * 0.78
+        r1 = r0 * 0.5
+        segs = max(segs, 6)
+    return _seg0(name, p0, p1, r0, r1, col, segs)
+
+
+def chain(name, pts, radii, col, segs=10, ball_tip=None, joints=True):  # noqa: F811
+    pts, radii = [V(p) for p in pts], list(radii)
+    if name in ("flame", "furnace_flame"):  # stubby, fat, rounded tongues instead of long needles
+        pts = [pts[0] + (p - pts[0]) * 0.55 for p in pts]
+        radii = [r * 1.7 for r in radii]
+    if radii[-1] < radii[-2] * 0.3 and radii[-2] > 0.0008:
+        radii[-1] = radii[-2] * 0.55
+        if ball_tip is None and radii[-2] >= 0.0025:
+            ball_tip = (radii[-1] * 1.05, col)
+    return _chain0(name, pts, radii, col, max(segs, 6), ball_tip, joints)
+
 
 def sample(c, r3, n, fn=None):
     out = []
@@ -45,11 +74,12 @@ def sample(c, r3, n, fn=None):
 
 
 def fur(c, r3, n, cols, L, w, bias=(0, 0, 0), fn=None, name="fur"):
+    """v02: smooth lumpy clumps of fur (squashed blobs lying on the surface), no strands."""
     parts = []
+    n = max(6, int(n * 0.45))
     for k, (pos, nrm, u) in enumerate(sample(c, r3, n, fn)):
-        d = (nrm + V(bias)).normalized()
-        ln = L * (0.7 + 0.6 * ((k * 7) % 5) / 4.0)
-        parts.append(seg(name, pos - nrm * 0.002, pos + d * ln, w, 0.0002, cols[k % len(cols)], 4))
+        d = (nrm + V(bias) * 0.6).normalized()
+        parts.append(bc.blob(name, w * 1.9, tuple(pos + d * w * 0.5), cols[k % len(cols)], 1, (1.0, 1.0, 0.75)))
     return parts
 
 
@@ -132,7 +162,7 @@ def cinder_mammoth():
         side = -1 if k % 2 else 1
         y = -0.060 + 0.128 * ((k // 2) / 59.0)
         top = V((side * (0.038 - 0.006 * abs(y) / 0.07), y, 0.072 + 0.006 * math.sin(k)))
-        root.append(seg("strand", top, top + V((side * 0.0060, 0.002 * math.sin(k * 2.0), -0.034 - 0.008 * ((k * 3) % 4))), 0.0046, 0.0002, stop(["charcoal", "obsidian", "ash_grey", "bone_shadow"], ((k * 5) % 4) / 4), 4))
+        root.append(seg("strand", top, top + V((side * 0.0050, 0.002 * math.sin(k * 2.0), -0.024 - 0.006 * ((k * 3) % 4))), 0.0070, 0.0050, stop(["charcoal", "obsidian", "ash_grey", "bone_shadow"], ((k * 5) % 4) / 4), 6))
     root += fur((0, 0.012, 0.092), (0.041, 0.066, 0.038), 250, ["charcoal", "obsidian", "ash_grey", "charcoal", "bone_shadow", "ember"], 0.018, 0.0044, (0, 0.5, 0.7), lambda u: u.z > -0.15)
     root += fur((0, -0.034, 0.124), (0.031, 0.029, 0.031), 80, ["obsidian", "charcoal", "ash_grey"], 0.020, 0.0046, (0, -0.2, 0.9), lambda u: u.z > 0.0)
     # chains and manacles on the front legs
@@ -201,7 +231,7 @@ def cinder_mammoth():
     tail = chain("tail", [V((0, 0.090, 0.098)), V((0, 0.100, 0.082)), V((0, 0.104, 0.058)), V((0, 0.100, 0.034))], [0.0070, 0.0058, 0.0044, 0.0030], "charcoal", 7, joints=False)
     tail += fur((0, 0.100, 0.030), (0.010, 0.010, 0.016), 22, ["charcoal", "ember", "obsidian"], 0.014, 0.0040, (0, 0.2, -0.4))
     groups.append(("tail", tail, (0, 0.090, 0.098), ""))
-    obj = bc.assemble("ew_boss_cinder_mammoth_v01", groups)
+    obj = bc.assemble("ew_boss_cinder_mammoth_v02", groups)
     for suffix, ph, until in (("plates", 1, 1), ("cracks", 2, None), ("flames", 3, None)):
         tag(obj, suffix, ph, until)
     b3.crystal_anchors(obj, 0.0900, 0.1050)
@@ -292,7 +322,7 @@ def gravemaw_bear():
     for k, (pos, nrm, u) in enumerate(sample((0, 0.004, 0.130), (0.043, 0.040, 0.050), 90, lambda u: u.z > 0.15 and u.y > -0.3)):
         fl += chain("flame", [pos, pos + V((0.003 * math.sin(k), 0.006, 0.022)), pos + V((0.006 * math.cos(k), 0.012, 0.044)), pos + V((0.003 * math.sin(k * 2), 0.018, 0.066))], [0.0060, 0.0048, 0.0030, 0.0002], stop(FLAME, (k % 6) / 6), 4, joints=False)
     groups.append(("flames", fl, (0, 0.004, 0.150), ""))
-    obj = bc.assemble("ew_boss_gravemaw_bear_v01", groups)
+    obj = bc.assemble("ew_boss_gravemaw_bear_v02", groups)
     for suffix, ph, until in (("bone_burst", 2, None), ("flames", 3, None)):
         tag(obj, suffix, ph, until)
     b3.crystal_anchors(obj, 0.0900, 0.1050)
@@ -401,7 +431,7 @@ def furnace_orc():
     for k in range(12):
         x0 = (k - 5.5) * 0.0072
         pts = [V((x0, 0.030, 0.158)), V((x0 * 1.3, 0.044, 0.140)), V((x0 * 1.6, 0.056, 0.100)), V((x0 * 1.8, 0.062, 0.060)), V((x0 * 2.0, 0.066, 0.018))]
-        cape += bk.skin("hide", pts, [0.0012] * 5, [0.0058] * 5, lambda i, n, k=k: stop(["wood_dark", "hand_dark_brown", "wood_mid", "charcoal"], ((k + i) % 4) / 4), sides=4, per=4)[0]
+        cape += bk.skin("hide", pts, [0.0030] * 5, [0.0085] * 5, lambda i, n, k=k: stop(["wood_dark", "hand_dark_brown", "wood_mid", "charcoal"], ((k + i) % 4) / 4), sides=4, per=4)[0]
     groups.append(("cape", cape, (0, 0.030, 0.158), ""))
     # P3: fire gushes from the pipes, the furnace door and the cleaver
     fl = []
@@ -412,7 +442,7 @@ def furnace_orc():
     for k in range(9):
         fl += chain("furnace_flame", [V((-0.012 + k * 0.0030, -0.0400, 0.1400)), V((-0.012 + k * 0.0030, -0.0470, 0.1500 + 0.002 * k)), V((-0.012 + k * 0.0030 + 0.002 * (k - 4) * 0.5, -0.0550, 0.1620 + 0.003 * k))], [0.0040, 0.0028, 0.0002], stop(FLAME, (k % 6) / 6), 4, joints=False)
     groups.append(("flames", fl, (0, 0.040, 0.210), ""))
-    obj = bc.assemble("ew_boss_furnace_orc_v01", groups)
+    obj = bc.assemble("ew_boss_furnace_orc_v02", groups)
     tag(obj, "flames", 3, None)
     b3.crystal_anchors(obj, 0.0900, 0.1050)
     bc.anchor(obj, "flame_anchor", tuple(HC + V((0, -0.0350, -0.0150))), "jaw", 0.010)
@@ -432,11 +462,11 @@ if __name__ == "__main__":
     key = argv[0] if argv else "cinder_mammoth"
     bc.clear_scene()
     obj = BOSSES[key]()
-    mc.smooth(obj)
+    mc.smooth(obj, 80)
     print("TRIS", key, mc.tri_count(obj))
     ph = argv[1] if len(argv) > 1 and argv[1] in ("p1", "p2", "p3") else None
     if ph:
         keep_phase(obj, int(ph[1]))
-        bc.save_blend(obj, "boss_%s_%s" % (key, ph))
+        bc.save_blend(obj, "boss_%s_v02_%s" % (key, ph))
     else:
-        bc.save_blend(obj, "boss_" + key)
+        bc.save_blend(obj, "boss_%s_v02" % key)
