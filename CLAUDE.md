@@ -20,7 +20,7 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - Reminders to raise at the right moment: (1) DONE 2026-10-22: community Godot skills reviewed; `godot-gdscript-patterns` (wshobson, MIT) and `godot-development` (omer-metin, Apache-2.0) installed in `.claude/skills/` with a project note on top; fenixnix/Godot-Skills (Godot 3) and struktured-labs/godot-mcp (Linux-only, duplicates our tools) skipped; (2) DONE 2026-11-03: skill `character-kit` (how models get parts, the CharacterRig animations, the pose sheets).
 
 ## Sharing (git)
-- Private GitHub repo. Binaries (`.blend`, `.glb`, `.png`, `.jpg`) go through Git LFS (`.gitattributes`). Ignored: `local.env`, `_work/`, `*.blend1`, `godot/.godot/`.
+- Private GitHub repo. Binaries (`.blend`, `.glb`, `.png`, `.jpg`, `.wav`) go through Git LFS (`.gitattributes`). Ignored: `local.env`, `_work/`, `*.blend1`, `godot/.godot/`.
 - Claim an asset in the tracker (owner) before working on it; one owner per asset at a time.
 - Work on `main`; no new branches unless really needed (Siddharth, 2026-10-19), e.g. a risky experiment that could break `main`, and only after asking. Pull before starting, push when done. Unapproved assets are fine on `main`: their status in `ASSETS.md` says "awaiting approval".
 - Never hand-edit `.blend` or `.glb`: change the generator and regenerate (binaries cannot be merged). Shared logs (`ASSETS.md`, `decisions.md`, `VFX_NOTES.md`, `ASSET_LIST.md`) are append-a-row files; on a merge conflict keep both rows.

@@ -151,6 +151,8 @@ func _hit_enemy(e: Enemy) -> void:
 
 func _finish() -> void:
 	done = true
+	if game != null:
+		game.snd("fireball_hit" if _fx_kind in ["fireball", "wizard"] else ("crossbow_pierce" if kind == "pierce" else "boulder_hit"), global_position)
 	_impact_fx()
 	queue_free()
 

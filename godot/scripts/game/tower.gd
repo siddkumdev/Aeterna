@@ -8,6 +8,7 @@ extends Node3D
 ## Ticked by Game.step().
 
 var game  # Game
+const SHOT_SOUNDS := {"fire": "fireball_launch", "crossbow": "crossbow_shot", "airship": "airship_shot"}
 var kind := "fire"
 var cfg: Dictionary
 var cell := Vector2i.ZERO
@@ -226,6 +227,7 @@ func step(delta: float) -> void:
 			game.shots_root.add_child(shot)
 			shot.launch(from, e, cfg, reach, mods)
 			game.shots.append(shot)
+		game.snd(SHOT_SOUNDS.get(kind, ""), from)
 
 
 func _nearest(skip: Array) -> Enemy:

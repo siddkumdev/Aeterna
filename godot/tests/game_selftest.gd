@@ -31,6 +31,7 @@ func _initialize() -> void:
 	await _grass()
 	await _vfx()
 	await _village_life()
+	await _audio()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -1375,3 +1376,36 @@ func _vfx() -> void:
 	check("particle cap: at most %d bursts alive at once (%d started)" % [VfxKit.MAX_BURSTS, n], VfxKit.active_bursts() <= VfxKit.MAX_BURSTS)
 	g.queue_free()
 	await process_frame
+
+
+func _audio() -> void:
+	## The sound player: every sound the manifest lists has a file, unknown or missing ids stay silent, the cooldown
+	## holds back a rapid repeat, and the game itself plays no sound without a rig.
+	var g := await _make_game()
+	check("audio: no player without the rig", g.audio == null)
+	g.snd("place_thunk")  # must be a harmless no-op
+	var a := AudioBank.new()
+	root.add_child(a)
+	a.setup()
+	check("audio: manifest loaded (%d sounds)" % a.manifest.size(), a.manifest.size() >= 60)
+	var missing := []
+	for id in a.manifest:
+		for f in a.manifest[id]["files"]:
+			if not ResourceLoader.exists(AudioBank.DIR + f["file"]):
+				missing.append(f["file"])
+	check("audio: every listed file imported %s" % [missing], missing.is_empty())
+	a.play("no_such_sound")
+	check("audio: unknown id is silent", a.played == 0)
+	a.play("pinch")
+	check("audio: a known sound plays", a.played == 1)
+	a.play("pinch")
+	check("audio: the cooldown holds back a rapid repeat", a.played == 1)
+	a.play("enemy_death", Vector3(0, 1, 0))
+	check("audio: a spatial sound plays", a.played == 2)
+	a.play("day_bed")
+	check("audio: a loop is not a one-shot", a.played == 2)
+	a.set_bed("day_bed")
+	var s := a._stream("day_bed.wav", true)
+	check("audio: a bed loops", s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	a.queue_free()
+	g.queue_free()

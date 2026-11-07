@@ -1,0 +1,1246 @@
+{
+ "airship_engine": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "airship_engine.wav",
+    "peak_db": -23.3,
+    "rms_db": -32.0,
+    "seam": 0.75,
+    "seconds": 1.9
+   }
+  ],
+  "loop": true,
+  "note": "loop: a soft propeller chug",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.03
+ },
+ "airship_shot": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "airship_shot.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.3,
+    "seam": null,
+    "seconds": 0.5
+   }
+  ],
+  "loop": false,
+  "note": "the Airship's cannon: a deep thump and a puff of smoke",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.05
+ },
+ "boss_phase": {
+  "bus": "sfx",
+  "cooldown": 1.0,
+  "files": [
+   {
+    "file": "boss_phase.wav",
+    "peak_db": -5.0,
+    "rms_db": -20.8,
+    "seam": null,
+    "seconds": 1.706
+   }
+  ],
+  "loop": false,
+  "note": "a phase change: a crystal crack, falling shimmer and a boom",
+  "spatial": true,
+  "tracker": "A22",
+  "vary": 0.03
+ },
+ "boss_roar": {
+  "bus": "sfx",
+  "cooldown": 2.0,
+  "files": [
+   {
+    "file": "boss_roar.wav",
+    "peak_db": -3.0,
+    "rms_db": -19.3,
+    "seam": null,
+    "seconds": 2.591
+   }
+  ],
+  "loop": false,
+  "note": "a deep growl with a moving mouth, ending in a rumble",
+  "spatial": true,
+  "tracker": "A22",
+  "vary": 0.03
+ },
+ "boulder_fall": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "boulder_fall.wav",
+    "peak_db": -6.0,
+    "rms_db": -16.0,
+    "seam": null,
+    "seconds": 0.9
+   }
+  ],
+  "loop": false,
+  "note": "a long whistle falling: pitch drops as it nears the ground",
+  "spatial": true,
+  "tracker": "A25",
+  "vary": 0.03
+ },
+ "boulder_hit": {
+  "bus": "sfx",
+  "cooldown": 0.1,
+  "files": [
+   {
+    "file": "boulder_hit.wav",
+    "peak_db": -3.0,
+    "rms_db": -18.2,
+    "seam": null,
+    "seconds": 1.005
+   }
+  ],
+  "loop": false,
+  "note": "a boulder lands: a heavy thud, gravel and dust",
+  "spatial": true,
+  "tracker": "A25",
+  "vary": 0.03
+ },
+ "build_pop": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "build_pop.wav",
+    "peak_db": -6.0,
+    "rms_db": -23.3,
+    "seam": null,
+    "seconds": 0.654
+   }
+  ],
+  "loop": false,
+  "note": "a puff of dust and a bubbly pop with two sparkles",
+  "spatial": false,
+  "tracker": "A12",
+  "vary": 0.05
+ },
+ "coin_bad": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "coin_bad.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.1,
+    "seam": null,
+    "seconds": 1.113
+   }
+  ],
+  "loop": false,
+  "note": "a bad result: two low notes, falling",
+  "spatial": false,
+  "tracker": "A14",
+  "vary": 0.03
+ },
+ "coin_flick": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "coin_flick.wav",
+    "peak_db": -7.0,
+    "rms_db": -19.0,
+    "seam": null,
+    "seconds": 0.9
+   }
+  ],
+  "loop": false,
+  "note": "a coin spun into the air and caught",
+  "spatial": false,
+  "tracker": "A13",
+  "vary": 0.03
+ },
+ "coin_good": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "coin_good.wav",
+    "peak_db": -7.0,
+    "rms_db": -21.0,
+    "seam": null,
+    "seconds": 1.366
+   }
+  ],
+  "loop": false,
+  "note": "a good result: a bright rising arpeggio",
+  "spatial": false,
+  "tracker": "A14",
+  "vary": 0.03
+ },
+ "coin_neutral": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "coin_neutral.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 1.367
+   }
+  ],
+  "loop": false,
+  "note": "a middling result: one round bell",
+  "spatial": false,
+  "tracker": "A14",
+  "vary": 0.03
+ },
+ "cooldown_ready": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "cooldown_ready.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 0.747
+   }
+  ],
+  "loop": false,
+  "note": "a spell is ready again: a tiny rising glint",
+  "spatial": false,
+  "tracker": "A46",
+  "vary": 0.03
+ },
+ "crossbow_pierce": {
+  "bus": "sfx",
+  "cooldown": 0.08,
+  "files": [
+   {
+    "file": "crossbow_pierce.wav",
+    "peak_db": -12.0,
+    "rms_db": -21.5,
+    "seam": null,
+    "seconds": 0.28
+   }
+  ],
+  "loop": false,
+  "note": "the bolt passes through: a thin rising whistle",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.08
+ },
+ "crossbow_shot": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "crossbow_shot.wav",
+    "peak_db": -7.0,
+    "rms_db": -21.9,
+    "seam": null,
+    "seconds": 0.37
+   }
+  ],
+  "loop": false,
+  "note": "the Wind Crossbow: a bowstring twang and a pale rush of air",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.05
+ },
+ "dawn_bell": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "dawn_bell.wav",
+    "peak_db": -7.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 4.066
+   }
+  ],
+  "loop": false,
+  "note": "day begins: a soft struck bell with a music-box overtone",
+  "spatial": false,
+  "tracker": "A38",
+  "vary": 0.03
+ },
+ "day_bed": {
+  "bus": "ambience",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "day_bed.wav",
+    "peak_db": -17.0,
+    "rms_db": -30.0,
+    "seam": 0.76,
+    "seconds": 12.0
+   }
+  ],
+  "loop": true,
+  "note": "loop: soft wind, rustling leaves and the odd bird",
+  "spatial": false,
+  "tracker": "A39",
+  "vary": 0.03
+ },
+ "door_close": {
+  "bus": "sfx",
+  "cooldown": 0.1,
+  "files": [
+   {
+    "file": "door_close.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.7,
+    "seam": null,
+    "seconds": 0.25
+   }
+  ],
+  "loop": false,
+  "note": "a wooden door and a latch click",
+  "spatial": true,
+  "tracker": "A35",
+  "vary": 0.03
+ },
+ "enemy_death": {
+  "bus": "sfx",
+  "cooldown": 0.04,
+  "files": [
+   {
+    "file": "enemy_death_1.wav",
+    "peak_db": -8.0,
+    "rms_db": -23.0,
+    "seam": null,
+    "seconds": 0.3
+   },
+   {
+    "file": "enemy_death_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -21.8,
+    "seam": null,
+    "seconds": 0.21
+   },
+   {
+    "file": "enemy_death_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.679
+   }
+  ],
+  "loop": false,
+  "note": "1 grunt: a falling bloop and a poof; 2 scout: pip and pff; 3 flyer: feathery whoosh",
+  "spatial": true,
+  "tracker": "A17",
+  "vary": 0.08
+ },
+ "enemy_spawn": {
+  "bus": "sfx",
+  "cooldown": 0.2,
+  "files": [
+   {
+    "file": "enemy_spawn.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.9
+   }
+  ],
+  "loop": false,
+  "note": "something stirs in the forest: a leaf rustle and a low creak",
+  "spatial": true,
+  "tracker": "A18",
+  "vary": 0.08
+ },
+ "fire_loop": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "fire_loop.wav",
+    "peak_db": -6.9,
+    "rms_db": -30.0,
+    "seam": 0.0,
+    "seconds": 2.0
+   }
+  ],
+  "loop": true,
+  "note": "loop: a small fire crackling",
+  "spatial": true,
+  "tracker": "A26",
+  "vary": 0.03
+ },
+ "fireball_hit": {
+  "bus": "sfx",
+  "cooldown": 0.04,
+  "files": [
+   {
+    "file": "fireball_hit.wav",
+    "peak_db": -6.0,
+    "rms_db": -18.8,
+    "seam": null,
+    "seconds": 0.38
+   }
+  ],
+  "loop": false,
+  "note": "a small fire burst where it lands",
+  "spatial": true,
+  "tracker": "A15",
+  "vary": 0.07
+ },
+ "fireball_launch": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "fireball_launch.wav",
+    "peak_db": -5.0,
+    "rms_db": -17.1,
+    "seam": null,
+    "seconds": 0.45
+   }
+  ],
+  "loop": false,
+  "note": "the orb throws a fireball: air, a low fwoomp and crackle",
+  "spatial": true,
+  "tracker": "A15",
+  "vary": 0.05
+ },
+ "fog_loop": {
+  "bus": "ambience",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "fog_loop.wav",
+    "peak_db": -22.4,
+    "rms_db": -34.0,
+    "seam": 0.28,
+    "seconds": 9.4
+   }
+  ],
+  "loop": true,
+  "note": "loop: a muffled hush with a faint low tone (Foggy Night)",
+  "spatial": false,
+  "tracker": "A41",
+  "vary": 0.03
+ },
+ "foresight_whisper": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "foresight_whisper_1.wav",
+    "peak_db": -10.0,
+    "rms_db": -26.5,
+    "seam": null,
+    "seconds": 1.727
+   },
+   {
+    "file": "foresight_whisper_2.wav",
+    "peak_db": -10.0,
+    "rms_db": -27.2,
+    "seam": null,
+    "seconds": 1.699
+   },
+   {
+    "file": "foresight_whisper_3.wav",
+    "peak_db": -10.0,
+    "rms_db": -26.5,
+    "seam": null,
+    "seconds": 1.683
+   }
+  ],
+  "loop": false,
+  "note": "the lens: a breathy whisper that gets sharper with each tier (vague, clear, sharp)",
+  "spatial": false,
+  "tracker": "A36",
+  "vary": 0.03
+ },
+ "forest_rumble": {
+  "bus": "sfx",
+  "cooldown": 1.0,
+  "files": [
+   {
+    "file": "forest_rumble.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.7,
+    "seam": null,
+    "seconds": 1.883
+   }
+  ],
+  "loop": false,
+  "note": "a wave gathers at the tree line: a low rumble with creaking branches",
+  "spatial": true,
+  "tracker": "A30",
+  "vary": 0.03
+ },
+ "gate_open": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "gate_open.wav",
+    "peak_db": -9.0,
+    "rms_db": -24.5,
+    "seam": null,
+    "seconds": 0.65
+   }
+  ],
+  "loop": false,
+  "note": "the Guard Tower gate swings open: a creak and a thump",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.03
+ },
+ "grab": {
+  "bus": "ui",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "grab.wav",
+    "peak_db": -7.0,
+    "rms_db": -17.9,
+    "seam": null,
+    "seconds": 0.16
+   }
+  ],
+  "loop": false,
+  "note": "a hand closes on something: a duller wooden thok",
+  "spatial": false,
+  "tracker": "A08",
+  "vary": 0.06
+ },
+ "heal_chime": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "heal_chime.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 1.572
+   }
+  ],
+  "loop": false,
+  "note": "a house repairs: three rising glass notes",
+  "spatial": false,
+  "tracker": "A27",
+  "vary": 0.03
+ },
+ "help_done": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "help_done.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 1.674
+   }
+  ],
+  "loop": false,
+  "note": "a request finished: a four note marimba jingle and a bell",
+  "spatial": false,
+  "tracker": "A34",
+  "vary": 0.03
+ },
+ "hit_soft": {
+  "bus": "sfx",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "hit_soft.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.7,
+    "seam": null,
+    "seconds": 0.1
+   }
+  ],
+  "loop": false,
+  "note": "a light hit (a bolt, a Guard's strike): a short thump and tick",
+  "spatial": true,
+  "tracker": "A48",
+  "vary": 0.1
+ },
+ "house_hit": {
+  "bus": "sfx",
+  "cooldown": 0.1,
+  "files": [
+   {
+    "file": "house_hit.wav",
+    "peak_db": -6.0,
+    "rms_db": -21.5,
+    "seam": null,
+    "seconds": 0.35
+   }
+  ],
+  "loop": false,
+  "note": "an enemy strikes a house: wood cracks and a beam creaks",
+  "spatial": true,
+  "tracker": "A23",
+  "vary": 0.06
+ },
+ "invalid": {
+  "bus": "ui",
+  "cooldown": 0.15,
+  "files": [
+   {
+    "file": "invalid.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.2,
+    "seam": null,
+    "seconds": 0.42
+   }
+  ],
+  "loop": false,
+  "note": "can't place or can't afford: two soft low knocks, falling",
+  "spatial": false,
+  "tracker": "A11",
+  "vary": 0.03
+ },
+ "melee_hit": {
+  "bus": "sfx",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "melee_hit.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.3,
+    "seam": null,
+    "seconds": 0.15
+   }
+  ],
+  "loop": false,
+  "note": "a troop's blow: a thud and a cloth slap",
+  "spatial": true,
+  "tracker": "A16",
+  "vary": 0.08
+ },
+ "menu_close": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "menu_close.wav",
+    "peak_db": -10.0,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.787
+   }
+  ],
+  "loop": false,
+  "note": "the same two notes falling, shorter",
+  "spatial": false,
+  "tracker": "A09",
+  "vary": 0.03
+ },
+ "menu_open": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "menu_open.wav",
+    "peak_db": -8.0,
+    "rms_db": -23.2,
+    "seam": null,
+    "seconds": 0.962
+   }
+  ],
+  "loop": false,
+  "note": "a rising two-step wooden plink",
+  "spatial": false,
+  "tracker": "A09",
+  "vary": 0.03
+ },
+ "night_bed": {
+  "bus": "ambience",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "night_bed.wav",
+    "peak_db": -16.0,
+    "rms_db": -31.0,
+    "seam": 0.27,
+    "seconds": 14.0
+   }
+  ],
+  "loop": true,
+  "note": "loop: crickets, a low breeze and a far owl",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
+ "night_fall": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "night_fall.wav",
+    "peak_db": -10.0,
+    "rms_db": -28.1,
+    "seam": null,
+    "seconds": 2.769
+   }
+  ],
+  "loop": false,
+  "note": "dusk turns to night: two low glass notes and a held breath of air",
+  "spatial": false,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "orb_charge": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "orb_charge.wav",
+    "peak_db": -12.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.9
+   }
+  ],
+  "loop": false,
+  "note": "the Wizard Tower's orb gathers power: a rising hum and a shimmer",
+  "spatial": true,
+  "tracker": "A43",
+  "vary": 0.03
+ },
+ "pinch": {
+  "bus": "ui",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "pinch.wav",
+    "peak_db": -8.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.05
+   }
+  ],
+  "loop": false,
+  "note": "finger and thumb meet: a soft wooden tick and a small pip",
+  "spatial": false,
+  "tracker": "A08",
+  "vary": 0.06
+ },
+ "place_thunk": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "place_thunk.wav",
+    "peak_db": -4.0,
+    "rms_db": -16.9,
+    "seam": null,
+    "seconds": 0.35
+   }
+  ],
+  "loop": false,
+  "note": "a tower sets down on the board: a woody stone thunk",
+  "spatial": false,
+  "tracker": "A10",
+  "vary": 0.05
+ },
+ "potion_pour": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "potion_pour.wav",
+    "peak_db": -12.0,
+    "rms_db": -33.2,
+    "seam": null,
+    "seconds": 1.1
+   }
+  ],
+  "loop": false,
+  "note": "a vial poured: glugs rising in pitch",
+  "spatial": false,
+  "tracker": "A29",
+  "vary": 0.03
+ },
+ "rage_cast": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rage_cast.wav",
+    "peak_db": -6.0,
+    "rms_db": -19.9,
+    "seam": null,
+    "seconds": 1.274
+   }
+  ],
+  "loop": false,
+  "note": "Rage: a war drum and a rising swell",
+  "spatial": true,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "rain_loop": {
+  "bus": "ambience",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rain_loop.wav",
+    "peak_db": -8.6,
+    "rms_db": -30.0,
+    "seam": 0.09,
+    "seconds": 7.5
+   }
+  ],
+  "loop": true,
+  "note": "loop: steady rain (Gentle Rain)",
+  "spatial": false,
+  "tracker": "A41",
+  "vary": 0.03
+ },
+ "rarity_common": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rarity_common.wav",
+    "peak_db": -10.0,
+    "rms_db": -26.8,
+    "seam": null,
+    "seconds": 1.055
+   }
+  ],
+  "loop": false,
+  "note": "a Common card: one glass note",
+  "spatial": false,
+  "tracker": "A47",
+  "vary": 0.03
+ },
+ "rarity_legendary": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rarity_legendary.wav",
+    "peak_db": -5.0,
+    "rms_db": -23.1,
+    "seam": null,
+    "seconds": 3.228
+   }
+  ],
+  "loop": false,
+  "note": "a Legendary card: a rising arpeggio, a sub boom and a long shimmer",
+  "spatial": false,
+  "tracker": "A47",
+  "vary": 0.03
+ },
+ "rarity_rare": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rarity_rare.wav",
+    "peak_db": -8.0,
+    "rms_db": -21.6,
+    "seam": null,
+    "seconds": 1.627
+   }
+  ],
+  "loop": false,
+  "note": "a Rare card: a note, a fifth above, and a shimmer",
+  "spatial": false,
+  "tracker": "A47",
+  "vary": 0.03
+ },
+ "release": {
+  "bus": "ui",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "release.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.6,
+    "seam": null,
+    "seconds": 0.09
+   }
+  ],
+  "loop": false,
+  "note": "the hand lets go: a falling pip and a breath of air",
+  "spatial": false,
+  "tracker": "A08",
+  "vary": 0.06
+ },
+ "request_new": {
+  "bus": "ui",
+  "cooldown": 0.2,
+  "files": [
+   {
+    "file": "request_new.wav",
+    "peak_db": -12.0,
+    "rms_db": -27.3,
+    "seam": null,
+    "seconds": 0.799
+   }
+  ],
+  "loop": false,
+  "note": "a '!' appears over a house: a curious little two-step",
+  "spatial": true,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "rewind_whoosh": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "rewind_whoosh.wav",
+    "peak_db": -4.0,
+    "rms_db": -21.9,
+    "seam": null,
+    "seconds": 3.35
+   }
+  ],
+  "loop": false,
+  "note": "time runs backwards: a reversed bell chord sucking in, a rising sweep and ticking",
+  "spatial": false,
+  "tracker": "A37",
+  "vary": 0.03
+ },
+ "root_grow": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "root_grow.wav",
+    "peak_db": -9.0,
+    "rms_db": -29.1,
+    "seam": null,
+    "seconds": 0.9
+   }
+  ],
+  "loop": false,
+  "note": "Root Ward: wood creaks and cracks as roots grow",
+  "spatial": true,
+  "tracker": "A28",
+  "vary": 0.03
+ },
+ "sell": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "sell.wav",
+    "peak_db": -7.0,
+    "rms_db": -20.4,
+    "seam": null,
+    "seconds": 0.832
+   }
+  ],
+  "loop": false,
+  "note": "a tower is sold: coins and the thunk backwards-ish",
+  "spatial": false,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "shutter_close": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "shutter_close.wav",
+    "peak_db": -7.0,
+    "rms_db": -16.7,
+    "seam": null,
+    "seconds": 0.29
+   }
+  ],
+  "loop": false,
+  "note": "the house shuts up: three wooden clacks and a slide",
+  "spatial": true,
+  "tracker": "A23",
+  "vary": 0.03
+ },
+ "spell_pick": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "spell_pick.wav",
+    "peak_db": -11.0,
+    "rms_db": -22.8,
+    "seam": null,
+    "seconds": 0.569
+   }
+  ],
+  "loop": false,
+  "note": "picking up a spell token: a bright wooden plink",
+  "spatial": false,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "splitter_split": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "splitter_split.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.3,
+    "seam": null,
+    "seconds": 0.49
+   }
+  ],
+  "loop": false,
+  "note": "a squelchy split: a wobbly slurp, a pop and two little plinks",
+  "spatial": true,
+  "tracker": "A21",
+  "vary": 0.08
+ },
+ "storm_cloud": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "storm_cloud.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 2.021
+   }
+  ],
+  "loop": false,
+  "note": "Storm Cloud: a roll of low thunder and raindrops",
+  "spatial": true,
+  "tracker": "A48",
+  "vary": 0.03
+ },
+ "throw_whoosh": {
+  "bus": "ui",
+  "cooldown": 0.05,
+  "files": [
+   {
+    "file": "throw_whoosh.wav",
+    "peak_db": -10.0,
+    "rms_db": -23.9,
+    "seam": null,
+    "seconds": 0.35
+   }
+  ],
+  "loop": false,
+  "note": "a thrown spell leaves the hand: a short airy whoosh",
+  "spatial": false,
+  "tracker": "A24",
+  "vary": 0.06
+ },
+ "trust_chime": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "trust_chime.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.6,
+    "seam": null,
+    "seconds": 1.11
+   }
+  ],
+  "loop": false,
+  "note": "trust gained: two bright glass notes and a sparkle",
+  "spatial": false,
+  "tracker": "A33",
+  "vary": 0.03
+ },
+ "tunneler_pop": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "tunneler_pop.wav",
+    "peak_db": -8.0,
+    "rms_db": -19.4,
+    "seam": null,
+    "seconds": 0.35
+   }
+  ],
+  "loop": false,
+  "note": "it bursts out of the ground: thump, gravel and a plop",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.08
+ },
+ "ui_cancel": {
+  "bus": "ui",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "ui_cancel.wav",
+    "peak_db": -10.0,
+    "rms_db": -23.9,
+    "seam": null,
+    "seconds": 0.625
+   }
+  ],
+  "loop": false,
+  "note": "a low soft step down",
+  "spatial": false,
+  "tracker": "A46",
+  "vary": 0.03
+ },
+ "ui_hover": {
+  "bus": "ui",
+  "cooldown": 0.06,
+  "files": [
+   {
+    "file": "ui_hover.wav",
+    "peak_db": -17.0,
+    "rms_db": -29.8,
+    "seam": null,
+    "seconds": 0.03
+   }
+  ],
+  "loop": false,
+  "note": "pointer over a button: a tiny tick",
+  "spatial": false,
+  "tracker": "A46",
+  "vary": 0.1
+ },
+ "village_bell": {
+  "bus": "sfx",
+  "cooldown": 1.0,
+  "files": [
+   {
+    "file": "village_bell.wav",
+    "peak_db": -6.0,
+    "rms_db": -22.1,
+    "seam": null,
+    "seconds": 4.876
+   }
+  ],
+  "loop": false,
+  "note": "the village bell: a deep clang, twice",
+  "spatial": false,
+  "tracker": "A45",
+  "vary": 0.03
+ },
+ "villager_blip": {
+  "bus": "sfx",
+  "cooldown": 0.3,
+  "files": [
+   {
+    "file": "villager_blip_1.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.8,
+    "seam": null,
+    "seconds": 0.696
+   },
+   {
+    "file": "villager_blip_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 0.516
+   },
+   {
+    "file": "villager_blip_3.wav",
+    "peak_db": -12.0,
+    "rms_db": -23.9,
+    "seam": null,
+    "seconds": 0.483
+   },
+   {
+    "file": "villager_blip_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 0.568
+   },
+   {
+    "file": "villager_blip_5.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.4,
+    "seam": null,
+    "seconds": 0.597
+   }
+  ],
+  "loop": false,
+  "note": "five little voices of gibberish, each with its own pitch and vowels (no real speech)",
+  "spatial": true,
+  "tracker": "A32",
+  "vary": 0.05
+ },
+ "ward_cast": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "ward_cast.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.7,
+    "seam": null,
+    "seconds": 1.661
+   }
+  ],
+  "loop": false,
+  "note": "a rune lights: a bell ping and a low hum swelling",
+  "spatial": true,
+  "tracker": "A28",
+  "vary": 0.03
+ },
+ "ward_hum": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "ward_hum.wav",
+    "peak_db": -25.2,
+    "rms_db": -32.0,
+    "seam": 0.42,
+    "seconds": 1.55
+   }
+  ],
+  "loop": true,
+  "note": "loop: a shield humming softly",
+  "spatial": true,
+  "tracker": "A28",
+  "vary": 0.03
+ },
+ "wisp_screech": {
+  "bus": "sfx",
+  "cooldown": 0.5,
+  "files": [
+   {
+    "file": "wisp_screech.wav",
+    "peak_db": -12.0,
+    "rms_db": -26.4,
+    "seam": null,
+    "seconds": 0.729
+   }
+  ],
+  "loop": false,
+  "note": "a flyer's cry: a short rise and fall, soft",
+  "spatial": true,
+  "tracker": "A19",
+  "vary": 0.08
+ },
+ "wisp_wings": {
+  "bus": "sfx",
+  "cooldown": 0.0,
+  "files": [
+   {
+    "file": "wisp_wings.wav",
+    "peak_db": -14.0,
+    "rms_db": -29.8,
+    "seam": 1.01,
+    "seconds": 1.2
+   }
+  ],
+  "loop": true,
+  "note": "loop: a flyer's soft flutter",
+  "spatial": true,
+  "tracker": "A19",
+  "vary": 0.04
+ }
+}

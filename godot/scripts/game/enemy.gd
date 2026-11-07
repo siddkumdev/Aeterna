@@ -347,6 +347,8 @@ func _move_straight(stride: float) -> void:
 
 func _pop_up() -> void:
 	underground = false
+	if game != null:
+		game.snd("tunneler_pop", global_position)
 	if game != null and game.with_rig and is_inside_tree():
 		VfxKit.toon_dust(get_parent(), global_position, 0.05)
 		VfxKit.burst(get_parent(), global_position + Vector3(0, 0.01, 0), Color("7E6048"), Color("C2B49A"), 8, 0.05, 0.4, 0.005)
@@ -368,6 +370,8 @@ func take_damage(amount: float, flash := true) -> void:
 	if not alive or shielded:
 		return
 	hp -= amount
+	if flash and game != null:
+		game.snd("hit_soft", global_position)
 	if flash:
 		for m in _mats:
 			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
