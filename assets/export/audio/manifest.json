@@ -25,31 +25,31 @@
   "files": [
    {
     "file": "airship_shot_1.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.3,
+    "peak_db": -1.0,
+    "rms_db": -16.8,
     "seam": null,
-    "seconds": 0.5
+    "seconds": 0.8
    },
    {
     "file": "airship_shot_2.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.3,
+    "peak_db": -1.0,
+    "rms_db": -17.0,
     "seam": null,
-    "seconds": 0.524
+    "seconds": 0.838
    },
    {
     "file": "airship_shot_3.wav",
-    "peak_db": -5.0,
+    "peak_db": -1.3,
     "rms_db": -16.4,
     "seam": null,
-    "seconds": 0.478
+    "seconds": 0.766
    },
    {
     "file": "airship_shot_4.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.5,
+    "peak_db": -1.4,
+    "rms_db": -16.4,
     "seam": null,
-    "seconds": 0.541
+    "seconds": 0.865
    }
   ],
   "loop": false,
@@ -84,10 +84,10 @@
   "files": [
    {
     "file": "boss_roar.wav",
-    "peak_db": -3.0,
+    "peak_db": -3.3,
     "rms_db": -19.3,
     "seam": null,
-    "seconds": 2.591
+    "seconds": 2.641
    }
   ],
   "loop": false,
@@ -122,35 +122,35 @@
   "files": [
    {
     "file": "boulder_hit_1.wav",
-    "peak_db": -3.0,
-    "rms_db": -18.2,
+    "peak_db": -2.2,
+    "rms_db": -18.5,
     "seam": null,
-    "seconds": 1.005
+    "seconds": 1.004
    },
    {
     "file": "boulder_hit_2.wav",
-    "peak_db": -3.0,
-    "rms_db": -18.7,
+    "peak_db": -3.4,
+    "rms_db": -18.5,
     "seam": null,
-    "seconds": 1.052
+    "seconds": 1.053
    },
    {
     "file": "boulder_hit_3.wav",
-    "peak_db": -3.0,
-    "rms_db": -18.7,
+    "peak_db": -2.5,
+    "rms_db": -18.5,
     "seam": null,
     "seconds": 0.962
    },
    {
     "file": "boulder_hit_4.wav",
-    "peak_db": -3.0,
-    "rms_db": -18.4,
+    "peak_db": -3.5,
+    "rms_db": -18.5,
     "seam": null,
-    "seconds": 1.084
+    "seconds": 1.297
    }
   ],
   "loop": false,
-  "note": "a boulder lands: a heavy thud, gravel and dust",
+  "note": "a boulder lands: a heavy thud, real stones knocking and soil",
   "spatial": true,
   "tracker": "A25",
   "vary": 0.03
@@ -162,35 +162,35 @@
   "files": [
    {
     "file": "build_pop_1.wav",
-    "peak_db": -6.0,
-    "rms_db": -23.3,
-    "seam": null,
-    "seconds": 0.654
-   },
-   {
-    "file": "build_pop_2.wav",
-    "peak_db": -6.0,
-    "rms_db": -24.5,
+    "peak_db": -6.5,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 0.664
    },
    {
-    "file": "build_pop_3.wav",
-    "peak_db": -6.0,
-    "rms_db": -22.7,
+    "file": "build_pop_2.wav",
+    "peak_db": -5.7,
+    "rms_db": -23.4,
     "seam": null,
-    "seconds": 0.626
+    "seconds": 0.694
+   },
+   {
+    "file": "build_pop_3.wav",
+    "peak_db": -6.5,
+    "rms_db": -23.4,
+    "seam": null,
+    "seconds": 0.636
    },
    {
     "file": "build_pop_4.wav",
-    "peak_db": -6.0,
-    "rms_db": -23.1,
+    "peak_db": -6.5,
+    "rms_db": -23.4,
     "seam": null,
-    "seconds": 0.705
+    "seconds": 0.716
    }
   ],
   "loop": false,
-  "note": "a puff of dust and a bubbly pop with two sparkles",
+  "note": "a bubbly pop, a clatter of wooden blocks and two sparkles",
   "spatial": false,
   "tracker": "A12",
   "vary": 0.05
@@ -318,35 +318,49 @@
   "files": [
    {
     "file": "crossbow_pierce_1.wav",
-    "peak_db": -12.0,
-    "rms_db": -21.4,
+    "peak_db": -14.2,
+    "rms_db": -21.7,
     "seam": null,
-    "seconds": 0.28
+    "seconds": 0.295
    },
    {
     "file": "crossbow_pierce_2.wav",
-    "peak_db": -12.0,
-    "rms_db": -21.6,
+    "peak_db": -13.3,
+    "rms_db": -21.7,
     "seam": null,
-    "seconds": 0.293
+    "seconds": 0.308
    },
    {
     "file": "crossbow_pierce_3.wav",
-    "peak_db": -12.0,
-    "rms_db": -21.5,
+    "peak_db": -12.8,
+    "rms_db": -21.7,
     "seam": null,
-    "seconds": 0.268
+    "seconds": 0.283
    },
    {
     "file": "crossbow_pierce_4.wav",
-    "peak_db": -12.0,
-    "rms_db": -22.2,
+    "peak_db": -13.0,
+    "rms_db": -21.7,
     "seam": null,
-    "seconds": 0.303
+    "seconds": 0.317
+   },
+   {
+    "file": "crossbow_pierce_5.wav",
+    "peak_db": -12.4,
+    "rms_db": -21.7,
+    "seam": null,
+    "seconds": 0.276
+   },
+   {
+    "file": "crossbow_pierce_6.wav",
+    "peak_db": -14.0,
+    "rms_db": -21.7,
+    "seam": null,
+    "seconds": 0.304
    }
   ],
   "loop": false,
-  "note": "the bolt passes through: a thin rising whistle",
+  "note": "the bolt passes through: a real stick whoosh and a thin rising whistle",
   "spatial": true,
   "tracker": "A43",
   "vary": 0.08
@@ -358,35 +372,49 @@
   "files": [
    {
     "file": "crossbow_shot_1.wav",
-    "peak_db": -7.0,
-    "rms_db": -21.8,
+    "peak_db": -5.7,
+    "rms_db": -22.2,
     "seam": null,
-    "seconds": 0.367
+    "seconds": 0.38
    },
    {
     "file": "crossbow_shot_2.wav",
-    "peak_db": -7.0,
+    "peak_db": -3.3,
     "rms_db": -22.2,
     "seam": null,
-    "seconds": 0.383
+    "seconds": 0.388
    },
    {
     "file": "crossbow_shot_3.wav",
-    "peak_db": -7.0,
-    "rms_db": -22.6,
+    "peak_db": -5.2,
+    "rms_db": -22.2,
     "seam": null,
-    "seconds": 0.352
+    "seconds": 0.365
    },
    {
     "file": "crossbow_shot_4.wav",
-    "peak_db": -7.0,
-    "rms_db": -22.5,
+    "peak_db": -3.0,
+    "rms_db": -23.3,
     "seam": null,
-    "seconds": 0.395
+    "seconds": 0.397
+   },
+   {
+    "file": "crossbow_shot_5.wav",
+    "peak_db": -3.5,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.348
+   },
+   {
+    "file": "crossbow_shot_6.wav",
+    "peak_db": -3.4,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.384
    }
   ],
   "loop": false,
-  "note": "the Wind Crossbow: a bowstring twang and a pale rush of air",
+  "note": "the Wind Crossbow: a real bow release, a soft twang and a pale rush of air",
   "spatial": true,
   "tracker": "A43",
   "vary": 0.05
@@ -417,9 +445,9 @@
   "files": [
    {
     "file": "day_bed.wav",
-    "peak_db": -16.5,
+    "peak_db": -17.2,
     "rms_db": -30.0,
-    "seam": 0.64,
+    "seam": 0.77,
     "seconds": 12.0
    }
   ],
@@ -436,35 +464,35 @@
   "files": [
    {
     "file": "door_close_1.wav",
-    "peak_db": -8.0,
-    "rms_db": -18.7,
+    "peak_db": -4.0,
+    "rms_db": -23.7,
     "seam": null,
-    "seconds": 0.25
+    "seconds": 0.355
    },
    {
     "file": "door_close_2.wav",
-    "peak_db": -8.0,
-    "rms_db": -18.4,
+    "peak_db": -4.0,
+    "rms_db": -22.7,
     "seam": null,
-    "seconds": 0.262
+    "seconds": 0.282
    },
    {
     "file": "door_close_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -18.4,
+    "peak_db": -4.0,
+    "rms_db": -20.0,
     "seam": null,
-    "seconds": 0.239
+    "seconds": 0.259
    },
    {
     "file": "door_close_4.wav",
-    "peak_db": -8.0,
-    "rms_db": -18.4,
+    "peak_db": -4.0,
+    "rms_db": -22.0,
     "seam": null,
-    "seconds": 0.27
+    "seconds": 0.29
    }
   ],
   "loop": false,
-  "note": "a wooden door and a latch click",
+  "note": "a real small wooden door closing, with a code-made latch click",
   "spatial": true,
   "tracker": "A35",
   "vary": 0.03
@@ -477,7 +505,7 @@
    {
     "file": "enemy_death_1.wav",
     "peak_db": -8.0,
-    "rms_db": -23.0,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 0.3
    },
@@ -593,6 +621,34 @@
     "rms_db": -18.8,
     "seam": null,
     "seconds": 0.411
+   },
+   {
+    "file": "fireball_hit_5.wav",
+    "peak_db": -6.0,
+    "rms_db": -19.5,
+    "seam": null,
+    "seconds": 0.353
+   },
+   {
+    "file": "fireball_hit_6.wav",
+    "peak_db": -6.0,
+    "rms_db": -18.6,
+    "seam": null,
+    "seconds": 0.392
+   },
+   {
+    "file": "fireball_hit_7.wav",
+    "peak_db": -6.0,
+    "rms_db": -18.8,
+    "seam": null,
+    "seconds": 0.369
+   },
+   {
+    "file": "fireball_hit_8.wav",
+    "peak_db": -6.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 0.404
    }
   ],
   "loop": false,
@@ -608,35 +664,49 @@
   "files": [
    {
     "file": "fireball_launch_1.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.3,
+    "peak_db": -1.0,
+    "rms_db": -16.7,
     "seam": null,
-    "seconds": 0.45
+    "seconds": 0.395
    },
    {
     "file": "fireball_launch_2.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.3,
+    "peak_db": -1.0,
+    "rms_db": -17.1,
     "seam": null,
-    "seconds": 0.471
+    "seconds": 0.455
    },
    {
     "file": "fireball_launch_3.wav",
-    "peak_db": -5.0,
-    "rms_db": -16.3,
+    "peak_db": -1.0,
+    "rms_db": -17.4,
     "seam": null,
-    "seconds": 0.431
+    "seconds": 0.369
    },
    {
     "file": "fireball_launch_4.wav",
-    "peak_db": -5.0,
-    "rms_db": -17.3,
+    "peak_db": -1.0,
+    "rms_db": -17.0,
     "seam": null,
-    "seconds": 0.486
+    "seconds": 0.435
+   },
+   {
+    "file": "fireball_launch_5.wav",
+    "peak_db": -2.3,
+    "rms_db": -16.6,
+    "seam": null,
+    "seconds": 0.383
+   },
+   {
+    "file": "fireball_launch_6.wav",
+    "peak_db": -1.0,
+    "rms_db": -16.8,
+    "seam": null,
+    "seconds": 0.405
    }
   ],
   "loop": false,
-  "note": "the orb throws a fireball: air, a low fwoomp and crackle",
+  "note": "the orb throws a fireball: a real whoosh, a low fwoomp and crackle",
   "spatial": true,
   "tracker": "A15",
   "vary": 0.05
@@ -816,35 +886,63 @@
   "files": [
    {
     "file": "hit_soft_1.wav",
-    "peak_db": -12.0,
-    "rms_db": -24.7,
+    "peak_db": -15.9,
+    "rms_db": -24.2,
     "seam": null,
-    "seconds": 0.1
+    "seconds": 0.12
    },
    {
     "file": "hit_soft_2.wav",
-    "peak_db": -12.0,
-    "rms_db": -24.1,
+    "peak_db": -8.0,
+    "rms_db": -24.2,
     "seam": null,
-    "seconds": 0.105
+    "seconds": 0.125
    },
    {
     "file": "hit_soft_3.wav",
-    "peak_db": -12.0,
-    "rms_db": -23.7,
+    "peak_db": -10.4,
+    "rms_db": -24.2,
     "seam": null,
-    "seconds": 0.096
+    "seconds": 0.116
    },
    {
     "file": "hit_soft_4.wav",
-    "peak_db": -12.0,
+    "peak_db": -8.1,
     "rms_db": -24.2,
     "seam": null,
-    "seconds": 0.108
+    "seconds": 0.27
+   },
+   {
+    "file": "hit_soft_5.wav",
+    "peak_db": -14.6,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.113
+   },
+   {
+    "file": "hit_soft_6.wav",
+    "peak_db": -9.7,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.172
+   },
+   {
+    "file": "hit_soft_7.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 0.243
+   },
+   {
+    "file": "hit_soft_8.wav",
+    "peak_db": -10.4,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.126
    }
   ],
   "loop": false,
-  "note": "a light hit (a bolt, a Guard's strike): a short thump and tick",
+  "note": "a light hit (a bolt, a Guard's strike): a real wood knock, a thump and a tick",
   "spatial": true,
   "tracker": "A48",
   "vary": 0.1
@@ -856,29 +954,29 @@
   "files": [
    {
     "file": "house_hit_1.wav",
-    "peak_db": -8.0,
-    "rms_db": -23.4,
+    "peak_db": -9.1,
+    "rms_db": -23.5,
     "seam": null,
     "seconds": 0.35
    },
    {
     "file": "house_hit_2.wav",
-    "peak_db": -8.0,
-    "rms_db": -22.8,
+    "peak_db": -5.9,
+    "rms_db": -23.5,
     "seam": null,
     "seconds": 0.366
    },
    {
     "file": "house_hit_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -23.8,
+    "peak_db": -8.7,
+    "rms_db": -23.5,
     "seam": null,
     "seconds": 0.335
    },
    {
     "file": "house_hit_4.wav",
-    "peak_db": -8.0,
-    "rms_db": -24.0,
+    "peak_db": -8.9,
+    "rms_db": -23.5,
     "seam": null,
     "seconds": 0.378
    }
@@ -915,35 +1013,63 @@
   "files": [
    {
     "file": "melee_hit_1.wav",
-    "peak_db": -8.0,
-    "rms_db": -20.2,
+    "peak_db": -4.0,
+    "rms_db": -21.6,
     "seam": null,
     "seconds": 0.15
    },
    {
     "file": "melee_hit_2.wav",
-    "peak_db": -8.0,
-    "rms_db": -20.8,
+    "peak_db": -4.8,
+    "rms_db": -20.7,
     "seam": null,
-    "seconds": 0.157
+    "seconds": 0.254
    },
    {
     "file": "melee_hit_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -21.6,
+    "peak_db": -4.0,
+    "rms_db": -21.7,
     "seam": null,
-    "seconds": 0.144
+    "seconds": 0.232
    },
    {
     "file": "melee_hit_4.wav",
-    "peak_db": -8.0,
-    "rms_db": -20.1,
+    "peak_db": -4.0,
+    "rms_db": -21.0,
     "seam": null,
-    "seconds": 0.162
+    "seconds": 0.177
+   },
+   {
+    "file": "melee_hit_5.wav",
+    "peak_db": -4.4,
+    "rms_db": -20.7,
+    "seam": null,
+    "seconds": 0.207
+   },
+   {
+    "file": "melee_hit_6.wav",
+    "peak_db": -4.0,
+    "rms_db": -21.2,
+    "seam": null,
+    "seconds": 0.245
+   },
+   {
+    "file": "melee_hit_7.wav",
+    "peak_db": -4.0,
+    "rms_db": -21.3,
+    "seam": null,
+    "seconds": 0.223
+   },
+   {
+    "file": "melee_hit_8.wav",
+    "peak_db": -4.0,
+    "rms_db": -21.1,
+    "seam": null,
+    "seconds": 0.243
    }
   ],
   "loop": false,
-  "note": "a troop's blow: a thud and a cloth slap",
+  "note": "a troop's blow: a real wooden whack, a thud and a cloth slap",
   "spatial": true,
   "tracker": "A16",
   "vary": 0.08
@@ -1090,35 +1216,49 @@
   "files": [
    {
     "file": "place_thunk_1.wav",
-    "peak_db": -4.0,
-    "rms_db": -16.9,
+    "peak_db": -1.0,
+    "rms_db": -16.7,
     "seam": null,
-    "seconds": 0.35
+    "seconds": 0.45
    },
    {
     "file": "place_thunk_2.wav",
-    "peak_db": -4.0,
-    "rms_db": -16.5,
+    "peak_db": -1.0,
+    "rms_db": -16.6,
     "seam": null,
-    "seconds": 0.366
+    "seconds": 0.471
    },
    {
     "file": "place_thunk_3.wav",
-    "peak_db": -4.0,
-    "rms_db": -16.5,
+    "peak_db": -1.0,
+    "rms_db": -19.4,
     "seam": null,
-    "seconds": 0.335
+    "seconds": 0.431
    },
    {
     "file": "place_thunk_4.wav",
-    "peak_db": -4.0,
-    "rms_db": -16.7,
+    "peak_db": -1.0,
+    "rms_db": -16.9,
     "seam": null,
-    "seconds": 0.378
+    "seconds": 0.486
+   },
+   {
+    "file": "place_thunk_5.wav",
+    "peak_db": -1.0,
+    "rms_db": -16.9,
+    "seam": null,
+    "seconds": 0.419
+   },
+   {
+    "file": "place_thunk_6.wav",
+    "peak_db": -1.3,
+    "rms_db": -16.6,
+    "seam": null,
+    "seconds": 0.464
    }
   ],
   "loop": false,
-  "note": "a tower sets down on the board: a woody stone thunk",
+  "note": "a tower sets down on the board: the table rings (wood), the base knocks (stone), a real game piece on wood",
   "spatial": false,
   "tracker": "A10",
   "vary": 0.05
@@ -1417,10 +1557,10 @@
   "files": [
    {
     "file": "storm_cloud.wav",
-    "peak_db": -7.0,
-    "rms_db": -20.4,
+    "peak_db": -3.0,
+    "rms_db": -24.0,
     "seam": null,
-    "seconds": 2.033
+    "seconds": 2.199
    }
   ],
   "loop": false,
@@ -1495,31 +1635,31 @@
   "files": [
    {
     "file": "tunneler_pop_1.wav",
-    "peak_db": -8.0,
-    "rms_db": -19.4,
+    "peak_db": -8.6,
+    "rms_db": -20.5,
     "seam": null,
-    "seconds": 0.35
+    "seconds": 0.4
    },
    {
     "file": "tunneler_pop_2.wav",
-    "peak_db": -8.0,
-    "rms_db": -20.8,
+    "peak_db": -7.5,
+    "rms_db": -20.5,
     "seam": null,
-    "seconds": 0.366
+    "seconds": 0.419
    },
    {
     "file": "tunneler_pop_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -22.4,
+    "peak_db": -8.4,
+    "rms_db": -20.5,
     "seam": null,
-    "seconds": 0.335
+    "seconds": 0.383
    },
    {
     "file": "tunneler_pop_4.wav",
-    "peak_db": -8.0,
-    "rms_db": -19.3,
+    "peak_db": -8.1,
+    "rms_db": -20.5,
     "seam": null,
-    "seconds": 0.378
+    "seconds": 0.432
    }
   ],
   "loop": false,

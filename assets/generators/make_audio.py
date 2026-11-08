@@ -1,5 +1,7 @@
-"""Aeterna sound effects and ambience, all synthesised from code (Siddharth 2026-11-07: no recordings, no third-party
-samples or soundfont). One recipe per sound; a recipe returns a numpy array and the framework below trims, cleans,
+"""Aeterna sound effects and ambience, synthesised from code, some layered over short cuts ("grains") of free licensed
+recordings (Siddharth 2026-11-08: CC0 / CC BY / royalty-free allowed with credits; cut by tools/audio_grains.py into
+assets/audio_src/grains/, credited in docs/AUDIO_CREDITS.md). Recipe = a real body + a crisp code-made attack + at
+most one sweetener. One recipe per sound; a recipe returns a numpy array and the framework below trims, cleans,
 loudness-matches and writes it.
 
 Run (no Blender needed):
@@ -32,19 +34,50 @@ GODOT_OUT = os.path.join(ROOT, "godot", "assets", "audio")
 RECIPES = {}
 
 
-TAKE_PITCH = [1.0, 0.955, 1.045, 0.925, 1.075]  # take k of a sound is resampled by this (a small pitch and length change)
+TAKE_PITCH = [1.0, 0.955, 1.045, 0.925, 1.075, 0.97, 1.03, 0.94]  # take k is resampled by this (a small pitch and length change)
 WARM_HZ = 10000  # second pass (Siddharth 2026-11-08, "peaceful and cozy"): one-shots lose their hard top end
+
+GRAINS = os.path.join(ROOT, "assets", "audio_src", "grains")
+_GRAIN_CACHE = {}
+
+
+def grain(kit, r, pitch=1.0, spread=0.06, seconds=None):
+    """One random kept grain of `kit`, resampled by pitch * (1 +- spread), peak 1. Each take draws its own grain."""
+    if kit not in _GRAIN_CACHE:
+        from scipy.io import wavfile
+        idx = json.load(open(os.path.join(GRAINS, "grains.json"), encoding="utf-8"))[kit]
+        keep = [e for e in idx if e.get("keep", True)] or idx
+        _GRAIN_CACHE[kit] = [wavfile.read(os.path.join(GRAINS, kit, e["file"]))[1].astype(float) / 32768.0 for e in keep]
+    xs = _GRAIN_CACHE[kit]
+    if not xs:
+        raise RuntimeError("grain kit %r is empty: rebuild it with tools/audio_grains.py %s" % (kit, kit))
+    x = xs[int(r.integers(0, len(xs)))]
+    k = pitch * (1.0 + float(r.uniform(-spread, spread)))
+    if k > 1.0:  # shrinking: filter first or the top end folds back down (aliasing)
+        x = lp(x, 0.45 * S.SR / k, 4)
+    n = max(16, int(len(x) / k))
+    x = np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x)
+    if seconds is not None:  # exactly `seconds` long: cut with a short fade, or pad with silence
+        if len(x) > n_of(seconds):
+            x = x[: n_of(seconds)].copy()
+            m = min(len(x) // 3, n_of(0.08))
+            x[-m:] *= np.linspace(1, 0, m)
+        else:
+            x = np.concatenate([x, np.zeros(n_of(seconds) - len(x))])
+    return pk(x)
 
 
 def recipe(name, tid, bus="sfx", peak=-4.0, loop=False, rms=None, spatial=False, cooldown=0.0, vary=0.03, variants=1,
-           xfade=0.3, note="", takes=1, duck=False, warm=True):
+           xfade=0.3, note="", takes=1, duck=False, warm=True, match=None):
     ## variants: the recipe is called with v = 0..variants-1 and draws a different sound for each (enemy kinds...).
     ## takes: the same recipe rendered several times with its own seed and pitch, so repeats do not sound robotic.
     ## duck: while it plays the game lowers ambience and music (a story beat). warm: roll off above WARM_HZ.
+    ## match: loudness (RMS dB) to hit instead of `peak`, with peaks allowed up to 4 dB over `peak`: a sound rebuilt on a
+    ## sharper recorded body keeps the old sound's loudness, and the new punch shows as attack, not as "quieter".
     def deco(fn):
         RECIPES[name] = dict(fn=fn, tid=tid, bus=bus, peak=peak, loop=loop, rms=rms, spatial=spatial,
                              cooldown=cooldown, vary=vary, variants=variants, xfade=xfade, note=note, takes=takes,
-                             duck=duck, warm=warm)
+                             duck=duck, warm=warm, match=match)
         return fn
     return deco
 
@@ -103,21 +136,23 @@ def cooldown_ready(r, v):
 
 # ============================================================================== BUILDING
 
-@recipe("place_thunk", "A10", takes=4, peak=-4, vary=0.05, note="a tower sets down on the board: a woody stone thunk")
+@recipe("place_thunk", "A10", match=-16.6, takes=6, peak=-4, vary=0.05, note="a tower sets down on the board: the table rings (wood), the base knocks (stone), a real game piece on wood")
 def place_thunk(r, v):
-    body = thud(0.35, 150, 58, 0.12, r, 0.5)
-    stone = pk(bp(noise(0.04, r), 1400, 3600) * exp_env(0.04, 0.008, 0.0003))
-    sub = osc("sine", 52, 0.25) * exp_env(0.25, 0.1, 0.004)
-    return mix((body, 0, 1.0), (stone, 0, 0.3), (sub, 0, 0.5))
+    # listening pick 3b (Siddharth 2026-11-08) plus a recorded piece-on-board under it
+    table = modal(float(r.uniform(105, 125)), 0.45, "wood", r, hardness=0.35)
+    base = modal(float(r.uniform(420, 520)), 0.2, "stone", r, hardness=0.55)
+    real = lp(grain("chess", r, 0.78), 6000)
+    sub = thud(0.3, 85, 45, 0.11, r, 0.0)
+    return mix((pk(table), 0, 0.8), (pk(base), 0.002, 0.45), (real, 0, 0.6), (sub, 0, 0.5))
 
 
-@recipe("build_pop", "A12", takes=4, peak=-6, vary=0.05, note="a puff of dust and a bubbly pop with two sparkles")
+@recipe("build_pop", "A12", match=-23.4, takes=4, peak=-6, vary=0.05, note="a bubbly pop, a clatter of wooden blocks and two sparkles")
 def build_pop(r, v):
     pop = osc("sine", curve([(0, 350), (0.07, 1100)], 0.08), 0.08) * exp_env(0.08, 0.025, 0.001)
-    dust = pk(hp(lp(noise(0.35, r), 3200), 500) * exp_env(0.35, 0.09, 0.004))
+    blocks = lp(grain("blocks", r, 1.0), 7000)
     sp1 = glass(note("G6"), 0.3, 0.6)
     sp2 = glass(note("C7"), 0.35, 0.6)
-    return reverb(mix((pop, 0, 0.9), (dust, 0, 0.4), (sp1, 0.04, 0.25), (sp2, 0.09, 0.2)), 0.5, 0.12)
+    return reverb(mix((pop, 0, 0.8), (blocks, 0.02, 0.5), (sp1, 0.05, 0.22), (sp2, 0.1, 0.18)), 0.5, 0.12)
 
 
 @recipe("invalid", "A11", bus="ui", peak=-8, cooldown=0.15, note="can't place or can't afford: two soft low knocks, falling")
@@ -165,15 +200,15 @@ def coin_bad(r, v):
 
 # ============================================================================== COMBAT
 
-@recipe("fireball_launch", "A15", takes=4, peak=-5, spatial=True, vary=0.05, note="the orb throws a fireball: air, a low fwoomp and crackle")
+@recipe("fireball_launch", "A15", match=-16.6, takes=6, peak=-5, spatial=True, vary=0.05, note="the orb throws a fireball: a real whoosh, a low fwoomp and crackle")
 def fireball_launch(r, v):
-    air = whoosh(0.45, 300, 1700, r, 1.0, 0.3)
+    air = lp(grain("whoosh", r, 0.85, seconds=0.6), 6000)
     boom = osc("sine", curve([(0, 70), (0.25, 190)], 0.3), 0.3) * exp_env(0.3, 0.12, 0.01)
     cr = crackle(0.4, r, 70, 3000) * exp_env(0.4, 0.2, 0.002)
-    return mix((air, 0, 0.7), (boom, 0, 0.55), (cr, 0.03, 0.35))
+    return mix((air, 0, 0.75), (boom, 0, 0.5), (cr, 0.03, 0.3))
 
 
-@recipe("fireball_hit", "A15", takes=4, peak=-6, spatial=True, vary=0.07, cooldown=0.04, note="a small fire burst where it lands")
+@recipe("fireball_hit", "A15", takes=8, peak=-6, spatial=True, vary=0.07, cooldown=0.04, note="a small fire burst where it lands")
 def fireball_hit(r, v):
     body = thud(0.38, 115, 46, 0.12, r, 0.4)
     puff = pk(lp(noise(0.35, r), 2600) * exp_env(0.35, 0.1, 0.003))
@@ -181,15 +216,18 @@ def fireball_hit(r, v):
     return mix((body, 0, 0.9), (puff, 0, 0.45), (sparks, 0.02, 0.35))
 
 
-@recipe("hit_soft", "A48", takes=4, peak=-12, spatial=True, vary=0.1, cooldown=0.05, note="a light hit (a bolt, a Guard's strike): a short thump and tick")
+@recipe("hit_soft", "A48", match=-24.2, takes=8, peak=-12, spatial=True, vary=0.1, cooldown=0.05, note="a light hit (a bolt, a Guard's strike): a real wood knock, a thump and a tick")
 def hit_soft(r, v):
-    return mix((thud(0.1, 230, 120, 0.04, r, 0.3), 0, 0.9), (pk(bp(noise(0.02, r), 1800, 4500) * exp_env(0.02, 0.004)), 0, 0.5))
+    knock = lp(grain("wood_knock", r, 1.1, seconds=0.25), 6500)
+    tick = pk(bp(noise(0.02, r), 1800, 4500) * exp_env(0.02, 0.004))
+    return mix((knock, 0, 0.8), (thud(0.1, 230, 120, 0.04, r, 0.3), 0, 0.5), (tick, 0, 0.3))
 
 
-@recipe("melee_hit", "A16", takes=4, peak=-8, spatial=True, vary=0.08, cooldown=0.05, note="a troop's blow: a thud and a cloth slap")
+@recipe("melee_hit", "A16", match=-20.7, takes=8, peak=-8, spatial=True, vary=0.08, cooldown=0.05, note="a troop's blow: a real wooden whack, a thud and a cloth slap")
 def melee_hit(r, v):
+    whack = lp(grain("hammer", r, 0.8), 5500)
     slap = pk(bp(noise(0.06, r), 900, 2600) * exp_env(0.06, 0.02, 0.0005))
-    return mix((thud(0.15, 200, 105, 0.055, r, 0.3), 0, 0.9), (slap, 0, 0.5))
+    return mix((whack, 0, 0.75), (thud(0.15, 200, 105, 0.055, r, 0.3), 0, 0.6), (slap, 0.004, 0.3))
 
 
 @recipe("enemy_death", "A17", peak=-8, spatial=True, vary=0.08, variants=3, cooldown=0.04,
@@ -198,7 +236,8 @@ def enemy_death(r, v):
     if v == 0:
         bloop = osc("sine", curve([(0, 430), (0.22, 105)], 0.24), 0.24) * exp_env(0.24, 0.1, 0.002)
         poof = pk(lp(noise(0.3, r), 1800) * exp_env(0.3, 0.07, 0.003))
-        return mix((bloop, 0, 0.9), (poof, 0, 0.5), (thud(0.2, 120, 60, 0.08), 0, 0.5))
+        squish = lp(grain("squish", r, 0.9), 5000)
+        return mix((bloop, 0, 0.8), (squish, 0, 0.45), (poof, 0, 0.4), (thud(0.2, 120, 60, 0.08), 0, 0.45))
     if v == 1:
         pip = osc("sine", curve([(0, 950), (0.12, 310)], 0.13), 0.13) * exp_env(0.13, 0.05, 0.001)
         pff = pk(hp(noise(0.2, r), 1800) * exp_env(0.2, 0.05, 0.002))
@@ -235,10 +274,10 @@ def wisp_screech(r, v):
     return reverb(mix((a, 0, 0.5), (b, 0.1, 0.5)), 0.5, 0.15)
 
 
-@recipe("tunneler_pop", "A20", takes=4, peak=-8, spatial=True, vary=0.08, note="it bursts out of the ground: thump, gravel and a plop")
+@recipe("tunneler_pop", "A20", match=-20.5, takes=4, peak=-8, spatial=True, vary=0.08, note="it bursts out of the ground: thump, gravel and a plop")
 def tunneler_pop(r, v):
     body = thud(0.3, 100, 48, 0.1, r, 0.5)
-    gravel = pk(lp(crackle(0.35, r, 140, 2200), 3500) * exp_env(0.35, 0.12, 0.002))
+    gravel = lp(grain("dirt", r, 1.0, seconds=0.4), 5000) * exp_env(0.4, 0.15, 0.002)
     plop = osc("sine", curve([(0, 250), (0.08, 520)], 0.09), 0.09) * exp_env(0.09, 0.03, 0.002)
     return mix((body, 0, 1.0), (gravel, 0, 0.5), (plop, 0.05, 0.4))
 
@@ -252,7 +291,7 @@ def splitter_split(r, v):
     return mix((slurp, 0, 0.8), (pop, 0.17, 0.6), (marimba(note("G5"), 0.25), 0.2, 0.35), (pan(marimba(note("D6"), 0.25), 0.5)[:, 0], 0.24, 0.3))
 
 
-@recipe("boss_roar", "A22", duck=True, peak=-3, spatial=True, cooldown=2.0, vary=0.03, note="a deep growl with a moving mouth, ending in a rumble")
+@recipe("boss_roar", "A22", match=-19.3, duck=True, peak=-3, spatial=True, cooldown=2.0, vary=0.03, note="a deep growl with a moving mouth, ending in a rumble")
 def boss_roar(r, v):
     d = 1.9
     t = t_of(d)
@@ -262,7 +301,8 @@ def boss_roar(r, v):
     voiced = sweep_bp(src, mouth, 1.6) * 3.0
     gr = lp(noise(d, r), 700) * 0.5
     x = (voiced + gr) * (0.72 + 0.28 * np.sin(2 * np.pi * 27 * t)) * swell(d, 0.3)
-    return reverb(soft_clip(x, 1.6), 1.3, 0.22)
+    beast = lp(grain("creature", r, 0.7, spread=0.03, seconds=d), 3000)  # a real creature voice pitched down underneath
+    return reverb(mix((soft_clip(x, 1.6), 0, 1.0), (beast, 0.05, 0.5), seconds=d + 0.3), 1.3, 0.22)
 
 
 @recipe("boss_phase", "A22", duck=True, peak=-5, spatial=True, cooldown=1.0, note="a phase change: a crystal crack, falling shimmer and a boom")
@@ -275,13 +315,14 @@ def boss_phase(r, v):
 
 # ============================================================================== VILLAGE
 
-@recipe("house_hit", "A23", takes=4, peak=-8, spatial=True, vary=0.06, cooldown=0.7, note="an enemy strikes a house: wood cracks and a beam creaks")
+@recipe("house_hit", "A23", match=-23.5, takes=4, peak=-8, spatial=True, vary=0.06, cooldown=0.7, note="an enemy strikes a house: wood cracks and a beam creaks")
 def house_hit(r, v):
     crack1 = pk(bp(noise(0.06, r), 700, 2400) * exp_env(0.06, 0.012, 0.0005))
     crack2 = pk(bp(noise(0.08, r), 600, 2000) * exp_env(0.08, 0.02, 0.0005))
     creak = osc("saw", curve([(0, 190), (0.25, 150)], 0.3), 0.3) * exp_env(0.3, 0.12, 0.01)
     creak = lp(bp(creak, 150, 900), 900) * (0.7 + 0.3 * np.sin(2 * np.pi * 22 * t_of(0.3)))
-    return mix((thud(0.3, 120, 66, 0.1, r, 0.4), 0, 1.0), (crack1, 0, 0.8), (crack2, 0.07, 0.6), (creak, 0.05, 0.4))
+    whack = lp(grain("wood_knock", r, 0.75), 5000)
+    return mix((thud(0.3, 120, 66, 0.1, r, 0.4), 0, 0.8), (whack, 0, 0.7), (crack1, 0, 0.5), (crack2, 0.07, 0.4), (creak, 0.05, 0.4))
 
 
 @recipe("shutter_close", "A23", peak=-7, spatial=True, note="the house shuts up: three wooden clacks and a slide")
@@ -293,10 +334,11 @@ def shutter_close(r, v):
     return mix((slide, 0, 0.25), (clack(0.012), 0.08, 0.9), (clack(0.012), 0.14, 0.8), (clack(0.02), 0.19, 1.0))
 
 
-@recipe("door_close", "A35", takes=4, peak=-8, spatial=True, cooldown=0.1, note="a wooden door and a latch click")
+@recipe("door_close", "A35", match=-18.5, takes=4, peak=-8, spatial=True, cooldown=0.1, note="a real small wooden door closing, with a code-made latch click")
 def door_close(r, v):
-    return mix((thud(0.25, 170, 85, 0.09, r, 0.5), 0, 1.0),
-               (bp(noise(0.015, r), 2500, 4500) * exp_env(0.015, 0.003, 0.0002), 0.12, 0.7))
+    door = lp(grain("door", r, 1.15, seconds=0.7), 6000)
+    return mix((door, 0, 0.9), (thud(0.25, 170, 85, 0.09, r, 0.5), 0, 0.4),
+               (bp(noise(0.015, r), 2500, 4500) * exp_env(0.015, 0.003, 0.0002), 0.1, 0.4))
 
 
 @recipe("gate_open", "A43", peak=-9, spatial=True, note="the Guard Tower gate swings open: a creak and a thump")
@@ -402,12 +444,12 @@ def boulder_fall(r, v):
     return mix((w, 0, 1.0), (air, 0, 1.0))
 
 
-@recipe("boulder_hit", "A25", takes=4, peak=-3, spatial=True, cooldown=0.1, note="a boulder lands: a heavy thud, gravel and dust")
+@recipe("boulder_hit", "A25", match=-18.5, takes=4, peak=-3, spatial=True, cooldown=0.1, note="a boulder lands: a heavy thud, real stones knocking and soil")
 def boulder_hit(r, v):
     body = thud(0.8, 85, 34, 0.22, r, 0.8)
-    gravel = pk(lp(crackle(0.5, r, 160, 2000), 4000) * exp_env(0.5, 0.2, 0.002))
-    dust = pk(hp(lp(noise(0.5, r), 2400), 400) * exp_env(0.5, 0.18, 0.004))
-    return reverb(mix((body, 0, 1.0), (gravel, 0.01, 0.6), (dust, 0, 0.4)), 0.5, 0.15)
+    stone = lp(grain("stone", r, 0.7), 5000)
+    soil = lp(grain("dirt", r, 0.9, seconds=0.5), 4500) * exp_env(0.5, 0.2, 0.004)
+    return reverb(mix((body, 0, 1.0), (stone, 0, 0.7), (soil, 0.02, 0.4)), 0.5, 0.15)
 
 
 @recipe("fire_loop", "A26", bus="sfx", peak=-14, rms=-30, loop=True, spatial=True, xfade=0.3, note="loop: a small fire crackling")
@@ -423,12 +465,12 @@ def spell_pick(r, v):
     return reverb(mix((marimba(note("A5"), 0.3), 0, 0.9), (glass(note("E7"), 0.3, 0.5), 0.02, 0.3)), 0.4, 0.1)
 
 
-@recipe("storm_cloud", "A48", peak=-7, spatial=True, note="Storm Cloud: a roll of low thunder and raindrops")
+@recipe("storm_cloud", "A48", match=-20.4, peak=-7, spatial=True, note="Storm Cloud: a roll of low thunder and raindrops")
 def storm_cloud(r, v):
-    d = 1.5
-    rum = pk(lp(noise(d, r, "brown"), 260) * swell(d, 0.3))
+    d = 1.8
+    rum = lp(grain("thunder", r, 0.9, seconds=d), 2500)  # a real thunder roll, darker
     rain = hp(noise(d, r), 3500) * 0.15 * swell(d, 0.5) + 0.3 * impulses(d, r, 120, 0.003)
-    return reverb(mix((rum, 0, 1.0), (rain, 0.1, 0.8)), 0.8, 0.15)
+    return reverb(mix((rum, 0, 1.0), (pk(rain), 0.1, 0.35)), 0.8, 0.15)
 
 
 @recipe("rage_cast", "A48", peak=-6, spatial=True, note="Rage: a war drum and a rising swell")
@@ -483,21 +525,21 @@ def orb_charge(r, v):
     return mix((hum, 0, 0.6), (shim, 0, 1.0), (cr, 0, 1.0))
 
 
-@recipe("crossbow_shot", "A43", takes=4, peak=-7, spatial=True, vary=0.05, note="the Wind Crossbow: a bowstring twang and a pale rush of air")
+@recipe("crossbow_shot", "A43", match=-22.2, takes=6, peak=-7, spatial=True, vary=0.05, note="the Wind Crossbow: a real bow release, a soft twang and a pale rush of air")
 def crossbow_shot(r, v):
-    t = t_of(0.2)
     twang = osc("sine", curve([(0, 330), (0.18, 170)], 0.2), 0.2) * exp_env(0.2, 0.09, 0.0005) \
         + 0.5 * osc("sine", curve([(0, 660), (0.18, 340)], 0.2), 0.2) * exp_env(0.2, 0.05, 0.0005)
-    tick = pk(bp(noise(0.015, r), 2000, 5000) * exp_env(0.015, 0.004))
+    bow = lp(grain("bow", r, 1.0, seconds=0.45), 7000)
     gust = whoosh(0.35, 1800, 700, r, 0.9, 0.25) * 0.5 + hp(noise(0.35, r), 4000) * swell(0.35, 0.3) * 0.12
-    return mix((twang, 0, 0.8), (tick, 0, 0.35), (gust, 0.02, 0.8))
+    return mix((bow, 0, 0.8), (twang, 0, 0.35), (gust, 0.03, 0.6))
 
 
-@recipe("crossbow_pierce", "A43", takes=4, peak=-12, spatial=True, vary=0.08, cooldown=0.08, note="the bolt passes through: a thin rising whistle")
+@recipe("crossbow_pierce", "A43", match=-21.7, takes=6, peak=-12, spatial=True, vary=0.08, cooldown=0.08, note="the bolt passes through: a real stick whoosh and a thin rising whistle")
 def crossbow_pierce(r, v):
     d = 0.28
     w = osc("sine", curve([(0, 1800), (d, 2600)], d), d) * swell(d, 0.4) * 0.25
-    return mix((w, 0, 1.0), (whoosh(d, 2000, 1000, r, 1.0, 0.4), 0, 0.4))
+    stick = hp(grain("whoosh", r, 1.3, seconds=0.35), 900)
+    return mix((stick, 0, 0.7), (pk(w), 0, 0.35))
 
 
 @recipe("airship_engine", "A43", bus="sfx", peak=-16, rms=-32, loop=True, spatial=True, xfade=0.3, note="loop: a soft propeller chug")
@@ -510,10 +552,11 @@ def airship_engine(r, v):
     return soft_clip((low * 0.7 + air) * blade, 1.4)
 
 
-@recipe("airship_shot", "A43", takes=4, peak=-5, spatial=True, vary=0.05, note="the Airship's cannon: a deep thump and a puff of smoke")
+@recipe("airship_shot", "A43", match=-16.4, takes=4, peak=-5, spatial=True, vary=0.05, note="the Airship's cannon: a deep thump and a puff of smoke")
 def airship_shot(r, v):
-    return mix((thud(0.5, 95, 40, 0.15, r, 0.5), 0, 1.0), (whoosh(0.3, 900, 400, r, 0.9, 0.3), 0, 0.4),
-               (crackle(0.25, r, 60, 3000) * exp_env(0.25, 0.1), 0.02, 0.3))
+    boom = lp(grain("cannon", r, 1.25, seconds=0.8), 3200)  # a real (far) cannon, pitched up: a toy-sized gun
+    return mix((boom, 0, 0.9), (thud(0.5, 95, 40, 0.15, r, 0.5), 0, 0.7),
+               (crackle(0.25, r, 60, 3000) * exp_env(0.25, 0.1), 0.02, 0.25))
 
 
 # ============================================================================== FORESIGHT, REWIND, CARDS
@@ -586,27 +629,22 @@ def day_bed(r, v):
     leaves = lp(bp(noise(d, r), 1800, 5200), 6000) * 0.09 * _slow(r, d, 0.5, 0.0, 1.0) ** 2
     bed = stereo_wide(wind * 0.8 + leaves, 0.6)
     layers = [bed]
-    # a far wind chime: a few pentatonic glass notes, very quiet, twice per loop
-    for at_c in (2.2, 8.1):
-        tones = [note(n) for n in ("D6", "E6", "G6", "A6", "B6")]
-        ring = []
-        t0 = 0.0
-        for k in range(int(r.integers(2, 4))):
-            ring.append((glass(tones[int(r.integers(0, len(tones)))], 1.6, 1.6), t0, 1.0))
-            t0 += float(r.uniform(0.18, 0.4))
-        layers.append((pan(mix(*ring) * 0.035, float(r.uniform(-0.6, 0.6))), at_c, 1.0))
+    # listening pick 1d (Siddharth 2026-11-08): no wind chime; soft far birds that warble (FM), uneven and in a room
     at = 0.8
     while at < d - 1.6:
-        f0 = float(r.uniform(2400, 4200))
-        notes = []
-        t0 = 0.0
-        for k in range(int(r.integers(2, 5))):
-            c = chirp(f0 * float(r.uniform(0.9, 1.15)), f0 * float(r.uniform(1.15, 1.5)), 0.07, 0.01, 40)
-            notes.append((c, t0, 1.0))
-            t0 += 0.11
-        bird = lp(mix(*notes), 6000) * 0.05
-        layers.append((pan(bird, float(r.uniform(-0.8, 0.8))), at, 1.0))
-        at += float(r.uniform(2.0, 5.0))
+        notes, t0 = [], 0.0
+        base = float(r.uniform(1800, 3000))
+        for k in range(int(r.integers(2, 6))):
+            dur = float(r.uniform(0.05, 0.16))
+            f_a = base * float(r.uniform(0.85, 1.2))
+            f_b = f_a * float(r.uniform(0.8, 1.35))
+            c = chirp(f_a, f_b, dur, vib=float(r.uniform(0.02, 0.06)), vib_rate=float(r.uniform(25, 60)), shape=float(r.uniform(0.6, 1.8)))
+            c = c * (0.7 + 0.3 * float(r.random())) + 0.15 * bp(noise(dur, r), f_a * 0.8, f_a * 1.3) * np.sin(np.pi * t_of(dur) / dur)
+            notes.append((flutter(c, r, 0.3, 40), t0, 1.0))
+            t0 += dur + float(r.uniform(0.03, 0.14))
+        bird = room(pan(lp(mix(*notes), 4200) * 0.025, float(r.uniform(-0.8, 0.8))), 0.5, 0.45, seed=int(r.integers(1, 99)))
+        layers.append((bird, at, 1.0))
+        at += float(r.uniform(2.5, 5.5))
     return reverb(mix(*layers, seconds=d), 0.8, 0.1)[: n_of(d)]
 
 
@@ -679,6 +717,8 @@ def render(name, spec, v, take=0):
         x = loop_seamless(x, spec["xfade"])
     if spec["rms"] is not None:
         x = normalise(x, rms_db=spec["rms"], max_peak_db=-2.0)
+    elif spec["match"] is not None:
+        x = normalise(x, rms_db=spec["match"], max_peak_db=min(-1.0, spec["peak"] + 4.0))
     else:
         x = normalise(x, peak_db=spec["peak"])
     return x
