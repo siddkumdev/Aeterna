@@ -45,7 +45,8 @@ The users often read on a phone with no terminal, so reports must stand alone:
 - Either teammate can approve an asset; record who.
 
 ## 6. Plugins and tools that come with the repo
-- `.claude/skills/` and `.claude/agents/` (`art-critic`, `code-critic`, `player-critic`): the project workflows (shared through git).
+- `.claude/skills/` and `.claude/agents/` (`art-critic`, `code-critic`, `player-critic`, `senior-advisor`): the project workflows (shared through git). `senior-advisor` (added 2026-11-08, Siddharth) is a read-only second opinion on design, UX, visuals, VFX, audio, performance and scope; ask it before big work or when the user wants a view. Its advice is not approval.
 - `.claude/settings.json` enables Siddharth's `i-have-adhd` output-style plugin (third-party, from GitHub `ayghri/i-have-adhd`). It does nothing unless someone types `/i-have-adhd`. If it is on, the project rule "no time estimates" still wins over its "give specific time estimates" rule.
 - Third-party Godot skills in `.claude/skills/` (installed 2026-10-22 with Siddharth's OK, text only): `godot-gdscript-patterns` (wshobson/agents, MIT) and `godot-development` (omer-metin, Apache-2.0). General Godot 4 guidance, mostly 2D; each starts with a project note: our rules win and the user decides, never "correct" a user's choice from them.
+- Third-party audio skill `game-audio-principles` (davila7/claude-code-templates, MIT, installed 2026-11-08 with Siddharth's OK, text only): general game-audio guidance; `docs/AUDIO_DIRECTION.md` wins over it.
 - `.mcp.json`: the Blender MCP connection (needs `uv` and the Blender add-on; optional, see `docs/SETUP.md`).

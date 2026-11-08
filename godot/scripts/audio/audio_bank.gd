@@ -9,7 +9,9 @@ extends Node
 
 const DIR := "res://assets/audio/"
 const MAX_VOICES := 28
-const BUS_DB := {"ui": -4.0, "sfx": -2.0, "ambience": -6.0, "music": -8.0}
+const BUS_DB := {"ui": -3.0, "sfx": -5.0, "ambience": -15.0, "music": -10.0}  # docs/AUDIO_DIRECTION.md
+const DUCK_DB := -6.0  # a story beat (manifest "duck") lowers ambience and music this much while it plays
+const DUCKED := ["ambience", "music"]
 
 var enabled := true
 var manifest := {}
@@ -21,6 +23,8 @@ var _bed_players := {}   # bed name -> AudioStreamPlayer
 var _bed := ""
 var _fades := {}         # player -> its running fade tween
 var _rng := RandomNumberGenerator.new()
+var _duck_until := 0  # msec: ambience and music stay lowered until then
+var _duck_tw: Tween
 
 
 func setup() -> void:
@@ -102,6 +106,8 @@ func play(id: String, at := Vector3.INF) -> void:
 	add_child(p)
 	if placed:
 		(p as AudioStreamPlayer3D).global_position = at
+	if m.get("duck", false):
+		_duck(s.get_length() / maxf(pitch, 0.01))
 	voices += 1
 	played += 1
 	p.finished.connect(func():
@@ -146,3 +152,34 @@ func _fade(p: AudioStreamPlayer, to_db: float, seconds: float, stop_after: bool)
 		tw.tween_callback(func():
 			if is_instance_valid(p) and _bed_players.get(_bed) != p:
 				p.stop())
+
+
+func _exit_tree() -> void:
+	_set_duck(0.0)  # the buses outlive this node: never leave them lowered
+
+
+func _duck(seconds: float) -> void:
+	## Lowers ambience and music under a story beat, and brings them back once the last beat has finished.
+	var until := Time.get_ticks_msec() + int(seconds * 1000.0)
+	if until <= _duck_until:
+		return
+	_duck_until = until
+	if _duck_tw and _duck_tw.is_valid():
+		_duck_tw.kill()
+	_duck_tw = create_tween()
+	_duck_tw.tween_method(_set_duck, _duck_amount(), 1.0, 0.25)
+	_duck_tw.tween_interval(maxf(0.0, seconds - 0.5))
+	_duck_tw.tween_method(_set_duck, 1.0, 0.0, 0.8)
+
+
+func _duck_amount() -> float:
+	## How far the ducked buses are down now, 0 (normal) to 1 (fully ducked).
+	var i := AudioServer.get_bus_index("ambience")
+	return 0.0 if i == -1 else clampf((BUS_DB["ambience"] - AudioServer.get_bus_volume_db(i)) / -DUCK_DB, 0.0, 1.0)
+
+
+func _set_duck(k: float) -> void:
+	for b in DUCKED:
+		var i := AudioServer.get_bus_index(b)
+		if i != -1:
+			AudioServer.set_bus_volume_db(i, BUS_DB[b] + DUCK_DB * k)

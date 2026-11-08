@@ -1407,5 +1407,10 @@ func _audio() -> void:
 	a.set_bed("day_bed")
 	var s := a._stream("day_bed.wav", true)
 	check("audio: a bed loops", s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	check("audio: frequent sounds have several takes", a.manifest["pinch"]["files"].size() >= 4)
+	var amb := AudioServer.get_bus_index("ambience")
+	a.play("dawn_bell")
+	await create_timer(0.4).timeout
+	check("audio: a story beat ducks the ambience", amb != -1 and AudioServer.get_bus_volume_db(amb) < AudioBank.BUS_DB["ambience"] - 3.0)
 	a.queue_free()
 	g.queue_free()

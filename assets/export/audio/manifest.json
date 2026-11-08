@@ -2,6 +2,7 @@
  "airship_engine": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "airship_engine.wav",
@@ -20,13 +21,35 @@
  "airship_shot": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "airship_shot.wav",
+    "file": "airship_shot_1.wav",
     "peak_db": -5.0,
     "rms_db": -16.3,
     "seam": null,
     "seconds": 0.5
+   },
+   {
+    "file": "airship_shot_2.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.3,
+    "seam": null,
+    "seconds": 0.524
+   },
+   {
+    "file": "airship_shot_3.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.4,
+    "seam": null,
+    "seconds": 0.478
+   },
+   {
+    "file": "airship_shot_4.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.5,
+    "seam": null,
+    "seconds": 0.541
    }
   ],
   "loop": false,
@@ -38,11 +61,12 @@
  "boss_phase": {
   "bus": "sfx",
   "cooldown": 1.0,
+  "duck": true,
   "files": [
    {
     "file": "boss_phase.wav",
     "peak_db": -5.0,
-    "rms_db": -20.8,
+    "rms_db": -20.9,
     "seam": null,
     "seconds": 1.706
    }
@@ -56,6 +80,7 @@
  "boss_roar": {
   "bus": "sfx",
   "cooldown": 2.0,
+  "duck": true,
   "files": [
    {
     "file": "boss_roar.wav",
@@ -74,11 +99,12 @@
  "boulder_fall": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "boulder_fall.wav",
     "peak_db": -6.0,
-    "rms_db": -16.0,
+    "rms_db": -14.8,
     "seam": null,
     "seconds": 0.9
    }
@@ -92,13 +118,35 @@
  "boulder_hit": {
   "bus": "sfx",
   "cooldown": 0.1,
+  "duck": false,
   "files": [
    {
-    "file": "boulder_hit.wav",
+    "file": "boulder_hit_1.wav",
     "peak_db": -3.0,
     "rms_db": -18.2,
     "seam": null,
     "seconds": 1.005
+   },
+   {
+    "file": "boulder_hit_2.wav",
+    "peak_db": -3.0,
+    "rms_db": -18.7,
+    "seam": null,
+    "seconds": 1.052
+   },
+   {
+    "file": "boulder_hit_3.wav",
+    "peak_db": -3.0,
+    "rms_db": -18.7,
+    "seam": null,
+    "seconds": 0.962
+   },
+   {
+    "file": "boulder_hit_4.wav",
+    "peak_db": -3.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 1.084
    }
   ],
   "loop": false,
@@ -110,13 +158,35 @@
  "build_pop": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "build_pop.wav",
+    "file": "build_pop_1.wav",
     "peak_db": -6.0,
     "rms_db": -23.3,
     "seam": null,
     "seconds": 0.654
+   },
+   {
+    "file": "build_pop_2.wav",
+    "peak_db": -6.0,
+    "rms_db": -24.5,
+    "seam": null,
+    "seconds": 0.664
+   },
+   {
+    "file": "build_pop_3.wav",
+    "peak_db": -6.0,
+    "rms_db": -22.7,
+    "seam": null,
+    "seconds": 0.626
+   },
+   {
+    "file": "build_pop_4.wav",
+    "peak_db": -6.0,
+    "rms_db": -23.1,
+    "seam": null,
+    "seconds": 0.705
    }
   ],
   "loop": false,
@@ -128,11 +198,12 @@
  "coin_bad": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "coin_bad.wav",
     "peak_db": -8.0,
-    "rms_db": -24.1,
+    "rms_db": -24.2,
     "seam": null,
     "seconds": 1.113
    }
@@ -146,13 +217,35 @@
  "coin_flick": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "coin_flick.wav",
+    "file": "coin_flick_1.wav",
     "peak_db": -7.0,
-    "rms_db": -19.0,
+    "rms_db": -19.3,
     "seam": null,
     "seconds": 0.9
+   },
+   {
+    "file": "coin_flick_2.wav",
+    "peak_db": -7.0,
+    "rms_db": -19.3,
+    "seam": null,
+    "seconds": 0.942
+   },
+   {
+    "file": "coin_flick_3.wav",
+    "peak_db": -7.0,
+    "rms_db": -19.6,
+    "seam": null,
+    "seconds": 0.861
+   },
+   {
+    "file": "coin_flick_4.wav",
+    "peak_db": -7.0,
+    "rms_db": -19.2,
+    "seam": null,
+    "seconds": 0.973
    }
   ],
   "loop": false,
@@ -164,13 +257,14 @@
  "coin_good": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "coin_good.wav",
     "peak_db": -7.0,
-    "rms_db": -21.0,
+    "rms_db": -20.9,
     "seam": null,
-    "seconds": 1.366
+    "seconds": 1.365
    }
   ],
   "loop": false,
@@ -182,6 +276,7 @@
  "coin_neutral": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "coin_neutral.wav",
@@ -200,6 +295,7 @@
  "cooldown_ready": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "cooldown_ready.wav",
@@ -218,13 +314,35 @@
  "crossbow_pierce": {
   "bus": "sfx",
   "cooldown": 0.08,
+  "duck": false,
   "files": [
    {
-    "file": "crossbow_pierce.wav",
+    "file": "crossbow_pierce_1.wav",
+    "peak_db": -12.0,
+    "rms_db": -21.4,
+    "seam": null,
+    "seconds": 0.28
+   },
+   {
+    "file": "crossbow_pierce_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -21.6,
+    "seam": null,
+    "seconds": 0.293
+   },
+   {
+    "file": "crossbow_pierce_3.wav",
     "peak_db": -12.0,
     "rms_db": -21.5,
     "seam": null,
-    "seconds": 0.28
+    "seconds": 0.268
+   },
+   {
+    "file": "crossbow_pierce_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.303
    }
   ],
   "loop": false,
@@ -236,13 +354,35 @@
  "crossbow_shot": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "crossbow_shot.wav",
+    "file": "crossbow_shot_1.wav",
     "peak_db": -7.0,
-    "rms_db": -21.9,
+    "rms_db": -21.8,
     "seam": null,
-    "seconds": 0.37
+    "seconds": 0.367
+   },
+   {
+    "file": "crossbow_shot_2.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.383
+   },
+   {
+    "file": "crossbow_shot_3.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.6,
+    "seam": null,
+    "seconds": 0.352
+   },
+   {
+    "file": "crossbow_shot_4.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.5,
+    "seam": null,
+    "seconds": 0.395
    }
   ],
   "loop": false,
@@ -254,6 +394,7 @@
  "dawn_bell": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "dawn_bell.wav",
@@ -272,12 +413,13 @@
  "day_bed": {
   "bus": "ambience",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "day_bed.wav",
-    "peak_db": -17.0,
+    "peak_db": -16.5,
     "rms_db": -30.0,
-    "seam": 0.76,
+    "seam": 0.64,
     "seconds": 12.0
    }
   ],
@@ -290,13 +432,35 @@
  "door_close": {
   "bus": "sfx",
   "cooldown": 0.1,
+  "duck": false,
   "files": [
    {
-    "file": "door_close.wav",
+    "file": "door_close_1.wav",
     "peak_db": -8.0,
     "rms_db": -18.7,
     "seam": null,
     "seconds": 0.25
+   },
+   {
+    "file": "door_close_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 0.262
+   },
+   {
+    "file": "door_close_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 0.239
+   },
+   {
+    "file": "door_close_4.wav",
+    "peak_db": -8.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 0.27
    }
   ],
   "loop": false,
@@ -308,6 +472,7 @@
  "enemy_death": {
   "bus": "sfx",
   "cooldown": 0.04,
+  "duck": false,
   "files": [
    {
     "file": "enemy_death_1.wav",
@@ -319,7 +484,7 @@
    {
     "file": "enemy_death_2.wav",
     "peak_db": -8.0,
-    "rms_db": -21.8,
+    "rms_db": -20.1,
     "seam": null,
     "seconds": 0.21
    },
@@ -340,13 +505,35 @@
  "enemy_spawn": {
   "bus": "sfx",
   "cooldown": 0.2,
+  "duck": false,
   "files": [
    {
-    "file": "enemy_spawn.wav",
+    "file": "enemy_spawn_1.wav",
     "peak_db": -12.0,
     "rms_db": -25.7,
     "seam": null,
     "seconds": 0.9
+   },
+   {
+    "file": "enemy_spawn_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.941
+   },
+   {
+    "file": "enemy_spawn_3.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.6,
+    "seam": null,
+    "seconds": 0.861
+   },
+   {
+    "file": "enemy_spawn_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -25.6,
+    "seam": null,
+    "seconds": 0.97
    }
   ],
   "loop": false,
@@ -358,6 +545,7 @@
  "fire_loop": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "fire_loop.wav",
@@ -376,13 +564,35 @@
  "fireball_hit": {
   "bus": "sfx",
   "cooldown": 0.04,
+  "duck": false,
   "files": [
    {
-    "file": "fireball_hit.wav",
+    "file": "fireball_hit_1.wav",
+    "peak_db": -6.0,
+    "rms_db": -18.7,
+    "seam": null,
+    "seconds": 0.38
+   },
+   {
+    "file": "fireball_hit_2.wav",
+    "peak_db": -6.0,
+    "rms_db": -19.5,
+    "seam": null,
+    "seconds": 0.398
+   },
+   {
+    "file": "fireball_hit_3.wav",
+    "peak_db": -6.0,
+    "rms_db": -19.3,
+    "seam": null,
+    "seconds": 0.364
+   },
+   {
+    "file": "fireball_hit_4.wav",
     "peak_db": -6.0,
     "rms_db": -18.8,
     "seam": null,
-    "seconds": 0.38
+    "seconds": 0.411
    }
   ],
   "loop": false,
@@ -394,13 +604,35 @@
  "fireball_launch": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "fireball_launch.wav",
+    "file": "fireball_launch_1.wav",
     "peak_db": -5.0,
-    "rms_db": -17.1,
+    "rms_db": -16.3,
     "seam": null,
     "seconds": 0.45
+   },
+   {
+    "file": "fireball_launch_2.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.3,
+    "seam": null,
+    "seconds": 0.471
+   },
+   {
+    "file": "fireball_launch_3.wav",
+    "peak_db": -5.0,
+    "rms_db": -16.3,
+    "seam": null,
+    "seconds": 0.431
+   },
+   {
+    "file": "fireball_launch_4.wav",
+    "peak_db": -5.0,
+    "rms_db": -17.3,
+    "seam": null,
+    "seconds": 0.486
    }
   ],
   "loop": false,
@@ -412,6 +644,7 @@
  "fog_loop": {
   "bus": "ambience",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "fog_loop.wav",
@@ -430,11 +663,12 @@
  "foresight_whisper": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "foresight_whisper_1.wav",
     "peak_db": -10.0,
-    "rms_db": -26.5,
+    "rms_db": -26.6,
     "seam": null,
     "seconds": 1.727
    },
@@ -462,6 +696,7 @@
  "forest_rumble": {
   "bus": "sfx",
   "cooldown": 1.0,
+  "duck": false,
   "files": [
    {
     "file": "forest_rumble.wav",
@@ -480,6 +715,7 @@
  "gate_open": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "gate_open.wav",
@@ -498,13 +734,35 @@
  "grab": {
   "bus": "ui",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "grab.wav",
+    "file": "grab_1.wav",
     "peak_db": -7.0,
     "rms_db": -17.9,
     "seam": null,
     "seconds": 0.16
+   },
+   {
+    "file": "grab_2.wav",
+    "peak_db": -7.0,
+    "rms_db": -17.9,
+    "seam": null,
+    "seconds": 0.168
+   },
+   {
+    "file": "grab_3.wav",
+    "peak_db": -7.0,
+    "rms_db": -17.8,
+    "seam": null,
+    "seconds": 0.153
+   },
+   {
+    "file": "grab_4.wav",
+    "peak_db": -7.0,
+    "rms_db": -17.9,
+    "seam": null,
+    "seconds": 0.173
    }
   ],
   "loop": false,
@@ -516,6 +774,7 @@
  "heal_chime": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "heal_chime.wav",
@@ -534,6 +793,7 @@
  "help_done": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "help_done.wav",
@@ -552,13 +812,35 @@
  "hit_soft": {
   "bus": "sfx",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "hit_soft.wav",
+    "file": "hit_soft_1.wav",
     "peak_db": -12.0,
     "rms_db": -24.7,
     "seam": null,
     "seconds": 0.1
+   },
+   {
+    "file": "hit_soft_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.1,
+    "seam": null,
+    "seconds": 0.105
+   },
+   {
+    "file": "hit_soft_3.wav",
+    "peak_db": -12.0,
+    "rms_db": -23.7,
+    "seam": null,
+    "seconds": 0.096
+   },
+   {
+    "file": "hit_soft_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.108
    }
   ],
   "loop": false,
@@ -569,14 +851,36 @@
  },
  "house_hit": {
   "bus": "sfx",
-  "cooldown": 0.1,
+  "cooldown": 0.7,
+  "duck": false,
   "files": [
    {
-    "file": "house_hit.wav",
-    "peak_db": -6.0,
-    "rms_db": -21.5,
+    "file": "house_hit_1.wav",
+    "peak_db": -8.0,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 0.35
+   },
+   {
+    "file": "house_hit_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -22.8,
+    "seam": null,
+    "seconds": 0.366
+   },
+   {
+    "file": "house_hit_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -23.8,
+    "seam": null,
+    "seconds": 0.335
+   },
+   {
+    "file": "house_hit_4.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.378
    }
   ],
   "loop": false,
@@ -588,6 +892,7 @@
  "invalid": {
   "bus": "ui",
   "cooldown": 0.15,
+  "duck": false,
   "files": [
    {
     "file": "invalid.wav",
@@ -606,13 +911,35 @@
  "melee_hit": {
   "bus": "sfx",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "melee_hit.wav",
+    "file": "melee_hit_1.wav",
     "peak_db": -8.0,
-    "rms_db": -20.3,
+    "rms_db": -20.2,
     "seam": null,
     "seconds": 0.15
+   },
+   {
+    "file": "melee_hit_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.8,
+    "seam": null,
+    "seconds": 0.157
+   },
+   {
+    "file": "melee_hit_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -21.6,
+    "seam": null,
+    "seconds": 0.144
+   },
+   {
+    "file": "melee_hit_4.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.1,
+    "seam": null,
+    "seconds": 0.162
    }
   ],
   "loop": false,
@@ -624,6 +951,7 @@
  "menu_close": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "menu_close.wav",
@@ -642,6 +970,7 @@
  "menu_open": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "menu_open.wav",
@@ -660,12 +989,13 @@
  "night_bed": {
   "bus": "ambience",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "night_bed.wav",
-    "peak_db": -16.0,
+    "peak_db": -16.8,
     "rms_db": -31.0,
-    "seam": 0.27,
+    "seam": 0.28,
     "seconds": 14.0
    }
   ],
@@ -678,17 +1008,18 @@
  "night_fall": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "night_fall.wav",
     "peak_db": -10.0,
-    "rms_db": -28.1,
+    "rms_db": -23.0,
     "seam": null,
-    "seconds": 2.769
+    "seconds": 3.373
    }
   ],
   "loop": false,
-  "note": "dusk turns to night: two low glass notes and a held breath of air",
+  "note": "dusk turns to night: a soft falling minor third over a low swell (a little tense, same world)",
   "spatial": false,
   "tracker": "A48",
   "vary": 0.03
@@ -696,11 +1027,12 @@
  "orb_charge": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "orb_charge.wav",
     "peak_db": -12.0,
-    "rms_db": -22.4,
+    "rms_db": -22.2,
     "seam": null,
     "seconds": 0.9
    }
@@ -714,13 +1046,35 @@
  "pinch": {
   "bus": "ui",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "pinch.wav",
+    "file": "pinch_1.wav",
     "peak_db": -8.0,
     "rms_db": -22.4,
     "seam": null,
     "seconds": 0.05
+   },
+   {
+    "file": "pinch_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 0.052
+   },
+   {
+    "file": "pinch_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -22.0,
+    "seam": null,
+    "seconds": 0.048
+   },
+   {
+    "file": "pinch_4.wav",
+    "peak_db": -8.0,
+    "rms_db": -23.1,
+    "seam": null,
+    "seconds": 0.054
    }
   ],
   "loop": false,
@@ -732,13 +1086,35 @@
  "place_thunk": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "place_thunk.wav",
+    "file": "place_thunk_1.wav",
     "peak_db": -4.0,
     "rms_db": -16.9,
     "seam": null,
     "seconds": 0.35
+   },
+   {
+    "file": "place_thunk_2.wav",
+    "peak_db": -4.0,
+    "rms_db": -16.5,
+    "seam": null,
+    "seconds": 0.366
+   },
+   {
+    "file": "place_thunk_3.wav",
+    "peak_db": -4.0,
+    "rms_db": -16.5,
+    "seam": null,
+    "seconds": 0.335
+   },
+   {
+    "file": "place_thunk_4.wav",
+    "peak_db": -4.0,
+    "rms_db": -16.7,
+    "seam": null,
+    "seconds": 0.378
    }
   ],
   "loop": false,
@@ -750,6 +1126,7 @@
  "potion_pour": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "potion_pour.wav",
@@ -768,6 +1145,7 @@
  "rage_cast": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "rage_cast.wav",
@@ -786,6 +1164,7 @@
  "rain_loop": {
   "bus": "ambience",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "rain_loop.wav",
@@ -804,6 +1183,7 @@
  "rarity_common": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "rarity_common.wav",
@@ -822,6 +1202,7 @@
  "rarity_legendary": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "rarity_legendary.wav",
@@ -840,11 +1221,12 @@
  "rarity_rare": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "rarity_rare.wav",
     "peak_db": -8.0,
-    "rms_db": -21.6,
+    "rms_db": -21.5,
     "seam": null,
     "seconds": 1.627
    }
@@ -858,13 +1240,35 @@
  "release": {
   "bus": "ui",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "release.wav",
+    "file": "release_1.wav",
     "peak_db": -9.0,
-    "rms_db": -20.6,
+    "rms_db": -19.8,
     "seam": null,
     "seconds": 0.09
+   },
+   {
+    "file": "release_2.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.094
+   },
+   {
+    "file": "release_3.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.1,
+    "seam": null,
+    "seconds": 0.086
+   },
+   {
+    "file": "release_4.wav",
+    "peak_db": -9.0,
+    "rms_db": -20.3,
+    "seam": null,
+    "seconds": 0.097
    }
   ],
   "loop": false,
@@ -876,6 +1280,7 @@
  "request_new": {
   "bus": "ui",
   "cooldown": 0.2,
+  "duck": false,
   "files": [
    {
     "file": "request_new.wav",
@@ -894,6 +1299,7 @@
  "rewind_whoosh": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": true,
   "files": [
    {
     "file": "rewind_whoosh.wav",
@@ -912,6 +1318,7 @@
  "root_grow": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "root_grow.wav",
@@ -930,6 +1337,7 @@
  "sell": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "sell.wav",
@@ -948,11 +1356,12 @@
  "shutter_close": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "shutter_close.wav",
     "peak_db": -7.0,
-    "rms_db": -16.7,
+    "rms_db": -16.8,
     "seam": null,
     "seconds": 0.29
    }
@@ -966,6 +1375,7 @@
  "spell_pick": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "spell_pick.wav",
@@ -984,6 +1394,7 @@
  "splitter_split": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "splitter_split.wav",
@@ -1002,13 +1413,14 @@
  "storm_cloud": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "storm_cloud.wav",
     "peak_db": -7.0,
-    "rms_db": -22.4,
+    "rms_db": -20.4,
     "seam": null,
-    "seconds": 2.021
+    "seconds": 2.033
    }
   ],
   "loop": false,
@@ -1020,13 +1432,35 @@
  "throw_whoosh": {
   "bus": "ui",
   "cooldown": 0.05,
+  "duck": false,
   "files": [
    {
-    "file": "throw_whoosh.wav",
+    "file": "throw_whoosh_1.wav",
     "peak_db": -10.0,
     "rms_db": -23.9,
     "seam": null,
     "seconds": 0.35
+   },
+   {
+    "file": "throw_whoosh_2.wav",
+    "peak_db": -10.0,
+    "rms_db": -24.2,
+    "seam": null,
+    "seconds": 0.366
+   },
+   {
+    "file": "throw_whoosh_3.wav",
+    "peak_db": -10.0,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.335
+   },
+   {
+    "file": "throw_whoosh_4.wav",
+    "peak_db": -10.0,
+    "rms_db": -24.6,
+    "seam": null,
+    "seconds": 0.378
    }
   ],
   "loop": false,
@@ -1038,6 +1472,7 @@
  "trust_chime": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "trust_chime.wav",
@@ -1056,13 +1491,35 @@
  "tunneler_pop": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
-    "file": "tunneler_pop.wav",
+    "file": "tunneler_pop_1.wav",
     "peak_db": -8.0,
     "rms_db": -19.4,
     "seam": null,
     "seconds": 0.35
+   },
+   {
+    "file": "tunneler_pop_2.wav",
+    "peak_db": -8.0,
+    "rms_db": -20.8,
+    "seam": null,
+    "seconds": 0.366
+   },
+   {
+    "file": "tunneler_pop_3.wav",
+    "peak_db": -8.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.335
+   },
+   {
+    "file": "tunneler_pop_4.wav",
+    "peak_db": -8.0,
+    "rms_db": -19.3,
+    "seam": null,
+    "seconds": 0.378
    }
   ],
   "loop": false,
@@ -1074,6 +1531,7 @@
  "ui_cancel": {
   "bus": "ui",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "ui_cancel.wav",
@@ -1092,6 +1550,7 @@
  "ui_hover": {
   "bus": "ui",
   "cooldown": 0.06,
+  "duck": false,
   "files": [
    {
     "file": "ui_hover.wav",
@@ -1110,6 +1569,7 @@
  "village_bell": {
   "bus": "sfx",
   "cooldown": 1.0,
+  "duck": true,
   "files": [
    {
     "file": "village_bell.wav",
@@ -1128,18 +1588,19 @@
  "villager_blip": {
   "bus": "sfx",
   "cooldown": 0.3,
+  "duck": false,
   "files": [
    {
     "file": "villager_blip_1.wav",
     "peak_db": -12.0,
-    "rms_db": -25.8,
+    "rms_db": -25.9,
     "seam": null,
     "seconds": 0.696
    },
    {
     "file": "villager_blip_2.wav",
     "peak_db": -12.0,
-    "rms_db": -25.4,
+    "rms_db": -25.5,
     "seam": null,
     "seconds": 0.516
    },
@@ -1174,6 +1635,7 @@
  "ward_cast": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "ward_cast.wav",
@@ -1192,6 +1654,7 @@
  "ward_hum": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "ward_hum.wav",
@@ -1210,6 +1673,7 @@
  "wisp_screech": {
   "bus": "sfx",
   "cooldown": 0.5,
+  "duck": false,
   "files": [
    {
     "file": "wisp_screech.wav",
@@ -1228,6 +1692,7 @@
  "wisp_wings": {
   "bus": "sfx",
   "cooldown": 0.0,
+  "duck": false,
   "files": [
    {
     "file": "wisp_wings.wav",
