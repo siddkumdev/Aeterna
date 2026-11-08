@@ -121,17 +121,154 @@ KITS = {
         (DL + "/383144__*", "zachrau", CC0, FS % 383144, 1.6, 6),
     ],
 }
+
+
+def SN(pack_glob, file_glob, vendor, max_s, max_n):
+    """A Sonniss GDC 2026 source."""
+    return (SONNISS + "/" + pack_glob + "/" + file_glob, vendor + " (Sonniss)", SONNISS_LIC, "https://sonniss.com/gameaudiogdc", max_s, max_n)
+
+
+def F(sid, author, lic, max_s, max_n):
+    """A Freesound download in ~/Downloads (<id>__<user>__<title>.<ext>)."""
+    return (DL + "/%s__*" % sid, author, lic, FS % sid, max_s, max_n)
+
+
+# Round 5 (Siddharth 2026-11-08: "minimal code, mainly real sounds"): every sound is built from these recordings.
+KITS.update({
+    # tuned notes: every grain's pitch is measured (f0), the recipes shift the nearest one to each note of the key
+    "wood_notes": [
+        # single notes only (code-critic round 5: the kalimba "3 Up" and the xylophone ringtone were jingles, and a
+        # shifted jingle goes off key). sgossner's VSCO-2 marimba (as written) and xylophone (sounds an octave up),
+        # downloaded with Siddharth's OK 2026-11-08; pitches pinned in NOTE_MIDI.
+        *[F(s, "sgossner", CC0, 1.2, 1) for s in (373579, 373585, 373577, 373583, 373580, 373586, 373578, 373581)],
+        *[F(s, "sgossner", CC0, 1.0, 1) for s in (374703, 374699, 374704, 374700, 374705, 374701, 374706, 374702)],
+    ],
+    # glockenspiel single notes (sounds an octave over the written note); the Christmas bells and music boxes were
+    # dropped as notes: no single clear pitch, so they could not be put on the key reliably
+    "bell_notes": [F(s, "sgossner", CC0, 1.6, 1) for s in (373367, 373364, 373368, 373365, 373369, 373366)],
+    "church": [SN("Ivo Vicic - Church Bells", "04 Church Bells*", "Ivo Vicic", 3.5, 4)],
+    # small things in the hand
+    "click": [
+        SN("Epic Stock Media - Board Game*", "UIClick_*", "Epic Stock Media", 0.15, 2),
+        SN("Epic Stock Media - HD Lock*", "MECHLtch_*", "Epic Stock Media", 0.3, 1),
+        SN("Epic Stock Media - HD Lock*", "MACHMech_*", "Epic Stock Media", 0.25, 2),
+    ],
+    "cloth": [
+        SN("InMotionAudio - Foley T-Shirt", "*", "InMotionAudio", 0.5, 8),
+        SN("Epic Stock Media - Fantasy Game 2*", "CLOTHFlp_*", "Epic Stock Media", 0.6, 1),
+        F(475440, "o_ciz", CC0, 0.6, 6), F(467037, "kelsey_w", BY3, 0.7, 6),
+    ],
+    "coins": [
+        F(223343, "jalastram", CC0, 0.6, 2),
+        SN("Cinematic Sound Design - UI Interaction Elements", "Ting Coins*", "Cinematic Sound Design", 1.0, 1),
+        SN("Cinematic Sound Design - Hybrid Game & UI Elements", "Foley Coin Flip*", "Cinematic Sound Design", 0.8, 1),
+    ],
+    "cards": [
+        SN("Epic Stock Media - Board Game*", "PAPRHndl_*", "Epic Stock Media", 0.3, 1),
+        SN("344 Audio - Casino Cards Vol. 1", "*", "344 Audio", 0.4, 6),
+        SN("344 Audio - Antique Books", "*Flicking*", "344 Audio", 0.4, 3),
+    ],
+    # fire, magic, air
+    "fire_whoosh": [
+        F(848728, "mikiko850", BY4, 1.0, 8),
+        SN("Epic Stock Media - Elemental Mutation*", "FIREWhsh_*", "Epic Stock Media", 1.5, 1),
+    ],
+    "crackle": [
+        F(563766, "florianreichelt", CC0, 0.35, 8), F(730704, "newlocknew", BY4, 0.35, 8),
+        SN("Ivo Vicic - Campfire - Bonfire FX", "24 Campfire*", "Ivo Vicic", 0.35, 8),
+    ],
+    "magic": [
+        SN("Alexander Kopeikin - Emotion and Magic", "magic, energy flow*", "Alexander Kopeikin", 2.5, 4),
+        SN("Epic Stock Media - Fantasy Game 2*", "MAGAngl_*", "Epic Stock Media", 2.5, 1),
+        SN("CB_Sounddesign*", "GAMEMisc_Magic Creation*", "CB Sounddesign", 2.5, 1),
+        F(761330, "TheLittleCrow", CC0, 2.0, 4),
+    ],
+    "shards": [SN("Epic Stock Media - Elemental Mutation*", "GLASMvmt_*", "Epic Stock Media", 2.0, 1)],
+    "whistle": [SN("Ivo Vicic - Fireworks FX", "02 Fireworks*", "Ivo Vicic", 1.4, 6)],
+    "wings": [F(655322, "21100495", CC0, 0.4, 10)],
+    "bubbles": [
+        SN("Cinematic Sound Design - Cartoon & Animation Vol 2", "Cartoon Bubbles*", "Cinematic Sound Design", 0.9, 1),
+        F(553954, "isbeorn", CC0, 0.5, 8),
+    ],
+    "drum": [F(274223, "PearceWilsonKing", CC0, 0.45, 8)],
+    "ticks": [SN("344 Audio - Antique Clocks", "*", "344 Audio", 0.2, 10)],
+    "creak": [F(456763, "WavJunction.com", CC0, 1.4, 3), F(216879, "CastIronCarousel", CC0, 1.0, 2)],
+    "rewind": [F(754845, "Poulpy2.0", CC0, 2.5, 4)],
+    "bowl": [F(204915, "brodjaman", CC0, 3.0, 2), F(573805, "hollandm", CC0, 3.0, 2)],
+    # voices (chopped into syllables for barks and villagers; no real words survive)
+    "voice_m": [F(832122, "dergraph", CC0, 0.3, 40), F(9958, "batchku", CC0, 0.3, 3), F(10260, "batchku", CC0, 0.3, 3),
+                F(10178, "batchku", CC0, 0.3, 3)],
+    "voice_f": [F(800349, "cloyen", CC0, 0.3, 30)],
+    "voice_old": [F(128488, "gipsyGA", BY4, 0.35, 8)],
+    "grunt": [F(511023, "ale-batec", CC0, 0.45, 12)],
+    "whisper": [F(193812, "geoneo0", CC0, 1.6, 4), F(362503, "balloonhead", CC0, 1.6, 4)],
+    "bird": [F(518674, "jackmichaelking", CC0, 1.6, 10), F(853112, "hoshisato", CC0, 1.6, 6),
+             SN("CB_Sounddesign*", "TOONMisc_Bird Flutes*", "CB Sounddesign", 1.0, 1)],
+    "leaves": [F(191454, "leah15", CC0, 1.5, 6)],
+    # beds: long stereo windows (BED_KITS), looped by the recipes
+    "bed_wind": [F(483076, "GregorQuendel", BY4, 14.0, 3)],
+    "bed_birds": [F(853112, "hoshisato", CC0, 14.0, 2),
+                  SN("Just Sound Effects - Highlands of Norway", "AMBSwmp_*", "Just Sound Effects", 14.0, 2)],
+    "bed_crickets": [F(440574, "ES335-001", CC0, 16.0, 3), F(522299, "Defelozedd94", CC0, 16.0, 2)],
+    "bed_rain": [F(398740, "Anthousai", CC0, 9.0, 2)],
+    "bed_fire": [F(730704, "newlocknew", BY4, 4.0, 2), SN("Ivo Vicic - Campfire - Bonfire FX", "24 Campfire*", "Ivo Vicic", 4.0, 1)],
+    "bed_propeller": [F(853012, "Wavewire", BY4, 3.0, 1),
+                      SN("Sonik Sound Library - Toy Quadcopter", "*Sustained*", "Sonik Sound Library", 3.0, 1)],
+    "bed_bowl": [F(573805, "hollandm", CC0, 10.0, 2)],
+    "bed_drone": [SN("Alexander Kopeikin - Emotion and Magic", "magic, drone, tension*", "Alexander Kopeikin", 16.0, 2)],
+    "bed_flutter": [F(655322, "21100495", CC0, 2.0, 2)],
+    "bed_whisper": [F(193812, "geoneo0", CC0, 3.0, 2), F(362503, "balloonhead", CC0, 3.0, 2)],
+})
 # Kits cut as phrases (a hoot series, a bell jingle, a bleat): a cut may run over the next onset (up to max seconds),
 # and an onset inside the previous cut is skipped, so phrases never overlap.
-PHRASE_KITS = {"owl", "sheep_bells", "sheep"}
+PHRASE_KITS = {"owl", "sheep_bells", "sheep", "church", "drum", "magic", "shards", "whistle", "creak", "rewind", "bowl", "whisper",
+               "bird", "leaves"}
+# Bed kits: evenly spaced windows of max seconds (stereo, from 2 s in), not onsets; recipes loop them.
+BED_KITS = {k for k in KITS if k.startswith("bed_")} | {"leaves"}  # a steady rustle has no onsets: windows too
 
 
-def read(path):
+# Sounding notes of the single-note samples (Freesound id -> MIDI). From sgossner's "midi-note-NN" tags (his titles say
+# F# where the tag says G); xylophone and glockenspiel sound an octave over the tag (measured 2026-11-08: every file's
+# pitch class matched, the octave was one up; the top notes were mismeasured, hence pinned rather than measured).
+NOTE_MIDI = {
+    373579: 48, 373585: 55, 373577: 59, 373583: 65, 373580: 72, 373586: 79, 373578: 83, 373581: 96,  # marimba
+    374703: 67, 374699: 72, 374704: 79, 374700: 84, 374705: 91, 374701: 96, 374706: 103, 374702: 108,  # xylophone
+    373367: 79, 373364: 84, 373368: 91, 373365: 96, 373369: 103, 373366: 108,  # glockenspiel
+}
+
+
+def pitch_of(path, g):
+    sid = os.path.basename(path).split("__")[0]
+    if sid.isdigit() and int(sid) in NOTE_MIDI:
+        return 440.0 * 2 ** ((NOTE_MIDI[int(sid)] - 69) / 12)
+    return f0_of(g)
+
+
+def f0_of(g):
+    """Rough pitch (Hz) of a grain: harmonic product spectrum of its first 0.25 s after the attack, 60-5000 Hz.
+    (The strongest peak is NOT used: on a xylophone it is the overtone an octave up.) Sources with a published note
+    (NOTE_HZ) skip this and use that note."""
+    seg = g[int(0.01 * SR): int(0.26 * SR)]
+    if len(seg) < 1024:
+        seg = g
+    n = 1 << 16
+    sp = np.abs(np.fft.rfft(seg * np.hanning(len(seg)), n))
+    fr = np.fft.rfftfreq(n, 1 / SR)
+    h = sp.copy()
+    for k in (2, 3):
+        d = sp[::k]
+        h[: len(d)] *= d
+    m = (fr >= 60) & (fr <= 5000)
+    return float(fr[m][np.argmax(h[m])])
+
+
+def read(path, channels=1):
     p = subprocess.run([FFMPEG, "-v", "error", "-nostdin", "-i", path, "-vn", "-f", "f32le", "-acodec", "pcm_f32le",
-                        "-ac", "1", "-ar", str(SR), "-"], capture_output=True)
+                        "-ac", str(channels), "-ar", str(SR), "-"], capture_output=True)
     if p.returncode != 0 or not p.stdout:
         raise RuntimeError("cannot read %s: %s" % (path, p.stderr.decode(errors="replace")[-200:]))
-    return np.frombuffer(p.stdout, dtype=np.float32).astype(float)
+    x = np.frombuffer(p.stdout, dtype=np.float32).astype(float)
+    return x if channels == 1 else x.reshape(-1, channels)
 
 
 def onsets(x, min_gap=0.08):
@@ -201,6 +338,22 @@ def main():
             files = sorted(glob.glob(pattern))
             per_file = max(1, max_n // len(files))
             for path in files:
+                if kit in BED_KITS:  # evenly spaced stereo windows, gently faded, peak 0.89
+                    x = read(path, 2)
+                    w = int(max_s * SR)
+                    room = max(1, len(x) - w - 2 * SR)
+                    for k in range(per_file):
+                        a = 2 * SR + (room * k) // max(1, per_file)
+                        g = x[a: a + w].copy()
+                        if len(g) < SR:
+                            continue
+                        g -= g.mean(axis=0)
+                        g /= np.max(np.abs(g)) + 1e-9
+                        name = "%s_%02d.wav" % (kit, len(entries) + 1)
+                        wavfile.write(os.path.join(kdir, name), SR, (g * 0.89 * 32767).astype(np.int16))
+                        entries.append(dict(file=name, seconds=round(len(g) / SR, 3), source=os.path.basename(path),
+                                            author=author, licence=lic, url=url, at=round(a / SR, 3)))
+                    continue
                 x = read(path)
                 at, db, hop = onsets(x)
                 if not at:  # slow swells (voices): start where it first gets within 20 dB of its peak
@@ -218,7 +371,7 @@ def main():
                     name = "%s_%02d.wav" % (kit, len(entries) + 1)
                     wavfile.write(os.path.join(kdir, name), SR, (g * 32767).astype(np.int16))
                     entries.append(dict(file=name, seconds=round(len(g) / SR, 3), source=os.path.basename(path),
-                                        author=author, licence=lic, url=url, at=round(a / SR, 3)))
+                                        author=author, licence=lic, url=url, at=round(a / SR, 3), f0=round(pitch_of(path, g), 1)))
                     n += 1
                     if n >= per_file:
                         break

@@ -1,10 +1,15 @@
 # Aeterna audio direction
 
 Owner: Siddharth (with Claude), since 2026-11-07. This page is the source of truth for how the game sounds; the
-`game-audio-principles` skill is general background and loses to this page. Sounds are made from code
-(`assets/generators/make_audio.py` with `tools/audio_synth.py`). Since 2026-11-08 (Siddharth) free sounds under CC0, CC-BY or
-a royalty-free licence are also allowed, each logged with source, author and licence and credited in `docs/AUDIO_CREDITS.md`;
-never AI-generated sounds, never NC licences.
+`game-audio-principles` skill is general background and loses to this page.
+
+**Sources (Siddharth, 2026-11-08): real recordings, minimal code.** Every sound is built from free recordings: Freesound
+CC0 / CC BY and the Sonniss GDC 2026 bundle (royalty-free), never AI-generated, never NC. `tools/audio_grains.py` cuts
+them into kits in `assets/audio_src/grains/` (credits in `docs/AUDIO_CREDITS.md`); `assets/generators/make_audio.py`
+only processes them (cut, pitch onto the key, filter, layer, small room) and refuses to build if a recipe calls a
+synthesis function. Tuned stings use one real recorded note (marimba, xylophone, kalimba, music box, church bell)
+shifted to each note of the melody. Voices (barks, villagers) are chopped real gibberish speech, kept near the
+speaker's own pitch.
 
 ## Mood (Siddharth, 2026-11-08)
 - **Day: peaceful and cozy.** A small toy village on a table: warm wood, soft bells, glass plinks, gentle wind, birds.

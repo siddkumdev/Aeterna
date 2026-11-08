@@ -10,20 +10,29 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | recording | author | licence | source | used in |
 |---|---|---|---|---|
 | 260433__roganmcdougald__glass-break-small-jar-01.wav | RoganMcDougald | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://freesound.org/s/260433/ | glass |
+| 467037__kelsey_w__canvas-flap.wav | kelsey_w | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://freesound.org/s/467037/ | cloth |
 | 268822__kwahmah_02__woodblock.wav | kwahmah_02 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | https://freesound.org/s/268822/ | wood_knock |
 | 85019__benboncan__bow-releases.wav | Benboncan | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/85019/ | bow |
 | 167074__drminky__slime-death-1.wav | DrMinky | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/167074/ | squish |
 | 572753__fmaudio__knocking-into-pile-of-large-stones-1.wav | F.M.Audio | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/572753/ | stone |
 | 574450__fmaudio__pushing-large-stones-down-shoreline-on-stony-beach-1.wav | F.M.Audio | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/574450/ | stone |
 | 670696__gregorquendel__thunder-lightning-iii-without-rain-wind-background-noise.wav | GregorQuendel | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/670696/ | thunder |
+| 483076__gregorquendel__autumn-wind-with-leaves-rustling.wav | GregorQuendel | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/483076/ | bed_wind |
 | 133783__julien-nicolas__impact-gravier.wav | Julien Nicolas | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/133783/ | stone |
 | 329924__uzbazur__knocking-on-door.wav | Uzbazur | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/329924/ | wood_knock |
+| 853012__wavewire__propellerspin_slow.wav | Wavewire | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/853012/ | bed_propeller |
 | 655916__yevashenpillay__hammer-wood-fast.wav | YevashenPillay | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/655916/ | hammer |
+| 128488__gipsyga__grandpa0091s.mp3 | gipsyGA | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/128488/ | voice_old |
 | 620334__marb7e__footsteps_leather_wood_walk04.wav | marb7e | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/620334/ | steps |
-| 848728__mikiko850__fire-whoosh-samples.wav | mikiko850 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/848728/ | whoosh |
+| 848728__mikiko850__fire-whoosh-samples.wav | mikiko850 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/848728/ | fire_whoosh, whoosh |
+| 730704__newlocknew__fireburn_campfirecloselongcracklingflame-roarsqueackhiss.wav | newlocknew | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/730704/ | bed_fire, crackle |
+| 655322__21100495__bird-wings-flapping.wav | 21100495 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/655322/ | bed_flutter, wings |
 | 384919__ali_6868__crossbow-firing-and-hitting-target.wav | Ali_6868 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/384919/ | bow |
+| 398740__anthousai__rain-drops-on-porch.wav | Anthousai | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/398740/ | bed_rain |
 | 465697__breviceps__owl-hoot.wav | Breviceps | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/465697/ | owl |
-| 216879__castironcarousel__squeaky-wooden-door-solid-close.wav | CastIronCarousel | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/216879/ | door |
+| 216879__castironcarousel__squeaky-wooden-door-solid-close.wav | CastIronCarousel | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/216879/ | creak, door |
+| 522299__defelozedd94__crickets-at-night-raw-sound.wav | Defelozedd94 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/522299/ | bed_crickets |
+| 440574__es335-001__crickets.wav | ES335-001 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/440574/ | bed_crickets |
 | 757195__henkonen__door-light-with-latch-2.wav | HenKonen | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/757195/ | door |
 | 755250__ienba__chess-pieces-drop.wav | IENBA | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/755250/ | chess |
 | 733927__jjtaynos__chess-pieces-move-close.wav | JJTaynos | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/733927/ | chess |
@@ -31,20 +40,76 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | 707538__liezeldippenaar__small-garden-fork-digging.wav | LiezelDippenaar | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/707538/ | dirt |
 | 271379__overlookhotelrecords__rummaging-through-wooden-toys-v3-tight-micing.wav | OverlookHotelRecords | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/271379/ | blocks |
 | 745208__patrick_corra__tawny-owl-hooting.ogg | Patrick_Corra | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/745208/ | owl |
+| 274223__pearcewilsonking__war-drum-loop.wav | PearceWilsonKing | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/274223/ | drum |
+| 754845__poulpy20__tape-player-rewind.wav | Poulpy2.0 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/754845/ | rewind |
 | 104002__rutgermuller__wood_knocks_muffled_1.aiff | RutgerMuller | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/104002/ | wood_knock |
 | 125958__ryding__wooden-door-open-close.wav | Ryding | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/125958/ | door |
 | 802449__sadiquecat__stick-reverse-whooshes-flying-object.wav | Sadiquecat | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/802449/ | whoosh |
 | 260130__splicesound__hand-digging-dirt-leaves-crunch.wav | SpliceSound | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/260130/ | dirt |
 | 420668__sypherzent__basic-melee-swing-miss-whoosh.wav | SypherZent | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/420668/ | whoosh |
+| 761330__thelittlecrow__magic-fire-spell-movement.wav | TheLittleCrow | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/761330/ | magic |
+| 456763__wavjunctioncom__gate-door-drawbridge-wooden-creaky-opens-closes-hinge.wav | WavJunction.com | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/456763/ | creak |
+| 511023__ale-batec__male-fight-grunts.wav | ale-batec | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/511023/ | grunt |
+| 362503__balloonhead__whispering-midnight.wav | balloonhead | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/362503/ | bed_whisper, whisper |
+| 9958__batchku__mb-guh-chi-hah-1-015.aiff | batchku | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/9958/ | voice_m |
+| 10178__batchku__s_mb-hoo-hee-1-020.aiff | batchku | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/10178/ | voice_m |
+| 204915__brodjaman__singing-bowl-a-tuned.wav | brodjaman | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/204915/ | bowl |
+| 800349__cloyen__female-gibberish.mp3 | cloyen | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/800349/ | voice_f |
 | 530354__danielpodlovics__stone.wav | danielpodlovics | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/530354/ | stone |
+| 832122__dergraph__expressive-gibberish.wav | dergraph | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/832122/ | voice_m |
 | 546121__el_boss__board-start.mp3 | el_boss | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/546121/ | chess |
+| 563766__florianreichelt__fire-crackles.mp3 | florianreichelt | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/563766/ | crackle |
+| 193812__geoneo0__four_voices_whispering_6.wav | geoneo0 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/193812/ | bed_whisper, whisper |
+| 573805__hollandm__singing-bowl-long-without-reverb.wav | hollandm | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/573805/ | bed_bowl, bowl |
+| 853112__hoshisato__birdsong-with-blackcap-nightingale-robin-chaffinch-and-woodland-birds-ambience.flac | hoshisato | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/853112/ | bed_birds, bird |
+| 553954__isbeorn__bottle-glugs.wav | isbeorn | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/553954/ | bubbles |
+| 518674__jackmichaelking__essex-spring-woodland-loud-single-bird.wav | jackmichaelking | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/518674/ | bird |
+| 223343__jalastram__1_coins.ogg | jalastram | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/223343/ | coins |
+| 191454__leah15__leaves-rustling.wav | leah15 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/191454/ | leaves |
 | 397918__nozefian__close-wooden-door-quiet.wav | nozefian | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/397918/ | door |
+| 475440__o_ciz__cloth_1rustle-fabric-clothes.wav | o_ciz | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/475440/ | cloth |
 | 646781__pbimal__chess-piece-bounce.ogg | pbimal | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/646781/ | chess |
 | 402638__runeble__sheep-bells.wav | runeble | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/402638/ | sheep_bells |
+| 373579__sgossner__marimba-c3-marimba_hit_outrigger_c2_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373579/ | wood_notes |
+| 373585__sgossner__marimba-f3-marimba_hit_outrigger_g2_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373585/ | wood_notes |
+| 373577__sgossner__marimba-b3-marimba_hit_outrigger_b2_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373577/ | wood_notes |
+| 373583__sgossner__marimba-e4-marimba_hit_outrigger_f3_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373583/ | wood_notes |
+| 373580__sgossner__marimba-c5-marimba_hit_outrigger_c4_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373580/ | wood_notes |
+| 373586__sgossner__marimba-f5-marimba_hit_outrigger_g4_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373586/ | wood_notes |
+| 373578__sgossner__marimba-b5-marimba_hit_outrigger_b4_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373578/ | wood_notes |
+| 373581__sgossner__marimba-c7-marimba_hit_outrigger_c6_loud_01.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373581/ | wood_notes |
+| 374703__sgossner__xylophone-f3-xylo_medium_g3_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374703/ | wood_notes |
+| 374699__sgossner__xylophone-c4-xylo_medium_c4_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374699/ | wood_notes |
+| 374704__sgossner__xylophone-f4-xylo_medium_g4_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374704/ | wood_notes |
+| 374700__sgossner__xylophone-c5-xylo_medium_c5_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374700/ | wood_notes |
+| 374705__sgossner__xylophone-f5-xylo_medium_g5_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374705/ | wood_notes |
+| 374701__sgossner__xylophone-c6-xylo_medium_c6_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374701/ | wood_notes |
+| 374706__sgossner__xylophone-f6-xylo_medium_g6_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374706/ | wood_notes |
+| 374702__sgossner__xylophone-c7-xylo_medium_c7_ff_01_far.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/374702/ | wood_notes |
+| 373367__sgossner__glockenspiel-f4-glock_medium_g4.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373367/ | bell_notes |
+| 373364__sgossner__glockenspiel-c5-glock_medium_c5.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373364/ | bell_notes |
+| 373368__sgossner__glockenspiel-f5-glock_medium_g5.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373368/ | bell_notes |
+| 373365__sgossner__glockenspiel-c6-glock_medium_c6.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373365/ | bell_notes |
+| 373369__sgossner__glockenspiel-f6-glock_medium_g6.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373369/ | bell_notes |
+| 373366__sgossner__glockenspiel-c7-glock_medium_c7.wav | sgossner | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/373366/ | bell_notes |
 | 245922.wav | sophiehall3535 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/245922/ | blocks |
 | 565794__stomachache__distant-cannon-fire-simulated.wav | stomachache | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/565794/ | cannon |
 | 221528__unfa__glass-break.flac | unfa | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/221528/ | glass |
 | 383144__zachrau__sheep-bleating.wav | zachrau | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/383144/ | sheep |
+| GAMECas_Automatic Shuffler, Shuffling 1_344 Audio_Casino Cards Vol 1.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cards |
+| GAMECas_Dealing 3_344 Audio_Casino Cards Vol 1.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cards |
+| GAMECas_Pick Up Multiple Cards At Once 5_344 Audio_Casino Cards Vol 1.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cards |
+| PAPRMisc_Antique Books Flicking Through Pages 11_344 Audio_Antiques - Books.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cards |
+| CLOCKTick_Crooked Antique Clock_344 Audio_Antique Clocks.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | ticks |
+| CLOCKTick_You're Running Late _344 Audio_Antique Clocks.wav | 344 Audio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | ticks |
+| magic, energy flow, astonishment-001.wav | Alexander Kopeikin (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | magic |
+| magic, energy flow, astral travel-015.wav | Alexander Kopeikin (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | magic |
+| magic, drone, tension, spellbound, evanescence-002.wav | Alexander Kopeikin (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bed_drone |
+| GAMEMisc_Magic Creation 23_CB Sounddesign_APPlicable Sounds.wav | CB Sounddesign (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | magic |
+| TOONMisc_Bird Flutes 3_CB Sounddesign_APPlicable Sounds.wav | CB Sounddesign (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bird |
+| Ting Coins.wav | Cinematic Sound Design (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | coins |
+| Foley Coin Flip Single Fast.wav | Cinematic Sound Design (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | coins |
+| Cartoon Bubbles Short.wav | Cinematic Sound Design (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bubbles |
 | GAMEBoard_Event Board Reset Organic Multiple Pieces Wood Small 02_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | wood_knock |
 | GAMEBoard_Game Play Piece Action Organic Connect Dots Fall Bounce 04_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | chess |
 | WOODImpt_Hit Blood Spill Splat Wood Impact Light Hit Squelch Small Thump 03_ESM_TDG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | squish |
@@ -53,6 +118,22 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | CREAMnstr_Designed Sea Beast Creature Pain Intense Yell Long 04_ESM_HC4.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |
 | HMNBrth_Construction Kit Male Screeching Breath Inhale Weak Squeal 05_ESM_HC4.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |
 | VOXReac_Construction Kit Male Flutter Death Vocal Stuttered Long 05_ESM_HC4.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |
+| UIClick_UI Button Analog Vintage Double Click Neutral Dry Press 11_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | click |
+| MECHLtch_Click Deep Mechanism Latch Button Nearfield Thunk 02_ESM_HDLM.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | click |
+| MACHMech_Mechanism Counting Machine Interact Loose Container Short 01_ESM_HDLM.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | click |
+| CLOTHFlp_Action Inventory Open Flip Cloth Canvas Bag Slide Light 02_ESM_FG2.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cloth |
+| PAPRHndl_Game Play Cards Dry Show Flip Toss Disgard Near 12_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cards |
+| FIREWhsh_Whoosh Fire Deep Growl Monster Saturated Crisp 03_ESM_EMWI.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | fire_whoosh |
+| MAGAngl_Magic Light Spell Enchantment Potion Effect Tonal Bright 03_ESM_FG2.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | magic |
+| GLASMvmt_Whoosh Glass Crystal Fragments Sharp Shards Dry 05_ESM_EMWI.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | shards |
+| FOLYClth_ClothMovement24_InMotionAudio_FoleyT-Shirt.wav | InMotionAudio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cloth |
+| FOLYClth_ClothMovement29_InMotionAudio_FoleyT-Shirt.wav | InMotionAudio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cloth |
+| FOLYClth_SinglePats04_InMotionAudio_FoleyT-Shirt.wav | InMotionAudio (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | cloth |
+| 04 Church Bells, Near Distance, In Church Tower-3 Different Bell 02.wav | Ivo Vicic (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | church |
+| 24 Campfire, Dropping Fresh Pine Branches in Fire, Crackling, Sizzling Strong, Close 02.wav | Ivo Vicic (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bed_fire, crackle |
+| 02 Fireworks_ explosions_dense_whistles.wav | Ivo Vicic (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | whistle |
+| AMBSwmp_Meadow Pipits calling many Insects humming Wind blowing through Grass_JSE_HoN_Stereo.wav | Just Sound Effects (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bed_birds |
+| AERORadio_Quadcopter, Toy, Flying Sustained Close to Mic_KSL_KS013.wav | Sonik Sound Library (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | bed_propeller |
 | CREAAqua_Aquatic Creature Gurgling 2_SNDBTS_VB-SE.wav | SoundBits (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |
 | CREAEthr_Ethereal Entity Grim Pain Long 4_SNDBTS_VB-SE.wav | SoundBits (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |
 | CREAHmn_Violent Humanoid Creature Exhale Short 4_SNDBTS_VB-SE.wav | SoundBits (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | creature |

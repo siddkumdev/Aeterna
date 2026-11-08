@@ -35,8 +35,18 @@ DESCRIBE = {
     "owl": "an owl hooting",
     "sheep_bells": "sheep bells tinkling",
     "sheep": "a sheep bleating",
+    "wood_notes": "a single wooden mallet note", "bell_notes": "a single music box note", "church": "a church bell ringing",
+    "click": "a small mechanical click", "cloth": "cloth rustle", "coins": "coins clinking", "cards": "a playing card flip",
+    "fire_whoosh": "a whoosh of fire", "crackle": "fire crackling", "magic": "a magical shimmer", "shards": "glass shards",
+    "whistle": "a firework whistle", "wings": "bird wings flapping", "bubbles": "bubbles", "drum": "a drum hit",
+    "ticks": "a clock tick", "creak": "a wooden creak", "rewind": "a tape rewinding", "bowl": "a singing bowl",
+    "voice_m": "a man speaking", "voice_f": "a woman speaking", "voice_old": "an old man speaking", "grunt": "a man grunting",
+    "whisper": "whispering", "bird": "a bird singing", "leaves": "leaves rustling",
 }
-PHRASE_KITS = {"owl", "sheep_bells", "sheep"}  # several onsets per grain is normal there: no double-hit rule
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import audio_grains as _G  # noqa: E402
+PHRASE_KITS = _G.PHRASE_KITS | _G.BED_KITS  # several onsets per grain is normal there: no double-hit rule
+SKIP_SCREEN = _G.BED_KITS | {"voice_m", "voice_f", "voice_old", "wood_notes", "bell_notes"}  # windows and syllables: every cut is kept
 
 
 def double_hit(path):
@@ -58,6 +68,12 @@ def main():
     for kit in kits:
         files = sorted(glob.glob(os.path.join(GR, kit, "*.wav")))
         if not files:
+            continue
+        if kit in SKIP_SCREEN:
+            for e in index.get(kit, []):
+                e["keep"] = True
+            print("%-11s kept all %d (not screened)" % (kit, len(index.get(kit, []))))
+            json.dump(index, open(index_path, "w", encoding="utf-8"), indent=1)
             continue
         ranked = []
         if os.path.exists(exe):

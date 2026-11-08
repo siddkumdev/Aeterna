@@ -19,7 +19,6 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, os.path.join(ROOT, "assets", "generators"))
 from audio_synth import *  # noqa: F401,F403,E402
-import make_audio as M  # noqa: E402
 
 OUT = os.path.join(ROOT, "_work", "audio", "ab")
 EXP = os.path.join(ROOT, "assets", "export", "audio")
@@ -41,12 +40,20 @@ def save(fn, x, rms=-22.0):
     print("wrote", fn)
 
 
+def _slow(r, seconds, rate, lo=0.0, hi=1.0):
+    """A smooth random curve between lo and hi that wanders about `rate` times a second (kept here: the round-1 test
+    is code-made on purpose, and make_audio.py no longer has synthesis helpers since round 5)."""
+    x = lp(noise(seconds, r), rate, 1)
+    x = (x - x.min()) / (np.ptp(x) + 1e-9)
+    return lo + (hi - lo) * x
+
+
 # ------------------------------------------------------------------ 1 day bed
 def day_bed(birds="old", chime=True, seed=1):
     r = rng(seed)
     d = 12.0
-    wind = lp(noise(d, r, "pink"), 600) * M._slow(r, d, 0.25, 0.3, 1.0)
-    leaves = lp(bp(noise(d, r), 1800, 5200), 6000) * 0.09 * M._slow(r, d, 0.5, 0.0, 1.0) ** 2
+    wind = lp(noise(d, r, "pink"), 600) * _slow(r, d, 0.25, 0.3, 1.0)
+    leaves = lp(bp(noise(d, r), 1800, 5200), 6000) * 0.09 * _slow(r, d, 0.5, 0.0, 1.0) ** 2
     layers = [stereo_wide(wind * 0.8 + leaves, 0.6)]
     if chime:
         for at_c in (2.2, 8.1):
