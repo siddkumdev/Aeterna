@@ -68,16 +68,18 @@ def grain(kit, r, pitch=1.0, spread=0.06, seconds=None):
 
 
 def recipe(name, tid, bus="sfx", peak=-4.0, loop=False, rms=None, spatial=False, cooldown=0.0, vary=0.03, variants=1,
-           xfade=0.3, note="", takes=1, duck=False, warm=True, match=None):
+           xfade=0.3, note="", takes=1, duck=False, warm=True, match=None, combo=False, tuned=False):
     ## variants: the recipe is called with v = 0..variants-1 and draws a different sound for each (enemy kinds...).
     ## takes: the same recipe rendered several times with its own seed and pitch, so repeats do not sound robotic.
     ## duck: while it plays the game lowers ambience and music (a story beat). warm: roll off above WARM_HZ.
     ## match: loudness (RMS dB) to hit instead of `peak`, with peaks allowed up to 4 dB over `peak`: a sound rebuilt on a
     ## sharper recorded body keeps the old sound's loudness, and the new punch shows as attack, not as "quieter".
+    ## tuned: takes only change the seed, not the pitch (pitched voices stay on the key's notes).
+    ## combo: repeats in quick succession climb the key's pentatonic scale in the game (AudioBank.COMBO_STEPS).
     def deco(fn):
         RECIPES[name] = dict(fn=fn, tid=tid, bus=bus, peak=peak, loop=loop, rms=rms, spatial=spatial,
                              cooldown=cooldown, vary=vary, variants=variants, xfade=xfade, note=note, takes=takes,
-                             duck=duck, warm=warm, match=match)
+                             duck=duck, warm=warm, match=match, combo=combo, tuned=tuned)
         return fn
     return deco
 
@@ -158,7 +160,7 @@ def build_pop(r, v):
 @recipe("invalid", "A11", bus="ui", peak=-8, cooldown=0.15, note="can't place or can't afford: two soft low knocks, falling")
 def invalid(r, v):
     a = lp(marimba(note("E3"), 0.25, 0.8), 1500)
-    b = lp(marimba(note("D#3"), 0.3, 0.8), 1400)
+    b = lp(marimba(note("D3"), 0.3, 0.8), 1400)  # in key (was D#3)
     return mix((a, 0, 1.0), (b, 0.12, 0.9))
 
 
@@ -183,7 +185,7 @@ def coin_flick(r, v):
 
 @recipe("coin_good", "A14", peak=-7, note="a good result: a bright rising arpeggio")
 def coin_good(r, v):
-    x = mix((glass(note("E6"), 0.7), 0, 0.8), (glass(note("G#6"), 0.7), 0.07, 0.8), (glass(note("B6"), 0.8), 0.14, 0.8))
+    x = mix((glass(note("C6"), 0.7), 0, 0.8), (glass(note("E6"), 0.7), 0.07, 0.8), (glass(note("G6"), 0.8), 0.14, 0.8))  # in key (was E G# B)
     return reverb(x, 0.9, 0.2)
 
 
@@ -230,7 +232,7 @@ def melee_hit(r, v):
     return mix((whack, 0, 0.75), (thud(0.15, 200, 105, 0.055, r, 0.3), 0, 0.6), (slap, 0.004, 0.3))
 
 
-@recipe("enemy_death", "A17", peak=-8, spatial=True, vary=0.08, variants=3, cooldown=0.04,
+@recipe("enemy_death", "A17", combo=True, peak=-8, spatial=True, vary=0.08, variants=3, cooldown=0.04,
         note="1 grunt: a falling bloop and a poof; 2 scout: pip and pff; 3 flyer: feathery whoosh")
 def enemy_death(r, v):
     if v == 0:
@@ -426,6 +428,29 @@ def potion_pour(r, v):
 
 SR_ = S.SR
 
+# The game's key (Siddharth 2026-11-08: bells and chimes in the music's key; no music yet, so the key is set here and the
+# music follows it): C major by day; night sounds may borrow from the parallel C minor (Eb, Ab, Bb) for a little tension.
+KEY_DAY = {0, 2, 4, 5, 7, 9, 11}
+KEY_NIGHT = KEY_DAY | {3, 8, 10}
+NIGHT_SOUNDS = {"night_fall", "night_bed", "amb_owl", "amb_creak", "amb_rustle", "boss_roar", "boss_phase", "fog_loop"}
+_NOTES_USED = []
+
+
+def _pitch_class(name):
+    names = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+    p = names[name[0]]
+    for ch in name[1:]:
+        if ch == "#":
+            p += 1
+        elif ch == "b":
+            p -= 1
+    return p % 12
+
+
+def note(name):  # noqa: F811  (wraps audio_synth.note so every recipe's notes can be checked against the key)
+    _NOTES_USED.append(name)
+    return S.note(name)
+
 
 # ============================================================================== SPELLS AND TOWERS
 
@@ -613,6 +638,112 @@ def rarity_legendary(r, v):
     return reverb(mix((arp, 0.1, 1.0), (boom, 0.5, 0.8), (shim, 0.4, 0.5), (bl, 0.55, 0.5)), 1.6, 0.28)
 
 
+# ============================================================================== TOWER VOICES (barks)
+# Siddharth 2026-11-08: towers get short voice barks (he judges by ear). Animalese-style gibberish from the crew member
+# on top (no real words), pitched on the key's notes. "ready" when the tower is placed, "cheer" now and then on a kill.
+VOICES = {  # crew: (low note, high note, vowels, syllable seconds, breath)
+    "wizard": ("G3", "C4", "oau", (0.09, 0.14), 0.07),   # an old, warm voice
+    "archer": ("C4", "G4", "eai", (0.06, 0.09), 0.04),   # young and quick
+    "pilot": ("E4", "A4", "aio", (0.06, 0.1), 0.05),     # cheery and bouncy
+    "guard": ("D3", "G3", "oua", (0.08, 0.11), 0.06),    # a gruff captain (the Guard Tower)
+}
+
+
+def _bark(r, crew, kind):
+    lo, hi, vow, (dmin, dmax), breath = VOICES[crew]
+    f_lo, f_hi = note(lo), note(hi)
+    out, at = [], 0.0
+    n = int(r.integers(2, 4)) if kind == "ready" else int(r.integers(1, 3))
+    for i in range(n):
+        d = float(r.uniform(dmin, dmax)) * (1.4 if i == n - 1 else 1.0)  # the last syllable is held a little
+        last = i == n - 1
+        # every syllable lands on a note of the key (only the voice's natural slide between them is off the grid)
+        if kind == "ready":  # "hup-hup-HAH": the low note, and the last syllable slides up to the high one
+            a, b = (f_lo, f_hi) if last else (f_lo, f_lo * 2 ** (1 / 12))
+        else:  # a cheer: the high note with a little upward lift to the next scale step
+            a, b = f_hi, f_hi * 2 ** (2 / 12)
+        out.append((formant_blip([(0, a), (d, b)], vow[i % len(vow)], d, r, breath=breath), at, 1.0 if last else 0.8))
+        at += d + float(r.uniform(0.02, 0.05))
+    # soft and woody, never buzzy (earshot read the raw saw voices as "a phone buzz"): roll the top off, a small room
+    return room(lp(mix(*out), 2400, 4) * 0.5, 0.25, 0.25, seed=int(r.integers(1, 99)))[:, 0]
+
+
+for _crew in VOICES:
+    for _kind, _cd, _what in (("ready", 0.5, "the tower is placed: a short 'hup-hup-hah'"), ("cheer", 3.0, "a kill, now and then: a quick happy yelp")):
+        def _make(crew=_crew, kind=_kind):
+            return lambda r, v: _bark(r, crew, kind)
+        recipe("bark_%s_%s" % (_crew, _kind), "A49", takes=4, tuned=True, peak=-11, spatial=True, vary=0.0, cooldown=_cd,
+               note="%s voice, %s (gibberish, no words)" % (_crew, _what))(_make())
+
+
+# ============================================================================== AMBIENCE ONE-SHOTS
+# The research round (2026-11-08): beds alone are monotonous, so the game also scatters short one-shots at things you can
+# see (birds and leaves in the forest ring, a villager at work by a house; at night an owl, a creak, something moving
+# in the undergrowth). The game picks them from a day or night pool (AudioBank.set_scatter). Bus ambience, spatial.
+
+def _bird_phrase(r):
+    """A soft far bird: a few warbling (FM), breathy notes with uneven gaps (listening pick 1d)."""
+    notes, t0 = [], 0.0
+    base = float(r.uniform(1800, 3000))
+    for k in range(int(r.integers(2, 6))):
+        dur = float(r.uniform(0.05, 0.16))
+        f_a = base * float(r.uniform(0.85, 1.2))
+        f_b = f_a * float(r.uniform(0.8, 1.35))
+        c = chirp(f_a, f_b, dur, vib=float(r.uniform(0.02, 0.06)), vib_rate=float(r.uniform(25, 60)), shape=float(r.uniform(0.6, 1.8)))
+        c = c * (0.7 + 0.3 * float(r.random())) + 0.15 * bp(noise(dur, r), f_a * 0.8, f_a * 1.3) * np.sin(np.pi * t_of(dur) / dur)
+        notes.append((flutter(c, r, 0.3, 40), t0, 1.0))
+        t0 += dur + float(r.uniform(0.03, 0.14))
+    return lp(mix(*notes), 4200)
+
+
+@recipe("amb_bird", "A50", bus="ambience", takes=8, peak=-9, spatial=True, vary=0.06, cooldown=1.0, note="a bird in the forest ring calls once")
+def amb_bird(r, v):
+    return room(_bird_phrase(r), 0.5, 0.35, seed=int(r.integers(1, 99)))[:, 0]
+
+
+@recipe("amb_leaves", "A50", bus="ambience", takes=4, peak=-12, spatial=True, vary=0.05, cooldown=2.0, note="a gust runs through one tree's leaves")
+def amb_leaves(r, v):
+    d = float(r.uniform(1.0, 1.6))
+    n = bp(noise(d, r), 1500, 5500) * _slow(r, d, 3.0, 0.3, 1.0) ** 1.5
+    return lp(n, 6000) * swell(d, 0.4)
+
+
+@recipe("amb_work", "A50", bus="ambience", takes=6, peak=-13, spatial=True, vary=0.06, cooldown=3.0, note="a villager at work by a house: a few far hammer taps or a door")
+def amb_work(r, v):
+    if r.random() < 0.6:  # hammering: 2-4 taps, a little uneven
+        taps, at = [], 0.0
+        for k in range(int(r.integers(2, 5))):
+            taps.append((lp(grain("hammer", r, 0.9), 2600), at, float(r.uniform(0.6, 1.0))))
+            at += float(r.uniform(0.32, 0.5))
+        x = mix(*taps)
+    else:
+        x = lp(grain("door", r, 1.0, seconds=0.8), 2600)
+    return room(x, 0.6, 0.5, seed=int(r.integers(1, 99)))[:, 0]
+
+
+@recipe("amb_owl", "A51", bus="ambience", takes=3, peak=-10, spatial=True, vary=0.03, cooldown=6.0, note="night: an owl hoots in the forest ring")
+def amb_owl(r, v):
+    # pitched down: the recordings sit near 890 Hz (read as "a kettle"); a tawny owl's hoot is lower and softer
+    return room(lp(grain("owl", r, 0.75, spread=0.03), 2000), 0.8, 0.45, seed=int(r.integers(1, 99)))[:, 0]
+
+
+@recipe("amb_creak", "A51", bus="ambience", takes=4, peak=-12, spatial=True, vary=0.05, cooldown=4.0, note="night: a branch creaks in the forest ring")
+def amb_creak(r, v):
+    d = float(r.uniform(0.5, 0.9))
+    creak = sweep_bp(noise(d, r), curve([(0, float(r.uniform(200, 280))), (d, float(r.uniform(380, 480)))], d), 3.0)
+    creak = creak * (0.5 + 0.5 * np.sin(2 * np.pi * float(r.uniform(12, 18)) * t_of(d))) * swell(d, 0.5)
+    return lp(pk(creak), 1200)
+
+
+@recipe("amb_rustle", "A51", bus="ambience", takes=4, peak=-13, spatial=True, vary=0.05, cooldown=4.0, note="night: something small moves in the undergrowth (a little tense)")
+def amb_rustle(r, v):
+    out, at = [], 0.0
+    for k in range(int(r.integers(2, 4))):
+        out.append((lp(grain("dirt", r, 1.2, seconds=0.25), 3500), at, float(r.uniform(0.5, 1.0))))
+        at += float(r.uniform(0.12, 0.3))
+    return mix(*out)
+
+
 # ============================================================================== AMBIENCE (loops, stereo)
 
 def _slow(r, seconds, rate, lo=0.0, hi=1.0):
@@ -632,17 +763,7 @@ def day_bed(r, v):
     # listening pick 1d (Siddharth 2026-11-08): no wind chime; soft far birds that warble (FM), uneven and in a room
     at = 0.8
     while at < d - 1.6:
-        notes, t0 = [], 0.0
-        base = float(r.uniform(1800, 3000))
-        for k in range(int(r.integers(2, 6))):
-            dur = float(r.uniform(0.05, 0.16))
-            f_a = base * float(r.uniform(0.85, 1.2))
-            f_b = f_a * float(r.uniform(0.8, 1.35))
-            c = chirp(f_a, f_b, dur, vib=float(r.uniform(0.02, 0.06)), vib_rate=float(r.uniform(25, 60)), shape=float(r.uniform(0.6, 1.8)))
-            c = c * (0.7 + 0.3 * float(r.random())) + 0.15 * bp(noise(dur, r), f_a * 0.8, f_a * 1.3) * np.sin(np.pi * t_of(dur) / dur)
-            notes.append((flutter(c, r, 0.3, 40), t0, 1.0))
-            t0 += dur + float(r.uniform(0.03, 0.14))
-        bird = room(pan(lp(mix(*notes), 4200) * 0.025, float(r.uniform(-0.8, 0.8))), 0.5, 0.45, seed=int(r.integers(1, 99)))
+        bird = room(pan(_bird_phrase(r) * 0.025, float(r.uniform(-0.8, 0.8))), 0.5, 0.45, seed=int(r.integers(1, 99)))
         layers.append((bird, at, 1.0))
         at += float(r.uniform(2.5, 5.5))
     return reverb(mix(*layers, seconds=d), 0.8, 0.1)[: n_of(d)]
@@ -700,7 +821,7 @@ def render(name, spec, v, take=0):
     seed = zlib.crc32(("%s:%d" % (name, v)).encode()) if take == 0 else zlib.crc32(("%s:%d:t%d" % (name, v, take)).encode())
     r = rng(seed)
     x = np.asarray(spec["fn"](r, v), dtype=float)
-    if take > 0:
+    if take > 0 and not spec["tuned"]:
         k = TAKE_PITCH[take % len(TAKE_PITCH)]
         n = max(16, int(round(x.shape[0] / k)))
         src = np.arange(x.shape[0])
@@ -733,8 +854,10 @@ def main():
     manifest = {}
     if os.path.exists(manifest_path):
         manifest = json.load(open(manifest_path, encoding="utf-8"))
+    off_key = []
     for name in names:
         spec = RECIPES[name]
+        del _NOTES_USED[:]
         for folder in ([OUT, GODOT_OUT] if godot and os.path.isdir(GODOT_OUT) else [OUT]):
             for old in os.listdir(folder):
                 if re.fullmatch(re.escape(name) + r"(_\d+)?\.wav(\.import)?", old):
@@ -749,11 +872,16 @@ def main():
                               rms_db=round(to_db(rms_of(x)), 1), seam=round(seam_error(x), 2) if spec["loop"] else None))
         manifest[name] = dict(tracker=spec["tid"], bus=spec["bus"], loop=spec["loop"], spatial=spec["spatial"],
                               cooldown=spec["cooldown"], vary=spec["vary"], files=files, note=spec["note"],
-                              duck=spec["duck"])
+                              duck=spec["duck"], combo=spec["combo"])
+        key = KEY_NIGHT if name in NIGHT_SOUNDS else KEY_DAY
+        bad = sorted({n for n in _NOTES_USED if _pitch_class(n) not in key})
+        if bad:
+            off_key.append("%s: %s" % (name, " ".join(bad)))
         f = files[0]
         print("%-18s %-4s %-8s %5.2fs peak %5.1f rms %5.1f%s" % (name, spec["tid"], spec["bus"], f["seconds"], f["peak_db"], f["rms_db"],
                                                                   "  seam %.2f" % f["seam"] if f["seam"] is not None else ""))
     json.dump(manifest, open(manifest_path, "w", encoding="utf-8"), indent=1, sort_keys=True)
+    print("key check (C major by day, C minor allowed at night):", "OK" if not off_key else "OFF KEY " + "; ".join(off_key))
     if godot:
         import shutil
         os.makedirs(GODOT_OUT, exist_ok=True)

@@ -6,12 +6,18 @@ extends Node
 ## Buses (made at runtime if the project has none): ui, sfx, ambience, music, all under Master.
 ## Spatial sounds use a 3D player at the given world position; the rest are 2D. Each id keeps its own cooldown from the
 ## manifest (so a crowd of hits does not stack into noise) and a small random pitch change ("vary").
+## Combo (manifest "combo", Siddharth 2026-11-08): repeats within COMBO_GAP_MS climb the key's pentatonic scale
+## (quick kills go up do-re-mi-so-la), and fall back to the root after a pause.
+## Scatter (set_scatter): short ambience one-shots played every few seconds at things on the board (birds in the
+## forest ring, a villager at work by a house...), from a day or a night pool, on top of the bed.
 
 const DIR := "res://assets/audio/"
 const MAX_VOICES := 28
 const BUS_DB := {"ui": -3.0, "sfx": -5.0, "ambience": -15.0, "music": -10.0}  # docs/AUDIO_DIRECTION.md
 const DUCK_DB := -6.0  # a story beat (manifest "duck") lowers ambience and music this much while it plays
 const DUCKED := ["ambience", "music"]
+const COMBO_STEPS := [0, 2, 4, 7, 9]  # semitones: the major pentatonic of the game's key (C major, make_audio.py)
+const COMBO_GAP_MS := 1200
 
 var enabled := true
 var manifest := {}
@@ -25,6 +31,12 @@ var _fades := {}         # player -> its running fade tween
 var _rng := RandomNumberGenerator.new()
 var _duck_until := 0  # msec: ambience and music stay lowered until then
 var _duck_tw: Tween
+var _combo := {}  # id -> {"n": step, "ms": last play}
+var _scatter: Array = []  # [{"id", "where", "w"}]
+var _scatter_point: Callable  # where -> world position (Vector3.INF = play flat)
+var _scatter_gap := Vector2(3.0, 7.0)
+var _scatter_left := 0.0
+var scattered := 0  # counted for tests
 
 
 func setup() -> void:
@@ -67,26 +79,27 @@ func _stream(file: String, loop: bool) -> AudioStream:
 	return s
 
 
-func play(id: String, at := Vector3.INF) -> void:
-	## One-shot. `at` = world position for a spatial sound (INF = not placed: plays flat).
+func play(id: String, at := Vector3.INF) -> bool:
+	## One-shot. `at` = world position for a spatial sound (INF = not placed: plays flat). True if it played.
 	if not enabled or not manifest.has(id) or not is_inside_tree():
-		return
+		return false
 	var m: Dictionary = manifest[id]
 	if m.get("loop", false):
-		return
+		return false
 	var now := Time.get_ticks_msec()
-	var cd: float = m.get("cooldown", 0.0)
-	if cd > 0.0 and now - int(_last_ms.get(id, -100000)) < int(cd * 1000.0):
-		return
+	if _cooling(id, now):
+		return false
 	if voices >= MAX_VOICES:
-		return
+		return false
 	var files: Array = m["files"]
 	var s := _stream(files[_rng.randi_range(0, files.size() - 1)]["file"], false)
 	if s == null:
-		return
+		return false
 	_last_ms[id] = now
 	var vary: float = m.get("vary", 0.0)
 	var pitch := 1.0 + _rng.randf_range(-vary, vary)
+	if m.get("combo", false):
+		pitch = _combo_pitch(id, now)
 	var p: Node
 	var placed: bool = m.get("spatial", false) and at != Vector3.INF
 	if placed:
@@ -114,6 +127,56 @@ func play(id: String, at := Vector3.INF) -> void:
 		voices -= 1
 		p.queue_free())
 	p.play()
+	return true
+
+
+func _cooling(id: String, now: int) -> bool:
+	var cd: float = manifest[id].get("cooldown", 0.0) if manifest.has(id) else 0.0
+	return cd > 0.0 and now - int(_last_ms.get(id, -100000)) < int(cd * 1000.0)
+
+
+func _combo_pitch(id: String, now: int) -> float:
+	## The next step up the scale when this id repeats quickly, else back to the root. No random detune: it stays in tune.
+	var c: Dictionary = _combo.get(id, {"n": -1, "ms": -100000})
+	c["n"] = mini(int(c["n"]) + 1, COMBO_STEPS.size() - 1) if now - int(c["ms"]) < COMBO_GAP_MS else 0
+	c["ms"] = now
+	_combo[id] = c
+	return pow(2.0, COMBO_STEPS[c["n"]] / 12.0)
+
+
+func combo_step(id: String) -> int:
+	## The step the last play of id reached (tests).
+	return int(_combo.get(id, {"n": 0})["n"])
+
+
+func set_scatter(pool: Array, point: Callable, gap := Vector2(3.0, 7.0)) -> void:
+	## pool: [{"id": "amb_bird", "where": "forest", "w": 5}, ...]; [] stops it. point(where) gives the world position.
+	_scatter = pool
+	_scatter_point = point
+	_scatter_gap = gap
+	_scatter_left = _rng.randf_range(gap.x * 0.5, gap.y)  # the first one comes within one gap too
+
+
+func _process(delta: float) -> void:
+	if _scatter.is_empty() or not enabled:
+		return
+	_scatter_left -= delta
+	if _scatter_left > 0.0:
+		return
+	_scatter_left = _rng.randf_range(_scatter_gap.x, _scatter_gap.y)
+	var now := Time.get_ticks_msec()
+	var ready := _scatter.filter(func(e): return not _cooling(e["id"], now))  # never waste a gap on a cooling sound
+	var total := 0.0
+	for e in ready:
+		total += float(e.get("w", 1.0))
+	var pick := _rng.randf() * total
+	for e in ready:
+		pick -= float(e.get("w", 1.0))
+		if pick <= 0.0:
+			var at: Vector3 = _scatter_point.call(e["where"]) if _scatter_point.is_valid() else Vector3.INF
+			if play(e["id"], at):
+				scattered += 1
+			return
 
 
 func set_bed(bed: String) -> void:

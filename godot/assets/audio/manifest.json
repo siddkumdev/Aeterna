@@ -1,6 +1,7 @@
 {
  "airship_engine": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -20,6 +21,7 @@
  },
  "airship_shot": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -58,8 +60,618 @@
   "tracker": "A43",
   "vary": 0.05
  },
+ "amb_bird": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 1.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_bird_1.wav",
+    "peak_db": -9.0,
+    "rms_db": -23.2,
+    "seam": null,
+    "seconds": 0.615
+   },
+   {
+    "file": "amb_bird_2.wav",
+    "peak_db": -9.0,
+    "rms_db": -24.7,
+    "seam": null,
+    "seconds": 1.329
+   },
+   {
+    "file": "amb_bird_3.wav",
+    "peak_db": -9.0,
+    "rms_db": -22.8,
+    "seam": null,
+    "seconds": 0.759
+   },
+   {
+    "file": "amb_bird_4.wav",
+    "peak_db": -9.0,
+    "rms_db": -23.8,
+    "seam": null,
+    "seconds": 0.683
+   },
+   {
+    "file": "amb_bird_5.wav",
+    "peak_db": -9.0,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.606
+   },
+   {
+    "file": "amb_bird_6.wav",
+    "peak_db": -9.0,
+    "rms_db": -23.9,
+    "seam": null,
+    "seconds": 0.694
+   },
+   {
+    "file": "amb_bird_7.wav",
+    "peak_db": -9.0,
+    "rms_db": -25.2,
+    "seam": null,
+    "seconds": 0.816
+   },
+   {
+    "file": "amb_bird_8.wav",
+    "peak_db": -9.0,
+    "rms_db": -23.0,
+    "seam": null,
+    "seconds": 1.001
+   }
+  ],
+  "loop": false,
+  "note": "a bird in the forest ring calls once",
+  "spatial": true,
+  "tracker": "A50",
+  "vary": 0.06
+ },
+ "amb_creak": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 4.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_creak_1.wav",
+    "peak_db": -12.0,
+    "rms_db": -28.8,
+    "seam": null,
+    "seconds": 0.722
+   },
+   {
+    "file": "amb_creak_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -28.2,
+    "seam": null,
+    "seconds": 0.893
+   },
+   {
+    "file": "amb_creak_3.wav",
+    "peak_db": -12.0,
+    "rms_db": -26.0,
+    "seam": null,
+    "seconds": 0.488
+   },
+   {
+    "file": "amb_creak_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -28.4,
+    "seam": null,
+    "seconds": 0.575
+   }
+  ],
+  "loop": false,
+  "note": "night: a branch creaks in the forest ring",
+  "spatial": true,
+  "tracker": "A51",
+  "vary": 0.05
+ },
+ "amb_leaves": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 2.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_leaves_1.wav",
+    "peak_db": -12.0,
+    "rms_db": -30.6,
+    "seam": null,
+    "seconds": 1.3
+   },
+   {
+    "file": "amb_leaves_2.wav",
+    "peak_db": -12.0,
+    "rms_db": -29.1,
+    "seam": null,
+    "seconds": 1.142
+   },
+   {
+    "file": "amb_leaves_3.wav",
+    "peak_db": -12.0,
+    "rms_db": -30.3,
+    "seam": null,
+    "seconds": 1.474
+   },
+   {
+    "file": "amb_leaves_4.wav",
+    "peak_db": -12.0,
+    "rms_db": -28.9,
+    "seam": null,
+    "seconds": 1.419
+   }
+  ],
+  "loop": false,
+  "note": "a gust runs through one tree's leaves",
+  "spatial": true,
+  "tracker": "A50",
+  "vary": 0.05
+ },
+ "amb_owl": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 6.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_owl_1.wav",
+    "peak_db": -10.0,
+    "rms_db": -24.4,
+    "seam": null,
+    "seconds": 3.452
+   },
+   {
+    "file": "amb_owl_2.wav",
+    "peak_db": -10.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 3.815
+   },
+   {
+    "file": "amb_owl_3.wav",
+    "peak_db": -10.0,
+    "rms_db": -22.5,
+    "seam": null,
+    "seconds": 2.243
+   }
+  ],
+  "loop": false,
+  "note": "night: an owl hoots in the forest ring",
+  "spatial": true,
+  "tracker": "A51",
+  "vary": 0.03
+ },
+ "amb_rustle": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 4.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_rustle_1.wav",
+    "peak_db": -13.0,
+    "rms_db": -35.5,
+    "seam": null,
+    "seconds": 0.531
+   },
+   {
+    "file": "amb_rustle_2.wav",
+    "peak_db": -13.0,
+    "rms_db": -32.6,
+    "seam": null,
+    "seconds": 0.398
+   },
+   {
+    "file": "amb_rustle_3.wav",
+    "peak_db": -13.0,
+    "rms_db": -24.3,
+    "seam": null,
+    "seconds": 0.635
+   },
+   {
+    "file": "amb_rustle_4.wav",
+    "peak_db": -13.0,
+    "rms_db": -36.1,
+    "seam": null,
+    "seconds": 0.848
+   }
+  ],
+  "loop": false,
+  "note": "night: something small moves in the undergrowth (a little tense)",
+  "spatial": true,
+  "tracker": "A51",
+  "vary": 0.05
+ },
+ "amb_work": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 3.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "amb_work_1.wav",
+    "peak_db": -13.0,
+    "rms_db": -31.9,
+    "seam": null,
+    "seconds": 0.986
+   },
+   {
+    "file": "amb_work_2.wav",
+    "peak_db": -13.0,
+    "rms_db": -31.4,
+    "seam": null,
+    "seconds": 1.011
+   },
+   {
+    "file": "amb_work_3.wav",
+    "peak_db": -13.0,
+    "rms_db": -29.3,
+    "seam": null,
+    "seconds": 0.627
+   },
+   {
+    "file": "amb_work_4.wav",
+    "peak_db": -13.0,
+    "rms_db": -32.4,
+    "seam": null,
+    "seconds": 1.175
+   },
+   {
+    "file": "amb_work_5.wav",
+    "peak_db": -13.0,
+    "rms_db": -32.0,
+    "seam": null,
+    "seconds": 0.572
+   },
+   {
+    "file": "amb_work_6.wav",
+    "peak_db": -13.0,
+    "rms_db": -31.0,
+    "seam": null,
+    "seconds": 1.456
+   }
+  ],
+  "loop": false,
+  "note": "a villager at work by a house: a few far hammer taps or a door",
+  "spatial": true,
+  "tracker": "A50",
+  "vary": 0.06
+ },
+ "bark_archer_cheer": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 3.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_archer_cheer_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 0.315
+   },
+   {
+    "file": "bark_archer_cheer_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.6,
+    "seam": null,
+    "seconds": 0.452
+   },
+   {
+    "file": "bark_archer_cheer_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.0,
+    "seam": null,
+    "seconds": 0.408
+   },
+   {
+    "file": "bark_archer_cheer_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -26.8,
+    "seam": null,
+    "seconds": 0.427
+   }
+  ],
+  "loop": false,
+  "note": "archer voice, a kill, now and then: a quick happy yelp (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_archer_ready": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.5,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_archer_ready_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.1,
+    "seam": null,
+    "seconds": 0.419
+   },
+   {
+    "file": "bark_archer_ready_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -22.6,
+    "seam": null,
+    "seconds": 0.448
+   },
+   {
+    "file": "bark_archer_ready_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 0.526
+   },
+   {
+    "file": "bark_archer_ready_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.1,
+    "seam": null,
+    "seconds": 0.58
+   }
+  ],
+  "loop": false,
+  "note": "archer voice, the tower is placed: a short 'hup-hup-hah' (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_guard_cheer": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 3.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_guard_cheer_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.6,
+    "seam": null,
+    "seconds": 0.347
+   },
+   {
+    "file": "bark_guard_cheer_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.4,
+    "seam": null,
+    "seconds": 0.457
+   },
+   {
+    "file": "bark_guard_cheer_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.3,
+    "seam": null,
+    "seconds": 0.357
+   },
+   {
+    "file": "bark_guard_cheer_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.5,
+    "seam": null,
+    "seconds": 0.373
+   }
+  ],
+  "loop": false,
+  "note": "guard voice, a kill, now and then: a quick happy yelp (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_guard_ready": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.5,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_guard_ready_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -23.6,
+    "seam": null,
+    "seconds": 0.587
+   },
+   {
+    "file": "bark_guard_ready_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.3,
+    "seam": null,
+    "seconds": 0.635
+   },
+   {
+    "file": "bark_guard_ready_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -23.9,
+    "seam": null,
+    "seconds": 0.461
+   },
+   {
+    "file": "bark_guard_ready_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.1,
+    "seam": null,
+    "seconds": 0.492
+   }
+  ],
+  "loop": false,
+  "note": "guard voice, the tower is placed: a short 'hup-hup-hah' (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_pilot_cheer": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 3.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_pilot_cheer_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.8,
+    "seam": null,
+    "seconds": 0.309
+   },
+   {
+    "file": "bark_pilot_cheer_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 0.493
+   },
+   {
+    "file": "bark_pilot_cheer_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 0.318
+   },
+   {
+    "file": "bark_pilot_cheer_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.6,
+    "seam": null,
+    "seconds": 0.4
+   }
+  ],
+  "loop": false,
+  "note": "pilot voice, a kill, now and then: a quick happy yelp (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_pilot_ready": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.5,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_pilot_ready_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.6,
+    "seam": null,
+    "seconds": 0.449
+   },
+   {
+    "file": "bark_pilot_ready_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -26.8,
+    "seam": null,
+    "seconds": 0.422
+   },
+   {
+    "file": "bark_pilot_ready_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 0.563
+   },
+   {
+    "file": "bark_pilot_ready_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.3,
+    "seam": null,
+    "seconds": 0.561
+   }
+  ],
+  "loop": false,
+  "note": "pilot voice, the tower is placed: a short 'hup-hup-hah' (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_wizard_cheer": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 3.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_wizard_cheer_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -22.8,
+    "seam": null,
+    "seconds": 0.387
+   },
+   {
+    "file": "bark_wizard_cheer_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -23.6,
+    "seam": null,
+    "seconds": 0.504
+   },
+   {
+    "file": "bark_wizard_cheer_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -23.5,
+    "seam": null,
+    "seconds": 0.541
+   },
+   {
+    "file": "bark_wizard_cheer_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -25.3,
+    "seam": null,
+    "seconds": 0.555
+   }
+  ],
+  "loop": false,
+  "note": "wizard voice, a kill, now and then: a quick happy yelp (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
+ "bark_wizard_ready": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.5,
+  "duck": false,
+  "files": [
+   {
+    "file": "bark_wizard_ready_1.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.7,
+    "seam": null,
+    "seconds": 0.65
+   },
+   {
+    "file": "bark_wizard_ready_2.wav",
+    "peak_db": -11.0,
+    "rms_db": -24.3,
+    "seam": null,
+    "seconds": 0.731
+   },
+   {
+    "file": "bark_wizard_ready_3.wav",
+    "peak_db": -11.0,
+    "rms_db": -26.1,
+    "seam": null,
+    "seconds": 0.497
+   },
+   {
+    "file": "bark_wizard_ready_4.wav",
+    "peak_db": -11.0,
+    "rms_db": -26.0,
+    "seam": null,
+    "seconds": 0.701
+   }
+  ],
+  "loop": false,
+  "note": "wizard voice, the tower is placed: a short 'hup-hup-hah' (gibberish, no words)",
+  "spatial": true,
+  "tracker": "A49",
+  "vary": 0.0
+ },
  "boss_phase": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 1.0,
   "duck": true,
   "files": [
@@ -79,6 +691,7 @@
  },
  "boss_roar": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 2.0,
   "duck": true,
   "files": [
@@ -98,6 +711,7 @@
  },
  "boulder_fall": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -117,6 +731,7 @@
  },
  "boulder_hit": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.1,
   "duck": false,
   "files": [
@@ -157,6 +772,7 @@
  },
  "build_pop": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -197,6 +813,7 @@
  },
  "coin_bad": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -216,6 +833,7 @@
  },
  "coin_flick": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -256,15 +874,16 @@
  },
  "coin_good": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
    {
     "file": "coin_good.wav",
     "peak_db": -7.0,
-    "rms_db": -20.9,
+    "rms_db": -22.9,
     "seam": null,
-    "seconds": 1.365
+    "seconds": 1.436
    }
   ],
   "loop": false,
@@ -275,6 +894,7 @@
  },
  "coin_neutral": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -294,6 +914,7 @@
  },
  "cooldown_ready": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -313,6 +934,7 @@
  },
  "crossbow_pierce": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.08,
   "duck": false,
   "files": [
@@ -367,6 +989,7 @@
  },
  "crossbow_shot": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -421,6 +1044,7 @@
  },
  "dawn_bell": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -440,6 +1064,7 @@
  },
  "day_bed": {
   "bus": "ambience",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -459,6 +1084,7 @@
  },
  "door_close": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.1,
   "duck": false,
   "files": [
@@ -499,6 +1125,7 @@
  },
  "enemy_death": {
   "bus": "sfx",
+  "combo": true,
   "cooldown": 0.04,
   "duck": false,
   "files": [
@@ -532,6 +1159,7 @@
  },
  "enemy_spawn": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.2,
   "duck": false,
   "files": [
@@ -572,6 +1200,7 @@
  },
  "fire_loop": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -591,6 +1220,7 @@
  },
  "fireball_hit": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.04,
   "duck": false,
   "files": [
@@ -659,6 +1289,7 @@
  },
  "fireball_launch": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -713,6 +1344,7 @@
  },
  "fog_loop": {
   "bus": "ambience",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -732,6 +1364,7 @@
  },
  "foresight_whisper": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -765,6 +1398,7 @@
  },
  "forest_rumble": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 1.0,
   "duck": false,
   "files": [
@@ -784,6 +1418,7 @@
  },
  "gate_open": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -803,6 +1438,7 @@
  },
  "grab": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -843,6 +1479,7 @@
  },
  "heal_chime": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -862,6 +1499,7 @@
  },
  "help_done": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -881,6 +1519,7 @@
  },
  "hit_soft": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -949,6 +1588,7 @@
  },
  "house_hit": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.7,
   "duck": false,
   "files": [
@@ -989,13 +1629,14 @@
  },
  "invalid": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.15,
   "duck": false,
   "files": [
    {
     "file": "invalid.wav",
     "peak_db": -8.0,
-    "rms_db": -18.2,
+    "rms_db": -18.5,
     "seam": null,
     "seconds": 0.42
    }
@@ -1008,6 +1649,7 @@
  },
  "melee_hit": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -1076,6 +1718,7 @@
  },
  "menu_close": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1095,6 +1738,7 @@
  },
  "menu_open": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1114,6 +1758,7 @@
  },
  "night_bed": {
   "bus": "ambience",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1133,6 +1778,7 @@
  },
  "night_fall": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -1152,6 +1798,7 @@
  },
  "orb_charge": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1171,6 +1818,7 @@
  },
  "pinch": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -1211,6 +1859,7 @@
  },
  "place_thunk": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1265,6 +1914,7 @@
  },
  "potion_pour": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1284,6 +1934,7 @@
  },
  "rage_cast": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1303,6 +1954,7 @@
  },
  "rain_loop": {
   "bus": "ambience",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1322,6 +1974,7 @@
  },
  "rarity_common": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1341,6 +1994,7 @@
  },
  "rarity_legendary": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -1360,6 +2014,7 @@
  },
  "rarity_rare": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -1379,6 +2034,7 @@
  },
  "release": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -1419,6 +2075,7 @@
  },
  "request_new": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.2,
   "duck": false,
   "files": [
@@ -1438,6 +2095,7 @@
  },
  "rewind_whoosh": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": true,
   "files": [
@@ -1457,6 +2115,7 @@
  },
  "root_grow": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1476,6 +2135,7 @@
  },
  "sell": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1495,6 +2155,7 @@
  },
  "shutter_close": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1514,6 +2175,7 @@
  },
  "spell_pick": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1533,6 +2195,7 @@
  },
  "splitter_split": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1552,6 +2215,7 @@
  },
  "storm_cloud": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1571,6 +2235,7 @@
  },
  "throw_whoosh": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.05,
   "duck": false,
   "files": [
@@ -1611,6 +2276,7 @@
  },
  "trust_chime": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1630,6 +2296,7 @@
  },
  "tunneler_pop": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1670,6 +2337,7 @@
  },
  "ui_cancel": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1689,6 +2357,7 @@
  },
  "ui_hover": {
   "bus": "ui",
+  "combo": false,
   "cooldown": 0.06,
   "duck": false,
   "files": [
@@ -1708,6 +2377,7 @@
  },
  "village_bell": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 1.0,
   "duck": true,
   "files": [
@@ -1727,6 +2397,7 @@
  },
  "villager_blip": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.3,
   "duck": false,
   "files": [
@@ -1774,6 +2445,7 @@
  },
  "ward_cast": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1793,6 +2465,7 @@
  },
  "ward_hum": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
@@ -1812,6 +2485,7 @@
  },
  "wisp_screech": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.5,
   "duck": false,
   "files": [
@@ -1831,6 +2505,7 @@
  },
  "wisp_wings": {
   "bus": "sfx",
+  "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [

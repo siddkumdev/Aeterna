@@ -22,6 +22,7 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | 620334__marb7e__footsteps_leather_wood_walk04.wav | marb7e | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/620334/ | steps |
 | 848728__mikiko850__fire-whoosh-samples.wav | mikiko850 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://freesound.org/s/848728/ | whoosh |
 | 384919__ali_6868__crossbow-firing-and-hitting-target.wav | Ali_6868 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/384919/ | bow |
+| 465697__breviceps__owl-hoot.wav | Breviceps | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/465697/ | owl |
 | 216879__castironcarousel__squeaky-wooden-door-solid-close.wav | CastIronCarousel | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/216879/ | door |
 | 757195__henkonen__door-light-with-latch-2.wav | HenKonen | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/757195/ | door |
 | 755250__ienba__chess-pieces-drop.wav | IENBA | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/755250/ | chess |
@@ -29,6 +30,7 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | 427979__kinoton__short-whoosh-13x.wav | Kinoton | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/427979/ | whoosh |
 | 707538__liezeldippenaar__small-garden-fork-digging.wav | LiezelDippenaar | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/707538/ | dirt |
 | 271379__overlookhotelrecords__rummaging-through-wooden-toys-v3-tight-micing.wav | OverlookHotelRecords | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/271379/ | blocks |
+| 745208__patrick_corra__tawny-owl-hooting.ogg | Patrick_Corra | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/745208/ | owl |
 | 104002__rutgermuller__wood_knocks_muffled_1.aiff | RutgerMuller | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/104002/ | wood_knock |
 | 125958__ryding__wooden-door-open-close.wav | Ryding | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/125958/ | door |
 | 802449__sadiquecat__stick-reverse-whooshes-flying-object.wav | Sadiquecat | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/802449/ | whoosh |
@@ -38,9 +40,11 @@ The shipped game must also show the CC BY rows on a credits screen (or the store
 | 546121__el_boss__board-start.mp3 | el_boss | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/546121/ | chess |
 | 397918__nozefian__close-wooden-door-quiet.wav | nozefian | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/397918/ | door |
 | 646781__pbimal__chess-piece-bounce.ogg | pbimal | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/646781/ | chess |
+| 402638__runeble__sheep-bells.wav | runeble | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/402638/ | sheep_bells |
 | 245922.wav | sophiehall3535 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/245922/ | blocks |
 | 565794__stomachache__distant-cannon-fire-simulated.wav | stomachache | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/565794/ | cannon |
 | 221528__unfa__glass-break.flac | unfa | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/221528/ | glass |
+| 383144__zachrau__sheep-bleating.wav | zachrau | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://freesound.org/s/383144/ | sheep |
 | GAMEBoard_Event Board Reset Organic Multiple Pieces Wood Small 02_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | wood_knock |
 | GAMEBoard_Game Play Piece Action Organic Connect Dots Fall Bounce 04_ESM_BG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | chess |
 | WOODImpt_Hit Blood Spill Splat Wood Impact Light Hit Squelch Small Thump 03_ESM_TDG.wav | Epic Stock Media (Sonniss) | Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects) | https://sonniss.com/gameaudiogdc | squish |

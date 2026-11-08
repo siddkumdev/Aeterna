@@ -14,6 +14,7 @@ var target: Enemy
 var splash := 0.0  # m
 var width := 0.0  # m
 var done := false
+var source  # the Tower that fired it (told about kills); may be null or freed
 var mods := {}  # card extras from the tower: damage, scale, burn, burn_spreads, knockback, patch, slow
 
 var _from := Vector3.ZERO
@@ -146,7 +147,10 @@ func _hit_enemy(e: Enemy) -> void:
 		e.ignite(mods["burn"], 3.0, mods.get("burn_spreads", false))  # Ember Shot: burn for 3 s
 	if mods.get("slow", false):
 		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
+	var was_alive: bool = e.alive
 	e.take_damage(dmg)
+	if was_alive and not e.alive and is_instance_valid(source):
+		source.on_kill()
 
 
 func _finish() -> void:

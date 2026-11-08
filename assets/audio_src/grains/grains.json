@@ -1843,5 +1843,176 @@
    "keep": true,
    "rank": 5
   }
+ ],
+ "owl": [
+  {
+   "file": "owl_01.wav",
+   "seconds": 2.2,
+   "source": "465697__breviceps__owl-hoot.wav",
+   "author": "Breviceps",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/465697/",
+   "at": 0.67,
+   "keep": true,
+   "rank": 1
+  },
+  {
+   "file": "owl_02.wav",
+   "seconds": 1.448,
+   "source": "465697__breviceps__owl-hoot.wav",
+   "author": "Breviceps",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/465697/",
+   "at": 2.946,
+   "keep": true,
+   "rank": 2
+  },
+  {
+   "file": "owl_03.wav",
+   "seconds": 2.2,
+   "source": "745208__patrick_corra__tawny-owl-hooting.ogg",
+   "author": "Patrick_Corra",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/745208/",
+   "at": 27.336,
+   "keep": true,
+   "rank": 3
+  }
+ ],
+ "sheep_bells": [
+  {
+   "file": "sheep_bells_01.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 0.27,
+   "keep": false,
+   "rank": 5
+  },
+  {
+   "file": "sheep_bells_02.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 4.476,
+   "keep": true,
+   "rank": 1
+  },
+  {
+   "file": "sheep_bells_03.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 7.262,
+   "keep": true,
+   "rank": 2
+  },
+  {
+   "file": "sheep_bells_04.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 13.909,
+   "keep": false,
+   "rank": 6
+  },
+  {
+   "file": "sheep_bells_05.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 16.53,
+   "keep": true,
+   "rank": 4
+  },
+  {
+   "file": "sheep_bells_06.wav",
+   "seconds": 2.502,
+   "source": "402638__runeble__sheep-bells.wav",
+   "author": "runeble",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/402638/",
+   "at": 19.496,
+   "keep": true,
+   "rank": 3
+  }
+ ],
+ "sheep": [
+  {
+   "file": "sheep_01.wav",
+   "seconds": 1.602,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 1.521,
+   "keep": true,
+   "rank": 4
+  },
+  {
+   "file": "sheep_02.wav",
+   "seconds": 0.737,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 6.142,
+   "keep": true,
+   "rank": 1
+  },
+  {
+   "file": "sheep_03.wav",
+   "seconds": 1.292,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 7.834,
+   "keep": false,
+   "rank": 5
+  },
+  {
+   "file": "sheep_04.wav",
+   "seconds": 1.518,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 10.992,
+   "keep": true,
+   "rank": 2
+  },
+  {
+   "file": "sheep_05.wav",
+   "seconds": 1.602,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 12.701,
+   "keep": true,
+   "rank": 3
+  },
+  {
+   "file": "sheep_06.wav",
+   "seconds": 1.602,
+   "source": "383144__zachrau__sheep-bleating.wav",
+   "author": "zachrau",
+   "licence": "CC0 1.0",
+   "url": "https://freesound.org/s/383144/",
+   "at": 18.155,
+   "keep": false,
+   "rank": 6
+  }
  ]
 }

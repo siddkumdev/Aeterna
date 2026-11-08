@@ -32,7 +32,11 @@ DESCRIBE = {
     "cannon": "a distant cannon shot",
     "bow": "a bowstring released, an arrow shot",
     "creature": "a monster growl",
+    "owl": "an owl hooting",
+    "sheep_bells": "sheep bells tinkling",
+    "sheep": "a sheep bleating",
 }
+PHRASE_KITS = {"owl", "sheep_bells", "sheep"}  # several onsets per grain is normal there: no double-hit rule
 
 
 def double_hit(path):
@@ -68,7 +72,7 @@ def main():
         n_keep = max(MIN_KEEP, int(round(len(ranked) * KEEP)))
         keep = set(ranked[:n_keep])
         for e in index.get(kit, []):
-            e["keep"] = (e["file"] in keep if ranked else True) and not double_hit(os.path.join(GR, kit, e["file"]))
+            e["keep"] = (e["file"] in keep if ranked else True) and (kit in PHRASE_KITS or not double_hit(os.path.join(GR, kit, e["file"])))
             e["rank"] = ranked.index(e["file"]) + 1 if e["file"] in ranked else None
         print("%-11s kept %d of %d" % (kit, sum(1 for e in index.get(kit, []) if e["keep"]), len(index.get(kit, []))))
         json.dump(index, open(index_path, "w", encoding="utf-8"), indent=1)

@@ -227,9 +227,25 @@ func snd(id: String, at := Vector3.INF) -> void:
 		audio.play(id, at)
 
 
+# Ambience one-shots on top of the beds (AudioBank.set_scatter): day = birds and leaves in the forest ring, a villager
+# at work by a house; night = sparser and a little tense: an owl, a creak, something moving in the undergrowth.
+const SCATTER_DAY := [
+	{"id": "amb_bird", "where": "forest", "w": 5}, {"id": "amb_leaves", "where": "forest", "w": 2},
+	{"id": "amb_work", "where": "village", "w": 2},
+]
+const SCATTER_NIGHT := [
+	{"id": "amb_owl", "where": "forest", "w": 1}, {"id": "amb_creak", "where": "forest", "w": 2},
+	{"id": "amb_rustle", "where": "forest", "w": 2},
+]
+
+
 func _phase_sound(was: int, p: int) -> void:
 	if audio == null:
 		return
+	if p == Phase.NIGHT:
+		audio.set_scatter(SCATTER_NIGHT, ambience_point, Vector2(4.0, 9.0))
+	else:
+		audio.set_scatter(SCATTER_DAY, ambience_point, Vector2(2.5, 6.0))
 	match p:
 		Phase.DAY:
 			audio.set_bed("day_bed")
@@ -240,6 +256,20 @@ func _phase_sound(was: int, p: int) -> void:
 			snd("night_fall")
 		_:
 			audio.set_bed("day_bed")
+
+
+func ambience_point(where: String) -> Vector3:
+	## A world position for an ambience one-shot: a random cell of the forest ring (the board's edge), or a standing house.
+	if where == "village":
+		var up: Array = houses.filter(func(h): return not h.is_shuttered)
+		if not up.is_empty():
+			var h: Node3D = up[randi() % up.size()]
+			return h.global_position + Vector3(0, GameConfig.CELL, 0)
+	var n := GameConfig.SIZE
+	var i := randi() % n
+	var cells := [Vector2i(i, 0), Vector2i(i, n - 1), Vector2i(0, i), Vector2i(n - 1, i)]
+	var cell: Vector2i = cells[randi() % 4]
+	return board.to_global(NavGrid.cell_centre(cell) + Vector3(0, GameConfig.CELL * 1.5, 0))
 
 
 func _set_phase(p: int, message: String) -> void:
@@ -807,6 +837,11 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	VfxKit.build_pop(shots_root, t.global_position)
 	snd("build_pop", t.global_position)
 	snd("place_thunk", t.global_position)
+	var voice: String = t.voice()
+	if audio and voice != "":  # the crew calls out once the tower has landed
+		get_tree().create_timer(0.35).timeout.connect(func():
+			if is_instance_valid(t):
+				snd("bark_%s_ready" % voice, t.global_position))
 	if with_rig:
 		t.settle()
 	tower_placed.emit(kind, t.global_position)

@@ -109,7 +109,21 @@ KITS = {
         (SONNISS + "/SoundBits - Vox Bestiae*/*", "SoundBits (Sonniss)", SONNISS_LIC, "https://sonniss.com/gameaudiogdc", 1.2, 6),
         (SONNISS + "/Epic Stock Media - Humanoid Creatures Vol 4*/*", "Epic Stock Media (Sonniss)", SONNISS_LIC, "https://sonniss.com/gameaudiogdc", 1.2, 6),
     ],
+    # ambience one-shots (round 4): whole short phrases, see PHRASE_KITS
+    "owl": [
+        (DL + "/465697__*", "Breviceps", CC0, FS % 465697, 2.2, 4),
+        (DL + "/745208__*", "Patrick_Corra", CC0, FS % 745208, 2.2, 4),
+    ],
+    "sheep_bells": [
+        (DL + "/402638__*", "runeble", CC0, FS % 402638, 2.5, 6),
+    ],
+    "sheep": [
+        (DL + "/383144__*", "zachrau", CC0, FS % 383144, 1.6, 6),
+    ],
 }
+# Kits cut as phrases (a hoot series, a bell jingle, a bleat): a cut may run over the next onset (up to max seconds),
+# and an onset inside the previous cut is skipped, so phrases never overlap.
+PHRASE_KITS = {"owl", "sheep_bells", "sheep"}
 
 
 def read(path):
@@ -192,10 +206,15 @@ def main():
                 if not at:  # slow swells (voices): start where it first gets within 20 dB of its peak
                     at = [int(np.argmax(db > db.max() - 20)) * hop]
                 n = 0
+                prev_end = -1
                 for j, a in enumerate(at):
-                    g = cut(x, a, max_s, db, hop, at[j + 1] if j + 1 < len(at) else None)
+                    phrase = kit in PHRASE_KITS
+                    if phrase and a < prev_end:
+                        continue
+                    g = cut(x, a, max_s, db, hop, None if phrase else (at[j + 1] if j + 1 < len(at) else None))
                     if g is None:
                         continue
+                    prev_end = a + len(g)
                     name = "%s_%02d.wav" % (kit, len(entries) + 1)
                     wavfile.write(os.path.join(kdir, name), SR, (g * 32767).astype(np.int16))
                     entries.append(dict(file=name, seconds=round(len(g) / SR, 3), source=os.path.basename(path),

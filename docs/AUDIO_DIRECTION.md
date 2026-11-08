@@ -37,9 +37,21 @@ Player feedback sits on top; there is no voice acting, so the ui bus is the refe
 - **Ducking:** a big story beat (dawn bell, night falls, a card's rarity, the rewind, the boss) lowers ambience and
   music by 6 dB while it plays (manifest `duck`).
 - **Priority:** at most 28 sounds at once; each sound has its own cooldown so crowds do not stack into noise.
-- **Variation:** sounds heard many times (pinch, grab, place, hits, shots) have 4 takes (different seed and a small
-  pitch offset), plus a random pitch change at play time.
+- **Variation:** sounds heard many times (pinch, grab, place, hits, shots) have 4-8 takes (different seed, a small
+  pitch offset and, for layered sounds, a different recorded grain), plus a random pitch change at play time.
+- **Combo:** quick kills (enemy_death within 1.2 s) climb the key's pentatonic (C D E G A), then fall back to C.
 - **3D:** the world bus is spatial (enemies, towers, houses, spells); ui, beds and stings are flat.
+
+## Key (Claude's default, 2026-11-08, Siddharth asked for chimes in the music's key)
+**C major by day; night sounds may borrow from C minor (Eb, Ab, Bb).** The music (A01-A07) follows this key.
+`make_audio.py` prints a key check for every build; barks are tuned (`tuned=True`: no take detune, no play-time vary).
+
+## Voices and the living board
+- **Tower barks (A49):** each crew member has a gibberish voice (no words): "hup-hup-hah" when the tower lands, a quick
+  cheer on some of its kills. Wizard old and warm, archer young and quick, pilot cheery, Guard Tower captain gruff.
+- **Ambience one-shots (A50, A51):** the beds stay quiet and steady; on top, the game scatters short sounds at things
+  you can see (`AudioBank.set_scatter`, pools in `game.gd`): by day birds and leaves in the forest ring and a villager at
+  work by a house, every few seconds; by night, sparser: an owl, a branch creak, something in the undergrowth.
 
 ## Accessibility (from the Claude-Code-Game-Studios review, 2026-11-08)
 Any sound that carries game information also needs something to see, because many VR players turn the sound down:
