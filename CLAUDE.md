@@ -11,7 +11,7 @@ Two people work on this repo, each with their own Claude Code on the same setup:
 - The user specifies what to build; Claude writes the code (including core game logic). Do not invent gameplay rules; ask when a spec is missing.
 - After finishing a task, give the exact command to verify it yourself.
 - Write complete reports (they are sometimes on mobile with no terminal). Verify claims before stating them; label inferences.
-- No AI-generated or third-party assets. Every asset is built from scratch (Blender scripts) and logged in `assets/ASSETS.md`.
+- No AI-generated or third-party assets. Every asset is built from scratch (Blender scripts) and logged in `assets/ASSETS.md`. Exception for sound effects only (Siddharth, 2026-11-08): free sounds under CC0, CC-BY or a royalty-free licence may be used, each logged with its source link, author and licence, and credited in `docs/AUDIO_CREDITS.md`; never AI-generated sounds and never non-commercial (NC) or share-alike-only-if-unclear licences.
 - Moodboard references are for style and shape language only. Never copy a specific third-party design, character or logo. The moodboard holds third-party images, so the repo must stay private.
 - Approvals (decided 2026-10-18): an asset is done only on explicit approval by EITHER Siddharth or his teammate. Log who approved: `approved by <name> (date)`.
 - Never estimate how long a task takes (no hours/days/effort sizes, in chat or docs). Describe order, dependencies and priority; the deadline 2026-11-18 12:00 PM PT may be cited as a date.

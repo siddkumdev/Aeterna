@@ -1,8 +1,10 @@
 # Aeterna audio direction
 
 Owner: Siddharth (with Claude), since 2026-11-07. This page is the source of truth for how the game sounds; the
-`game-audio-principles` skill is general background and loses to this page. Every sound is made from code
-(`assets/generators/make_audio.py` with `tools/audio_synth.py`); no recordings, samples or soundfonts.
+`game-audio-principles` skill is general background and loses to this page. Sounds are made from code
+(`assets/generators/make_audio.py` with `tools/audio_synth.py`). Since 2026-11-08 (Siddharth) free sounds under CC0, CC-BY or
+a royalty-free licence are also allowed, each logged with source, author and licence and credited in `docs/AUDIO_CREDITS.md`;
+never AI-generated sounds, never NC licences.
 
 ## Mood (Siddharth, 2026-11-08)
 - **Day: peaceful and cozy.** A small toy village on a table: warm wood, soft bells, glass plinks, gentle wind, birds.
