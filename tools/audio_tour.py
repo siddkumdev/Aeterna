@@ -2,7 +2,7 @@
 plays its OLD version (first take), a short pause, then its NEW version (first take), then a longer pause before the
 next sound. Loops: 5 s of each. Loudness-matched per pair. A text file lists the order with timestamps.
 
-    python tools/audio_tour.py <old_dir> <out_dir>        # new = assets/export/audio
+    python tools/audio_tour.py <old_dir> <out_dir> [new_dir]   # new defaults to assets/export/audio
 """
 import json
 import os
@@ -47,6 +47,7 @@ def rms(x):
 
 def main():
     old_dir, out_dir = sys.argv[1], sys.argv[2]
+    new_dir = sys.argv[3] if len(sys.argv) > 3 else NEW
     man = json.load(open(os.path.join(NEW, "manifest.json"), encoding="utf-8"))
     os.makedirs(out_dir, exist_ok=True)
     lines = []
@@ -56,7 +57,7 @@ def main():
         for name in names:
             if name not in man:
                 continue
-            a, b = first(old_dir, name, man), first(NEW, name, man)
+            a, b = first(old_dir, name, man), first(new_dir, name, man)
             if b is None:
                 continue
             target = 10 ** (-24 / 20)

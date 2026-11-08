@@ -37,6 +37,21 @@ RECIPES = {}
 TAKE_PITCH = [1.0, 0.955, 1.045, 0.925, 1.075, 0.97, 1.03, 0.94]  # take k is resampled by this (a small pitch and length change)
 WARM_HZ = 10000  # second pass (Siddharth 2026-11-08, "peaceful and cozy"): one-shots lose their hard top end
 
+# OPEN (Siddharth 2026-11-08: "all the audio feel very low bitrate"): the recipes' tone filters (low-pass above 2.6 kHz)
+# and WARM_HZ are multiplied by this, so the recordings keep more of their top end.
+# Cutoffs of 2.6 kHz and under are deliberate darkening (rumbles, hums, the wind that read as waves) and stay as
+# written, as does far(). Anti-alias filters in the
+# resamplers use _lp_exact and are never opened. Env EW_AUDIO_OPEN overrides it for A/B listening builds.
+OPEN = max(1.0, float(os.environ.get("EW_AUDIO_OPEN", "1.0")))
+_lp_exact = S.lp
+
+
+def lp(x, fc, order=2):  # noqa: F811  (recipes' tone filter, see OPEN)
+    if fc > 2600:
+        fc = min(fc * OPEN, 0.45 * S.SR)
+    return _lp_exact(x, fc, order)
+
+
 GRAINS = os.path.join(ROOT, "assets", "audio_src", "grains")
 _GRAIN_CACHE = {}
 
@@ -58,7 +73,7 @@ def grain(kit, r, pitch=1.0, spread=0.06, seconds=None):
     x = xs[int(r.integers(0, len(xs)))]
     k = pitch * (1.0 + float(r.uniform(-spread, spread)))
     if k > 1.0:  # shrinking: filter first or the top end folds back down (aliasing)
-        x = lp(x, 0.45 * S.SR / k, 4)
+        x = _lp_exact(x, 0.45 * S.SR / k, 4)
     n = max(16, int(len(x) / k))
     x = np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x)
     if seconds is not None:  # exactly `seconds` long: cut with a short fade, or pad with silence
@@ -139,7 +154,7 @@ def _resample(x, k):
     if abs(k - 1.0) < 1e-6:
         return x
     if k > 1.0:
-        x = lp(x, 0.45 * SR_ / k, 4)
+        x = _lp_exact(x, 0.45 * SR_ / k, 4)
     n = max(16, int(x.shape[0] / k))
     at = np.linspace(0, x.shape[0] - 1, n)
     src = np.arange(x.shape[0])
@@ -220,7 +235,7 @@ def voice(kit, r, seconds=None, step=0.0, slide=0.0):
     lift = 2 ** (slide / 12) if slide else 1.0
     kmax = k * max(1.0, lift)
     if kmax > 1.0:  # one anti-alias filter over the whole syllable (no restart mid-syllable)
-        x = lp(x, 0.45 * SR_ / kmax, 4)
+        x = _lp_exact(x, 0.45 * SR_ / kmax, 4)
     # speed rises smoothly from k to k * lift over the syllable (a small upward lift when slide > 0)
     m = len(x)
     # read position through the source: speed k for the first half, then rising to k * lift by the end
@@ -235,7 +250,7 @@ def voice(kit, r, seconds=None, step=0.0, slide=0.0):
 
 def far(x, r, cutoff=3000, size=0.6, wet=0.45):
     """Push a recording away: darker and in a room (mono out)."""
-    y = room(lp(x, cutoff), size, wet, seed=int(r.integers(1, 99)))
+    y = room(_lp_exact(x, cutoff), size, wet, seed=int(r.integers(1, 99)))
     return y[:, 0] if y.ndim == 2 else y
 
 
@@ -781,7 +796,8 @@ def render(name, spec, v, take=0):
         at = np.linspace(0, x.shape[0] - 1, n)  # plain interpolation: an FFT resample would wrap the attack onto the tail
         x = np.interp(at, src, x) if x.ndim == 1 else np.stack([np.interp(at, src, x[:, c]) for c in range(x.shape[1])], axis=1)
     if spec["warm"] and not spec["loop"]:
-        x = lp(x, WARM_HZ, 2)
+        if WARM_HZ * OPEN < 0.45 * SR_:
+            x = _lp_exact(x, WARM_HZ * OPEN, 2)
     if not spec["loop"]:
         x = remove_dc(x)
         x = trim_silence(x, -55.0, 0.02)
