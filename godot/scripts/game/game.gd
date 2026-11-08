@@ -227,7 +227,7 @@ func snd(id: String, at := Vector3.INF) -> void:
 		audio.play(id, at)
 
 
-# Ambience one-shots on top of the beds (AudioBank.set_scatter): day = birds and leaves in the forest ring, a villager
+# Ambience one-shots (AudioBank.set_scatter; no beds since 2026-11-08): day = birds and leaves in the forest ring, a villager
 # at work by a house; night = sparser and a little tense: an owl, a creak, something moving in the undergrowth.
 const SCATTER_DAY := [
 	{"id": "amb_bird", "where": "forest", "w": 5}, {"id": "amb_leaves", "where": "forest", "w": 2},
@@ -246,16 +246,15 @@ func _phase_sound(was: int, p: int) -> void:
 		audio.set_scatter(SCATTER_NIGHT, ambience_point, Vector2(4.0, 9.0))
 	else:
 		audio.set_scatter(SCATTER_DAY, ambience_point, Vector2(2.5, 6.0))
+	# No background beds (Siddharth 2026-11-08: he did not like the day and night beds); the scattered one-shots above
+	# and the dawn / nightfall bells carry the time of day. The bed files stay in the bank in case they come back.
+	audio.set_bed("")
 	match p:
 		Phase.DAY:
-			audio.set_bed("day_bed")
 			if was == Phase.NIGHT:
 				snd("dawn_bell")
 		Phase.NIGHT:
-			audio.set_bed("night_bed")
 			snd("night_fall")
-		_:
-			audio.set_bed("day_bed")
 
 
 func ambience_point(where: String) -> Vector3:

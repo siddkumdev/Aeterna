@@ -56,7 +56,9 @@ Player feedback sits on top; there is no voice acting, so the ui bus is the refe
   cheer on some of its kills. Wizard old and warm, archer young and quick, pilot cheery, Guard Tower captain gruff.
   Voices (barks and villagers) stay at the speaker's own recorded pitch, nudged only a few semitones for contour,
   never shifted onto the key's notes (Siddharth 2026-11-08: shifting made them chipmunky).
-- **Ambience one-shots (A50, A51):** the beds stay quiet and steady; on top, the game scatters short sounds at things
+- **No background beds (Siddharth 2026-11-08):** day_bed and night_bed are not played; the one-shots below and the
+  dawn / nightfall bells carry the time of day.
+- **Ambience one-shots (A50, A51):** the game scatters short sounds at things
   you can see (`AudioBank.set_scatter`, pools in `game.gd`): by day birds and leaves in the forest ring and a villager at
   work by a house, every few seconds; by night, sparser: an owl, a branch creak, something in the undergrowth.
 
