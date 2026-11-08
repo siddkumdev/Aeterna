@@ -440,3 +440,108 @@ def write_wav(path, x):
     x = np.asarray(x, dtype=float)
     x = np.clip(x, -1.0, 1.0)
     wavfile.write(path, SR, (x * 32767.0).astype(np.int16))
+
+
+# ------------------------------------------------------------------ richer material (second look, 2026-11-08)
+# Why the first set sounds "primitive": most bodies are one to three pure sines with the same clean exponential decay,
+# in the same synthetic noise reverb. Real objects ring at many inharmonic modes, each with its own decay, excited by a
+# noisy strike, and they sit in a room with early reflections. These helpers add exactly those three things.
+
+MATERIALS = {
+    # mode ratios (inharmonic), base decay in s, brightness (how fast high modes die), strike noise
+    "wood": dict(ratios=(1.0, 2.57, 4.21, 5.87, 7.98, 10.6), decay=0.09, bright=2.2, strike=0.35),
+    "stone": dict(ratios=(1.0, 1.63, 2.31, 3.18, 3.91, 4.77, 5.94), decay=0.05, bright=1.6, strike=0.55),
+    "metal": dict(ratios=(1.0, 2.76, 5.40, 8.93, 13.3, 18.6), decay=0.9, bright=0.8, strike=0.2),
+    "clay": dict(ratios=(1.0, 2.13, 3.47, 4.91), decay=0.04, bright=2.8, strike=0.6),
+}
+
+
+def modal(f0, seconds, material, r, hardness=0.5, detune=0.012, nmodes=None):
+    """A struck object: many inharmonic modes, each slightly detuned and with its own decay, excited by a short noisy
+    strike (not a click). hardness 0..1 = soft mallet (dull) to hard (bright)."""
+    m = MATERIALS[material]
+    out = np.zeros(n_of(seconds))
+    ratios = m["ratios"][: nmodes or len(m["ratios"])]
+    for i, ra in enumerate(ratios):
+        f = f0 * ra * (1.0 + float(r.uniform(-detune, detune)))
+        if f > SR / 2.3:
+            continue
+        amp = (1.0 / (1.0 + i * (1.6 - hardness))) * float(r.uniform(0.6, 1.0))
+        tau = m["decay"] / (1.0 + i * m["bright"] * (1.2 - hardness)) * float(r.uniform(0.8, 1.2))
+        out += amp * exp_env(seconds, tau, 0.0008) * np.sin(_phase(f, seconds) + float(r.uniform(0, TWO_PI)))
+    k = min(n_of(0.012), n_of(seconds))
+    strike = np.zeros(n_of(seconds))
+    burst = r.standard_normal(k) * np.exp(-np.arange(k) / SR / (0.0015 + 0.003 * (1 - hardness)))
+    strike[:k] = lp(burst, 1500 + 7000 * hardness, 1)
+    return out / (np.max(np.abs(out)) + 1e-9) + m["strike"] * strike / (np.max(np.abs(strike)) + 1e-9)
+
+
+def resonate(x, freqs, q=30.0, gains=None):
+    """Run a noisy source through a bank of narrow resonators: gives noise a body (a pot, a hollow log, a throat)."""
+    out = np.zeros_like(np.asarray(x, dtype=float))
+    for i, f in enumerate(freqs):
+        bw = f / q
+        sos = signal.butter(2, [max(20.0, f - bw / 2), min(SR / 2.05, f + bw / 2)], "bandpass", fs=SR, output="sos")
+        out += (gains[i] if gains else 1.0) * signal.sosfilt(sos, x, axis=0)
+    return out
+
+
+def flutter(x, r, depth=0.15, rate=18.0):
+    """Small random amplitude wobble: nothing in nature decays perfectly smoothly."""
+    n = x.shape[0]
+    secs = n / SR
+    w = lp(r.standard_normal(n), rate, 1)
+    w = w / (np.max(np.abs(w)) + 1e-9)
+    g = 1.0 + depth * w
+    return x * (g if x.ndim == 1 else g[:, None])
+
+
+def jitter_pitch(x, r, cents=12.0, rate=6.0):
+    """A slow random pitch drift by resampling along a wandering time line (a hand-struck object is never exact)."""
+    n = x.shape[0]
+    w = lp(r.standard_normal(n), rate, 1)
+    w = w / (np.max(np.abs(w)) + 1e-9)
+    speed = 2.0 ** (cents * w / 1200.0)
+    pos = np.cumsum(speed)
+    pos = pos / pos[-1] * (n - 1)
+    src = np.arange(n)
+    return np.interp(pos, src, x) if x.ndim == 1 else np.stack([np.interp(pos, src, x[:, c]) for c in range(x.shape[1])], axis=1)
+
+
+def fire_texture(seconds, r, size=1.0):
+    """Fire that is not white-noise clicks: a breathy low roar, licks (slow band-pass swells) and pops of mixed size."""
+    roar = lp(noise(seconds, r, "pink"), 500 + 400 * size) * (0.6 + 0.4 * lp(r.standard_normal(n_of(seconds)), 4, 1) * 3)
+    licks = sweep_bp(noise(seconds, r), lp(r.standard_normal(n_of(seconds)), 3, 1) * 3000 + 1400, 1.5)
+    pops = np.zeros(n_of(seconds))
+    for _ in range(int(r.poisson(25 * seconds))):
+        f = float(r.uniform(600, 3200))
+        d = float(r.uniform(0.008, 0.04))
+        p = modal(f, d, "clay", r, hardness=float(r.uniform(0.3, 0.9)), nmodes=3) * float(r.random() ** 2)
+        at = int(r.integers(0, max(1, len(pops) - len(p))))
+        pops[at:at + len(p)] += p[: len(pops) - at]
+    return pk(roar) * 0.5 + pk(licks) * 0.35 + pk(pops) * 0.45
+
+
+def room(x, size=0.35, wet=0.22, seed=3):
+    """A small real room (a table in a living room): a few early reflections a few ms apart, then a short soft tail.
+    This is what puts a sound 'in a place' instead of in a synth. Returns stereo."""
+    x = np.asarray(x, dtype=float)
+    xs = np.repeat(x[:, None], 2, axis=1) if x.ndim == 1 else x
+    src = xs.mean(axis=1)
+    n_extra = n_of(size * 1.6 + 0.04)
+    n = xs.shape[0] + n_extra
+    dry = np.zeros((n, 2))
+    dry[: xs.shape[0]] = xs
+    er = np.zeros((n, 2))
+    for d, g, p in [(0.0047, 0.55, -0.4), (0.0083, 0.45, 0.5), (0.0121, 0.38, -0.2), (0.0167, 0.30, 0.3), (0.0229, 0.22, -0.5)]:
+        k = n_of(d * (0.6 + size))
+        tap = lp(src, 6000 - 2500 * g, 1) * g
+        er[k:k + len(tap), 0] += tap * (1 - p) * 0.5
+        er[k:k + len(tap), 1] += tap * (1 + p) * 0.5
+    full = reverb(src, rt60=size, wet=1.0, predelay=0.02, damp=3500, seed=seed)
+    tail = full - np.pad(src, (0, len(full) - len(src))) * 0.5  # the wet part only
+    m = min(len(tail), n)
+    wetsig = er.copy()
+    wetsig[:m, 0] += tail[:m] * 0.5
+    wetsig[:m, 1] += np.roll(tail[:m], 23) * 0.5
+    return dry * (1 - wet * 0.5) + wetsig * wet * 1.6
