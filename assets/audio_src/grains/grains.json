@@ -2689,8 +2689,8 @@
    "url": "https://freesound.org/s/848728/",
    "at": 0.607,
    "f0": 234.8,
-   "keep": false,
-   "rank": 5
+   "keep": true,
+   "rank": 4
   },
   {
    "file": "fire_whoosh_02.wav",
@@ -2702,7 +2702,7 @@
    "at": 3.251,
    "f0": 133.2,
    "keep": true,
-   "rank": 3
+   "rank": 2
   },
   {
    "file": "fire_whoosh_03.wav",
@@ -2714,7 +2714,7 @@
    "at": 5.245,
    "f0": 255.7,
    "keep": false,
-   "rank": 6
+   "rank": 5
   },
   {
    "file": "fire_whoosh_04.wav",
@@ -2726,7 +2726,7 @@
    "at": 7.686,
    "f0": 152.8,
    "keep": true,
-   "rank": 2
+   "rank": 1
   },
   {
    "file": "fire_whoosh_05.wav",
@@ -2738,19 +2738,7 @@
    "at": 8.844,
    "f0": 154.1,
    "keep": true,
-   "rank": 4
-  },
-  {
-   "file": "fire_whoosh_06.wav",
-   "seconds": 0.113,
-   "source": "FIREWhsh_Whoosh Fire Deep Growl Monster Saturated Crisp 03_ESM_EMWI.wav",
-   "author": "Epic Stock Media (Sonniss)",
-   "licence": "Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects)",
-   "url": "https://sonniss.com/gameaudiogdc",
-   "at": 0.906,
-   "f0": 65.9,
-   "keep": true,
-   "rank": 1
+   "rank": 3
   }
  ],
  "crackle": [

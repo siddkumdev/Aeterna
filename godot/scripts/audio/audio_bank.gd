@@ -39,6 +39,19 @@ var _scatter_left := 0.0
 var scattered := 0  # counted for tests
 
 
+func _add_master_limiter() -> void:
+	## Many sounds at once (fireballs landing together, 3D sounds boosted close to the head) can sum past full scale, and
+	## the output then hard-clips: it sounds bit-crushed (Siddharth 2026-11-08, Wizard Tower attacks). A limiter on Master
+	## turns those peaks down smoothly instead. Added once.
+	var m := AudioServer.get_bus_index("Master")
+	for k in AudioServer.get_bus_effect_count(m):
+		if AudioServer.get_bus_effect(m, k) is AudioEffectHardLimiter:
+			return
+	var lim := AudioEffectHardLimiter.new()
+	lim.ceiling_db = -0.5
+	AudioServer.add_bus_effect(m, lim)
+
+
 func setup() -> void:
 	_rng.randomize()
 	for b in BUS_DB:
@@ -48,6 +61,7 @@ func setup() -> void:
 			AudioServer.set_bus_name(i, b)
 			AudioServer.set_bus_send(i, "Master")
 			AudioServer.set_bus_volume_db(i, BUS_DB[b])
+	_add_master_limiter()
 	var f := FileAccess.open(DIR + "manifest.json", FileAccess.READ)
 	if f == null:
 		return

@@ -171,7 +171,8 @@ KITS.update({
     # fire, magic, air
     "fire_whoosh": [
         F(848728, "mikiko850", BY4, 1.0, 8),
-        SN("Epic Stock Media - Elemental Mutation*", "FIREWhsh_*", "Epic Stock Media", 1.5, 1),
+        # (the Sonniss "Whoosh Fire Deep Growl Monster Saturated Crisp" was removed 2026-11-08: it is distorted on purpose
+        # and made the Wizard Tower's attacks sound bit-crushed to Siddharth)
     ],
     "crackle": [
         F(563766, "florianreichelt", CC0, 0.35, 8), F(730704, "newlocknew", BY4, 0.35, 8),

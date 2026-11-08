@@ -1408,8 +1408,19 @@ func _audio() -> void:
 	var s := a._stream("day_bed.wav", true)
 	check("audio: a bed loops", s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
 	check("audio: frequent sounds have several takes", a.manifest["pinch"]["files"].size() >= 4)
+	var lims := 0
+	var mb := AudioServer.get_bus_index("Master")
+	for k in AudioServer.get_bus_effect_count(mb):
+		if AudioServer.get_bus_effect(mb, k) is AudioEffectHardLimiter:
+			lims += 1
+	a._add_master_limiter()
+	var lims2 := 0
+	for k in AudioServer.get_bus_effect_count(mb):
+		if AudioServer.get_bus_effect(mb, k) is AudioEffectHardLimiter:
+			lims2 += 1
+	check("audio: one limiter on Master, never added twice", lims == 1 and lims2 == 1)
 	var amb := AudioServer.get_bus_index("ambience")
-	a.play("dawn_bell")
+	a.play("village_bell")
 	await create_timer(0.4).timeout
 	check("audio: a story beat ducks the ambience", amb != -1 and AudioServer.get_bus_volume_db(amb) < AudioBank.BUS_DB["ambience"] - 3.0)
 	# combo: quick kills climb the scale, a pause brings it back to the root

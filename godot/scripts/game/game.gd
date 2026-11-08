@@ -239,7 +239,7 @@ const SCATTER_NIGHT := [
 ]
 
 
-func _phase_sound(was: int, p: int) -> void:
+func _phase_sound(_was: int, p: int) -> void:
 	if audio == null:
 		return
 	if p == Phase.NIGHT:
@@ -247,14 +247,10 @@ func _phase_sound(was: int, p: int) -> void:
 	else:
 		audio.set_scatter(SCATTER_DAY, ambience_point, Vector2(2.5, 6.0))
 	# No background beds (Siddharth 2026-11-08: he did not like the day and night beds); the scattered one-shots above
-	# and the dawn / nightfall bells carry the time of day. The bed files stay in the bank in case they come back.
+	# carry the time of day. The bed files stay in the bank in case they come back.
 	audio.set_bed("")
-	match p:
-		Phase.DAY:
-			if was == Phase.NIGHT:
-				snd("dawn_bell")
-		Phase.NIGHT:
-			snd("night_fall")
+	# No sound at the change of time either (Siddharth 2026-11-08: replace the bells with "Nothing"): dawn_bell and
+	# night_fall stay built but are not played; the light change and the UI carry it.
 
 
 func ambience_point(where: String) -> Vector3:
