@@ -123,6 +123,10 @@ func play(id: String, at := Vector3.INF) -> bool:
 		p3.pitch_scale = pitch
 		p3.unit_size = 0.7
 		p3.max_distance = 8.0
+		# Godot's default 3D "air absorption" low-passes every placed sound at 5 kHz; on a tabletop board everything is
+		# within arm's reach, so it only made the game sound dull and lo-fi (in-game capture 2026-11-08: almost nothing
+		# above 5 kHz). 20500 Hz turns it off.
+		p3.attenuation_filter_cutoff_hz = 20500.0
 		p = p3
 	else:
 		var p2 := AudioStreamPlayer.new()

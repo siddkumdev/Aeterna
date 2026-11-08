@@ -850,7 +850,9 @@ def main():
         del _SYNTH_USED[:]
         for folder in ([OUT, GODOT_OUT] if godot and os.path.isdir(GODOT_OUT) else [OUT]):
             for old in os.listdir(folder):
-                if re.fullmatch(re.escape(name) + r"(_\d+)?\.wav(\.import)?", old):
+                # .import files are kept: deleting them gave every sound a new Godot uid on each rebuild; an .import whose
+                # .wav is gone is removed after the copy below
+                if re.fullmatch(re.escape(name) + r"(_\d+)?\.wav", old):
                     os.remove(os.path.join(folder, old))
         files = []
         renders = [(v, t) for v in range(spec["variants"]) for t in range(spec["takes"])]
@@ -888,6 +890,9 @@ def main():
         for fn in os.listdir(OUT):
             if fn.endswith((".wav", ".json")):
                 shutil.copy2(os.path.join(OUT, fn), os.path.join(GODOT_OUT, fn))
+        for fn in os.listdir(GODOT_OUT):  # an .import left without its .wav (a take count went down)
+            if fn.endswith(".wav.import") and not os.path.exists(os.path.join(GODOT_OUT, fn[: -len(".import")])):
+                os.remove(os.path.join(GODOT_OUT, fn))
         print("copied to", GODOT_OUT)
 
 
