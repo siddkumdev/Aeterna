@@ -78,7 +78,7 @@ def recipe(name, tid, bus="sfx", peak=-4.0, loop=False, rms=None, spatial=False,
     ## duck: while it plays the game lowers ambience and music (a story beat). warm: roll off above WARM_HZ.
     ## match: loudness (RMS dB) to hit instead of `peak`, with peaks allowed up to 4 dB over `peak`: a sound rebuilt on a
     ## sharper recorded body keeps the old sound's loudness, and the new punch shows as attack, not as "quieter".
-    ## tuned: takes only change the seed, not the pitch (pitched voices stay on the key's notes).
+    ## tuned: takes only change the seed, not the pitch (keeps a sound's notes or a voice's contour as built).
     ## combo: repeats in quick succession climb the key's pentatonic scale in the game (AudioBank.COMBO_STEPS).
     def deco(fn):
         RECIPES[name] = dict(fn=fn, tid=tid, bus=bus, peak=peak, loop=loop, rms=rms, spatial=spatial,
@@ -200,15 +200,23 @@ def bed(kit, r, seconds):
     return x[a: a + n].copy()
 
 
-def voice(kit, name, r, seconds=None, slide=0.0):
-    """A real voice syllable shifted so its measured pitch lands on the key's note `name` (slide: semitones of rise)."""
+# Each voice kit's syllables span a wide range of pitches (different takes, some octave misreads); a narrow band per kit
+# keeps one speaker's syllables close together, so a bark's contour is not lost in 20-semitone jumps (code-critic).
+VOICE_BAND = {"voice_m": (70, 100), "grunt": (100, 160)}  # Hz; voice_f (158-205) and voice_old (92-121) are already narrow
+
+
+def voice(kit, r, seconds=None, step=0.0, slide=0.0):
+    """A real voice syllable at the speaker's OWN pitch (Siddharth 2026-11-08: no more shifting voices onto the key's
+    notes, it made them chipmunky), moved only `step` semitones for a little up/down contour; slide: semitones of rise
+    over the syllable's second half."""
     from scipy.io import wavfile
-    keep = [e for e in _index()[kit] if e.get("keep", True) and 70 < e.get("f0", 0) < 450 and e["seconds"] > 0.08]
-    target = note(name)
-    fits = [e for e in keep if 0.5 <= target / e["f0"] <= 1.8]  # syllables that reach the note without chipmunking
-    e = (fits or keep)[int(r.integers(0, len(fits or keep)))]
+    lo, hi = VOICE_BAND.get(kit, (70, 450))
+    keep = [e for e in _index()[kit] if e.get("keep", True) and lo <= e.get("f0", 0) <= hi and e["seconds"] > 0.08]
+    if not keep:
+        raise RuntimeError("voice(%s): no kept syllable between %d and %d Hz" % (kit, lo, hi))
+    e = keep[int(r.integers(0, len(keep)))]
     x = _mono(wavfile.read(os.path.join(GRAINS, kit, e["file"]))[1].astype(float) / 32768.0)
-    k = float(np.clip(target / e["f0"], 0.5, 1.8))  # only clamps when no syllable fits
+    k = 2 ** (step / 12)
     lift = 2 ** (slide / 12) if slide else 1.0
     kmax = k * max(1.0, lift)
     if kmax > 1.0:  # one anti-alias filter over the whole syllable (no restart mid-syllable)
@@ -447,13 +455,13 @@ def request_new(r, v):
 
 
 @recipe("villager_blip", "A32", bus="sfx", peak=-12, spatial=True, vary=0.05, variants=5, cooldown=0.3,
-        note="five villagers' gibberish: real voice syllables, each villager on their own notes (no real words)")
+        note="five villagers' gibberish: real voice syllables at the speakers' own pitch, each villager a little higher or lower (no real words)")
 def villager_blip(r, v):
-    kit, notes = [("voice_f", ("G3", "A3", "C4")), ("voice_m", ("G3", "A3", "C4")), ("voice_f", ("A3", "C4", "D4")),
-                  ("voice_m", ("C3", "D3", "E3")), ("voice_f", ("E3", "G3", "A3"))][v]
+    # (voice kit, semitones from the speaker's own pitch): small offsets only, so five villagers differ without chipmunks
+    kit, base = [("voice_f", 0), ("voice_m", 1), ("voice_f", 2), ("voice_m", -2), ("voice_f", -2)][v]
     out, at = [], 0.0
     for i in range(int(r.integers(3, 6))):
-        s = voice(kit, notes[int(r.integers(0, 3))], r, seconds=float(r.uniform(0.1, 0.16)))
+        s = voice(kit, r, seconds=float(r.uniform(0.1, 0.16)), step=base + float(r.choice([0, 1, 2])))
         out.append((s, at, 1.0))
         at += len(s) / SR_ + float(r.uniform(0.01, 0.03))
     return room(mix(*out) * 0.6, 0.3, 0.15)[:, 0]
@@ -643,12 +651,13 @@ def rarity_legendary(r, v):
 
 # ============================================================================== TOWER VOICES (barks)
 # Siddharth 2026-11-08: towers get short voice barks; round 5: chopped REAL voice syllables (Animalese-style, no real
-# words), each syllable shifted onto the key's notes. "ready" when the tower is placed, "cheer" now and then on a kill.
-VOICES = {  # crew: (voice kit, low note, high note)
-    "wizard": ("voice_m", "C3", "G3"),   # an old, warm voice (a man's syllables, low)
-    "archer": ("voice_f", "G3", "C4"),   # young and quick
-    "pilot": ("voice_f", "A3", "D4"),    # cheery and bouncy
-    "guard": ("grunt", "G3", "C4"),      # a gruff captain (real effort grunts, pitched down)
+# words), at the speakers' own pitch (Siddharth 2026-11-08), only nudged a few semitones for the "hup-hup-HAH" contour.
+# "ready" when the tower is placed, "cheer" now and then on a kill.
+VOICES = {  # crew: (voice kit, semitones for the low syllables, for the high ones), relative to the speaker's own pitch
+    "wizard": ("voice_m", -2, 1),   # an old, warm voice (a man's syllables, a little low)
+    "archer": ("voice_f", 0, 2),    # young and quick
+    "pilot": ("voice_f", 1, 3),     # cheery and bouncy
+    "guard": ("grunt", -1, 1),      # a gruff captain (real effort grunts)
 }
 
 
@@ -658,12 +667,12 @@ def _bark(r, crew, kind):
     n = int(r.integers(2, 4)) if kind == "ready" else int(r.integers(1, 3))
     for i in range(n):
         last = i == n - 1
-        if kind == "ready":  # "hup-hup-HAH": the low note, and the last syllable lifted to the high one
-            s = voice(kit, hi if last else lo, r, seconds=0.24 if last else 0.16, slide=2 if last else 0)
-        else:  # a cheer: the high note with a lift
-            s = voice(kit, hi, r, seconds=0.2, slide=2)
+        if kind == "ready":  # "hup-hup-HAH": low steps, the last syllable on the high step with a lift
+            s = voice(kit, r, seconds=0.24 if last else 0.16, step=hi if last else lo, slide=2 if last else 0)
+        else:  # a cheer: the high step with a lift
+            s = voice(kit, r, seconds=0.2, step=hi, slide=2)
         if crew == "wizard" and r.random() < 0.6:
-            s = voice("voice_old", lo, r, seconds=0.22)
+            s = voice("voice_old", r, seconds=0.22, step=lo)
         out.append((s, at, 1.0 if last else 0.8))
         at += len(s) / SR_ + float(r.uniform(0.02, 0.05))
     return room(lp(mix(*out), 5000) * 0.6, 0.25, 0.2, seed=int(r.integers(1, 99)))[:, 0]
@@ -763,7 +772,7 @@ def render(name, spec, v, take=0):
     seed = zlib.crc32(("%s:%d" % (name, v)).encode()) if take == 0 else zlib.crc32(("%s:%d:t%d" % (name, v, take)).encode())
     r = rng(seed)
     x = np.asarray(spec["fn"](r, v), dtype=float)
-    # a sound with key notes in it (tuned(), melody(), voice() all go through note()) keeps its pitch: a take's resample
+    # a sound with key notes in it (tuned() and melody() go through note()) keeps its pitch: a take's resample
     # would put it off key (code-critic round 5)
     if take > 0 and not spec["tuned"] and not _NOTES_USED:
         k = TAKE_PITCH[take % len(TAKE_PITCH)]

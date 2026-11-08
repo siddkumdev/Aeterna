@@ -349,31 +349,31 @@
   "files": [
    {
     "file": "bark_archer_cheer_1.wav",
-    "peak_db": -10.3,
+    "peak_db": -9.3,
     "rms_db": -25.5,
     "seam": null,
-    "seconds": 0.405
+    "seconds": 0.417
    },
    {
     "file": "bark_archer_cheer_2.wav",
-    "peak_db": -10.3,
+    "peak_db": -11.6,
     "rms_db": -25.5,
     "seam": null,
-    "seconds": 0.636
+    "seconds": 0.65
    },
    {
     "file": "bark_archer_cheer_3.wav",
-    "peak_db": -12.2,
+    "peak_db": -11.9,
     "rms_db": -25.5,
     "seam": null,
-    "seconds": 0.571
+    "seconds": 0.618
    },
    {
     "file": "bark_archer_cheer_4.wav",
-    "peak_db": -11.2,
+    "peak_db": -10.9,
     "rms_db": -25.5,
     "seam": null,
-    "seconds": 0.616
+    "seconds": 0.644
    }
   ],
   "loop": false,
@@ -390,31 +390,31 @@
   "files": [
    {
     "file": "bark_archer_ready_1.wav",
-    "peak_db": -8.4,
+    "peak_db": -11.3,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.598
+    "seconds": 0.661
    },
    {
     "file": "bark_archer_ready_2.wav",
-    "peak_db": -8.4,
+    "peak_db": -10.0,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.589
+    "seconds": 0.622
    },
    {
     "file": "bark_archer_ready_3.wav",
-    "peak_db": -7.8,
+    "peak_db": -9.6,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.791
+    "seconds": 0.845
    },
    {
     "file": "bark_archer_ready_4.wav",
-    "peak_db": -9.9,
+    "peak_db": -10.5,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.812
+    "seconds": 0.862
    }
   ],
   "loop": false,
@@ -431,31 +431,31 @@
   "files": [
    {
     "file": "bark_guard_cheer_1.wav",
-    "peak_db": -10.4,
+    "peak_db": -11.0,
     "rms_db": -24.4,
     "seam": null,
-    "seconds": 0.367
+    "seconds": 0.353
    },
    {
     "file": "bark_guard_cheer_2.wav",
-    "peak_db": -9.1,
+    "peak_db": -9.0,
     "rms_db": -24.4,
     "seam": null,
-    "seconds": 0.458
+    "seconds": 0.599
    },
    {
     "file": "bark_guard_cheer_3.wav",
-    "peak_db": -8.5,
+    "peak_db": -11.1,
     "rms_db": -24.4,
     "seam": null,
-    "seconds": 0.296
+    "seconds": 0.364
    },
    {
     "file": "bark_guard_cheer_4.wav",
-    "peak_db": -9.5,
+    "peak_db": -9.8,
     "rms_db": -24.4,
     "seam": null,
-    "seconds": 0.372
+    "seconds": 0.359
    }
   ],
   "loop": false,
@@ -472,31 +472,31 @@
   "files": [
    {
     "file": "bark_guard_ready_1.wav",
-    "peak_db": -10.0,
+    "peak_db": -8.3,
     "rms_db": -24.5,
     "seam": null,
-    "seconds": 0.678
+    "seconds": 0.716
    },
    {
     "file": "bark_guard_ready_2.wav",
-    "peak_db": -12.4,
+    "peak_db": -9.2,
     "rms_db": -24.5,
     "seam": null,
-    "seconds": 0.785
+    "seconds": 0.734
    },
    {
     "file": "bark_guard_ready_3.wav",
-    "peak_db": -10.8,
+    "peak_db": -7.8,
     "rms_db": -24.5,
     "seam": null,
-    "seconds": 0.578
+    "seconds": 0.497
    },
    {
     "file": "bark_guard_ready_4.wav",
-    "peak_db": -8.5,
+    "peak_db": -9.7,
     "rms_db": -24.5,
     "seam": null,
-    "seconds": 0.549
+    "seconds": 0.518
    }
   ],
   "loop": false,
@@ -513,31 +513,31 @@
   "files": [
    {
     "file": "bark_pilot_cheer_1.wav",
-    "peak_db": -11.9,
+    "peak_db": -9.4,
     "rms_db": -25.6,
     "seam": null,
-    "seconds": 0.372
+    "seconds": 0.413
    },
    {
     "file": "bark_pilot_cheer_2.wav",
-    "peak_db": -8.1,
+    "peak_db": -10.3,
     "rms_db": -25.6,
     "seam": null,
-    "seconds": 0.59
+    "seconds": 0.662
    },
    {
     "file": "bark_pilot_cheer_3.wav",
-    "peak_db": -8.4,
+    "peak_db": -13.0,
     "rms_db": -25.6,
     "seam": null,
-    "seconds": 0.373
+    "seconds": 0.393
    },
    {
     "file": "bark_pilot_cheer_4.wav",
-    "peak_db": -10.7,
+    "peak_db": -8.9,
     "rms_db": -25.6,
     "seam": null,
-    "seconds": 0.591
+    "seconds": 0.613
    }
   ],
   "loop": false,
@@ -554,31 +554,31 @@
   "files": [
    {
     "file": "bark_pilot_ready_1.wav",
-    "peak_db": -11.9,
-    "rms_db": -25.4,
-    "seam": null,
-    "seconds": 0.588
-   },
-   {
-    "file": "bark_pilot_ready_2.wav",
-    "peak_db": -10.1,
-    "rms_db": -25.4,
-    "seam": null,
-    "seconds": 0.574
-   },
-   {
-    "file": "bark_pilot_ready_3.wav",
     "peak_db": -11.0,
     "rms_db": -25.4,
     "seam": null,
-    "seconds": 0.751
+    "seconds": 0.657
+   },
+   {
+    "file": "bark_pilot_ready_2.wav",
+    "peak_db": -11.2,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 0.636
+   },
+   {
+    "file": "bark_pilot_ready_3.wav",
+    "peak_db": -13.4,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 0.769
    },
    {
     "file": "bark_pilot_ready_4.wav",
-    "peak_db": -11.7,
+    "peak_db": -8.7,
     "rms_db": -25.4,
     "seam": null,
-    "seconds": 0.765
+    "seconds": 0.814
    }
   ],
   "loop": false,
@@ -595,31 +595,31 @@
   "files": [
    {
     "file": "bark_wizard_cheer_1.wav",
-    "peak_db": -9.5,
+    "peak_db": -11.2,
     "rms_db": -23.8,
     "seam": null,
-    "seconds": 0.36
+    "seconds": 0.409
    },
    {
     "file": "bark_wizard_cheer_2.wav",
-    "peak_db": -8.2,
+    "peak_db": -7.7,
     "rms_db": -23.8,
     "seam": null,
-    "seconds": 0.401
+    "seconds": 0.432
    },
    {
     "file": "bark_wizard_cheer_3.wav",
-    "peak_db": -9.4,
+    "peak_db": -10.4,
     "rms_db": -23.8,
     "seam": null,
-    "seconds": 0.39
+    "seconds": 0.455
    },
    {
     "file": "bark_wizard_cheer_4.wav",
-    "peak_db": -11.6,
+    "peak_db": -8.1,
     "rms_db": -23.8,
     "seam": null,
-    "seconds": 0.629
+    "seconds": 0.49
    }
   ],
   "loop": false,
@@ -636,31 +636,31 @@
   "files": [
    {
     "file": "bark_wizard_ready_1.wav",
-    "peak_db": -9.6,
+    "peak_db": -11.3,
     "rms_db": -25.3,
     "seam": null,
-    "seconds": 0.573
+    "seconds": 0.565
    },
    {
     "file": "bark_wizard_ready_2.wav",
-    "peak_db": -12.6,
+    "peak_db": -11.9,
     "rms_db": -25.3,
     "seam": null,
-    "seconds": 0.574
+    "seconds": 0.576
    },
    {
     "file": "bark_wizard_ready_3.wav",
-    "peak_db": -10.3,
+    "peak_db": -11.4,
     "rms_db": -25.3,
     "seam": null,
-    "seconds": 0.631
+    "seconds": 0.643
    },
    {
     "file": "bark_wizard_ready_4.wav",
-    "peak_db": -10.7,
+    "peak_db": -11.3,
     "rms_db": -25.3,
     "seam": null,
-    "seconds": 0.853
+    "seconds": 0.804
    }
   ],
   "loop": false,
@@ -2403,45 +2403,45 @@
   "files": [
    {
     "file": "villager_blip_1.wav",
-    "peak_db": -10.3,
+    "peak_db": -10.8,
     "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.905
+    "seconds": 0.924
    },
    {
     "file": "villager_blip_2.wav",
-    "peak_db": -8.2,
+    "peak_db": -9.4,
     "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.568
+    "seconds": 0.529
    },
    {
     "file": "villager_blip_3.wav",
-    "peak_db": -9.6,
+    "peak_db": -10.6,
     "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.648
+    "seconds": 0.662
    },
    {
     "file": "villager_blip_4.wav",
-    "peak_db": -12.1,
+    "peak_db": -8.3,
     "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.727
+    "seconds": 0.708
    },
    {
     "file": "villager_blip_5.wav",
-    "peak_db": -12.0,
+    "peak_db": -11.9,
     "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.756
+    "seconds": 0.799
    }
   ],
   "loop": false,
-  "note": "five villagers' gibberish: real voice syllables, each villager on their own notes (no real words)",
+  "note": "five villagers' gibberish: real voice syllables at the speakers' own pitch, each villager a little higher or lower (no real words)",
   "spatial": true,
   "tracker": "A32",
-  "vary": 0.0
+  "vary": 0.05
  },
  "ward_cast": {
   "bus": "sfx",
