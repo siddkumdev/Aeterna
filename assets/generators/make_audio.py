@@ -39,11 +39,10 @@ TAKE_PITCH = [1.0, 0.955, 1.045, 0.925, 1.075, 0.97, 1.03, 0.94]  # take k is re
 # prefers fuller): a final gentle low-pass per sound. Chimes / bells / music-box notes were flagged "metallic, glassy" and
 # measure as the brightest in the game (their notes sound near 2.6 kHz, 25-40% of the energy above 5 kHz); crunchy or raspy
 # sounds were flagged as harsh. The note pitch is kept (only the partials above the cutoff go). Cutoffs are exact (no OPEN).
-DARKEN = {"coin_flick": 4500, "coin_good": 3400, "coin_neutral": 4000, "cooldown_ready": 3400, "heal_chime": 3800,
-          "trust_chime": 3400, "rarity_common": 3400, "rarity_rare": 3200, "rarity_legendary": 3600, "menu_open": 4500,
-          "boss_phase": 3800, "ward_cast": 4200, "spell_pick": 4500, "help_done": 4500,
-          "orb_charge": 3500, "wisp_screech": 3500, "enemy_death": 4500, "melee_hit": 4500, "rage_cast": 4500,
-          "rewind_whoosh": 4500, "enemy_spawn": 4500, "boulder_hit": 4500}
+DARKEN = {"wisp_screech": 3500, "coin_good": 3400, "trust_chime": 3400, "melee_hit": 4500}
+# Siddharth's blind a/b test (2026-11-09): he preferred the OLD (brighter) version of heal_chime, orb_charge, enemy_death and
+# boss_phase, the NEW of wisp_screech, and heard no difference on coin_good, trust_chime, melee_hit. So only those four stay
+# darkened; every other sound is back to as it was. Do not darken more sounds without a blind test.
 TAIL_FADE_S = 0.06  # a sound still this loud (-36 dB re peak) in its last 30 ms gets a longer fade-out: it was cut off
 WARM_HZ = 10000  # second pass (Siddharth 2026-11-08, "peaceful and cozy"): one-shots lose their hard top end
 
