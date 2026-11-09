@@ -267,7 +267,7 @@
    },
    {
     "file": "amb_rustle_3.wav",
-    "peak_db": -20.8,
+    "peak_db": -20.4,
     "rms_db": -32.1,
     "seam": null,
     "seconds": 0.635
@@ -677,10 +677,10 @@
   "files": [
    {
     "file": "boss_phase.wav",
-    "peak_db": -4.4,
+    "peak_db": -3.0,
     "rms_db": -20.9,
     "seam": null,
-    "seconds": 2.026
+    "seconds": 1.931
    }
   ],
   "loop": false,
@@ -745,7 +745,7 @@
    {
     "file": "boulder_hit_2.wav",
     "peak_db": -1.0,
-    "rms_db": -23.3,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 1.257
    },
@@ -839,29 +839,29 @@
   "files": [
    {
     "file": "coin_flick_1.wav",
-    "peak_db": -3.0,
-    "rms_db": -27.2,
+    "peak_db": -3.2,
+    "rms_db": -19.3,
     "seam": null,
     "seconds": 0.316
    },
    {
     "file": "coin_flick_2.wav",
     "peak_db": -3.0,
-    "rms_db": -22.3,
+    "rms_db": -21.5,
     "seam": null,
     "seconds": 0.082
    },
    {
     "file": "coin_flick_3.wav",
     "peak_db": -3.0,
-    "rms_db": -28.1,
+    "rms_db": -19.4,
     "seam": null,
     "seconds": 0.312
    },
    {
     "file": "coin_flick_4.wav",
-    "peak_db": -3.0,
-    "rms_db": -19.5,
+    "peak_db": -3.3,
+    "rms_db": -19.3,
     "seam": null,
     "seconds": 0.668
    }
@@ -880,10 +880,10 @@
   "files": [
    {
     "file": "coin_good.wav",
-    "peak_db": -3.9,
+    "peak_db": -6.5,
     "rms_db": -23.0,
     "seam": null,
-    "seconds": 2.083
+    "seconds": 2.104
    }
   ],
   "loop": false,
@@ -901,9 +901,9 @@
    {
     "file": "coin_neutral.wav",
     "peak_db": -4.0,
-    "rms_db": -23.4,
+    "rms_db": -22.5,
     "seam": null,
-    "seconds": 1.851
+    "seconds": 1.858
    }
   ],
   "loop": false,
@@ -920,10 +920,10 @@
   "files": [
    {
     "file": "cooldown_ready.wav",
-    "peak_db": -9.7,
+    "peak_db": -13.1,
     "rms_db": -25.5,
     "seam": null,
-    "seconds": 0.725
+    "seconds": 0.745
    }
   ],
   "loop": false,
@@ -1131,14 +1131,14 @@
   "files": [
    {
     "file": "enemy_death_1.wav",
-    "peak_db": -5.5,
+    "peak_db": -5.4,
     "rms_db": -21.9,
     "seam": null,
     "seconds": 0.32
    },
    {
     "file": "enemy_death_2.wav",
-    "peak_db": -6.7,
+    "peak_db": -8.4,
     "rms_db": -21.9,
     "seam": null,
     "seconds": 0.21
@@ -1165,29 +1165,29 @@
   "files": [
    {
     "file": "enemy_spawn_1.wav",
-    "peak_db": -8.7,
+    "peak_db": -8.9,
     "rms_db": -25.0,
     "seam": null,
     "seconds": 0.896
    },
    {
     "file": "enemy_spawn_2.wav",
-    "peak_db": -8.7,
+    "peak_db": -8.8,
     "rms_db": -25.0,
     "seam": null,
     "seconds": 0.942
    },
    {
     "file": "enemy_spawn_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -25.4,
+    "peak_db": -8.8,
+    "rms_db": -25.0,
     "seam": null,
-    "seconds": 0.856
+    "seconds": 0.859
    },
    {
     "file": "enemy_spawn_4.wav",
     "peak_db": -8.0,
-    "rms_db": -27.5,
+    "rms_db": -27.8,
     "seam": null,
     "seconds": 0.973
    }
@@ -1254,7 +1254,7 @@
    },
    {
     "file": "fireball_hit_5.wav",
-    "peak_db": -2.5,
+    "peak_db": -2.4,
     "rms_db": -19.0,
     "seam": null,
     "seconds": 0.372
@@ -1485,10 +1485,10 @@
   "files": [
    {
     "file": "heal_chime.wav",
-    "peak_db": -5.6,
+    "peak_db": -6.5,
     "rms_db": -24.0,
     "seam": null,
-    "seconds": 2.112
+    "seconds": 2.123
    }
   ],
   "loop": false,
@@ -1505,10 +1505,10 @@
   "files": [
    {
     "file": "help_done.wav",
-    "peak_db": -6.8,
+    "peak_db": -7.6,
     "rms_db": -24.0,
     "seam": null,
-    "seconds": 2.04
+    "seconds": 2.099
    }
   ],
   "loop": false,
@@ -1656,7 +1656,7 @@
    {
     "file": "melee_hit_1.wav",
     "peak_db": -4.0,
-    "rms_db": -21.5,
+    "rms_db": -21.6,
     "seam": null,
     "seconds": 0.154
    },
@@ -1670,7 +1670,7 @@
    {
     "file": "melee_hit_3.wav",
     "peak_db": -4.0,
-    "rms_db": -24.4,
+    "rms_db": -24.3,
     "seam": null,
     "seconds": 0.232
    },
@@ -1684,28 +1684,28 @@
    {
     "file": "melee_hit_5.wav",
     "peak_db": -4.0,
-    "rms_db": -21.7,
+    "rms_db": -21.4,
     "seam": null,
     "seconds": 0.207
    },
    {
     "file": "melee_hit_6.wav",
     "peak_db": -4.0,
-    "rms_db": -23.7,
+    "rms_db": -23.9,
     "seam": null,
     "seconds": 0.245
    },
    {
     "file": "melee_hit_7.wav",
     "peak_db": -4.0,
-    "rms_db": -24.1,
+    "rms_db": -23.8,
     "seam": null,
     "seconds": 0.223
    },
    {
     "file": "melee_hit_8.wav",
     "peak_db": -4.0,
-    "rms_db": -26.6,
+    "rms_db": -26.5,
     "seam": null,
     "seconds": 0.243
    }
@@ -1744,10 +1744,10 @@
   "files": [
    {
     "file": "menu_open.wav",
-    "peak_db": -8.7,
+    "peak_db": -9.7,
     "rms_db": -23.2,
     "seam": null,
-    "seconds": 1.148
+    "seconds": 1.151
    }
   ],
   "loop": false,
@@ -1805,7 +1805,7 @@
    {
     "file": "orb_charge.wav",
     "peak_db": -8.0,
-    "rms_db": -25.3,
+    "rms_db": -24.8,
     "seam": null,
     "seconds": 0.94
    }
@@ -1980,10 +1980,10 @@
   "files": [
    {
     "file": "rarity_common.wav",
-    "peak_db": -8.6,
+    "peak_db": -11.6,
     "rms_db": -26.8,
     "seam": null,
-    "seconds": 1.869
+    "seconds": 1.896
    }
   ],
   "loop": false,
@@ -2000,7 +2000,7 @@
   "files": [
    {
     "file": "rarity_legendary.wav",
-    "peak_db": -6.1,
+    "peak_db": -6.5,
     "rms_db": -23.1,
     "seam": null,
     "seconds": 3.522
@@ -2021,9 +2021,9 @@
    {
     "file": "rarity_rare.wav",
     "peak_db": -4.0,
-    "rms_db": -23.5,
+    "rms_db": -23.2,
     "seam": null,
-    "seconds": 2.29
+    "seconds": 2.365
    }
   ],
   "loop": false,
@@ -2101,7 +2101,7 @@
   "files": [
    {
     "file": "rewind_whoosh.wav",
-    "peak_db": -4.3,
+    "peak_db": -4.2,
     "rms_db": -21.9,
     "seam": null,
     "seconds": 3.652
@@ -2181,10 +2181,10 @@
   "files": [
    {
     "file": "spell_pick.wav",
-    "peak_db": -7.8,
+    "peak_db": -8.1,
     "rms_db": -22.8,
     "seam": null,
-    "seconds": 0.841
+    "seconds": 0.842
    }
   ],
   "loop": false,
@@ -2283,9 +2283,9 @@
    {
     "file": "trust_chime.wav",
     "peak_db": -4.0,
-    "rms_db": -24.7,
+    "rms_db": -22.3,
     "seam": null,
-    "seconds": 2.03
+    "seconds": 2.115
    }
   ],
   "loop": false,
@@ -2452,7 +2452,7 @@
    {
     "file": "ward_cast.wav",
     "peak_db": -4.0,
-    "rms_db": -21.3,
+    "rms_db": -18.8,
     "seam": null,
     "seconds": 2.067
    }
@@ -2492,9 +2492,9 @@
    {
     "file": "wisp_screech.wav",
     "peak_db": -8.0,
-    "rms_db": -27.1,
+    "rms_db": -27.5,
     "seam": null,
-    "seconds": 0.848
+    "seconds": 1.29
    }
   ],
   "loop": false,

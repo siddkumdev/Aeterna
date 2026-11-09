@@ -35,6 +35,16 @@ RECIPES = {}
 
 
 TAKE_PITCH = [1.0, 0.955, 1.045, 0.925, 1.075, 0.97, 1.03, 0.94]  # take k is resampled by this (a small pitch and length change)
+# DARKEN (2026-11-09, first-opinion review by Antigravity of all 72 sounds + measurements, Siddharth: most sounds feel wrong,
+# prefers fuller): a final gentle low-pass per sound. Chimes / bells / music-box notes were flagged "metallic, glassy" and
+# measure as the brightest in the game (their notes sound near 2.6 kHz, 25-40% of the energy above 5 kHz); crunchy or raspy
+# sounds were flagged as harsh. The note pitch is kept (only the partials above the cutoff go). Cutoffs are exact (no OPEN).
+DARKEN = {"coin_flick": 4500, "coin_good": 3400, "coin_neutral": 4000, "cooldown_ready": 3400, "heal_chime": 3800,
+          "trust_chime": 3400, "rarity_common": 3400, "rarity_rare": 3200, "rarity_legendary": 3600, "menu_open": 4500,
+          "boss_phase": 3800, "ward_cast": 4200, "spell_pick": 4500, "help_done": 4500,
+          "orb_charge": 3500, "wisp_screech": 3500, "enemy_death": 4500, "melee_hit": 4500, "rage_cast": 4500,
+          "rewind_whoosh": 4500, "enemy_spawn": 4500, "boulder_hit": 4500}
+TAIL_FADE_S = 0.06  # a sound still this loud (-36 dB re peak) in its last 30 ms gets a longer fade-out: it was cut off
 WARM_HZ = 10000  # second pass (Siddharth 2026-11-08, "peaceful and cozy"): one-shots lose their hard top end
 
 # OPEN (Siddharth 2026-11-08: "all the audio feel very low bitrate"): the recipes' tone filters (low-pass above 2.6 kHz)
@@ -802,9 +812,14 @@ def render(name, spec, v, take=0):
         if WARM_HZ * OPEN < 0.45 * SR_:
             x = _lp_exact(x, WARM_HZ * OPEN, 2)
     if not spec["loop"]:
+        if name in DARKEN:
+            x = _lp_exact(x, DARKEN[name], 2)
         x = remove_dc(x)
         x = trim_silence(x, -55.0, 0.02)
-        x = fade(x, 0.0015, 0.015)
+        m = x if x.ndim == 1 else x[:, 0]
+        end = int(0.03 * SR_)
+        loud_end = len(m) > int(0.3 * SR_) and 20 * np.log10(np.sqrt(np.mean(m[-end:] ** 2)) / (np.abs(m).max() + 1e-12) + 1e-9) > -36.0
+        x = fade(x, 0.0015, TAIL_FADE_S if loud_end else 0.015)
     else:
         x = remove_dc(x)
         x = loop_seamless(x, spec["xfade"])
