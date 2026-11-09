@@ -43,8 +43,13 @@ def _mono(x):
 
 def measure(path):
     x, sr = sf.read(path, always_2d=False)
+    return measure_array(x, sr, os.path.basename(path))
+
+
+def measure_array(x, sr, name="clip"):
+    """The same numbers for audio already in memory (mono or [n, channels])."""
     x = _mono(np.asarray(x, dtype=float))
-    out = {"file": os.path.basename(path), "seconds": round(len(x) / sr, 3)}
+    out = {"file": name, "seconds": round(len(x) / sr, 3)}
     if len(x) == 0 or not np.any(x):
         out["error"] = "empty or silent"
         return out
@@ -86,7 +91,7 @@ def measure(path):
             t = timbral_models.timbral_extractor(x, fs=sr, verbose=False)  # the trimmed audio, not the file
         for k in TIMBRAL:
             v = t.get(k)
-            out[k] = round(float(v), 1) if v is not None else None
+            out[k] = round(float(v), 1) if v is not None and np.isfinite(float(v)) else None  # NaN: model gave no reading
     except Exception as ex:  # very short or silent clips can fail inside the timbral models
         out["timbral_error"] = "%s: %s" % (type(ex).__name__, str(ex)[:120])
     return out
