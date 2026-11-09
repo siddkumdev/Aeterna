@@ -1525,29 +1525,29 @@
   "files": [
    {
     "file": "hit_soft_1.wav",
-    "peak_db": -16.0,
+    "peak_db": -11.4,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.133
+    "seconds": 0.135
    },
    {
     "file": "hit_soft_2.wav",
     "peak_db": -8.0,
-    "rms_db": -24.9,
+    "rms_db": -24.8,
     "seam": null,
     "seconds": 0.141
    },
    {
     "file": "hit_soft_3.wav",
     "peak_db": -8.0,
-    "rms_db": -24.8,
+    "rms_db": -25.3,
     "seam": null,
     "seconds": 0.13
    },
    {
     "file": "hit_soft_4.wav",
     "peak_db": -8.0,
-    "rms_db": -30.9,
+    "rms_db": -30.5,
     "seam": null,
     "seconds": 0.27
    },
@@ -1556,28 +1556,28 @@
     "peak_db": -13.5,
     "rms_db": -24.3,
     "seam": null,
-    "seconds": 0.233
+    "seconds": 0.135
    },
    {
     "file": "hit_soft_6.wav",
     "peak_db": -8.0,
-    "rms_db": -26.8,
+    "rms_db": -25.7,
     "seam": null,
-    "seconds": 0.171
+    "seconds": 0.174
    },
    {
     "file": "hit_soft_7.wav",
-    "peak_db": -8.0,
-    "rms_db": -24.6,
+    "peak_db": -9.6,
+    "rms_db": -24.3,
     "seam": null,
     "seconds": 0.243
    },
    {
     "file": "hit_soft_8.wav",
     "peak_db": -8.0,
-    "rms_db": -25.7,
+    "rms_db": -26.5,
     "seam": null,
-    "seconds": 0.145
+    "seconds": 0.146
    }
   ],
   "loop": false,
@@ -2302,29 +2302,29 @@
   "files": [
    {
     "file": "tunneler_pop_1.wav",
-    "peak_db": -13.3,
-    "rms_db": -20.5,
+    "peak_db": -4.0,
+    "rms_db": -21.2,
     "seam": null,
     "seconds": 0.4
    },
    {
     "file": "tunneler_pop_2.wav",
-    "peak_db": -5.4,
-    "rms_db": -20.5,
+    "peak_db": -4.0,
+    "rms_db": -21.6,
     "seam": null,
     "seconds": 0.419
    },
    {
     "file": "tunneler_pop_3.wav",
     "peak_db": -4.0,
-    "rms_db": -23.6,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 0.383
    },
    {
     "file": "tunneler_pop_4.wav",
     "peak_db": -4.0,
-    "rms_db": -23.2,
+    "rms_db": -23.4,
     "seam": null,
     "seconds": 0.432
    }

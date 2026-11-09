@@ -365,7 +365,9 @@ def fireball_hit(r, v):
 
 @recipe("hit_soft", "A48", takes=8, peak=-12, spatial=True, vary=0.1, cooldown=0.05, note="a light hit (a bolt, a Guard's strike): a real wood knock and a cloth pat")
 def hit_soft(r, v):
-    return mix((lp(grain("wood_knock", r, 1.1, seconds=0.25), 6500), 0, 0.9), (lp(grain("cloth", r, 1.2, seconds=0.12), 5000), 0, 0.35))
+    # high-pass 90 Hz: some grains are mostly sub-bass rumble (takes measured at 47-69 Hz centre, 2026-11-09), which a
+    # headset barely plays and which sounds like a faint thud
+    return hp(mix((lp(grain("wood_knock", r, 1.1, seconds=0.25), 6500), 0, 0.9), (lp(grain("cloth", r, 1.2, seconds=0.12), 5000), 0, 0.35)), 90)
 
 
 @recipe("melee_hit", "A16", takes=8, peak=-8, spatial=True, vary=0.08, cooldown=0.05, note="a troop's blow: a real wooden whack and a cloth slap")
@@ -403,8 +405,9 @@ def wisp_screech(r, v):
 
 @recipe("tunneler_pop", "A20", takes=4, peak=-8, spatial=True, vary=0.08, note="it bursts out of the ground: real soil, a stone and a bubbly plop")
 def tunneler_pop(r, v):
-    return mix((lp(grain("dirt", r, 1.0, seconds=0.4), 5000), 0, 0.9), (lp(grain("stone", r, 0.6, seconds=0.3), 3000), 0, 0.6),
-               (lp(grain("bubbles", r, 1.0, seconds=0.2), 5000), 0.05, 0.4))
+    # high-pass 90 Hz: the dirt grain carries sub-bass rumble (take 1 measured at 18 Hz centre, 2026-11-09)
+    return hp(mix((lp(grain("dirt", r, 1.0, seconds=0.4), 5000), 0, 0.9), (lp(grain("stone", r, 0.6, seconds=0.3), 3000), 0, 0.6),
+                  (lp(grain("bubbles", r, 1.0, seconds=0.2), 5000), 0.05, 0.4)), 90)
 
 
 @recipe("splitter_split", "A21", peak=-9, spatial=True, vary=0.08, note="a squelchy split: a real squelch, bubbles and two marimba plinks (G5 D6)")
