@@ -33,16 +33,16 @@ def _place_thunk(s):
     def body(r, v):
         piece = MA.lp(MA.grain("chess", r, s["piece_pitch"]), s["piece_lp"])
         knock = MA.lp(MA.grain("wood_knock", r, s["knock_pitch"]), s["knock_lp"])
-        stone = MA.lp(MA.grain("stone", r, s["stone_pitch"], seconds=0.3), 6000)
+        stone = MA.lp(MA.grain("stone", r, s["stone_pitch"], seconds=0.3), 4500)
         return MA.mix((piece, 0, s["piece_w"]), (knock, 0, s["knock_w"]), (stone, 0.003, s["stone_w"]))
     return body
 
 
 CANDIDATES = {
     "place_thunk": (_place_thunk, {
-        "piece_pitch": [0.8, 1.0, 1.25], "piece_lp": [6000, 19000],
-        "knock_pitch": [0.5, 0.8, 1.1], "knock_lp": [2500, 12000],
-        "stone_pitch": [1.0], "piece_w": [1.0], "knock_w": [0.4, 0.9], "stone_w": [0.0, 0.35],
+        "piece_pitch": [1.0, 1.25, 1.5], "piece_lp": [6000, 19000],
+        "knock_pitch": [0.8, 1.1, 1.4], "knock_lp": [2500, 12000],
+        "stone_pitch": [0.75, 1.0], "piece_w": [0.7, 1.0], "knock_w": [0.2, 0.4, 0.9], "stone_w": [0.0, 0.35],
         "warm": [True, False]}),
 }
 TAKES = 3  # each candidate is rendered with 3 seeds and scored on the average, so one lucky grain does not win
@@ -103,7 +103,8 @@ def main():
     out = os.path.join(OUT, name)
     os.makedirs(out, exist_ok=True)
     for f in os.listdir(out):
-        os.remove(os.path.join(out, f))
+        if os.path.isfile(os.path.join(out, f)):
+            os.remove(os.path.join(out, f))
     # finalists must differ: skip a candidate whose settings differ from an earlier finalist in only one value
     picks = []
     for e in results:

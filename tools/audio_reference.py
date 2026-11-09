@@ -25,7 +25,7 @@ import audio_measure  # noqa: E402
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_work", "refs")
 HOP_S = 0.005
 JUMP_DB = 12.0
-CLEAN_DB = 20.0
+CLEAN_DB = 24.0
 MAX_EVENT_S = 1.5
 MIN_EVENT_S = 0.04
 KEYS = ["lufs", "crest_db", "attack_ms", "decay_ms", "seconds", "centroid_hz", "above_5k_db", "above_10k_db",
@@ -49,21 +49,31 @@ def find_events(x, sr):
         if env[i + rise_n] - back < JUMP_DB or env[i] - back > JUMP_DB * 0.5:
             i += 1
             continue
+        # start at the first hop that has really risen (6 dB over the background), one hop of lead-in: no background
+        # before the sound, or the attack would be counted from the noise
         start = i
+        while start < i + rise_n and env[start] - back < 6.0:
+            start += 1
+        start = max(i, start - 1)
         j = start + 1
         stop = min(len(env), start + int(MAX_EVENT_S / HOP_S))
         peak = env[start]
+        end = None
         while j < stop:
+            # a new sharp jump after the peak has decayed: the next event begins; end this one before that rise
+            if j > start + 2 * rise_n and env[j] - env[j - rise_n] > JUMP_DB and env[j - rise_n] < peak - 10:
+                end = j - rise_n
+                break
             peak = max(peak, env[j])
             if j > start + rise_n and env[j] < back + 4.0:
-                break
-            # a new sharp jump after the peak has decayed: the next event
-            if j > start + 2 * rise_n and env[j] - env[j - rise_n] > JUMP_DB and env[j - rise_n] < peak - 10:
+                end = j
                 break
             j += 1
-        if peak - back >= CLEAN_DB and (j - start) * HOP_S >= MIN_EVENT_S:
-            out.append((max(0, start - 2) * hop, j * hop, float(peak), float(back)))
-        i = j + 1
+        if end is None:
+            end = j
+        if peak - back >= CLEAN_DB and (end - start) * HOP_S >= MIN_EVENT_S:
+            out.append((start * hop, end * hop, float(peak), float(back)))
+        i = max(end, start + 1)
     return out
 
 
