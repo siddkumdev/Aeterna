@@ -411,9 +411,51 @@ def _pkg9(fn_):
 
 ROUNDS_R9 = {"boulder": _pkg9(boulder9), "storm_cloud": _pkg9(storm9), "rage": _pkg9(rage9), "root_ward": _pkg9(root9)}
 
+# Round r10: Boulder good, Rage liked (kept). Storm Cloud: "sounds like sparks" -> no crackle grains at all; dark rolling thunder.
+# Root Ward: "not a floorboard creak, a more Groot's branches sound" -> branches growing and slithering: leaf rustle, short
+# twisting wood groans, soft swell, no long creaks.
+def storm10a(r):  # rolling rumble with three low thunder 'strikes' (short thunder grains)
+    secs = 2.6
+    base = S.pk(_g("thunder", r, 1.1, seconds=secs, lpf=2200, hpf=150)) * S.curve([(0, 0.1), (0.8, 1.0), (2.0, 0.9), (secs, 0.05)], secs, log=False)
+    out = [(base, 0, 1.0)]
+    for at, g, kit in ((0.9, 1.0, "thunder"), (1.3, 0.85, "thunder"), (1.7, 0.75, "thunder")):
+        out.append((_g(kit, r, 1.5, seconds=0.3, lpf=2500, hpf=140), at, g))
+    return S.mix(*out)
+
+
+def storm10b(r):  # only a dark rolling swell: two thunder layers
+    secs = 2.6
+    env = S.curve([(0, 0.05), (1.0, 1.0), (2.0, 0.8), (secs, 0.03)], secs, log=False)
+    a = S.pk(_g("thunder", r, 1.0, seconds=secs, lpf=2000, hpf=150)) * env
+    b = S.pk(_g("thunder", r, 1.35, seconds=secs, lpf=2600, hpf=200)) * env * 0.7
+    return S.mix((a, 0, 1.0), (b, 0.15, 0.8))
+
+
+def root10a(r):  # rustle-heavy: leaves swelling, short groans under it
+    secs = 2.2
+    env = S.curve([(0, 0.05), (0.9, 1.0), (1.8, 0.8), (secs, 0.03)], secs, log=False)
+    lv = S.pk(_g("leaves", r, 0.95, seconds=secs, lpf=4500, hpf=250)) * env
+    out = [(lv, 0, 1.0)]
+    for at, pitch in ((0.2, 0.9), (0.7, 1.15), (1.2, 1.0)):
+        out.append((_g("creak", r, pitch, seconds=0.34, lpf=3500, hpf=150), at, 0.55))
+    return S.mix(*out)
+
+
+def root10b(r):  # groan-heavy: many short twisting groans, a lighter rustle
+    out = []
+    t = 0.0
+    for pitch, g in ((0.8, 0.8), (1.1, 0.7), (0.95, 0.8), (1.25, 0.6), (0.85, 0.7), (1.05, 0.5)):
+        out.append((_g("creak", r, pitch, seconds=0.34, lpf=3500, hpf=150), t, g))
+        t += float(r.uniform(0.18, 0.3))
+    out.append((_g("leaves", r, 1.0, seconds=1.7, lpf=4000, hpf=250), 0.0, 0.5))
+    return S.mix(*out)
+
+
+ROUNDS_R10 = {"storm_a": _pkg9(storm10a), "storm_b": _pkg9(storm10b), "root_a": _pkg9(root10a), "root_b": _pkg9(root10b)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
