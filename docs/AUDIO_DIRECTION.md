@@ -71,3 +71,15 @@ an enemy spawning off-view, a house being hit, a spell coming off cooldown. Chec
 2. Claude edits the recipe, regenerates (`python assets/generators/make_audio.py <name> --godot`), checks it
    (`python tools/validate_audio.py`) and sends the new file.
 3. Only your ears approve a sound; log approvals in `assets/ASSETS.md`.
+
+## Restart brief, batch 1 (Siddharth, 2026-11-10; SFX restarted from scratch)
+Answers to the first taste questions, kept in his words. Nothing here is a technical spec; the agent translates it.
+- Loved reference: Bloons tower defense (no particular dislike named).
+- Feeling: cosy, cute, calm. He says none of these are present in the old sounds.
+- Placing a tower: a soft wooden tap.
+- Fighting: weighty and impactful while the game still feels cosy. The hit sound depends on the TOWER, not the enemy.
+- Rewards and coins: soft and round.
+- Hated: buzzy, metallic or sharp sounds, and bit-crushed sounds.
+- Listening: headphones only for now (Quest speakers later).
+- Style: stylised, not realistic.
+- Open: hackathon eligibility of synthesised sound; Quest speaker testing; later batches (per-sound feel, pitch/chain ideas).
