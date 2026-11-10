@@ -453,9 +453,43 @@ def root10b(r):  # groan-heavy: many short twisting groans, a lighter rustle
 
 ROUNDS_R10 = {"storm_a": _pkg9(storm10a), "storm_b": _pkg9(storm10b), "root_a": _pkg9(root10a), "root_b": _pkg9(root10b)}
 
+# Round r11 (Siddharth 2026-11-10): Storm Cloud = choice 2 (rolling swell) + a short low thunder crack whenever a strike hits an
+# enemy; Root Ward = choice 1 (rustle) but LESS creaking and "other wood sounds". Our library has no branch/twig recordings, so the
+# wood comes from wooden-toy rummaging (blocks), soft wood knocks and the leaf rustle; one very quiet short creak at most.
+def storm11(r):
+    secs = 2.6
+    env = S.curve([(0, 0.05), (1.0, 1.0), (2.0, 0.8), (secs, 0.03)], secs, log=False)
+    a = S.pk(_g("thunder", r, 1.0, seconds=secs, lpf=2000, hpf=150)) * env
+    b = S.pk(_g("thunder", r, 1.35, seconds=secs, lpf=2600, hpf=200)) * env * 0.7
+    out = [(a, 0, 1.0), (b, 0.15, 0.8)]
+    for at, g in ((0.9, 1.1), (1.3, 0.95), (1.7, 0.85)):  # a short low thunder crack per enemy struck
+        out.append((_g("thunder", r, 1.5, seconds=0.3, lpf=2500, hpf=140), at, g))
+    return S.mix(*out)
+
+
+def root11(dense, knock, creak):
+    def fn(r):
+        secs = 2.2
+        env = S.curve([(0, 0.05), (0.9, 1.0), (1.8, 0.8), (secs, 0.03)], secs, log=False)
+        out = [(S.pk(_g("leaves", r, 0.95, seconds=secs, lpf=4500, hpf=250)) * env, 0, 0.8)]
+        t = 0.1
+        while t < 1.9:  # wooden sticks shifting and sliding: many small wood grains at uneven spacing, growing then fading
+            lvl = float(np.interp(t, [0, 0.9, 1.8, 2.2], [0.3, 1.0, 0.7, 0.2]))
+            out.append((_g("blocks", r, float(r.uniform(0.7, 1.3)), seconds=0.12, lpf=4500, hpf=150), t, 0.45 * lvl))
+            t += float(r.uniform(0.05, 0.16)) / dense
+        for at in (0.35, 0.95, 1.4):
+            out.append((_g("wood_knock", r, float(r.uniform(0.9, 1.3)), seconds=0.2, lpf=3500), at, knock))
+        if creak:
+            out.append((_g("creak", r, 1.1, seconds=0.34, lpf=3000, hpf=150), 0.6, creak))
+        return S.mix(*out)
+    return fn
+
+
+ROUNDS_R11 = {"storm": _pkg9(storm11), "root_a": _pkg9(root11(1.0, 0.35, 0.15)), "root_b": _pkg9(root11(0.6, 0.6, 0.0))}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
