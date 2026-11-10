@@ -202,6 +202,8 @@ func _wake() -> void:
 	game.snd("dawn_bell")
 	_title.queue_free()
 	game.asleep = false
+	for r in game.requests:
+		r._say("before")  # the villagers say what they need now that the game is awake
 	_state = "playing"
 	game.say_at_shrine(StoryText.prayer(0, 0))
 	_step = 0

@@ -199,8 +199,8 @@ const TASK_ID := {"chimney": "kite_in_oak", "bird": "lost_lamb", "lantern": "fes
 
 func _say(which: String) -> void:
 	## "before" when posted, "after" when done: a parchment bubble over the villager who asked (with the rig only).
-	if not game.with_rig or not is_inside_tree():
-		return
+	if not game.with_rig or not is_inside_tree() or game.asleep:
+		return  # the title screen shows the island asleep: the words wait until the game wakes
 	var line := StoryText.task(TASK_ID.get(kind, ""), which)
 	if line == "":
 		return

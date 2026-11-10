@@ -9,7 +9,7 @@ const ISLAND := "res://assets/world/ew_world_island_v01.glb"
 const UNDERSIDE := "res://assets/world/ew_world_island_underside_v03.glb"
 const CLUMPS: Array[String] = [
 	"res://assets/world/ew_world_forest_clump_dark_v02.glb",
-	"res://assets/world/ew_world_forest_clump_mix_v02.glb",
+	"res://assets/world/ew_world_forest_clump_mix_v03.glb",
 	"res://assets/world/ew_world_forest_clump_low_v02.glb",
 ]
 const LOW_CLUMP := "res://assets/world/ew_world_forest_clump_low_v02.glb"
