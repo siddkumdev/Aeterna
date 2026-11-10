@@ -1767,7 +1767,7 @@ func _update_lens() -> void:
 		else:
 			basis_held = _lens_hand.global_transform.basis * Basis(Vector3.RIGHT, -PI / 2.0)
 		_lens.global_transform = Transform3D(basis_held * sc, hold_at - basis_held * sc * _lens_grip)
-		var up := (_lens.global_transform * _lens_centre).y > board.global_position.y + GameConfig.LENS_RAISE
+		var up := hold_at.y > board.global_position.y + GameConfig.LENS_RAISE
 		if up and _xr_cam and _lens_view:
 			set_lens(true)  # every gap: the lens window crops to what you look at through the glass
 		elif up and _xr_cam:
