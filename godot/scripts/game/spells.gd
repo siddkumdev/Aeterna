@@ -361,7 +361,7 @@ func _step_ball(f: Dictionary) -> void:
 
 
 func _burst(pos: Vector3, damage: float, radius: float, fire := false) -> void:
-	game.snd("fireball_hit" if fire else "boulder_hit", to_global(pos))
+	game.snd("orb_hit" if fire else "boulder_hit", to_global(pos))
 	for e in game.enemies.duplicate():
 		if is_instance_valid(e) and e.targetable(true, true) and _flat(e.position - pos) <= radius:
 			e.take_damage(damage)
@@ -394,6 +394,7 @@ func _strike(f: Dictionary) -> void:
 		hit.append(at)
 		points.append(at.chest())
 		at.take_damage(cfg["damage"])
+		game.snd("storm_crack", at.global_position)  # a low thunder crack for each enemy struck (Siddharth 2026-11-10)
 		var last: Vector3 = at.position
 		at = _nearest(last, cfg["chain_reach"] * GameConfig.CELL, hit)
 	for i in range(points.size() - 1):

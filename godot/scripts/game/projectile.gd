@@ -118,6 +118,8 @@ func step(delta: float) -> void:
 				if is_instance_valid(e) and _can_hit(e) and not _hit.has(e) and _seg_dist(e.global_position, a, b) <= width:
 					_hit[e] = true
 					_hit_enemy(e)
+					if _hit.size() == 1:  # one soft thup for the first enemy the bolt pierces; later ones stay silent (Siddharth 2026-11-10)
+						game.snd("crossbow_pierce", e.global_position)
 			global_position = b
 			_left -= stride
 			if _left <= 0.0:
@@ -153,10 +155,20 @@ func _hit_enemy(e: Enemy) -> void:
 		source.on_kill()
 
 
+func _hit_sound() -> String:
+	## The hit sound belongs to the TOWER that fired, never to the enemy (Siddharth 2026-11-10).
+	if _fx_kind == "wizard":
+		return "wizard_hit"
+	if _fx_kind == "fireball":  # the Airship's cannonball
+		return "airship_hit"
+	return "" if kind == "pierce" else "boulder_hit"  # a pierce bolt sounds when it hits, not at the end of its flight
+
+
 func _finish() -> void:
 	done = true
 	if game != null:
-		game.snd("fireball_hit" if _fx_kind in ["fireball", "wizard"] else ("crossbow_pierce" if kind == "pierce" else "boulder_hit"), global_position)
+		if _hit_sound() != "":
+			game.snd(_hit_sound(), global_position)
 	_impact_fx()
 	queue_free()
 

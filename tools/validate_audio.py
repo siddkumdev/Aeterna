@@ -29,7 +29,7 @@ def check(name, spec, fspec):
     mono = x if x.ndim == 1 else x.mean(axis=1)
     problems = []
     peak = np.max(np.abs(x))
-    if peak < 0.01:
+    if peak < 0.01 and not spec.get("note", "").startswith("SILENT on purpose"):  # enemy_death, build_pop (2026-11-10)
         problems.append("silent")
     if peak > 10 ** (-1.0 / 20):
         problems.append("peak above -1 dBFS")

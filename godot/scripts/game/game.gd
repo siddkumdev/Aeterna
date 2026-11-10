@@ -33,7 +33,7 @@ enum Phase { DAY, NIGHT, CARDS, DONE }
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const BOARD_POS := Vector3(0, 0.75, -0.85)
-const SPELL_SOUNDS := {"fire_orb": "fireball_launch", "boulder": "throw_whoosh", "storm": "storm_cloud", "rage": "rage_cast", "roots": "ward_cast"}
+const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "storm": "storm_cloud", "rage": "rage_cast", "roots": "ward_cast"}
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target

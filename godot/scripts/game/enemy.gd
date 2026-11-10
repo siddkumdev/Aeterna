@@ -366,12 +366,14 @@ func _face(p: Vector3) -> void:
 		rotation.y = atan2(d.x, d.z)
 
 
-func take_damage(amount: float, flash := true) -> void:
+func take_damage(amount: float, flash := true, hit_sound := "") -> void:
+	## hit_sound: the caller's own sound ("" = none): a hit sounds like the tower or spell that made it, not like the enemy.
 	if not alive or shielded:
 		return
 	hp -= amount
 	if flash and game != null:
-		game.snd("hit_soft", global_position)
+		if hit_sound != "":
+			game.snd(hit_sound, global_position)
 	if flash:
 		for m in _mats:
 			m.albedo_color = Color8(0xFF, 0xE6, 0xC8)
