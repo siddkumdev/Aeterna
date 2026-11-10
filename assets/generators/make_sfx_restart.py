@@ -411,9 +411,120 @@ def _pkg9(fn_):
 
 ROUNDS_R9 = {"boulder": _pkg9(boulder9), "storm_cloud": _pkg9(storm9), "rage": _pkg9(rage9), "root_ward": _pkg9(root9)}
 
+# Round r10: Boulder good, Rage liked (kept). Storm Cloud: "sounds like sparks" -> no crackle grains at all; dark rolling thunder.
+# Root Ward: "not a floorboard creak, a more Groot's branches sound" -> branches growing and slithering: leaf rustle, short
+# twisting wood groans, soft swell, no long creaks.
+def storm10a(r):  # rolling rumble with three low thunder 'strikes' (short thunder grains)
+    secs = 2.6
+    base = S.pk(_g("thunder", r, 1.1, seconds=secs, lpf=2200, hpf=150)) * S.curve([(0, 0.1), (0.8, 1.0), (2.0, 0.9), (secs, 0.05)], secs, log=False)
+    out = [(base, 0, 1.0)]
+    for at, g, kit in ((0.9, 1.0, "thunder"), (1.3, 0.85, "thunder"), (1.7, 0.75, "thunder")):
+        out.append((_g(kit, r, 1.5, seconds=0.3, lpf=2500, hpf=140), at, g))
+    return S.mix(*out)
+
+
+def storm10b(r):  # only a dark rolling swell: two thunder layers
+    secs = 2.6
+    env = S.curve([(0, 0.05), (1.0, 1.0), (2.0, 0.8), (secs, 0.03)], secs, log=False)
+    a = S.pk(_g("thunder", r, 1.0, seconds=secs, lpf=2000, hpf=150)) * env
+    b = S.pk(_g("thunder", r, 1.35, seconds=secs, lpf=2600, hpf=200)) * env * 0.7
+    return S.mix((a, 0, 1.0), (b, 0.15, 0.8))
+
+
+def root10a(r):  # rustle-heavy: leaves swelling, short groans under it
+    secs = 2.2
+    env = S.curve([(0, 0.05), (0.9, 1.0), (1.8, 0.8), (secs, 0.03)], secs, log=False)
+    lv = S.pk(_g("leaves", r, 0.95, seconds=secs, lpf=4500, hpf=250)) * env
+    out = [(lv, 0, 1.0)]
+    for at, pitch in ((0.2, 0.9), (0.7, 1.15), (1.2, 1.0)):
+        out.append((_g("creak", r, pitch, seconds=0.34, lpf=3500, hpf=150), at, 0.55))
+    return S.mix(*out)
+
+
+def root10b(r):  # groan-heavy: many short twisting groans, a lighter rustle
+    out = []
+    t = 0.0
+    for pitch, g in ((0.8, 0.8), (1.1, 0.7), (0.95, 0.8), (1.25, 0.6), (0.85, 0.7), (1.05, 0.5)):
+        out.append((_g("creak", r, pitch, seconds=0.34, lpf=3500, hpf=150), t, g))
+        t += float(r.uniform(0.18, 0.3))
+    out.append((_g("leaves", r, 1.0, seconds=1.7, lpf=4000, hpf=250), 0.0, 0.5))
+    return S.mix(*out)
+
+
+ROUNDS_R10 = {"storm_a": _pkg9(storm10a), "storm_b": _pkg9(storm10b), "root_a": _pkg9(root10a), "root_b": _pkg9(root10b)}
+
+# Round r11 (Siddharth 2026-11-10): Storm Cloud = choice 2 (rolling swell) + a short low thunder crack whenever a strike hits an
+# enemy; Root Ward = choice 1 (rustle) but LESS creaking and "other wood sounds". Our library has no branch/twig recordings, so the
+# wood comes from wooden-toy rummaging (blocks), soft wood knocks and the leaf rustle; one very quiet short creak at most.
+def storm11(r):
+    secs = 2.6
+    env = S.curve([(0, 0.05), (1.0, 1.0), (2.0, 0.8), (secs, 0.03)], secs, log=False)
+    a = S.pk(_g("thunder", r, 1.0, seconds=secs, lpf=2000, hpf=150)) * env
+    b = S.pk(_g("thunder", r, 1.35, seconds=secs, lpf=2600, hpf=200)) * env * 0.7
+    out = [(a, 0, 1.0), (b, 0.15, 0.8)]
+    for at, g in ((0.9, 1.1), (1.3, 0.95), (1.7, 0.85)):  # a short low thunder crack per enemy struck
+        out.append((_g("thunder", r, 1.5, seconds=0.3, lpf=2500, hpf=140), at, g))
+    return S.mix(*out)
+
+
+def root11(dense, knock, creak):
+    def fn(r):
+        secs = 2.2
+        env = S.curve([(0, 0.05), (0.9, 1.0), (1.8, 0.8), (secs, 0.03)], secs, log=False)
+        out = [(S.pk(_g("leaves", r, 0.95, seconds=secs, lpf=4500, hpf=250)) * env, 0, 0.8)]
+        t = 0.1
+        while t < 1.9:  # wooden sticks shifting and sliding: many small wood grains at uneven spacing, growing then fading
+            lvl = float(np.interp(t, [0, 0.9, 1.8, 2.2], [0.3, 1.0, 0.7, 0.2]))
+            out.append((_g("blocks", r, float(r.uniform(0.7, 1.3)), seconds=0.12, lpf=4500, hpf=150), t, 0.45 * lvl))
+            t += float(r.uniform(0.05, 0.16)) / dense
+        for at in (0.35, 0.95, 1.4):
+            out.append((_g("wood_knock", r, float(r.uniform(0.9, 1.3)), seconds=0.2, lpf=3500), at, knock))
+        if creak:
+            out.append((_g("creak", r, 1.1, seconds=0.34, lpf=3000, hpf=150), 0.6, creak))
+        return S.mix(*out)
+    return fn
+
+
+ROUNDS_R11 = {"storm": _pkg9(storm11), "root_a": _pkg9(root11(1.0, 0.35, 0.15)), "root_b": _pkg9(root11(0.6, 0.6, 0.0))}
+
+# Round r12: Fire Orb from REAL fire recordings (Siddharth 2026-11-10: "give me one with real recording"). Fire whooshes (CC BY 4.0,
+# mikiko850) and a campfire bed (CC BY 4.0, newlocknew) for flame, a cannon-body grain for the round thump. Only the DULL crackle
+# grains (02, 05, 18) are used, at low level: the bright ones sound like sparks, which he hated in Storm Cloud.
+def _pick(kit, name, pitch=1.0, seconds=None, lpf=9000, hpf=90):
+    from scipy.io import wavfile
+    sr_, x = wavfile.read(os.path.join(ROOT, "assets", "audio_src", "grains", kit, name))
+    x = MA._mono(x.astype(float) / 32768.0)
+    if pitch != 1.0:
+        n = max(16, int(len(x) / pitch))
+        x = np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x)
+    if seconds is not None:
+        x = x[: S.n_of(seconds)].copy()
+        m = min(len(x) // 3, S.n_of(0.08))
+        x[-m:] *= np.linspace(1, 0, m)
+        x = np.concatenate([x, np.zeros(S.n_of(seconds) - len(x))])  # a pitched-up grain is shorter: pad to the exact length
+    return S.fade(S.lp(S.hp(x, hpf), lpf), 0.002, 0.03)
+
+
+def fire_orb12(r):
+    sw = S.curve([(0, 0.05), (0.35, 1.0), (0.9, 0.05)], 0.9, log=False)
+    launch = [(S.pk(_pick("fire_whoosh", "fire_whoosh_01.wav", 1.15, 0.9)) * sw, 0.0, 1.0),
+              (S.pk(_pick("fire_whoosh", "fire_whoosh_05.wav", 1.35, 0.9)) * sw, 0.05, 0.6),
+              (S.pk(_pick("bed_fire", "bed_fire_02.wav", 1.0, 0.9, 8000)) * sw, 0.0, 0.45)]
+    hit = [(_pick("cannon", "cannon_01.wav", 0.9, 0.5, 2500), 1.0, 1.3),
+           (S.pk(_pick("fire_whoosh", "fire_whoosh_02.wav", 1.5, 0.5)) * S.exp_env(0.5, 0.16, 0.003), 1.0, 1.0),
+           (_pick("fire_whoosh", "fire_whoosh_04.wav", 0.8, 0.2), 1.0, 0.8),
+           (S.pk(_pick("bed_fire", "bed_fire_02.wav", 1.0, 0.5, 8000)) * S.exp_env(0.5, 0.2, 0.003), 1.0, 0.4),
+           (_pick("crackle", "crackle_05.wav", 1.0, 0.3, 4500, 200), 1.12, 0.25),
+           (_pick("crackle", "crackle_18.wav", 1.0, 0.3, 4500, 200), 1.25, 0.2)]
+    x = S.mix(*launch, *hit)
+    return S.lp(x + 1.3 * S.hp(x, 1500), 9000)  # real fire whooshes are dark (~880 Hz): lift the upper mids so it is not muffled
+
+
+ROUNDS_R12 = {"fire_orb_real": _pkg9(fire_orb12)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
