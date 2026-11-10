@@ -100,9 +100,39 @@ def _package(launch, hit, lg=2.2):
     return fn
 
 
+# Round r3 (after he rejected r2: "they dont sound like fire magic at all"). His words for fire: launch = whoosh + roar /
+# flame rush; hit = soft 'fwoomf' burst. So now NOISE-led (air and flame), not tonal thumps; still soft-topped.
+def _rush(seconds, r, lo, hi, peak_at, tex):
+    n = S.noise(seconds, r, "pink")
+    cut = S.curve([(0, lo), (seconds * peak_at, hi), (seconds, lo * 0.8)], seconds)
+    air = S.sweep_lp(n, cut) * S.curve([(0, 0.02), (seconds * peak_at, 1.0), (seconds, 0.02)], seconds, log=False)
+    fire = S.lp(S.fire_texture(seconds, r, 1.2), 4200) * S.curve([(0, 0.05), (seconds * peak_at, 1.0), (seconds, 0.05)], seconds, log=False)
+    return S.pk(air) * 1.0 + S.pk(fire) * tex
+
+
+def wiz3_launch(lo, hi, peak_at, tex, secs=0.6):
+    return lambda r: _soft(_rush(secs, r, lo, hi, peak_at, tex), 5000)
+
+
+def wiz3_hit(body, fire, secs=0.5):
+    def fn(r):
+        n = S.noise(secs, r, "pink")
+        cut = S.curve([(0, 3200), (0.12, 900), (secs, 350)], secs)
+        puff = S.sweep_lp(n, cut) * S.exp_env(secs, 0.13, 0.003)
+        low = S.thud(secs, 240, 115, 0.1, r, grit=0.0)
+        cr = S.lp(S.crackle(0.35, r, 28, 1800), 3200)
+        f = S.lp(S.fire_texture(0.4, r, 1.0), 3500) * S.exp_env(0.4, 0.14, 0.003)
+        return _soft(S.mix((S.pk(puff), 0, 1.0), (low, 0, body), (cr, 0.03, 0.35), (f, 0, fire)), 4800)
+    return fn
+
+
+ROUNDS_R3 = {"wiz_a": _package(wiz3_launch(450, 3200, 0.45, 0.6), wiz3_hit(0.4, 0.5), 1.0),
+             "wiz_b": _package(wiz3_launch(600, 4200, 0.4, 0.25), wiz3_hit(0.3, 0.25), 1.0),
+             "wiz_c": _package(wiz3_launch(350, 2400, 0.55, 1.0, 0.7), wiz3_hit(0.6, 0.9), 1.0)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
