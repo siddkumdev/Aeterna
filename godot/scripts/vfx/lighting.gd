@@ -92,6 +92,12 @@ func build(fog_from: float) -> void:
 	set_mood("day", 0.0)
 
 
+func enable_passthrough() -> bool:
+	## Quest only: asks OpenXR for alpha blend and makes the background transparent so the real room shows through
+	## (HazeDome.try_enable_passthrough). False, and nothing changes, on the desktop and in the simulator.
+	return HazeDome.try_enable_passthrough(get_viewport(), env)
+
+
 func _process(_delta: float) -> void:
 	## A light at zero energy is switched off, so the Quest never shades with it (the moon by day, the sun at night).
 	sun.visible = sun.light_energy > 0.01
