@@ -10,6 +10,8 @@ const SCALE := 0.7
 var life  # VillageLife
 var key := ""
 var job := ""
+var voice := ""  # which thoughts.json villager speaks through this one (StoryText)
+var taps := 0  # how many times it was tapped: which of its lines comes next
 var home := 0
 var rig: CharacterRig
 var state := "stay"  # stay / go / startle / enter / inside / wait_out / exit

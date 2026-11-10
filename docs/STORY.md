@@ -1,6 +1,6 @@
 # Aeterna: the story
 
-Status: DRAFT for the user's approval (written 2026-11-10 from the user's brief and plan). Nothing here is built yet. Gameplay numbers stay in `docs/GAME_SPEC.md`; this file is story, cast and words.
+Status: APPROVED by the user 2026-11-10 (ending = a choice at the shrine; the Warden is named Skotos). Parts are being built (cards, hands, Veil, loop rules, thoughts data are in the game). Gameplay numbers stay in `docs/GAME_SPEC.md`; this file is story, cast and words.
 
 Tone: warm, plain, a little funny, then quietly heartbreaking. Cozy, never grim. The sadness comes from love, not from gore. Short sentences. Villagers sound like neighbours, not prophets.
 
@@ -18,7 +18,7 @@ You are a very small god. Your whole world is one floating island, a meadow, twe
 - They are not a monster in their own mind. They say they want the villagers' faith "because it is the only warm thing left." The deeper truth: they want you to know what being forgotten feels like.
 - Voice: cool, amused, tired, sometimes almost kind. Never shouts. Purple is their colour (art rule).
 - Curse, spoken at the first dusk: *"Your Veil will fail at every nightfall. Let us see how long they believe in a god who cannot keep the dark out."*
-- Their true name is carved on the shrine's oldest stone and can only be read through the Crystal Lens (see section 9).
+- Their true name is **Skotos** (Greek for darkness; the villagers only ever call them the Warden). It is carved on the shrine's oldest stone and can only be read through the Crystal Lens (see section 9).
 
 ## 4. The cast (12 villagers, two per house)
 | Name | Who they are | What they want |

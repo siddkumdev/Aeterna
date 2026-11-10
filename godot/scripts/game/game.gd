@@ -229,6 +229,8 @@ func _start_loop(message: String) -> void:
 	closed_spawn = ""
 	_set_phase(Phase.DAY, message)
 	select("")  # a new run starts with nothing picked: no sell ring left on the empty ground
+	if with_rig:
+		say_at_shrine(StoryText.prayer(loop, 0))  # Maren's first prayer of the loop
 
 
 func card(id: String) -> int:
@@ -333,6 +335,7 @@ func _doom_step(delta: float) -> void:
 		last_message = "The Warden's horn sounds. The Veil breaks."
 		snd("boss_roar")
 		_refresh_ui()
+		_skotos_says(StoryText.warden("night5", loop))
 	_doom_timer += delta
 	if _doom_timer >= GameConfig.DOOM_STEP:
 		_doom_timer = 0.0
@@ -368,8 +371,11 @@ func start_night() -> bool:
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
 	if night == GameConfig.BOSS_NIGHT:
 		_set_phase(Phase.NIGHT, "Boss night. The Warden comes.")
+		_skotos_says(StoryText.warden("night5", loop))
 	else:
 		_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
+		if night == 0:
+			_skotos_says(StoryText.warden("dusk_day1", loop))  # the curse, spoken at the first dusk of each loop
 	return true
 
 
@@ -665,6 +671,8 @@ func _end_night() -> void:
 	closed_spawn = ""
 	var next :="Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
 	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d faith. %s" % [standing, income, next])
+	if with_rig:
+		say_at_shrine(StoryText.prayer(loop, night))  # Maren's dawn prayer for this day
 
 
 func _end_loop(won: bool) -> void:
@@ -1104,11 +1112,71 @@ func _hover(origin: Vector3, dir: Vector3) -> void:
 	_refresh_buttons()
 
 
+func villager_at(origin: Vector3, dir: Vector3, reach_m := 0.025) -> Villager:
+	## The visible villager nearest the ray (within reach_m of its chest), or null.
+	if life == null:
+		return null
+	var best: Villager = null
+	var best_d := reach_m
+	for v in life.villagers:
+		if not v.visible:
+			continue
+		var chest := v.global_position + Vector3(0, 0.035, 0)
+		var d := Geometry3D.get_closest_point_to_segment_uncapped(chest, origin, origin + dir * 2.0).distance_to(chest)
+		if d < best_d:
+			best_d = d
+			best = v
+	return best
+
+
+func tap_villager(v: Villager) -> String:
+	## Tap a villager: a bubble with their next thought for this loop; they turn to look at you.
+	if v == null or v.voice == "":
+		return ""
+	var line := StoryText.thought(v.voice, loop, v.taps)
+	v.taps += 1
+	if line == "":
+		return ""
+	snd("villager_blip", v.global_position)
+	Bubble.say(v, Vector3(0, 0.1, 0), "%s: %s" % [StoryText.villager_name(v.voice), line] if v.taps == 1 else line)
+	if v.state == "stay" or v.state == "go":
+		v.put(v.position, "idle", 2.5, board.to_local(_eye()))  # stops and looks at you while it speaks
+	return line
+
+
+const SKOTOS := Color("9C3EB0")  # palette crystal_purple: the Warden's colour
+
+
+func _skotos_says(line: String) -> void:
+	## Skotos speaks: purple, in the message line and over the island (with the rig only).
+	if line == "" or not with_rig:
+		return
+	last_message = "Skotos: " + line
+	_refresh_ui()
+	say_at_shrine(line, SKOTOS.darkened(0.25))
+	if _msg:
+		_msg.modulate = SKOTOS.lightened(0.25)
+		get_tree().create_timer(6.0).timeout.connect(func():
+			if is_instance_valid(_msg):
+				_msg.modulate = Color.WHITE)
+
+
+func say_at_shrine(line: String, colour := Bubble.INK) -> void:
+	## A line from the shrine (Maren's dawn prayer, Skotos's words). TODO: the shrine model's __candle_anchor.
+	if board and line != "":
+		Bubble.say(board, Vector3(0, 0.13, 0), line, 6.0, colour)
+
+
 func _press(origin: Vector3, dir: Vector3) -> void:
 	var b := _button_at(origin, dir)
 	if b != "":
 		_press_button(b)
 		return
+	if not placing():
+		var vt := villager_at(origin, dir)
+		if vt:
+			tap_villager(vt)
+			return
 	if spell_sel != "":
 		var sr := _ray_to_board(origin, dir)
 		var sh: Variant = Plane(Vector3.UP, 0.0).intersects_ray(sr[0], sr[1])
@@ -1440,6 +1508,11 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell = tok
 			_held_spell_hand = h
 			return
+	if life and not placing():
+		for v in life.villagers:  # a pinch right at a villager (arm's reach, no ray needed)
+			if v.visible and h.global_position.distance_to(v.global_position + Vector3(0, 0.035, 0)) <= reach(GameConfig.TOUCH_REACH):
+				tap_villager(v)
+				return
 	_active_hand = h
 	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())

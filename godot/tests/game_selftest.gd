@@ -1036,6 +1036,27 @@ func _village_life() -> void:
 	var life: VillageLife = g.life
 	check("12 villagers, 2 to a house", life.villagers.size() == 12 and range(6).all(func(h): return life.villagers.filter(func(v): return v.home == h).size() == 2))
 	check("they are all out on the first day", life.villagers.all(func(v): return v.visible))
+	# the words (docs/STORY.md): every villager speaks, every loop has lines, nothing is empty
+	check("12 distinct voices, one per villager", life.villagers.map(func(v): return v.voice).size() == 12 and life.villagers.map(func(v): return v.voice).filter(func(x): return x != "").size() == 12)
+	var all_lines := true
+	var banned := true
+	var rx := RegEx.create_from_string("(?i)\\b(loop|time|rewind|reset)\\b")
+	for vid in StoryText.ids():
+		for lp in 5:
+			for i in 4:
+				var ln := StoryText.thought(vid, lp, i)
+				all_lines = all_lines and ln != "" and ln.length() <= 110
+				if lp < 3 and rx.search(ln) != null:
+					banned = false
+	check("every villager has 4 lines (max 110 chars) in each of the 5 loops", all_lines and StoryText.ids().size() == 12)
+	check("no 'loop', 'time', 'rewind' or 'reset' in a villager's mouth before loop 4", banned)
+	check("a dawn prayer for every loop and day", range(5).all(func(lp): return range(5).all(func(d): return StoryText.prayer(lp, d) != "")))
+	check("Skotos has a dusk and a night-5 line in every loop", range(5).all(func(lp): return StoryText.warden("dusk_day1", lp) != "" and StoryText.warden("night5", lp) != ""))
+	check("the first dawn prayer is Maren's first line", StoryText.prayer(0, 0).begins_with("Little god"))
+	var tv: Villager = life.villagers[0]
+	var t_line := g.tap_villager(tv)
+	check("tapping a villager gives their first line for this loop", t_line == StoryText.thought(tv.voice, 0, 0) and tv.taps == 1)
+	check("tapping again gives the next line", g.tap_villager(tv) == StoryText.thought(tv.voice, 0, 1))
 	check("every model has a head, arms and legs", life.villagers.all(func(v): return v.rig.parts.has("head") and v.rig.parts.has("arm_l") and v.rig.parts.has("arm_r") and v.rig.parts.has("leg_l") and v.rig.parts.has("leg_r")))
 	check("the forest's watchers wait by day", life.lurkers.size() >= 4)
 	var trees_only := func(): return life.lurkers.all(func(l): return l["cell"].x in [1, GameConfig.SIZE - 2] or l["cell"].y in [1, GameConfig.SIZE - 2])

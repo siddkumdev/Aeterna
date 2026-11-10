@@ -8,18 +8,18 @@ extends Node3D
 ## Villagers walk round houses, towers and props on their own grid (a tower built on one just makes it walk off).
 
 const CAST := [  # 2 villagers per house
-	{"key": "elder_ram", "job": "stroll", "home": 0},
-	{"key": "clerk_owl", "job": "notices", "home": 0},
-	{"key": "farmer_horse", "job": "farm", "home": 1},
-	{"key": "builder_ant", "job": "build", "home": 1},
-	{"key": "dancer_butterfly", "job": "dance", "home": 2},
-	{"key": "baker_mouse", "job": "bake", "home": 2},
-	{"key": "tailor_spider", "job": "sew", "home": 3},
-	{"key": "kid_bunny", "job": "chase", "home": 3},
-	{"key": "kid_sprout", "job": "follow", "home": 4},
-	{"key": "bee_kid", "job": "flowers", "home": 4},
-	{"key": "cat_girl", "job": "sweep", "home": 5},
-	{"key": "shroom_goblin", "job": "well", "home": 5},
+	{"key": "elder_ram", "voice": "maren", "job": "stroll", "home": 0},
+	{"key": "clerk_owl", "voice": "finn", "job": "notices", "home": 0},
+	{"key": "farmer_horse", "voice": "hob", "job": "farm", "home": 1},
+	{"key": "builder_ant", "voice": "tomas", "job": "build", "home": 1},
+	{"key": "dancer_butterfly", "voice": "isolde", "job": "dance", "home": 2},
+	{"key": "baker_mouse", "voice": "edda", "job": "bake", "home": 2},
+	{"key": "tailor_spider", "voice": "sorrel", "job": "sew", "home": 3},
+	{"key": "kid_bunny", "voice": "pip", "job": "chase", "home": 3},
+	{"key": "kid_sprout", "voice": "wren", "job": "follow", "home": 4},
+	{"key": "bee_kid", "voice": "lyra", "job": "flowers", "home": 4},
+	{"key": "cat_girl", "voice": "garrick", "job": "sweep", "home": 5},
+	{"key": "shroom_goblin", "voice": "bram", "job": "well", "home": 5},
 ]
 const ENEMY_MODELS := {"grunt": ["blightbark", "bark"], "scout": ["veilrunner", "veil"], "splitter": ["sporebloom", "spore"], "wisp": ["lantern_spirit", "lantern"]}
 const LURKER_SCALE := 0.75
@@ -47,6 +47,7 @@ func setup(g, marks: Dictionary) -> void:
 		var v := Villager.new()
 		add_child(v)
 		v.setup(self, c["key"], c["job"], c["home"])
+		v.voice = c.get("voice", "")
 		v.visible = false
 		v.state = "inside"
 		villagers.append(v)
