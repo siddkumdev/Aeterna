@@ -83,3 +83,11 @@ Answers to the first taste questions, kept in his words. Nothing here is a techn
 - Listening: headphones only for now (Quest speakers later).
 - Style: stylised, not realistic.
 - Open: hackathon eligibility of synthesised sound; Quest speaker testing; later batches (per-sound feel, pitch/chain ideas).
+
+## Restart brief, batch 2 (Siddharth, 2026-11-10)
+- Bloons TD: its sounds were satisfying AND each tower's sound felt like that tower made it. Our current game does not do this. Goal: every tower has a sound that obviously belongs to it.
+- Correction (agent error): there is no wind tower. Real roster: Wizard Tower (fireball), Guard Tower (Guards fight), Longbow Tower (piercing bolts), Airship (friendly, hits air). Spells: Fire Orb, Boulder, Storm Cloud, Rage, Root Ward.
+- Enemy death: silent, or a minimal sound that is not distinct.
+- Loudness tiers: left to the agent's judgement from sound-design theory (frequent = quiet and short; rare = bigger). Proposal sent 2026-11-10, awaiting his OK on the per-tower voices.
+- No ambient bed for now.
+- Hackathon: synthesised sound is allowed (Siddharth confirmed 2026-11-10). Still no AI-generated audio, no NC licences.
