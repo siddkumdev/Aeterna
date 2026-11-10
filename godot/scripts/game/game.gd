@@ -62,6 +62,7 @@ var night := 0  # 0-based, within the loop; GameConfig.BOSS_NIGHT is the boss ni
 var loop := 0  # 0-based; a run is GameConfig.LOOPS_PER_RUN loops
 var cards := {}  # ability cards held: id -> rarity (0 Common, 1 Rare, 2 Legendary); kept through the loop
 var offers: Array[Dictionary] = []  # cards on the table during Phase.CARDS
+var ending_choice := false  # Phase.CARDS holds the two endings (let_go / remember), not ability cards
 var loop_won := false  # how the current loop ended (beat the boss, or lost a night)
 var phase := Phase.DAY
 var night_time := 0.0
@@ -697,6 +698,12 @@ func _end_loop(won: bool) -> void:
 	## Beat the boss: 3 cards, keep 1. Lost a night: 1 Common card. The last loop of the run offers none.
 	loop_won = won
 	_clear_night()
+	if loop + 1 >= GameConfig.LOOPS_PER_RUN and won:
+		# the last loop, the Warden's end: the player chooses how the story ends (docs/STORY.md section 8)
+		ending_choice = true
+		offers = [{"id": "let_go", "rarity": 0}, {"id": "remember", "rarity": 0}]
+		_set_phase(Phase.CARDS, "Skotos kneels. Maren: \"You've carried us. Let us carry you.\" Choose how this ends.")
+		return
 	if loop + 1 >= GameConfig.LOOPS_PER_RUN:
 		var how := "The Warden falls. Run complete!" if won else "Night %d of loop %d lost. Run over." % [night + 1, loop + 1]
 		_set_phase(Phase.DONE, how + " New run = R or the sign.")
@@ -714,11 +721,30 @@ func choose_card(i: int) -> bool:
 	if phase != Phase.CARDS or i < 0 or i >= offers.size():
 		return false
 	var o: Dictionary = offers[i]
+	if ending_choice:
+		return _finish_story(o["id"])
 	cards[o["id"]] = o["rarity"]  # a duplicate is only offered at a higher rarity, so this upgrades it
 	snd(RARITY_SOUNDS[clampi(int(o["rarity"]), 0, 2)])
 	snd("rewind_whoosh")
 	offers = []
 	_rewind()
+	return true
+
+
+const ENDINGS := {
+	"let_go": "You let go. The Veil is yours no longer: it is theirs, and it holds. You fade into a small carved statue on the shrine. In the morning the villagers leave honeycakes at your feet, and Wren whispers: \"Thank you, little god.\" In the trees, Skotos weeps, because someone gave everything for love.",
+	"remember": "You show Skotos every prayer you ever heard. They remember being worshipped. They remember being loved. The curse cracks. The Dark Wood blooms, and two small gods keep watch over one garden.",
+}
+
+
+func _finish_story(id: String) -> bool:
+	## The ending the player chose. The run is over; a new run starts from the sign (or R).
+	ending_choice = false
+	offers = []
+	snd("dawn_bell")
+	_set_phase(Phase.DONE, ENDINGS.get(id, "The end."))
+	if with_rig:
+		say_at_shrine("Thank you, little god." if id == "let_go" else "I remember.")
 	return true
 
 
@@ -1839,7 +1865,7 @@ func _refresh_buttons() -> void:
 				if b["node"].visible:
 					var o: Dictionary = offers[i]
 					var hint := "[ keep ]" if offers.size() == 1 else "[ %d ]" % (i + 1)
-					b["label"].text = Cards.describe(o["id"], o["rarity"]) + "\n\n" + hint
+					b["label"].text = (CardData.ending(o["id"])["text"] if ending_choice else Cards.describe(o["id"], o["rarity"])) + "\n\n" + hint
 					c = [Color8(0xE6, 0xD8, 0xBC), Color8(0xF0, 0xA4, 0x50), Color8(0xE0, 0x50, 0x3A)][o["rarity"]]
 			_:
 				b["node"].visible = day
@@ -1878,7 +1904,7 @@ func _refresh_tray() -> void:
 		Phase.CARDS:
 			key = "offers%d_%s" % [loop, str(offers)]
 			for o in offers:
-				list.append(CardData.ability(o["id"], o["rarity"]))
+				list.append(CardData.ending(o["id"]) if ending_choice else CardData.ability(o["id"], o["rarity"]))
 	if key != _tray_key:
 		_tray_key = key
 		if _held_card:  # the phase changed under a held card: put it down cleanly

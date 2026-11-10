@@ -26,6 +26,7 @@ func _initialize() -> void:
 	await _mouse_hand_rules()
 	await _warden()
 	await _doom()
+	await _endings()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -1025,6 +1026,16 @@ func _doom() -> void:
 	f.night = GameConfig.BOSS_NIGHT
 	check("the last loop is not doomed", not f.is_doomed_night())
 	f.queue_free()
+
+
+func _endings() -> void:
+	var g := await _make_game()
+	g.loop = GameConfig.LOOPS_PER_RUN - 1
+	g.night = GameConfig.BOSS_NIGHT
+	g._end_loop(true)
+	check("beating the Warden in the last loop offers the two endings", g.phase == Game.Phase.CARDS and g.ending_choice and g.offers.size() == 2)
+	check("choosing an ending finishes the run with its words", g.choose_card(1) and g.phase == Game.Phase.DONE and g.last_message.contains("Skotos"))
+	g.queue_free()
 
 
 func _village_life() -> void:

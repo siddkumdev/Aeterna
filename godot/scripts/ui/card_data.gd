@@ -76,6 +76,18 @@ static func spell(id: String) -> Dictionary:
 	}
 
 
+static func ending(id: String) -> Dictionary:
+	## The two ways the story can end (docs/STORY.md section 8), as cards on the tray.
+	var let_go := id == "let_go"
+	return {
+		"kind": "ending", "id": id, "title": "Let go" if let_go else "Remember them", "family": "ivory", "rarity": 0,
+		"seal": "End",
+		"stats": [["Ending", "Bittersweet" if let_go else "Hopeful"], ["", ""], ["", ""], ["", ""]],
+		"text": "Spend all your godhood so the Veil holds forever. You fade." if let_go else "Show Skotos every prayer. Let them remember being loved.",
+		"flavour": "Some days are worth having twice." if let_go else "Two small gods, one garden.",
+	}
+
+
 static func ability(id: String, rarity: int) -> Dictionary:
 	var c: Dictionary = Cards.POOL[id]
 	var text: String = c["text"] % str(c["values"][rarity])
