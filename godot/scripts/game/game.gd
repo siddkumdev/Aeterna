@@ -777,7 +777,18 @@ func _play_hourglass() -> void:
 	if top and bottom:  # once flipped, the sand runs upward: the "top" bulb (now below) empties into the other
 		tw.tween_property(top, "scale:y", 0.08, 1.3)
 		tw.parallel().tween_property(bottom, "scale:y", 1.0, 1.3)
-	tw.tween_callback(func(): VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 48, 0.16, 1.4, 0.007, 0.05))  # a warm burst as the day returns
+	tw.tween_callback(func():
+		VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 48, 0.16, 1.4, 0.007, 0.05)  # a warm burst as the day returns
+		var flash := OmniLight3D.new()  # a warm white flash over the island, gone in a moment
+		flash.light_color = Color("FFF1B8")
+		flash.omni_range = 1.6
+		flash.light_energy = 0.0
+		flash.position = Vector3(0, 0.4, 0)
+		board.add_child(flash)
+		var ft := flash.create_tween()
+		ft.tween_property(flash, "light_energy", 6.0, 0.15)
+		ft.tween_property(flash, "light_energy", 0.0, 0.7)
+		ft.tween_callback(flash.queue_free))
 	tw.tween_interval(0.5)
 	tw.tween_callback(func(): _hourglass.visible = false)
 
