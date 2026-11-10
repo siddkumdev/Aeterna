@@ -130,9 +130,56 @@ ROUNDS_R3 = {"wiz_a": _package(wiz3_launch(450, 3200, 0.45, 0.6), wiz3_hit(0.4, 
              "wiz_b": _package(wiz3_launch(600, 4200, 0.4, 0.25), wiz3_hit(0.3, 0.25), 1.0),
              "wiz_c": _package(wiz3_launch(350, 2400, 0.55, 1.0, 0.7), wiz3_hit(0.6, 0.9), 1.0)}
 
+# Round r4: he liked r3 choices 2 and 3 (wiz_b, wiz_a) but found them muffled, "not like a fireball". Cause (measured in the
+# code): pink noise, low-passes at 3.5-5 kHz and a dark room tail. Fix: open the top end (still no hiss above ~9 kHz),
+# whiter noise, a falling 'swish' as the fireball flies away, brighter crackles, a hit with a full-bandwidth attack.
+def _open(x, hz):
+    x = S.remove_dc(S.hp(x, 90))
+    x = S.lp(x, hz)
+    return S.fade(S.trim_silence(x, -55), 0.002, 0.05)
+
+
+def wiz4_launch(hi, tex, swish, hz, secs=0.6):
+    def fn(r):
+        n = 0.5 * S.noise(secs, r, "white") + 0.5 * S.noise(secs, r, "pink") * 0.6
+        cut = S.curve([(0, 600), (secs * 0.35, hi), (secs, 700)], secs)
+        env = S.curve([(0, 0.03), (secs * 0.3, 1.0), (secs, 0.03)], secs, log=False)
+        air = S.sweep_lp(n, cut) * env
+        fire = S.lp(S.fire_texture(secs, r, 1.2), hz) * env
+        sw = S.sweep_bp(S.noise(secs, r, "white"), S.curve([(0, 4200), (secs, 900)], secs), 1.4) * S.curve([(0, 0.0), (secs * 0.35, 0.2), (secs, 0.0)], secs, log=False)
+        tail = S.lp(S.crackle(secs, r, 35, 3000), hz) * env
+        return _open(S.pk(air) + S.pk(fire) * tex + S.pk(sw) * swish + 0.35 * S.pk(tail), hz)
+    return fn
+
+
+def wiz4_hit(hz, body, spark, secs=0.55):
+    def fn(r):
+        n = 0.5 * S.noise(secs, r, "white") + 0.5 * S.noise(secs, r, "pink") * 0.6
+        cut = S.curve([(0, hz), (0.1, 1800), (secs, 450)], secs)
+        puff = S.sweep_lp(n, cut) * S.exp_env(secs, 0.15, 0.002)
+        low = S.thud(secs, 250, 120, 0.1, r, grit=0.0)
+        sp = S.lp(S.crackle(0.4, r, 45, 3500), hz) * S.exp_env(0.4, 0.16, 0.002)
+        f = S.lp(S.fire_texture(0.45, r, 1.1), hz) * S.exp_env(0.45, 0.16, 0.002)
+        return _open(S.mix((S.pk(puff), 0, 1.0), (low, 0, body), (sp, 0.02, spark), (f, 0, 0.5)), hz)
+    return fn
+
+
+def _package4(launch, hit, lg=1.0):
+    def fn(seed):
+        r = S.rng(seed)
+        x = S.mix((launch(r), 0, lg), (hit(r), 0.8, 1.0))
+        x = S.room(x, 0.2, 0.07)
+        return S.normalise(x, -5.0, -21.0, -3.0)
+    return fn
+
+
+ROUNDS_R4 = {"wiz_a": _package4(wiz4_launch(5500, 0.35, 0.6, 7500), wiz4_hit(7500, 0.4, 0.5)),
+             "wiz_b": _package4(wiz4_launch(7000, 0.5, 0.9, 9000), wiz4_hit(9000, 0.4, 0.6)),
+             "wiz_c": _package4(wiz4_launch(8000, 0.8, 0.6, 11000), wiz4_hit(11000, 0.5, 0.9))}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
