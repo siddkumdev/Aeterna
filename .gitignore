@@ -10,6 +10,10 @@ __pycache__/
 godot/.godot/
 # personal Claude Code settings (shared ones are in .claude/settings.json)
 .claude/settings.local.json
+# Quest build (2026-11-10): OpenXR Vendors plugin binaries (82 MB, GodotVR 5.1.0-stable) and the
+# Android Gradle build template are per-machine for now; see docs/QUEST_BUILD.md to recreate them
+godot/addons/godotopenxrvendors/
+godot/android/
 watch/build/
 watch/.gradle/
 watch/local.properties
