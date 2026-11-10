@@ -273,9 +273,86 @@ ROUNDS_R7 = {"xbow_a1": xbow_pkg(xbow_shot(480, 1.3, 6500, 0.9, 0.4, 9000, 0.0, 
              "xbow_a2": xbow_pkg(xbow_shot(560, 1.0, 6000, 1.0, 0.25, 8500, 0.0, 4500)),
              "xbow_a3": xbow_pkg(xbow_shot(480, 1.1, 6000, 0.9, 0.35, 9000, 0.45, 4200))}
 
+# Round r8: the five spells (Siddharth 2026-11-10). Fire Orb = the Wizard fireball bigger; Boulder = heavy stone thud;
+# Storm Cloud = soft crackle + dark rolling rumble; Rage = swell like a drumbeat / heartbeat; Root Ward = creaky, woody.
+# "Yes" to 'all clearly stronger than tower shots' is read by the agent as: yes, spells are bigger than tower sounds.
+HZ8 = 8000
+
+
+def _pkg8(fn_):
+    def fn(seed):
+        r = S.rng(seed)
+        return S.normalise(S.room(fn_(r), 0.25, 0.08), -5.0, -21.0, -3.0)
+    return fn
+
+
+def fire_orb(r):
+    launch = wiz4_launch(5500, 0.35, 0.6, 7500, 0.8)(r)
+    hit = wiz4_hit(7500, 0.9, 0.5, 0.8)(r)
+    big = S.thud(0.7, 210, 100, 0.18, r, grit=0.1)
+    return S.mix((launch, 0, 1.0), (hit, 1.0, 1.3), (_open(big, HZ8), 1.0, 0.7))
+
+
+def boulder(r):
+    fall = S.sweep_bp(S.noise(0.5, r, "white"), S.curve([(0, 2500), (0.5, 600)], 0.5), 1.0) * S.curve([(0, 0.0), (0.45, 1.0), (0.5, 0.0)], 0.5, log=False)
+    thud = S.thud(0.7, 200, 100, 0.2, r, grit=0.15)
+    stone = S.modal(190, 0.3, "stone", r, hardness=0.35, nmodes=5)
+    dust = S.sweep_lp(S.noise(0.7, r, "pink"), S.curve([(0, 6000), (0.2, 2000), (0.7, 500)], 0.7)) * S.exp_env(0.7, 0.2, 0.003)
+    rumble = S.lp(S.noise(1.0, r, "pink"), 450) * S.exp_env(1.0, 0.35, 0.01)
+    return S.mix((_open(S.pk(fall), HZ8), 0, 0.5), (_open(thud, HZ8), 0.5, 0.8), (_open(S.modal(300, 0.25, "stone", r, hardness=0.4, nmodes=5), HZ8), 0.5, 0.9),
+                 (_open(stone, HZ8), 0.5, 0.6), (_open(S.pk(dust), HZ8), 0.5, 1.6), (_open(S.pk(rumble), 2000), 0.5, 0.4))
+
+
+def storm_cloud(r):
+    secs = 2.0
+    rum = S.lp(S.noise(secs, r, "pink"), 500)
+    am = 0.6 + 0.4 * S.lp(r.standard_normal(S.n_of(secs)), 3, 1) * 4
+    env = S.curve([(0, 0.05), (0.5, 1.0), (1.6, 0.9), (secs, 0.05)], secs, log=False)
+    body = S.pk(rum) * np.clip(am, 0.2, 1.2) * env
+    mid = S.sweep_lp(S.noise(secs, r, "pink"), S.curve([(0, 1800), (1.0, 2600), (secs, 1400)], secs)) * env * 0.8
+    out = [(_open(S.pk(body), 2500), 0, 1.0), (_open(S.pk(mid), 3000), 0, 1.0)]
+    for at, g in ((0.7, 1.6), (1.05, 1.4), (1.4, 1.2)):  # three chained soft strikes
+        cr = S.lp(S.crackle(0.18, r, 90, 3000), 5500) * S.exp_env(0.18, 0.05, 0.001)
+        tk = S.thud(0.1, 240, 130, 0.04, r, grit=0.0)
+        out += [(_open(S.pk(cr), HZ8), at, g), (_open(tk, HZ8), at, 0.5)]
+    return S.mix(*out)
+
+
+def rage(r):
+    beats = []
+    for k in range(4):  # lub-dub x4, each pair louder and a little higher: a swelling heartbeat
+        t0 = k * 0.42
+        g = 0.45 + 0.2 * k
+        f0 = 230 + 18 * k
+        beats.append((_open(S.thud(0.22, f0, 120, 0.07, r, grit=0.05), HZ8), t0, g))
+        beats.append((_open(S.thud(0.22, f0 * 0.92, 112, 0.07, r, grit=0.05), HZ8), t0 + 0.17, g * 0.75))
+        beats.append((_open(S.modal(420, 0.1, "wood", r, hardness=0.35, nmodes=3), HZ8), t0, g * 0.7))
+        beats.append((_open(S.modal(380, 0.1, "wood", r, hardness=0.3, nmodes=3), HZ8), t0 + 0.17, g * 0.5))
+    secs = 1.9
+    sw = S.sweep_lp(S.noise(secs, r, "pink"), S.curve([(0, 1200), (secs, 5000)], secs)) * S.curve([(0, 0.05), (1.6, 1.0), (secs, 0.05)], secs, log=False)
+    return S.mix(*beats, (_open(S.pk(sw), HZ8), 0, 1.0))
+
+
+def root_ward(r):
+    secs = 1.6
+    out = []
+    for at, f0, f1, g in ((0.0, 520, 840, 1.0), (0.45, 640, 420, 0.9), (0.9, 480, 760, 1.0)):  # three woody creaks
+        n = S.noise(0.5, r, "white")
+        c = S.sweep_bp(n, S.curve([(0, f0), (0.5, f1)], 0.5), 9.0)
+        c = S.flutter(c, r, 0.5, 22.0) * S.curve([(0, 0.0), (0.12, 1.0), (0.4, 0.8), (0.5, 0.0)], 0.5, log=False)
+        out.append((_open(S.pk(c), HZ8), at, g))
+        out.append((_open(S.modal(f1 * 0.9, 0.12, "wood", r, hardness=0.3, nmodes=3), HZ8), at + 0.38, 0.6))
+    leaf = S.sweep_bp(S.noise(secs, r, "white"), S.curve([(0, 1800), (secs, 2600)], secs), 0.8) * S.exp_env(secs, 0.6, 0.2) * 0.2
+    out.append((_open(leaf, HZ8), 0, 1.0))
+    return S.mix(*out)
+
+
+ROUNDS_R8 = {"fire_orb": _pkg8(fire_orb), "boulder": _pkg8(boulder), "storm_cloud": _pkg8(storm_cloud),
+             "rage": _pkg8(rage), "root_ward": _pkg8(root_ward)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
