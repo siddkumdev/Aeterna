@@ -258,7 +258,7 @@ def xbow_thup(r):  # a soft pierce: short muted pat, not a tick
 def xbow_pkg(shot):
     def fn(seed):
         r = S.rng(seed)
-        x = S.mix((shot(r), 0, 1.0), (xbow_thup(r), 0.4, 0.6), (xbow_thup(r), 0.52, 0.5), (xbow_thup(r), 0.64, 0.45))
+        x = S.mix((shot(r), 0, 1.0), (xbow_thup(r), 0.4, 0.6))  # one pierce sound only (Siddharth 2026-11-10: option 2)
         return S.normalise(S.room(x, 0.2, 0.07), -5.0, -21.0, -3.0)
     return fn
 
