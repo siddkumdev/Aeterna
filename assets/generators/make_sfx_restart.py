@@ -522,9 +522,62 @@ def fire_orb12(r):
 
 ROUNDS_R12 = {"fire_orb_real": _pkg9(fire_orb12)}
 
+# Round r13: rewards and UI (Siddharth 2026-11-10): reward 'plink' = wooden marimba pluck; hand sounds (pinch, grab, release, hover) =
+# soft cloth and paper rustles; 'not allowed' = soft low wooden 'bop'; reward chains climb a scale in the game's key (C major /
+# pentatonic: the game does the stepping, so each reward is delivered as one clean note or a short rising pair).
+def _ui(x, hz=7000, wet=0.06):
+    x = S.remove_dc(S.hp(x, 90))
+    x = S.lp(x, hz)
+    x = S.fade(S.trim_silence(x, -55), 0.001, 0.04)
+    return S.normalise(S.room(x, 0.15, wet), -5.0, -22.0, -3.0)
+
+
+def coin_a(seed):  # synthesised marimba bar, two notes rising (C5, G5)
+    r = S.rng(seed)
+    n1 = S.marimba(523.25, 0.55, hard=0.15)
+    n2 = S.marimba(784.0, 0.6, hard=0.15)
+    return _ui(S.mix((n1, 0, 0.8), (n2, 0.1, 1.0)))
+
+
+def coin_b(seed):  # real recorded wooden notes, same two notes
+    r = S.rng(seed)
+    a = MA.tuned("C5", r, ("wood_notes",), seconds=0.6)
+    b = MA.tuned("G5", r, ("wood_notes",), seconds=0.65)
+    return _ui(S.mix((a, 0, 0.8), (b, 0.1, 1.0)), 6500)
+
+
+def coin_c(seed):  # real wooden notes with a soft low body underneath: rounder
+    r = S.rng(seed)
+    a = MA.tuned("C5", r, ("wood_notes",), seconds=0.6)
+    b = MA.tuned("G5", r, ("wood_notes",), seconds=0.65)
+    lo = S.marimba(261.6, 0.5, hard=0.1)
+    lo2 = S.marimba(392.0, 0.55, hard=0.1)
+    return _ui(S.mix((a, 0, 0.7), (b, 0.1, 0.9), (lo, 0, 0.5), (lo2, 0.1, 0.5)), 6500)
+
+
+def pinch_cloth(seed):  # a soft cloth rustle, very short
+    r = S.rng(seed)
+    return _ui(_pick("cloth", "cloth_02.wav", 1.3, 0.12, 5500, 200), 5500, 0.03)
+
+
+def pinch_paper(seed):  # a soft paper flip, very short
+    r = S.rng(seed)
+    return _ui(_pick("cards", "cards_04.wav", 1.2, 0.13, 5000, 200), 5000, 0.03)
+
+
+def bad_bop(seed):  # a soft low wooden 'bop': dull and friendly
+    r = S.rng(seed)
+    wood = S.modal(340, 0.16, "wood", r, hardness=0.2, nmodes=4)
+    low = S.thud(0.2, 220, 140, 0.06, r, grit=0.0)
+    puff = S.lp(S.noise(0.1, r, "white"), 3500) * S.exp_env(0.1, 0.03, 0.002)
+    return _ui(S.mix((wood, 0, 0.9), (low, 0, 0.5), (S.pk(puff), 0, 0.9)), 5000, 0.04)
+
+
+ROUNDS_R13 = {"coin_a": coin_a, "coin_b": coin_b, "coin_c": coin_c, "pinch_cloth": pinch_cloth, "pinch_paper": pinch_paper, "bad_bop": bad_bop}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
