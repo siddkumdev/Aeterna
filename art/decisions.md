@@ -305,3 +305,4 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - 2026-11-10 (Siddharth): Wizard Tower voice = r4 `wiz_a` (the softer fireball_2). Round 5 builds Longbow (wood thwip + ticks), Guard Tower (clop + dull thud), Airship (cannon thoomp + landing thump) matched to it; awaiting his reaction.
 - 2026-11-10 (Siddharth, round 5): Guard Tower and Airship cannon OK ("ok ig"); Longbow rejected ("doesnt sound like a bow", "so random"); he chose it should sound like a CROSSBOW (tight thunk release, bolt whoosh, soft thup per pierce). Round 6 (3 choices) sent; awaiting his pick.
 - 2026-11-10 (Siddharth): crossbow pierce = ONE soft thup (first enemy hit only), later pierces silent. Round 6 files regenerated with a single thup; shot pick pending.
+- 2026-11-10 (Siddharth, round 6 blind): picked crossbow_1 (= xbow_a) but "a little dull". Round 7: three less-dull variations (centroid 1.1 kHz -> 1.4-1.6 kHz); pick pending.

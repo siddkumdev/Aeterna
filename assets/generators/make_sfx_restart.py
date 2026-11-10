@@ -239,13 +239,14 @@ ROUNDS_R5 = {"longbow": longbow_pkg, "guard": guard_pkg, "airship": cannon_pkg}
 # Round r6: Longbow Tower rebuilt as a CROSSBOW (Siddharth 2026-11-10: round 5 "doesn't sound like a bow, sounds so random";
 # chose crossbow: a short tight 'thunk' of the release, one quick bolt whoosh, a soft 'thup' per pierced enemy).
 # One coherent event instead of knock + unrelated swish: thunk, string snap and whoosh start together.
-def xbow_shot(thunk_hz, snap, snap_hi, whoosh_g, body):
+def xbow_shot(thunk_hz, snap, snap_hi, whoosh_g, body, hz=HZ5, click=0.0, wh_hi=3200):
     def fn(r):
         thunk = S.modal(thunk_hz, 0.14, "wood", r, hardness=0.3, nmodes=4)
         low = S.thud(0.12, 210, 130, 0.05, r, grit=0.0)
         sn = S.bp(S.noise(0.06, r, "white"), 1800, snap_hi) * S.exp_env(0.06, 0.012, 0.0008)
-        wh = S.sweep_bp(S.noise(0.2, r, "white"), S.curve([(0, 3200), (0.2, 1400)], 0.2), 1.2) * S.exp_env(0.2, 0.06, 0.004)
-        return _open(S.mix((thunk, 0, 0.9), (low, 0, body), (S.pk(sn), 0, snap), (S.pk(wh), 0.015, whoosh_g)), HZ5)
+        wh = S.sweep_bp(S.noise(0.2, r, "white"), S.curve([(0, wh_hi), (0.2, 1400)], 0.2), 1.2) * S.exp_env(0.2, 0.06, 0.004)
+        ck = S.modal(900, 0.04, "wood", r, hardness=0.5, nmodes=2)
+        return _open(S.mix((thunk, 0, 0.9), (low, 0, body), (S.pk(sn), 0, snap), (S.pk(wh), 0.015, whoosh_g), (ck, 0, click)), hz)
     return fn
 
 
@@ -267,9 +268,14 @@ ROUNDS_R6 = {"xbow_a": xbow_pkg(xbow_shot(480, 0.9, 5000, 0.8, 0.4)),
              "xbow_b": xbow_pkg(xbow_shot(430, 0.9, 5500, 0.6, 0.5)),
              "xbow_c": xbow_pkg(xbow_shot(400, 0.7, 4000, 0.6, 0.7))}
 
+# Round r7: he picked crossbow_1 (= xbow_a) but "a little dull": three less-dull variations of it (more top end, crisper snap).
+ROUNDS_R7 = {"xbow_a1": xbow_pkg(xbow_shot(480, 1.3, 6500, 0.9, 0.4, 9000, 0.0, 4200)),
+             "xbow_a2": xbow_pkg(xbow_shot(560, 1.0, 6000, 1.0, 0.25, 8500, 0.0, 4500)),
+             "xbow_a3": xbow_pkg(xbow_shot(480, 1.1, 6000, 0.9, 0.35, 9000, 0.45, 4200))}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
