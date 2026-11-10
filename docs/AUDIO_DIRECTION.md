@@ -99,3 +99,7 @@ Answers to the first taste questions, kept in his words. Nothing here is a techn
 - Airship: like the cannon sounds in Clash Royale.
 - Spells: defined, distinct sounds, NOT small.
 - Hit sound does not change between normal and boss enemies (the tower decides). Confirmed.
+
+## Restart round results
+- 2026-11-10 round 1 (tower placing), blind pick by Siddharth: choice 2 = `tap_b` (a hollow wooden box with a warm low knock), recipe in assets/generators/make_sfx_restart.py. Not yet in the game.
+- 2026-11-10 round 2 (Wizard Tower launch + hit, 3 choices) sent; awaiting his pick.
