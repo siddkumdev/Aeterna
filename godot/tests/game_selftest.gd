@@ -692,7 +692,7 @@ func _requests() -> void:
 	check("the prop follows the hand", bird.prop.global_position.distance_to(hand.global_position) < 0.001)
 	var before := g.faith
 	g.hand_released(hand)
-	check("letting go far enough finishes it", bird.done and g.faith == before + 10)
+	check("letting go far enough finishes it", bird.done and g.faith == before + GameConfig.REQUESTS["chimney"]["reward"])
 	hand.global_position = g.board.global_position + Vector3(0, 0.3, 0)
 	g.hand_pressed(hand)
 	check("a pinch away from every prop grabs nothing", g._held_req == null)
