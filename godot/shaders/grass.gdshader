@@ -81,6 +81,7 @@ void fragment() {
 	vec3 c = mix(root_col, mid_col, smoothstep(0.0, 0.5, h));  // dark root, saturated middle, bright tip: layered foliage
 	c = mix(c, tip, smoothstep(0.45, 1.0, h));
 	c *= 0.84 + 0.3 * tone;  // each clump a little lighter or darker
+	c *= mix(0.58, 1.0, smoothstep(0.0, 0.38, h));  // contact shadow: the roots are dark where they meet the ground
 	c = mix(c, mix(tip_col, dry_col, 0.3) * 1.08, patch * 0.7);  // sunlit lighter patches
 	ALBEDO = mix(c, gust_col, gtint * (0.35 + 0.65 * h));
 	ROUGHNESS = 1.0;

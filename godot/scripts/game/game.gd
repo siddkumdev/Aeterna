@@ -81,6 +81,10 @@ var _held_req: HelpRequest  # the request prop being moved
 var _held_req_hand: GameHand  # the hand holding it, or null for the mouse
 var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
 
+var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
+var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
+var _held_card: Card3D  # the card in a hand (or on the mouse hand)
+var _held_card_hand: GameHand
 var _lens: Node3D  # the Crystal Lens model (spec 13)
 var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
 var _lens_grip := Vector3.ZERO  # the grip anchor in the lens model's own space
@@ -524,6 +528,25 @@ func _faith_sparkle(at: Vector3) -> void:
 
 
 func _update_held() -> void:
+	if _held_card and _held_card_hand:
+		# the card rides in the hand, face toward the eyes; over the board a tower shows its ghost and range ring
+		# on the cell under the card, a spell its aim
+		var hp := _held_card_hand.global_position
+		_held_card.global_position = hp + Vector3(0, 0.05, 0.02)  # a little above the fingers, so the ghost under it stays visible
+		_held_card.face_toward(_eye())
+		var local := board.to_local(hp)
+		var inside := absf(local.x) <= HALF and absf(local.z) <= HALF
+		if _held_card.data.get("kind", "") == "tower":
+			_hover_cell = Vector2i(-1, -1)
+			if inside:
+				_hover_cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
+					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
+			_update_ghost()
+		elif inside:
+			var b: Dictionary = GameConfig.SPELLS["boulder"]
+			spells.show_aim(_held_card.data["id"], local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+		else:
+			spells.hide_aim()
 	if _held_spell != "" and _held_spell_hand:
 		var local := board.to_local(_held_spell_hand.global_position)
 		var b: Dictionary = GameConfig.SPELLS["boulder"]
@@ -1188,7 +1211,9 @@ func _process(delta: float) -> void:
 	_update_held()
 	for h in _hands:
 		h.set_bubble_hot(grabbable_near(h.global_position))
-	if _xr:
+	if _held_card:
+		pass  # a card in hand decides the cell (_update_held); the pointer must not overwrite it
+	elif _xr:
 		if _active_hand:
 			_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
 	elif _camera:
@@ -1271,6 +1296,11 @@ func _build_ui() -> void:
 		ui.add_child(_hourglass)
 	_build_close_signs(ui)
 	_build_spell_tokens(ui, x0, w, gap)
+	if with_rig:
+		_tray = CardTray.new()
+		_tray.name = "CardTray"
+		_tray.position = Vector3(0, 0.0, HALF + 0.12)
+		ui.add_child(_tray)
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
 
@@ -1340,6 +1370,10 @@ func lens_grip_position() -> Vector3:
 func hand_pressed(h: GameHand) -> void:
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
+	if _tray and _held_card == null:
+		var cd := _tray.card_near(h.global_position, reach(GameConfig.TOUCH_REACH * 1.6))
+		if cd and _grab_card(cd, h):
+			return
 	if not placing():
 		if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
 			_lens_hand = h
@@ -1356,7 +1390,67 @@ func hand_pressed(h: GameHand) -> void:
 	_press(h.ray_origin(), h.ray_dir())
 
 
+func _grab_card(cd: Card3D, h: GameHand) -> bool:
+	## Returns true when the pinch was used on this card (even if it could not be taken, so it never also presses
+	## something behind it).
+	var id: String = cd.data.get("id", "")
+	match cd.data.get("kind", ""):
+		"tower":
+			if phase != Phase.DAY:
+				return true
+			if faith < GameConfig.TOWERS[id]["cost"] or at_max(id):
+				snd("invalid")
+				last_message = "Not enough faith for a %s." % GameConfig.TOWERS[id]["name"] if faith < GameConfig.TOWERS[id]["cost"] \
+					else "You already have the most %s towers the island holds." % GameConfig.TOWERS[id]["name"]
+				_refresh_ui()
+				return true
+			select(id)
+		"spell":
+			if phase != Phase.NIGHT:
+				return true
+			if not spells.is_ready(id):
+				snd("invalid")
+				last_message = "%s is still cooling down (%d s)." % [GameConfig.SPELLS[id]["name"], ceili(spells.cooldown[id])]
+				_refresh_ui()
+				return true
+		_:
+			# an ability offer: picking it up is choosing it
+			choose_card(_tray.cards.find(cd))
+			return true
+	snd("pinch")
+	_held_card = cd
+	_held_card_hand = h
+	cd.lift(_eye())
+	return true
+
+
+func _eye() -> Vector3:
+	var cam: Camera3D = _xr_cam if _xr and _xr_cam else _camera
+	return cam.global_position if cam else Vector3(0, 1.4, 0.6)
+
+
 func hand_released(h: GameHand) -> void:
+	if _held_card and _held_card_hand == h:
+		var cd := _held_card
+		var id: String = cd.data.get("id", "")
+		var local := board.to_local(h.global_position)
+		_held_card = null
+		_held_card_hand = null
+		spells.hide_aim()
+		if cd.data.get("kind", "") == "tower":
+			var cell := Vector2i(-1, -1)
+			if absf(local.x) <= HALF and absf(local.z) <= HALF:
+				cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
+					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
+			if cell.x >= 0 and try_build(id, cell):
+				pass
+			else:
+				select("")
+		elif absf(local.x) <= HALF and absf(local.z) <= HALF:
+			var b: Dictionary = GameConfig.SPELLS["boulder"]
+			cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+		cd.release_to_home()
+		return
 	if _held_spell != "" and _held_spell_hand == h:
 		var id := _held_spell
 		var local := board.to_local(h.global_position)
@@ -1507,9 +1601,49 @@ func _refresh_buttons() -> void:
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == id:
 					c = Color8(0xF0, 0xB0, 0x4A)
+		if _tray and (GameConfig.TOWER_ORDER.has(id) or id.begins_with("spell_") or id.begins_with("card")):
+			b["node"].visible = false  # the physical cards take these signs' place
 		if b["hover"]:
 			c = c.lightened(0.25)
 		b["mat"].albedo_color = c
+	if _tray:
+		for sid in spells.tokens:
+			spells.tokens[sid].visible = false  # a spell is a card now, not a token on the table
+		_refresh_tray()
+
+
+func _refresh_tray() -> void:
+	## Tower cards by day, spell cards at night, the ability offers after a loop. The tray is rebuilt only when what
+	## it shows changes; otherwise each card just lights or dims (can you use it now?).
+	var key := ""
+	var list: Array[Dictionary] = []
+	match phase:
+		Phase.DAY:
+			key = "day"
+			for id: String in GameConfig.TOWER_ORDER:
+				list.append(CardData.tower(id))
+		Phase.NIGHT:
+			key = "night"
+			for id: String in GameConfig.SPELL_ORDER:
+				list.append(CardData.spell(id))
+		Phase.CARDS:
+			key = "offers%d_%s" % [loop, str(offers)]
+			for o in offers:
+				list.append(CardData.ability(o["id"], o["rarity"]))
+	if key != _tray_key:
+		_tray_key = key
+		_held_card = null
+		_held_card_hand = null
+		_tray.set_cards(list)
+	for c in _tray.cards:
+		var id: String = c.data.get("id", "")
+		match c.data.get("kind", ""):
+			"tower":
+				c.set_glow(faith >= GameConfig.TOWERS[id]["cost"] and not at_max(id))
+			"spell":
+				c.set_glow(spells.is_ready(id))
+			_:
+				c.set_glow(true)
 
 
 # ---------------------------------------------------------------- world, light, rig

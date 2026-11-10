@@ -125,7 +125,7 @@ func _make(nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: i
 	inst.multimesh = _mm
 	inst.material_override = _mat
 	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	inst.position.y = 0.0006  # a hair above the island so the roots never z-fight with the ground
+	inst.position.y = -0.0015  # roots 1.5 mm INTO the ground (the grass is a flat slab at y = 0): seated, never floating
 	add_child(inst)
 	flowers = FlowerField.build(self, nav, tiles, props, rng_seed)
 

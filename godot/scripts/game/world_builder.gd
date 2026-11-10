@@ -13,7 +13,10 @@ const CLUMPS: Array[String] = [
 	"res://assets/world/ew_world_forest_clump_low_v02.glb",
 ]
 const LOW_CLUMP := "res://assets/world/ew_world_forest_clump_low_v02.glb"
-const ISLAND_HEIGHT := 0.115  # measured: the island's top surface is 0.115 m above its base
+# The grass top is 0.09 m above the island's base (make_island.py HEIGHT; ray casts in tools/grass_surface.gd confirm it).
+# This was 0.115 until 2026-11-10: that was the height of the tallest baked tuft or stone, so the whole island sat 2.5 cm
+# too deep and the grass, houses and props floated above the ground. y = 0 on the board is now the grass itself.
+const ISLAND_HEIGHT := 0.09
 const ISLAND_CELLS := 12  # the approved island v01 is built for 12 x 12 cells (0.6 m)
 
 

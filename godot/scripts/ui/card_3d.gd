@@ -146,8 +146,7 @@ func face_toward(eye: Vector3) -> void:
 	var to_eye := eye - global_position
 	if to_eye.length() < 0.01:
 		return
-	look_at(global_position - to_eye, Vector3.UP)  # a Node3D's front is +Z; look_at points -Z, so aim away
-	rotate_object_local(Vector3.UP, PI)
+	look_at(global_position - to_eye, Vector3.UP)  # the face is on +Z; look_at points -Z, so aim away from the eye
 
 
 func release_to_home(duration := 0.25) -> void:
