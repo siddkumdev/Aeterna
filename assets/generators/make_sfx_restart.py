@@ -350,9 +350,70 @@ def root_ward(r):
 ROUNDS_R8 = {"fire_orb": _pkg8(fire_orb), "boulder": _pkg8(boulder), "storm_cloud": _pkg8(storm_cloud),
              "rage": _pkg8(rage), "root_ward": _pkg8(root_ward)}
 
+# Round r9: spells rebuilt on REAL RECORDINGS (Siddharth 2026-11-10: rejected the synthesised Boulder, Storm Cloud, Rage and Root
+# Ward as "not what they are supposed to be"; chose "real recordings as the base"). Grains come from assets/audio_src/grains
+# (cut and credited by the existing pipeline); code only cuts, pitches, filters and layers them. Fire Orb stays as r8.
+sys.path.insert(0, HERE)
+import make_audio as MA  # noqa: E402
+
+
+def _g(kit, r, pitch=1.0, seconds=None, lpf=8000, hpf=90):
+    x = MA.grain(kit, r, pitch, 0.05, seconds)
+    return S.fade(S.lp(S.hp(x, hpf), lpf), 0.002, 0.03)
+
+
+def boulder9(r):
+    stone = [(_g("stone", r, 0.62, lpf=5000), 0.0, 1.0), (_g("stone", r, 0.75, lpf=5000), 0.015, 0.8)]
+    thump = (_g("cannon", r, 0.9, seconds=0.5, lpf=2500), 0.0, 1.2)
+    rumble = (_g("thunder", r, 1.0, seconds=1.2, lpf=1200), 0.02, 0.45)
+    dust = (_g("dirt", r, 1.0, seconds=0.5, lpf=3500, hpf=300), 0.03, 0.5)
+    fall = (S.sweep_bp(S.noise(0.45, r, "white"), S.curve([(0, 2200), (0.45, 700)], 0.45), 1.0)
+            * S.curve([(0, 0.0), (0.42, 1.0), (0.45, 0.0)], 0.45, log=False) * 0.25, 0.0, 1.0)
+    return S.mix(fall, *[(a, b + 0.45, c) for a, b, c in stone + [thump, rumble, dust]])
+
+
+def storm9(r):
+    secs = 2.4
+    base = _g("thunder", r, 1.15, seconds=secs, lpf=2200, hpf=160)
+    base = S.pk(base) * S.curve([(0, 0.1), (0.7, 1.0), (1.9, 0.9), (secs, 0.05)], secs, log=False) * 2.0
+    out = [(base, 0, 1.0)]
+    for at, g in ((0.8, 1.2), (1.2, 1.0), (1.6, 0.9)):
+        out.append((_g("crackle", r, 1.0 + 0.1 * at, seconds=0.25, lpf=4200, hpf=300), at, g * 0.6))
+    return S.mix(*out)
+
+
+def rage9(r):
+    out = []
+    for k in range(4):
+        t0 = k * 0.45
+        g = 0.5 + 0.18 * k
+        out.append((_g("drum", r, 1.25 + 0.03 * k, seconds=0.35, lpf=6000), t0, g * 0.7))
+        out.append((_g("drum", r, 1.1 + 0.03 * k, seconds=0.35, lpf=6000), t0 + 0.18, g * 0.5))
+        out.append((_g("wood_knock", r, 1.6, seconds=0.2, lpf=4500), t0, g * 1.0))
+        out.append((_g("wood_knock", r, 1.4, seconds=0.2, lpf=4500), t0 + 0.18, g * 0.7))
+    return S.mix(*out)
+
+
+def root9(r):
+    out = [(_g("creak", r, 1.0, seconds=1.4, lpf=3500, hpf=150), 0.0, 1.0), (_g("creak", r, 0.85, seconds=1.4, lpf=3500, hpf=150), 0.5, 0.8)]
+    out.append((_g("wood_knock", r, 1.0, seconds=0.2, lpf=3500), 0.7, 0.4))
+    out.append((_g("leaves", r, 1.0, seconds=1.5, lpf=3500, hpf=200), 0.1, 0.35))
+    return S.mix(*out)
+
+
+def _pkg9(fn_):
+    def fn(seed):
+        r = S.rng(seed)
+        np.random.seed(seed)
+        return S.normalise(S.room(fn_(r), 0.25, 0.08), -5.0, -21.0, -3.0)
+    return fn
+
+
+ROUNDS_R9 = {"boulder": _pkg9(boulder9), "storm_cloud": _pkg9(storm9), "rage": _pkg9(rage9), "root_ward": _pkg9(root9)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
