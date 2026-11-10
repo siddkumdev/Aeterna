@@ -157,6 +157,7 @@ func _ready() -> void:
 	decor_cells = dressing["decor"]
 	_path_tiles = dressing["tiles"]
 	_prop_points = dressing["props"]
+	_setup_shrine(dressing["shrine"])
 	_build_ghost()
 	spells = Spells.new()
 	spells.name = "Spells"
@@ -231,7 +232,9 @@ func _start_loop(message: String) -> void:
 	faith = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
 	night = 0
 	closed_spawn = ""
+	_helped = 0
 	_set_phase(Phase.DAY, message)
+	_update_shrine()
 	select("")  # a new run starts with nothing picked: no sell ring left on the empty ground
 	if with_rig:
 		say_at_shrine(StoryText.prayer(loop, 0))  # Maren's first prayer of the loop
@@ -577,6 +580,8 @@ func release_request() -> bool:
 	snd("help_done")
 	snd("trust_chime")
 	faith += r.reward
+	_helped += 1
+	_update_shrine()
 	if with_rig:
 		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
 	last_message = "%s: thank you! +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
@@ -720,12 +725,25 @@ func _play_hourglass() -> void:
 	if _hourglass == null or not is_inside_tree():
 		return
 	_hourglass.visible = true
-	_hourglass.position = Vector3(0, 0.05, 0)
+	_hourglass.position = Vector3(0, 0.11, 0)  # rises from the shrine (its __rewind_anchor)
 	_hourglass.rotation = Vector3.ZERO
+	var top: Node3D = _hourglass.find_child("*__sand_top", true, false)
+	var bottom: Node3D = _hourglass.find_child("*__sand_bottom", true, false)
+	if top:
+		top.scale.y = 1.0
+	if bottom:
+		bottom.scale.y = 0.12
+	var gold := Color("FFD45A")  # fire_yellow
+	var amber := Color("F6A45D")  # lantern_glow
+	VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 36, 0.12, 1.1, 0.006, 0.02)  # embers rise as it wakes
 	var tw := create_tween()
 	tw.tween_property(_hourglass, "position:y", 0.3, 0.8).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_hourglass, "rotation:z", PI, 0.9).set_trans(Tween.TRANS_BACK)
-	tw.tween_interval(0.4)
+	if top and bottom:  # once flipped, the sand runs upward: the "top" bulb (now below) empties into the other
+		tw.tween_property(top, "scale:y", 0.08, 1.3)
+		tw.parallel().tween_property(bottom, "scale:y", 1.0, 1.3)
+	tw.tween_callback(func(): VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 48, 0.16, 1.4, 0.007, 0.05))  # a warm burst as the day returns
+	tw.tween_interval(0.5)
 	tw.tween_callback(func(): _hourglass.visible = false)
 
 
@@ -1151,6 +1169,64 @@ func tap_villager(v: Villager) -> String:
 const SKOTOS := Color("9C3EB0")  # palette crystal_purple: the Warden's colour
 
 
+var shrine: Node3D  # the god's shrine at the centre of the island
+var _shrine_cracks: Node3D
+var _shrine_light: OmniLight3D
+var _shrine_flame: MeshInstance3D
+var _cakes: Array[MeshInstance3D] = []
+var _helped := 0  # kindnesses done in this loop: a honeycake appears at the shrine for each (up to 6)
+
+
+func _setup_shrine(node: Node3D) -> void:
+	## The candle flame, a warm light that follows your faith, and the cracks (one more shows each loop).
+	shrine = node
+	if shrine == null:
+		return
+	_shrine_cracks = shrine.find_child("*__cracks", true, false)
+	var candle: Node3D = shrine.find_child("*__candle_anchor", true, false)
+	if candle:
+		_shrine_flame = MeshInstance3D.new()  # a flame is Godot's job, never glowing geometry in the model
+		var fm := SphereMesh.new()
+		fm.radius = 0.0022
+		fm.height = 0.0075
+		_shrine_flame.mesh = fm
+		_shrine_flame.material_override = ModelUtil.flat_material(Color("FFD45A"), true)  # fire_yellow
+		candle.add_child(_shrine_flame)
+		_shrine_light = OmniLight3D.new()
+		_shrine_light.light_color = Color("F6A45D")  # lantern_glow
+		_shrine_light.omni_range = 0.22
+		_shrine_light.light_energy = 0.4
+		candle.add_child(_shrine_light)
+	_update_shrine()
+
+
+func _update_shrine() -> void:
+	## Cracks from loop 2 on; honeycakes for each kindness this loop; the light follows your faith.
+	if shrine == null:
+		return
+	if _shrine_cracks:
+		_shrine_cracks.visible = loop >= 1
+	if _shrine_light:
+		_shrine_light.light_energy = 0.25 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.9
+	var want := mini(_helped, 6)
+	var bowl: Node3D = shrine.find_child("*__offering_anchor", true, false)
+	if bowl == null:
+		return
+	while _cakes.size() < want:
+		var m := MeshInstance3D.new()
+		var cm := SphereMesh.new()
+		cm.radius = 0.0034
+		cm.height = 0.0045
+		m.mesh = cm
+		m.material_override = ModelUtil.flat_material(Color("C87428"))  # roof_orange: a honeycake
+		var k := _cakes.size()
+		m.position = Vector3(0.0045 * cos(k * 2.1), 0.0012 + 0.0026 * (k / 3), 0.0045 * sin(k * 2.1))
+		bowl.add_child(m)
+		_cakes.append(m)
+	while _cakes.size() > want:
+		_cakes.pop_back().queue_free()
+
+
 func _skotos_says(line: String) -> void:
 	## Skotos speaks: purple, in the message line and over the island (with the rig only).
 	if line == "" or not with_rig:
@@ -1416,7 +1492,7 @@ func _build_ui() -> void:
 		label.position = Vector3(0, 0, 0.0056)
 		node.add_child(label)
 		_buttons["card%d" % i] = {"node": node, "mat": mat, "label": label, "hover": false, "box": AABB(-bm.size / 2.0, bm.size)}
-	var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v01.glb")
+	var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v02.glb")
 	if hg:
 		_hourglass = hg.instantiate()
 		_hourglass.scale = Vector3.ONE * 2.0
@@ -1701,6 +1777,8 @@ func _refresh_hud() -> void:
 		t += "   |   x2"
 	_hud.text = t
 	_msg.text = last_message
+	if _shrine_light:
+		_shrine_light.light_energy = 0.25 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.9
 
 
 func _refresh_buttons() -> void:

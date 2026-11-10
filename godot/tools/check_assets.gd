@@ -91,7 +91,7 @@ func _check(cat: String, path: String) -> void:
 	if path.contains("ew_world_forest_clump"):
 		budget = 1200  # forest ring clumps (W22, ~1k each), same override as tools/validate_asset.py
 	if path.contains("ew_vfx_rewind_hourglass"):
-		budget = 1000  # rewind hourglass hero prop (X11, asset list <1k), same override as tools/validate_asset.py
+		budget = 2000  # rewind hourglass hero prop (v02, the user 2026-11-10), same override as tools/validate_asset.py
 	if path.contains("ew_world_island_underside"):
 		budget = 8500  # hanging rock + propulsion + crew (Siddharth picked F, 2026-10-30), same override as tools/validate_asset.py
 	elif path.contains("ew_world_island"):

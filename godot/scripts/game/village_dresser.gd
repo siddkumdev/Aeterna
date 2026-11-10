@@ -48,13 +48,30 @@ static func build(board: Node3D, rng_seed: int) -> Dictionary:
 	d._root.name = "Dressing"
 	board.add_child(d._root)
 	d._paths()
+	var shrine := d._shrine()
 	d._house_props()
 	d._landmarks()
 	var out: Array[Vector2i] = []
 	for c in d._nav.kind:
 		if d._nav.kind[c] == "decor":
 			out.append(c)
-	return {"decor": out, "tiles": d._tiles, "props": d._props, "landmarks": d._landmarks_at}
+	return {"decor": out, "tiles": d._tiles, "props": d._props, "landmarks": d._landmarks_at, "shrine": shrine}
+
+
+func _shrine() -> Node3D:
+	## The god's shrine stands on the plaza at the centre (the user, 2026-11-10; docs/STORY.md). It fills the four
+	## centre cells, which used to be the one open tower spot: they are "decor" now, so no tower can stand there.
+	var half := GameConfig.SIZE / 2.0
+	var n: Node3D = _scene(VILLAGE + "ew_village_shrine_v01.glb").instantiate()
+	n.name = "Shrine"
+	_root.add_child(n)
+	n.position = _to_local(Vector2(half, half)) + Vector3(0, EPS * 20.0, 0)  # the model's front looks south, at the player
+	for x in range(int(half) - 1, int(half) + 1):
+		for y in range(int(half) - 1, int(half) + 1):
+			_nav.kind[Vector2i(x, y)] = "decor"
+	_props.append(Vector2(half, half))
+	_landmarks_at["shrine"] = Vector2i(int(half) - 1, int(half) - 1)
+	return n
 
 
 func _scene(path: String) -> PackedScene:

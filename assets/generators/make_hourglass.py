@@ -176,7 +176,82 @@ def hg_F():
     return p
 
 
-VARIANTS = {"A": hg_A, "B": hg_B, "C": hg_C, "D": hg_D, "E": hg_E, "F": hg_F}
+# ------------------------------------------------------------------ v02 (2026-11-10, the user: "make the hourglass prettier")
+# The god's relic: gilded and carved, molten-gold sand (the same colour as the god's glow, no blue: blue is Foresight's),
+# an ember sigil (a small sun) at each end so it reads the same after the flip. 12 tris per twisted segment.
+EMBER, YELLOW = "fire_red", "fire_yellow"
+
+
+def sigil(z, r_out, face_y):
+    """A small sun medallion on the front (face_y = -1) or back (+1) of a cap: a gold ring, a red disc, a yellow core, 8 rays."""
+    y = face_y * r_out
+    p = [vp.nb(vp.tcyl("sig_ring", 0.0105, 0.0032, (0, y, z), GOLD, 8, 90, 0, 0)),
+         vp.nb(vp.tcyl("sig_disc", 0.0085, 0.0040, (0, y + face_y * 0.0003, z), EMBER, 8, 90, 0, 0)),
+         vp.nb(vp.tcyl("sig_core", 0.0042, 0.0048, (0, y + face_y * 0.0006, z), YELLOW, 6, 90, 0, 0))]
+    for k in range(8):
+        a = math.radians(45 * k)
+        p.append(vp.tbox("ray", (0.0020, 0.0030, 0.0058), (0.0125 * math.sin(a), y, z + 0.0125 * math.cos(a)), GOLD, 0, -60 * k, 0))
+    return p
+
+
+def twisted_post(x, y, ang, z0, h, col=GOLD, segs=6, w=0.0074, d=0.0034):
+    """A rope-twisted post: stacked thin boxes, each turned a little more than the one below."""
+    out = []
+    for i in range(segs):
+        z = z0 + (i + 0.5) * h / segs
+        out.append(vp.nb(vp.tbox("twist", (w, d, h / segs * 1.12), (x, y, z), col, 0, 0, ang + i * 38)))
+    return out
+
+
+def hg_G():
+    """Twisted gold posts: four rope-twisted posts, round moulded caps with a dark band, a sun sigil front and back on each cap."""
+    p = caps(0.047, Z0, GOLD, 12, DARK) + [vp.cyl("step", 0.051, 0.004, (0, 0, 0), GOLD, 12),
+                                           vp.cyl("step", 0.051, 0.004, (0, 0, Z0 * 2 + GH - 0.004), GOLD, 12)]
+    for a in (45, 135, 225, 315):
+        ar = math.radians(a)
+        p += twisted_post(0.040 * math.cos(ar), 0.040 * math.sin(ar), a, Z0, GH)
+        p.append(vp.nb(vp.cyl("finial", 0.0058, 0.008, (0.040 * math.cos(ar), 0.040 * math.sin(ar), Z0 * 2 + GH - 0.001), YELLOW, 6)))
+    for z in (0.030, 0.100):
+        r = glass_r(z) + 0.0015
+        p.append(lathe("band", [(r, z - 0.0025), (r + 0.0040, z - 0.0025), (r + 0.0040, z + 0.0025), (r, z + 0.0025), (r, z - 0.0025)],
+                       GOLD, 14, cap_bottom=False, cap_top=False))
+    p += sigil(Z0 + 0.0025, 0.0485, -1) + sigil(Z0 + 0.0025, 0.0485, 1)
+    p += sigil(Z0 + GH - 0.0025, 0.0485, -1) + sigil(Z0 + GH - 0.0025, 0.0485, 1)
+    return p
+
+
+def hg_H():
+    """Sun crown: wide stepped caps topped with a ring of pointed rays, two slim twisted posts, a sun sigil at each end."""
+    p = caps(0.046, Z0, GOLD, 14, DARK) + [vp.cyl("step", 0.050, 0.004, (0, 0, 0), GOLD, 14),
+                                           vp.cyl("step", 0.050, 0.004, (0, 0, Z0 * 2 + GH - 0.004), GOLD, 14)]
+    for a in (0, 180):
+        ar = math.radians(a)
+        p += twisted_post(0.043 * math.cos(ar), 0.043 * math.sin(ar), a, Z0, GH, GOLD, 9, 0.0092, 0.0046)
+    for k in range(10):  # rays on the top cap, and the same on the bottom so the flip looks the same
+        ar = math.radians(36 * k)
+        for z, tip in ((Z0 * 2 + GH, 1), (0.0, -1)):
+            p.append(vp.nb(vp.tcyl("crown", 0.0034, 0.011, (0.036 * math.cos(ar), 0.036 * math.sin(ar), z + tip * 0.0055),
+                                  YELLOW, 4, 0 if tip > 0 else 180, 0, 0)))
+    p += sigil(Z0 * 0.5, 0.0485, -1) + sigil(Z0 * 1.5 + GH, 0.0485, 1)
+    return p
+
+
+def hg_I():
+    """Leaf arches: three slim arched leaf-posts (a bowed bar with a leaf at each end), moulded caps, a small sun on each cap's front."""
+    p = caps(0.046, Z0, GOLD, 12, DARK)
+    for a in (90, 210, 330):
+        pts = [(0.039, Z0), (0.046, Z0 + 0.035), (0.048, Z0 + GH / 2), (0.046, Z0 + GH - 0.035), (0.039, Z0 + GH)]
+        for p1, p2 in zip(pts, pts[1:]):
+            p.append(bar("arch", p1, p2, a, 0.0062, 0.0046, GOLD))
+        ar = math.radians(a)
+        for z in (Z0 + 0.012, Z0 + GH - 0.012):
+            p.append(vp.nb(bc.blob("leaf", 0.0058, (0.0415 * math.cos(ar), 0.0415 * math.sin(ar), z), "leaf_light", 0, (0.8, 0.8, 1.5))))
+    p += sigil(Z0 * 0.5, 0.0475, -1) + sigil(Z0 * 1.5 + GH, 0.0475, -1)
+    return p
+
+
+VARIANTS = {"A": hg_A, "B": hg_B, "C": hg_C, "D": hg_D, "E": hg_E, "F": hg_F, "G": hg_G, "H": hg_H, "I": hg_I}
+V02 = ("G", "H", "I")  # these use molten-gold sand (the older variants keep crystal_blue)
 
 
 def tris(objs):
@@ -184,6 +259,8 @@ def tris(objs):
 
 
 def build(letter, ver="v01"):
+    global SAND
+    SAND = "shell_gold" if letter in V02 else "crystal_blue"
     bc.clear_scene()
     name = "ew_vfx_rewind_hourglass_%s" % ver
     frame = VARIANTS[letter]()

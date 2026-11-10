@@ -11,7 +11,7 @@ func _initialize() -> void:
 	for i in 5:
 		await process_frame
 	g.faith = 500
-	g.try_build("guard", Vector2i(11, 11))
+	g.try_build("guard", Vector2i(16, 11))
 	var gt: Tower = g.towers[0]
 	g.night = 2
 	g.start_night()

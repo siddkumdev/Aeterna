@@ -22,7 +22,7 @@ func _initialize() -> void:
 	root.add_child(cam)
 	cam.current = true
 	cam.fov = 35
-	for n in [["fire", Vector2i(6, 11), "grunt", Vector2i(7, 8), "wizard"], ["crossbow", Vector2i(11, 11), "grunt", Vector2i(11, 8), "archer"], ["airship", Vector2i(16, 11), "wisp", Vector2i(16, 9), "pilot"]]:
+	for n in [["fire", Vector2i(6, 11), "grunt", Vector2i(7, 8), "wizard"], ["crossbow", Vector2i(16, 11), "grunt", Vector2i(11, 8), "archer"], ["airship", Vector2i(16, 11), "wisp", Vector2i(16, 9), "pilot"]]:
 		for e in g.enemies.duplicate():
 			e.queue_free()
 		g.enemies.clear()

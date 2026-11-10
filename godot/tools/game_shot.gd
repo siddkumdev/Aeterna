@@ -11,7 +11,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.try_build("fire", Vector2i(11, 11))
+	g.try_build("fire", Vector2i(16, 11))
 	g.select("crossbow")
 	g.set_process(false)  # keep the mouse from moving the ghost
 	g._hover_cell = Vector2i(3, 9)
@@ -137,7 +137,7 @@ func _initialize() -> void:
 		g.night = 2
 		g._start_loop("Foresight, loop %d" % (lp + 1))
 		g.night = 2
-		g.try_build("fire", Vector2i(11, 11))
+		g.try_build("fire", Vector2i(16, 11))
 		g._lens.transform = g._lens_rest.translated(Vector3(0, 0.12, -0.03))
 		g.set_lens(true)
 		g._refresh_ui()

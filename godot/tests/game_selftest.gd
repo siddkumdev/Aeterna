@@ -181,7 +181,7 @@ func _nights() -> void:
 
 	# 2) A whole run (2 loops) by a bot that keeps building round the village and takes the first card offered.
 	g = await _make_game()
-	check("build costs faith", g.try_build("fire", Vector2i(11, 11)) and g.faith == GameConfig.START_FAITH - 60)
+	check("build costs faith", g.try_build("fire", Vector2i(16, 11)) and g.faith == GameConfig.START_FAITH - 60)
 	g.queue_free()
 	await process_frame
 	var run := await _run_bot(true, true)
@@ -200,7 +200,7 @@ func _nights() -> void:
 	var results := []
 	for spd in [1.0, 2.0, 10.0, 50.0]:
 		var gs := await _make_game()
-		gs.try_build("fire", Vector2i(11, 11))
+		gs.try_build("fire", Vector2i(16, 11))
 		gs.try_build("crossbow", Vector2i(9, 3))
 		gs.try_build("guard", Vector2i(3, 9))
 		gs.set_speed(spd)
@@ -226,7 +226,7 @@ func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
 	## round the village; takes the first card offered. Plays loop 1 only, or the whole run.
 	## Returns {"lost_on": night lost in loop 1 (7 = beat the boss), "loops", "phase", "log"}.
 	var g := await _make_game()
-	var spots: Array[Vector2i] = [Vector2i(11, 11), Vector2i(11, 4), Vector2i(5, 11), Vector2i(17, 11), Vector2i(11, 18),
+	var spots: Array[Vector2i] = [Vector2i(16, 11), Vector2i(11, 4), Vector2i(5, 11), Vector2i(17, 11), Vector2i(11, 18),
 		Vector2i(14, 5), Vector2i(8, 5), Vector2i(5, 15), Vector2i(17, 15), Vector2i(5, 7), Vector2i(17, 7), Vector2i(14, 17)]
 	var order := ["fire", "crossbow", "guard", "airship"]
 	var out := {"lost_on": 7, "loops": 1, "log": []}
@@ -298,7 +298,7 @@ func _cards() -> void:
 	check("Deep Pockets: +30 starting faith", g.faith == GameConfig.START_FAITH + 30)
 	check("Sturdy Homes Rare: houses 60 -> 90 HP", is_equal_approx(g.houses[0].max_hp, 90.0) and is_equal_approx(g.houses[0].hp, 90.0))
 	g.faith = 1000
-	g.try_build("fire", Vector2i(11, 11))
+	g.try_build("fire", Vector2i(16, 11))
 	g.try_build("guard", Vector2i(11, 4))
 	g.try_build("crossbow", Vector2i(5, 11))
 	var f: Tower = g.towers[0]
@@ -1161,7 +1161,7 @@ func _crews() -> void:
 	var g := await _make_game()
 	g.faith = 500
 	g.try_build("fire", Vector2i(5, 12))  # (6,12) now holds village props
-	g.try_build("crossbow", Vector2i(11, 12))
+	g.try_build("crossbow", Vector2i(11, 4))  # the centre (11,11) is the shrine now
 	g.try_build("airship", Vector2i(17, 12))  # (16,13) now holds a village prop
 	var kinds := g.towers.map(func(t): return t.crew.kind if t.crew else "")
 	check("every tower has its crew: wizard, archer, pilot", kinds == ["wizard", "archer", "pilot"])
@@ -1184,7 +1184,7 @@ func _guards() -> void:
 	var C := GameConfig.CELL
 	var g := await _make_game()
 	g.faith = 1000
-	g.try_build("guard", Vector2i(11, 11))
+	g.try_build("guard", Vector2i(16, 11))
 	var gt: Tower = g.towers[0]
 	check("a built Guard Tower has 3 Guards, each on its own free post touching the tower",
 		gt.guards.size() == 3 and gt.guards.map(func(x): return x.index).size() == 3 and _distinct_posts(gt))
@@ -1242,7 +1242,7 @@ func _guards() -> void:
 	g.cards = {"shield_wall": 2}
 	g.faith = 1000
 	g._start_loop("test")
-	g.try_build("guard", Vector2i(11, 11))
+	g.try_build("guard", Vector2i(16, 11))
 	gt = g.towers[0]
 	check("Shield Wall Legendary: +100% HP and Guards can hit flyers", is_equal_approx(gt.guard_hp, 60.0) and gt.guards_air)
 	_night_start(g)
@@ -1272,7 +1272,7 @@ func _guards() -> void:
 	g.cards = {"friendly_faces": 1}
 	g.faith = 1000
 	g._start_loop("test")
-	g.try_build("guard", Vector2i(11, 11))
+	g.try_build("guard", Vector2i(16, 11))
 	gt = g.towers[0]
 	check("Friendly Faces Rare: 4 Guards, replacements 25% faster", gt.max_guards == 4 and gt.guards.size() == 4 and is_equal_approx(gt.respawn, 8.0 / 1.25))
 	var gone := gt.guards[0]
@@ -1301,8 +1301,18 @@ func _decor() -> void:
 	var c: Vector2i = g.decor_cells[0]
 	var top_left := c  # a 2 x 2 tower whose top-left cell is the prop cell
 	check("a tower cannot be built on a village prop", not g.can_build("fire", top_left) and not g.try_build("fire", top_left))
-	check("props never sit in the open centre block", g.decor_cells.all(func(d): return not VillageDresser.CENTRE_BLOCK.has_point(d)))
-	check("the centre still takes a tower", g.can_build("fire", Vector2i(11, 11)))
+	var shrine_cells := [Vector2i(11, 11), Vector2i(12, 11), Vector2i(11, 12), Vector2i(12, 12)]
+	check("the shrine fills the four centre cells and no tower can stand there", shrine_cells.all(func(d): return g.decor_cells.has(d)) and not g.can_build("fire", Vector2i(11, 11)))
+	check("props never sit in the centre block outside the shrine", g.decor_cells.all(func(d): return not VillageDresser.CENTRE_BLOCK.has_point(d) or shrine_cells.has(d)))
+	check("the shrine stands on the plaza with its anchors", g.shrine != null and g.shrine.find_child("*__candle_anchor", true, false) != null and g.shrine.find_child("*__offering_anchor", true, false) != null)
+	check("no cracks in loop 1, cracks from loop 2", not g._shrine_cracks.visible)
+	g.loop = 1
+	g._update_shrine()
+	check("the shrine shows its cracks in loop 2", g._shrine_cracks.visible)
+	g._helped = 3
+	g._update_shrine()
+	check("a honeycake for each kindness", g._cakes.size() == 3)
+	check("the centre still takes a tower", g.can_build("fire", Vector2i(16, 11)))
 	# enemies walk through props: the route does not treat a prop cell as solid
 	check("props are not solid for the pathfinder", not g.nav.astar.is_point_solid(c))
 	g._start_loop("again")
@@ -1330,7 +1340,7 @@ func _grass() -> void:
 	check("tufts under a tower are hidden (%d tufts sit on its 4 cells)" % under, under > 0 and fp.all(func(c): return g.grass._hidden.has(c)) and g.grass._hidden.size() == 4)
 	g.sell(g.towers[0])
 	check("and they come back when the tower is sold", g.grass._hidden.is_empty())
-	g.try_build("crossbow", Vector2i(11, 12))
+	g.try_build("crossbow", Vector2i(11, 4))  # the centre (11,11) is the shrine now
 	g.start_night()
 	g._spawn_queue.clear()
 	_still(g, "grunt", _at(11, 9))

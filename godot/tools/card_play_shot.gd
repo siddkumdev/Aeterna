@@ -27,7 +27,7 @@ func _initialize() -> void:
 	h.global_position = card.global_position
 	g.hand_pressed(h)
 	print("CARDPLAY held: ", g._held_card != null, " kind=", card.data.get("id", ""))
-	var spot := NavGrid.footprint_centre(Vector2i(11, 11), GameConfig.TOWER_SIZE)  # the cell game_selftest builds on
+	var spot := NavGrid.footprint_centre(Vector2i(16, 11), GameConfig.TOWER_SIZE)  # the cell game_selftest builds on
 	h.global_position = g.board.to_global(spot + Vector3(0, 0.07, 0))
 	g._update_held()
 	print("CARDPLAY hover cell ", g._hover_cell, " can_build ", g.can_build("fire", g._hover_cell))

@@ -6,7 +6,7 @@ extends SceneTree
 
 # a sensible player's build order: one Fire Tower on each approach, an Airship in the village centre (it reaches
 # every house), then Longbows and more fire on the approaches, Braziers by the houses, a second Airship
-const PLAN := [["fire", Vector2i(11, 4)], ["fire", Vector2i(4, 11)], ["fire", Vector2i(18, 11)], ["airship", Vector2i(11, 11)],
+const PLAN := [["fire", Vector2i(11, 4)], ["fire", Vector2i(4, 11)], ["fire", Vector2i(18, 11)], ["airship", Vector2i(16, 11)],
 	["crossbow", Vector2i(8, 4)], ["crossbow", Vector2i(4, 14)], ["crossbow", Vector2i(18, 8)],
 	["guard", Vector2i(14, 6)], ["guard", Vector2i(6, 10)], ["guard", Vector2i(16, 11)],
 	["fire", Vector2i(14, 4)], ["fire", Vector2i(4, 8)], ["fire", Vector2i(18, 14)], ["airship", Vector2i(11, 18)],
