@@ -29,6 +29,7 @@ const FORESIGHT_TIERS := 3
 const FORESIGHT_TIER_BY_LOOP: Array[int] = [1, 1, 2, 2, 3]
 const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Foresight only
 const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
+const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to grab it (one reach for requests and spells; god-hands plan C1)
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
 # Easy reach (debug aid, 2026-10-25): grab distances are multiplied by this on the desktop (mouse hand) and when
@@ -50,7 +51,7 @@ const REQUESTS := {
 }
 const REQUESTS_PER_DAY := 4
 const HELP_MARKER_SCENE := "res://assets/ui/ew_ui_help_marker_v01.glb"
-const REQUEST_GRAB_REACH := 0.05  # m from a hand (or the mouse ray) to a prop to grab it
+const REQUEST_GRAB_REACH := TOUCH_REACH  # alias kept for game.gd: m from a hand (or the mouse ray) to a prop to grab it
 const LANTERN_DISTANCE := Vector2(4, 7)  # cells from its house where a lost lantern lies
 
 # Houses (decided 2026-10-22: 60 HP). Damage carries over between nights (Siddharth 2026-10-23): each dawn a
@@ -185,7 +186,7 @@ const SPELLS := {
 	"roots": {"name": "Root Ward", "cooldown": 25.0, "duration": 8.0, "absorb": 40.0, "reach": 2.0},
 }
 const SPELL_ORDER: Array[String] = ["fire_orb", "boulder", "storm", "rage", "roots"]
-const SPELL_GRAB_REACH := 0.05  # m from a hand to a spell token on the table to grab it (VR)
+const SPELL_GRAB_REACH := TOUCH_REACH  # alias kept for spells.gd: m from a hand to a spell token on the table to grab it (VR)
 
 const TOWER_ORDER: Array[String] = ["fire", "guard", "crossbow", "airship"]
 # Selling (Siddharth 2026-10-23): day only, with the Sell sign. Full cost back on the day the tower was built

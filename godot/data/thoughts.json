@@ -1,0 +1,103 @@
+{
+"villagers": {
+"maren": {"name": "Old Maren", "role": "Shrine-keeper", "loops": {
+"1": ["I light the candle every dawn. Somebody ought to.", "Pip has my late husband's ears. And none of his patience.", "If the little god is listening, I hope it likes the new candle.", "Three husbands' worth of worry, and I still can't sleep."],
+"2": ["That prayer felt worn in, like a favourite shawl.", "Pip asked what I dreamed. I told him: breakfast. Odd.", "I've lit this candle before. My hands knew the way.", "Strange. I'm sure I already told Pip that story."],
+"3": ["The crack in the shrine stone. It grows. It was smaller.", "I keep waking with the smell of smoke in my hair.", "The young ones feel it too. I see it in their eyes.", "Haven't we done all this? I'm too old to be this sure."],
+"4": ["We've lived this day before, haven't we. Hello, little god.", "Don't be sorry. A keeper keeps. That is the whole job.", "I'll teach Pip the long prayer today. Just in case.", "Every dawn I've asked you to keep us. Today I thank you."],
+"5": ["You've been carrying us. Let us carry you.", "Rest your hands, little god. We'll hold the candle.", "I never once got to say it. I love you. There.", "Whatever tonight is, we're all here. That's the miracle."]}},
+"pip": {"name": "Pip", "role": "Maren's grandson", "loops": {
+"1": ["If a monster comes I'll hit it with a bucket. A big bucket.", "The woods were loud last night. I wasn't scared. Much.", "Gran says heroes eat their porridge. I'm thinking about it.", "I'm ten. That's practically a soldier. Practically."],
+"2": ["Funny. I think I already found this stick.", "I had a dream about the tower cheering. It felt real.", "Why does Gran's prayer sound like I've heard it twice?", "I'm brave, but I'm confused. Is that allowed?"],
+"3": ["I keep thinking about the mill. Why do I keep thinking about the mill?", "The mill burned. Didn't it? I can almost smell the smoke.", "Nobody believes me. Wren does, but she's seven.", "I'm not telling the grown-ups. They'd just pat my head."],
+"4": ["I remember it all! The fire, the horns, everything!", "I'm still scared. I'm doing it anyway. That's the hero part.", "Gran's right. Heroes look after each other, not just swing buckets.", "Can I hold your hand, little god? Just for the night."],
+"5": ["I'll carry you on my shoulders, little god. I'm strong now.", "Thank you for letting me be brave. Many times.", "I'm going to remember everything. I promise. Pip's promise.", "If I forget, make me remember. Okay? Okay."]}},
+"wren": {"name": "Wren", "role": "Seven, kite in hand", "loops": {
+"1": ["The god helped me! I'm going to leave it a honeycake.", "My kite wants to fly. I think it's shy.", "Do gods like honey? I'm bringing honey.", "I named the kite Biscuit. Biscuit says hello."],
+"2": ["Biscuit and I did this already. Didn't we, Biscuit?", "The honeycake tastes the same as in my dream.", "Pip says dreams are silly. Pip is silly.", "I know the oak tree. It wanted my kite. Again."],
+"3": ["I told Biscuit about the fire. Biscuit was sad too.", "Everyone's so quiet. I'll fly the kite louder.", "I think the god remembers me. It looks at me kindly.", "The honeycake is for you, even if you've had one."],
+"4": ["I'm not scared. Biscuit is, but I hold him.", "You always lift my kite. I'll lift you back, someday.", "I made two honeycakes today. One's for goodbye. Sorry.", "Please don't be sad, little god. Kites come back."],
+"5": ["We're carrying you today! I'll hold the kite string.", "Thank you for every honeycake day. I counted. A lot.", "Biscuit flew all the way to the Veil. It was gold.", "I love you, little god. That's the whole honeycake."]}},
+"tomas": {"name": "Tomas", "role": "Carpenter", "loops": {
+"1": ["Nearly done. One more cut and the cradle's finished.", "Oak is stubborn. So am I. We get on.", "Isolde hums while I work. The wood likes it.", "A cradle should rock like a heartbeat. Not too fast."],
+"2": ["Odd. My hand knew the next cut before I did.", "I've sanded this rail already. It's smooth as water.", "Sawdust on my boots again. Felt like I'd just swept.", "Isolde says she picked a name. I think she did before."],
+"3": ["The cradle's done by dusk now. Why am I hurrying?", "Same dawn, same birds. Even the birds feel rehearsed.", "I carve little stars in the rail. Don't know why.", "Something's coming. My hands are telling me."],
+"4": ["Done. Early. Just in case.", "If there's not much time, the cradle is what's left behind.", "I held the cradle and Isolde cried. Good crying.", "I'm no good with words. The wood says it for me."],
+"5": ["The cradle is yours tonight, little god. Rest in it.", "I'll carry you gently. I've carried worse. Not much.", "Thank you for every morning my family woke up.", "I carved your hands on the headboard. Bit too bright. Perfect."]}},
+"isolde": {"name": "Isolde", "role": "Tomas's wife, with child", "loops": {
+"1": ["The baby kicked. I think she likes my singing.", "I can't pick a name. Every one sounds like somebody else.", "Tomas is hiding the cradle. It's the worst-kept secret.", "A safe morning is all I ask. A quiet one."],
+"2": ["I've picked a name. I've picked it before, I think. Funny.", "The song came out of me before I thought of it.", "Do you ever feel you're remembering the future?", "The baby's restless. Like she knows something."],
+"3": ["The name is Dawn. It was always Dawn. Odd.", "I keep humming a lullaby I never learned.", "Everyone's looking at the shrine. Even the baby.", "I'm not afraid. I'm only holding on very tight."],
+"4": ["I know we've lived this. I sing anyway. It helps.", "Her name is Dawn. If you hear nothing else, hear that.", "Tomas finished early. He thinks I haven't noticed. I have.", "Whatever happens, she's been loved. That counts."],
+"5": ["Little god, here's the name: Dawn. You gave her one.", "We'll sing you to sleep tonight. Hush now.", "Thank you for every safe morning, however many.", "Lean on us. We're stronger than we look."]}},
+"edda": {"name": "Edda", "role": "Baker", "loops": {
+"1": ["Bram hasn't said my bread was good in nine years. I'll try the honey loaf.", "Flour to my elbows and nothing to show for it. Lovely.", "Bram came by. He grunted. That's a compliment, right?", "A good loaf needs patience and someone to share it."],
+"2": ["The honey loaf. Haven't I baked that already?", "I swear the oven was already warm when I walked in.", "Bram grunted at my bread again. Same grunt. Same day?", "I'm cheerful. I'm also a little bit spooked."],
+"3": ["Everyone's talking about fire. I'm baking extra bread.", "I made Bram's loaf first. Who knows what comes next?", "He ate it. Quietly. Fierce quietly.", "I've said hello to this morning before. I'm sure of it."],
+"4": ["I told him. Finally. He said 'it's all right.' That's practically a poem.", "I'm baking everyone's favourite. Seems only fair.", "Flour on the shrine steps. Little god, have a loaf.", "If tonight's the end, let it smell of fresh bread."],
+"5": ["I baked you a loaf, little god. No crumbs left behind.", "Bram's beside me. He's holding the bread. Look at that.", "Thank you for every warm oven and every warm morning.", "We'll carry you. And we'll keep you fed. Both."]}},
+"bram": {"name": "Bram", "role": "Miller", "loops": {
+"1": ["Don't need company. Don't need anything.", "The mill wheel creaks. I like it. It talks less than people.", "Edda's bread smells fine. Not saying that out loud.", "Hob worries about rain. I worry about Hob. Don't tell him."],
+"2": ["The wheel turned before I touched it. Hm.", "I think I've scolded this crow already.", "Edda's bread. Same as I remember. Remember from when?", "Don't like feeling dizzy. Don't like it one bit."],
+"3": ["Smoke in my dreams. Mill wheel on fire. Pah. Silly.", "Not silly. Pip says it too. I don't like it.", "I should fix the roof. In case. I'll fix the roof.", "Edda keeps looking at me. I keep looking at the grain."],
+"4": ["Edda's bread. I'll say it tomorrow. Tomorrow.", "Fine. Fine! The bread is good. It's the best. There.", "I've been a grumpy old fool. Don't say yes.", "If the mill burns again, it was a good mill. And good company."],
+"5": ["I'll carry the god. Heavier than flour. Lighter than regret.", "Edda's bread. Every morning. I mean it every time.", "Thank you, little god. Said it. Won't say twice.", "Maybe I do need people. Maybe that's all I need."]}},
+"hob": {"name": "Hob", "role": "Farmer", "loops": {
+"1": ["If only it would rain.", "The barley's thirsty. So am I. We suffer together.", "Bram says I worry too much. Bram hasn't looked at the field.", "One good harvest. That's all. One."],
+"2": ["The sky looked like this yesterday. Or the day before?", "Dry again. I could swear I've counted these clouds.", "My boots are dusty. Didn't I wash them?", "Bram says I'm tired. Maybe I'm just remembering."],
+"3": ["The field never needed rain on this day before, did it?", "I planted this row already. The soil felt used.", "Rain won't save the field. Not tonight's trouble.", "Something bigger than barley is wrong. I feel it."],
+"4": ["I don't care about the harvest today. I care about my friends.", "Bram, you old grump, sit with me. Watch the sky.", "If it rains, fine. If not, we had a good field.", "I'd plant this barley a hundred more times. For them."],
+"5": ["We'll carry you through the field, little god. Dusty gold.", "Thank you for every grain. And every neighbour.", "Look, a cloud. Just one. A thank-you from the sky.", "The harvest was never the point. You were."]}},
+"lyra": {"name": "Lyra", "role": "Lamplighter, sixteen", "loops": {
+"1": ["What's on the other side of the Veil? Nobody ever asks.", "I light every lantern myself. That's the best part of dusk.", "The woods whisper. I've decided they're talking about me.", "One day I'll climb the highest oak and see everything."],
+"2": ["That lantern was already lit. I lit it. Didn't I?", "The stars are in the same places as last night. All of them.", "Funny. I knew which lamp would flicker.", "Someone's mapping my steps. Maybe it's me."],
+"3": ["The stars never move any more. That's wrong, isn't it?", "I've counted the lanterns. Twelve. Always twelve. Ever so neat.", "Past the Veil there's a purple light. It watches us.", "I'm done wondering. I want to know. Truly know."],
+"4": ["I remember all of it. The Warden's voice. The embers.", "I lit every lantern early. Let them see us. Let them see.", "The dark isn't evil, I think. It's just alone.", "Little god, I'm not afraid. I'm curious. That's better."],
+"5": ["I'll light the way for you tonight, little god.", "Every lantern in the village is for you. Count them.", "You showed me what's out there. I wanted to say thanks.", "Lean on my lamp. I won't let the dark in."]}},
+"garrick": {"name": "Garrick", "role": "Captain of the watch", "loops": {
+"1": ["Nobody on my watch.", "Three lanterns on the north wall. Better four.", "The children think I never get scared. Let them.", "Walls, bows, a few brave neighbours. It'll do."],
+"2": ["Same patrol, same shadow. I've seen that shadow before.", "My hands knew the wall's cracks. Odd.", "I'm tired already. It's only morning.", "Nobody on my watch. I said that yesterday. Didn't I?"],
+"3": ["The horn sounded exactly when I thought it would.", "No matter how many bows, the dark finds a gap.", "I stand the watch. It's what I do. Even when it's pointless.", "Haven't we done this? I'm afraid to say it aloud."],
+"4": ["I've failed that promise more times than I can count. I'd still make it.", "I won't fight the night today. I'll hold the village instead.", "Tell them thanks, little god. I'm bad at it.", "Whatever comes, nobody stands alone on my watch."],
+"5": ["Captain's orders: the god gets carried. No arguments.", "We'll hold the wall. All twelve of us, hand in hand.", "You kept us safe. We never said it. Thank you.", "Rest, little god. The watch is ours tonight."]}},
+"sorrel": {"name": "Sorrel", "role": "Herbalist", "loops": {
+"1": ["Mint, sage, a little thyme. The garden knows the way.", "I hum to the plants. They hum back. Mostly.", "Sleep well, rosemary. Tomorrow will be kind.", "The old well tastes of something I can't name. Moss. Stars."],
+"2": ["I dreamed today already.", "Mint came up in the wrong season. And again. Something's off.", "My basket was full before I picked a leaf.", "I feel a day repeating. Like a song I've forgotten the words of."],
+"3": ["I've written my notes twice. The ink is already dry.", "The plants lean toward the shrine. They know.", "Haven't we done this? I asked the sage. It stayed quiet.", "I'm starting to count the days. They don't add up."],
+"4": ["I think we are being given the same day. Is it a gift or a punishment?", "A gift, I decide. Gifts you may open slowly.", "Little god, my plants bloom whenever you look at them.", "I brewed a calming tea. It's for all of us. And you."],
+"5": ["It was a gift. I've decided. Thank you for opening it with us.", "I'll carry you in my basket, little god. Soft moss.", "My garden's blooming. Every season at once. Your doing.", "Some days are worth having twice. Or five times."]}},
+"finn": {"name": "Old Finn", "role": "Fisherman turned storyteller", "loops": {
+"1": ["In my story the good god wins.", "There was a fish once. Bigger than the well. Truly.", "The children want stories. I want a good ending.", "Every good tale has a hero and a kettle. I forget why."],
+"2": ["I told this story yesterday. Or told it better.", "The kids finished my sentence. Cheeky little echoes.", "A tale told twice gets truer. Isn't that strange?", "My knees ache like I've walked this ground often."],
+"3": ["Something's gone odd with my ending. It keeps ending the same.", "I told them a story about fire. They went quiet.", "A storyteller notices when the page turns back.", "Haven't we done this? Ha. My old bones think so."],
+"4": ["I know it now. The ending isn't mine to fix.", "I'll tell it again. Better. With all of us in it.", "The god never loses. It just keeps waking up.", "A good story, little god, is one you'd tell again."],
+"5": ["I'm changing my story. The good god is allowed to rest.", "Rest now. We'll carry the tale. And you.", "Once upon a time, a small god loved twelve people. The end. No. The start.", "Thank you for the best story I ever lived in."]}}
+},
+"dawn_prayers": {
+"1": ["Little god, if you're listening... the Veil is thin. Please keep us.", "Thank you for yesterday. The baby kicked last night. Isolde says it is a good omen.", "I told Pip the old prayer. He asked if you get bored. I said gods don't get bored. I hope that's true.", "The woods are louder every night. I'm not afraid. I want you to know that.", "Whatever comes tonight, thank you for the mornings."],
+"2": ["Little god, if you're listening... the Veil is thin. Please keep us. ...Funny. I've said that before.", "Thank you for yesterday. The baby kicked. Odd, I was certain I'd said so already.", "I told Pip the old prayer. His next question came before he asked it.", "The woods are loud. Strange, I think I knew they'd be.", "Whatever comes tonight, thank you for the mornings. Do I say that often?"],
+"3": ["Little god, I think you heard me yesterday. I'm sure of it. I'm sure I've heard myself.", "The baby kicked. Isolde knows the name already. She hums it.", "Pip says the mill burned. We were all quiet. Then we all knew.", "The crack in the stone is wider. I won't pretend I don't see it.", "Whatever comes, tonight I'll stand by the shrine. Stay with me."],
+"4": ["Good morning, little god. I think you know me better than I know myself. Let's try again.", "We've lived this day before, haven't we. I'm not afraid to say so now.", "Thank you for every dawn I've forgotten. I remember them tonight.", "The village is kinder today. You'd be proud. I am.", "Whatever comes, we are here. Whatever comes, you are loved."],
+"5": ["You've been carrying us. Let us carry you.", "Every candle I lit, I lit for you. I just never said so.", "Twelve of us, and one very small god. What a village.", "If you need to rest, rest. We know the way home.", "Thank you for the mornings. All of them. Every single one."]
+},
+"warden": {
+"dusk_day1": {
+"1": "Nightfall, little god. Your light goes out. Your Veil will fail at every nightfall. Let us see how long they believe in a god who cannot keep the dark out.",
+"2": "Back so soon?",
+"3": "Again? You know how this ends.",
+"4": "Do you know how long I waited for someone to say my name? You keep saying theirs.",
+"5": "You came with your hands open this time. Interesting. Let us see."},
+"night5": {
+"1": "They are lovely. Aren't they. It is a pity.",
+"2": "Same horn. Same dusk. Did you think I'd tire first?",
+"3": "Strong towers. Warm light. And still, here we are.",
+"4": "Listen to them. They remember. How cruel of you, to let them.",
+"5": "You would give all that, for them. ...Then perhaps I'll listen."}},
+"tasks": {
+"kite_in_oak": {"before": "Oh no! My kite's stuck in the old oak. Biscuit's up there!", "after": "Biscuit's free! Thank you, little god! I'm bringing you honeycake!"},
+"lost_lamb": {"before": "One lamb's missing from the flock. She was by the fence a moment ago.", "after": "There she is, safe! Thank you, little god. The flock's whole again."},
+"rain_for_field": {"before": "Look at that barley. Thirsty as a fish on a plank. A little rain, anyone?", "after": "Rain! Real rain! Thank you, little god. The field is singing."},
+"broken_plank": {"before": "A plank's snapped on the bridge. Somebody will turn an ankle.", "after": "Mended, and sturdy. Thank you, little god. Nobody falls on my watch."},
+"festival_lanterns": {"before": "The festival lanterns won't light. I've tried everything. Matches, hope, swearing.", "after": "They're glowing! Thank you, little god. Look how pretty the village is."},
+"sick_child": {"before": "The little one has a fever and a shiver. A bit of warmth would help.", "after": "She's resting easy now, cheeks pink. Thank you, little god. Truly."}}
+}
