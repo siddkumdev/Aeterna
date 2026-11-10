@@ -318,6 +318,10 @@ Music from MIDI rendered with a free soundfont, SFX synthesised, no voice record
 | A45 | P1 | audio | SFX: village bell | NEW: pairs with W24. | NEW |
 | A46 | P1 | audio | SFX: UI hover, cancel, cooldown ready | NEW. | NEW |
 | A47 | P1 | audio | SFX: rarity reveal stings (x3) | NEW: Common, Rare, Legendary. | NEW |
+| A48 | P1 | audio | SFX: extra cues (sell, soft hit, new request, night falls, spell pick, storm cloud, rage cast) | NEW 2026-11-07: cues the game needed that the first list lacked. Generated from code with the rest of the SFX. | NEW |
+| A49 | P1 | audio | SFX: tower voice barks | NEW 2026-11-08 (Siddharth: yes, he judges): gibberish 'hup-hup-hah' when placed, a quick cheer now and then on a kill; one voice per crew (wizard, archer, pilot, Guard Tower captain), on the key's notes. | NEW |
+| A50 | P1 | audio | SFX: day ambience one-shots | NEW 2026-11-08: birds and leaves in the forest ring, a villager at work by a house; scattered by the game over day_bed. | NEW |
+| A51 | P1 | audio | SFX: night ambience one-shots | NEW 2026-11-08: an owl, a branch creak, something moving in the undergrowth; sparser than by day. | NEW |
 
 ## T Text and story
 English only, or English subtitles.

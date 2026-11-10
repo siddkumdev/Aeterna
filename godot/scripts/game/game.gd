@@ -26,13 +26,15 @@ extends Node3D
 ## Everything moving is ticked from step(), so tests/game_selftest.gd can play whole nights headless.
 
 signal phase_changed(phase: int)
-signal tower_placed(kind: String, at: Vector3)  # for the sound and feel hooks (audio is not built yet)
+signal tower_placed(kind: String, at: Vector3)
 
 enum Phase { DAY, NIGHT, CARDS, DONE }
 
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const BOARD_POS := Vector3(0, 0.75, -0.85)
+const SPELL_SOUNDS := {"fire_orb": "fireball_launch", "boulder": "throw_whoosh", "storm": "storm_cloud", "rage": "rage_cast", "roots": "ward_cast"}
+const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
 
@@ -116,6 +118,7 @@ var _camera: Camera3D
 var _hands: Array[GameHand] = []
 var _active_hand: GameHand
 var _xr := false
+var audio: AudioBank  # sounds; only made with the rig (headless tests stay silent)
 
 
 func _ready() -> void:
@@ -157,6 +160,10 @@ func _ready() -> void:
 	_build_ui()
 	_build_lens()
 	if with_rig:
+		audio = AudioBank.new()
+		audio.name = "Audio"
+		add_child(audio)
+		audio.setup()
 		_build_rig()
 	if with_rig or with_life:
 		life = VillageLife.new()
@@ -214,7 +221,54 @@ func card(id: String) -> int:
 	return cards.get(id, -1)
 
 
+func snd(id: String, at := Vector3.INF) -> void:
+	## Plays a sound by name (see AudioBank); does nothing without the rig.
+	if audio:
+		audio.play(id, at)
+
+
+# Ambience one-shots (AudioBank.set_scatter; no beds since 2026-11-08): day = birds and leaves in the forest ring, a villager
+# at work by a house; night = sparser and a little tense: an owl, a creak, something moving in the undergrowth.
+const SCATTER_DAY := [
+	{"id": "amb_bird", "where": "forest", "w": 5}, {"id": "amb_leaves", "where": "forest", "w": 2},
+	{"id": "amb_work", "where": "village", "w": 2},
+]
+const SCATTER_NIGHT := [
+	{"id": "amb_owl", "where": "forest", "w": 1}, {"id": "amb_creak", "where": "forest", "w": 2},
+	{"id": "amb_rustle", "where": "forest", "w": 2},
+]
+
+
+func _phase_sound(_was: int, p: int) -> void:
+	if audio == null:
+		return
+	if p == Phase.NIGHT:
+		audio.set_scatter(SCATTER_NIGHT, ambience_point, Vector2(4.0, 9.0))
+	else:
+		audio.set_scatter(SCATTER_DAY, ambience_point, Vector2(2.5, 6.0))
+	# No background beds (Siddharth 2026-11-08: he did not like the day and night beds); the scattered one-shots above
+	# carry the time of day. The bed files stay in the bank in case they come back.
+	audio.set_bed("")
+	# No sound at the change of time either (Siddharth 2026-11-08: replace the bells with "Nothing"): dawn_bell and
+	# night_fall stay built but are not played; the light change and the UI carry it.
+
+
+func ambience_point(where: String) -> Vector3:
+	## A world position for an ambience one-shot: a random cell of the forest ring (the board's edge), or a standing house.
+	if where == "village":
+		var up: Array = houses.filter(func(h): return not h.is_shuttered)
+		if not up.is_empty():
+			var h: Node3D = up[randi() % up.size()]
+			return h.global_position + Vector3(0, GameConfig.CELL, 0)
+	var n := GameConfig.SIZE
+	var i := randi() % n
+	var cells := [Vector2i(i, 0), Vector2i(i, n - 1), Vector2i(0, i), Vector2i(n - 1, i)]
+	var cell: Vector2i = cells[randi() % 4]
+	return board.to_global(NavGrid.cell_centre(cell) + Vector3(0, GameConfig.CELL * 1.5, 0))
+
+
 func _set_phase(p: int, message: String) -> void:
+	var was := phase
 	phase = p
 	last_message = message
 	if p != Phase.DAY:
@@ -230,6 +284,7 @@ func _set_phase(p: int, message: String) -> void:
 		_clear_requests()
 	_set_light(p)
 	_refresh_ui()
+	_phase_sound(was, p)
 	phase_changed.emit(p)
 
 
@@ -439,6 +494,7 @@ func grab_request(r: HelpRequest, hand: GameHand = null) -> bool:
 	_held_req = r
 	_held_req_hand = hand
 	select("")
+	snd("grab")
 	return true
 
 
@@ -450,7 +506,10 @@ func release_request() -> bool:
 	_held_req = null
 	_held_req_hand = null
 	if not r.release():
+		snd("release")
 		return false
+	snd("help_done")
+	snd("trust_chime")
 	trust += r.reward
 	if with_rig:
 		_trust_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
@@ -486,11 +545,13 @@ func cast_spell(id: String, pos: Vector3, height := -1.0) -> bool:
 	if phase != Phase.NIGHT:
 		return false
 	if not spells.is_ready(id):
+		snd("invalid")
 		last_message = "%s is still cooling down (%d s)." % [GameConfig.SPELLS[id]["name"], ceili(spells.cooldown[id])]
 		_refresh_ui()
 		return false
 	var ok := spells.cast(id, pos, spell_height if height < 0.0 else height)
 	if ok:
+		snd(SPELL_SOUNDS.get(id, ""), board.to_global(pos))
 		last_message = "%s!" % GameConfig.SPELLS[id]["name"]
 	_refresh_ui()
 	return ok
@@ -501,6 +562,7 @@ func pick_spell(id: String) -> void:
 	if phase != Phase.NIGHT or not GameConfig.SPELLS.has(id):
 		return
 	spell_sel = "" if spell_sel == id else id
+	snd("spell_pick")
 	if spell_sel == "":
 		spells.hide_aim()
 	_refresh_ui()
@@ -552,6 +614,8 @@ func choose_card(i: int) -> bool:
 		return false
 	var o: Dictionary = offers[i]
 	cards[o["id"]] = o["rarity"]  # a duplicate is only offered at a higher rarity, so this upgrades it
+	snd(RARITY_SOUNDS[clampi(int(o["rarity"]), 0, 2)])
+	snd("rewind_whoosh")
 	offers = []
 	_rewind()
 	return true
@@ -652,6 +716,7 @@ func _spawn(cell: Vector2i, kind: String, at := Vector3.INF) -> Enemy:
 	e.setup(kind, night, loop, _rng)
 	_enemies_root.add_child(e)
 	e.spawn_at(cell, at)
+	snd("wisp_screech" if kind == "wisp" else "enemy_spawn", e.global_position)
 	e.died.connect(_on_enemy_died)
 	enemies.append(e)
 	return e
@@ -663,6 +728,7 @@ func add_patch(pos: Vector3, radius: float, dps: float, seconds: float) -> void:
 
 func _on_enemy_died(e: Enemy) -> void:
 	enemies.erase(e)
+	snd("boss_roar" if e.is_boss else "enemy_death", e.global_position)
 	if e.burn_left > 0.0 and e.burn_spreads:
 		# Ember Shot Legendary: the burn passes to the nearest enemy within 1 cell
 		var best: Enemy = null
@@ -679,7 +745,8 @@ func _on_enemy_died(e: Enemy) -> void:
 			_spawn(e.cell, e.stats["splits_into"], e.position + side)
 
 
-func _on_house_shuttered(_h: House) -> void:
+func _on_house_shuttered(h: House) -> void:
+	snd("shutter_close", h.global_position)
 	var down := houses.size() - standing_houses().size()
 	if down >= GameConfig.HOUSES_LOST_AT and phase == Phase.NIGHT:
 		_end_loop(false)
@@ -730,6 +797,7 @@ func sell(t: Tower) -> bool:
 	grass.refresh(nav)
 	towers.erase(t)
 	VfxKit.build_pop(shots_root, t.global_position)
+	snd("sell", t.global_position)
 	t.queue_free()
 	last_message = "%s sold: +%d trust." % [GameConfig.TOWERS[t.kind]["name"], back]
 	if foresight.showing:
@@ -762,6 +830,13 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	t.built_night = night
 	towers.append(t)
 	VfxKit.build_pop(shots_root, t.global_position)
+	snd("build_pop", t.global_position)
+	snd("place_thunk", t.global_position)
+	var voice: String = t.voice()
+	if audio and voice != "":  # the crew calls out once the tower has landed
+		get_tree().create_timer(0.35).timeout.connect(func():
+			if is_instance_valid(t):
+				snd("bark_%s_ready" % voice, t.global_position))
 	if with_rig:
 		t.settle()
 	tower_placed.emit(kind, t.global_position)
@@ -795,6 +870,7 @@ func _build_houses() -> void:
 		h.fx = with_rig
 		h.shuttered.connect(_on_house_shuttered)
 		h.hold_check = _hold_check
+		h.on_hit = func(): snd("house_hit", h.global_position)
 		houses.append(h)
 
 
@@ -1276,6 +1352,7 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell_hand = h
 			return
 	_active_hand = h
+	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())
 
 

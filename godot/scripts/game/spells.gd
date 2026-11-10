@@ -361,6 +361,7 @@ func _step_ball(f: Dictionary) -> void:
 
 
 func _burst(pos: Vector3, damage: float, radius: float, fire := false) -> void:
+	game.snd("fireball_hit" if fire else "boulder_hit", to_global(pos))
 	for e in game.enemies.duplicate():
 		if is_instance_valid(e) and e.targetable(true, true) and _flat(e.position - pos) <= radius:
 			e.take_damage(damage)

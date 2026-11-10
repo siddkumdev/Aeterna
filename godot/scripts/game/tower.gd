@@ -8,8 +8,11 @@ extends Node3D
 ## Ticked by Game.step().
 
 var game  # Game
+const SHOT_SOUNDS := {"fire": "fireball_launch", "crossbow": "crossbow_shot", "airship": "airship_shot"}
+const CHEER_CHANCE := 0.3  # a kill makes the crew cheer now and then (the bark's own cooldown keeps it rare)
 var kind := "fire"
 var cfg: Dictionary
+var kills := 0  # enemies finished by its shots or Guards (counted for tests)
 var cell := Vector2i.ZERO
 var cooldown := 0.0
 var built_night := 0  # the night (0-based, in this loop) whose day it was built on: selling refunds in full that day
@@ -224,8 +227,22 @@ func step(delta: float) -> void:
 			var shot := Projectile.new()
 			shot.game = game
 			game.shots_root.add_child(shot)
+			shot.source = self
 			shot.launch(from, e, cfg, reach, mods)
 			game.shots.append(shot)
+		game.snd(SHOT_SOUNDS.get(kind, ""), from)
+
+
+func voice() -> String:
+	## Whose bark this tower uses (make_audio.py VOICES): its crew member, or the Guard Tower's captain.
+	return "guard" if kind == "guard" else str(cfg.get("crew", ""))
+
+
+func on_kill() -> void:
+	## One of this tower's shots or Guards finished an enemy.
+	kills += 1
+	if voice() != "" and randf() < CHEER_CHANCE:
+		game.snd("bark_%s_cheer" % voice(), global_position)
 
 
 func _nearest(skip: Array) -> Enemy:

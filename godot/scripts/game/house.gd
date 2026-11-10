@@ -12,6 +12,7 @@ var max_hp := GameConfig.HOUSE_HP  # raised by the Sturdy Homes card
 var hp := GameConfig.HOUSE_HP
 ## Asked once when the house would be shuttered; returning true keeps it at 1 HP (Sturdy Homes, Legendary)
 var hold_check: Callable
+var on_hit: Callable  # called when the house takes damage (the game plays the sound)
 var is_shuttered := false
 var ward := 0.0  # damage still soaked up by Root Ward roots
 var fx := false  # the game turns the effects on (chimney smoke, dust); logic-only games stay without them
@@ -109,6 +110,8 @@ func damage(amount: float) -> void:
 		if amount <= 0.0:
 			return
 	hp = maxf(0.0, hp - amount)
+	if on_hit.is_valid():
+		on_hit.call()
 	if hp <= 0.0 and hold_check.is_valid() and hold_check.call(self):
 		hp = 1.0
 	_update_bar()

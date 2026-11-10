@@ -74,7 +74,10 @@ func step(delta: float) -> void:
 					target.blocked_by = self
 				if _cool <= 0.0:
 					_cool = _cfg["attack_interval"]
+					var was_alive: bool = target.alive
 					target.take_damage(_cfg["guard_damage"])
+					if was_alive and not target.alive and is_instance_valid(tower):
+						tower.on_kill()
 					_crew.react(target.global_position)
 		"return", "to_post":
 			if _flat_dist(global_position, home) <= 0.002:

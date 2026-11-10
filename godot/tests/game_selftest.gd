@@ -31,6 +31,7 @@ func _initialize() -> void:
 	await _grass()
 	await _vfx()
 	await _village_life()
+	await _audio()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -1375,3 +1376,91 @@ func _vfx() -> void:
 	check("particle cap: at most %d bursts alive at once (%d started)" % [VfxKit.MAX_BURSTS, n], VfxKit.active_bursts() <= VfxKit.MAX_BURSTS)
 	g.queue_free()
 	await process_frame
+
+
+func _audio() -> void:
+	## The sound player: every sound the manifest lists has a file, unknown or missing ids stay silent, the cooldown
+	## holds back a rapid repeat, and the game itself plays no sound without a rig.
+	var g := await _make_game()
+	check("audio: no player without the rig", g.audio == null)
+	g.snd("place_thunk")  # must be a harmless no-op
+	var a := AudioBank.new()
+	root.add_child(a)
+	a.setup()
+	check("audio: manifest loaded (%d sounds)" % a.manifest.size(), a.manifest.size() >= 60)
+	var missing := []
+	for id in a.manifest:
+		for f in a.manifest[id]["files"]:
+			if not ResourceLoader.exists(AudioBank.DIR + f["file"]):
+				missing.append(f["file"])
+	check("audio: every listed file imported %s" % [missing], missing.is_empty())
+	a.play("no_such_sound")
+	check("audio: unknown id is silent", a.played == 0)
+	a.play("pinch")
+	check("audio: a known sound plays", a.played == 1)
+	a.play("pinch")
+	check("audio: the cooldown holds back a rapid repeat", a.played == 1)
+	a.play("enemy_death", Vector3(0, 1, 0))
+	check("audio: a spatial sound plays", a.played == 2)
+	a.play("day_bed")
+	check("audio: a loop is not a one-shot", a.played == 2)
+	a.set_bed("day_bed")
+	var s := a._stream("day_bed.wav", true)
+	check("audio: a bed loops", s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	check("audio: frequent sounds have several takes", a.manifest["pinch"]["files"].size() >= 4)
+	var lims := 0
+	var mb := AudioServer.get_bus_index("Master")
+	for k in AudioServer.get_bus_effect_count(mb):
+		if AudioServer.get_bus_effect(mb, k) is AudioEffectHardLimiter:
+			lims += 1
+	a._add_master_limiter()
+	var lims2 := 0
+	for k in AudioServer.get_bus_effect_count(mb):
+		if AudioServer.get_bus_effect(mb, k) is AudioEffectHardLimiter:
+			lims2 += 1
+	check("audio: one limiter on Master, never added twice", lims == 1 and lims2 == 1)
+	var amb := AudioServer.get_bus_index("ambience")
+	a.play("village_bell")
+	await create_timer(0.4).timeout
+	check("audio: a story beat ducks the ambience", amb != -1 and AudioServer.get_bus_volume_db(amb) < AudioBank.BUS_DB["ambience"] - 3.0)
+	# combo: quick kills climb the scale, a pause brings it back to the root
+	await create_timer(1.3).timeout  # the spatial check above played enemy_death: let that combo run out first
+	for i in range(3):
+		a.play("enemy_death", Vector3(0, 1, 0))
+		await create_timer(0.08).timeout
+	check("audio: quick repeats of a combo sound climb the scale", a.combo_step("enemy_death") == 2)
+	await create_timer(1.3).timeout
+	a.play("enemy_death", Vector3(0, 1, 0))
+	check("audio: after a pause the combo starts again", a.combo_step("enemy_death") == 0)
+	# ambience one-shots: every pool id and every tower voice exists, and the scatter plays on its own
+	var ids := []
+	for e in Game.SCATTER_DAY + Game.SCATTER_NIGHT:
+		ids.append(e["id"])
+	for kind in GameConfig.TOWERS:
+		var t := Tower.new()
+		t.kind = kind
+		t.cfg = GameConfig.TOWERS[kind]
+		if t.voice() != "":
+			ids.append("bark_%s_ready" % t.voice())
+			ids.append("bark_%s_cheer" % t.voice())
+		t.free()
+	var absent := ids.filter(func(id): return not a.has(id))
+	check("audio: every ambience one-shot and tower bark exists %s" % [absent], absent.is_empty() and ids.size() >= 14)
+	var before := a.scattered
+	a.set_scatter([{"id": "amb_bird", "where": "forest", "w": 1}], func(_w): return Vector3(0, 1, 0), Vector2(0.05, 0.1))
+	await create_timer(2.4).timeout  # amb_bird's cooldown is 1 s: 2-3 really play, the rest are skipped
+	var n_sc := a.scattered - before
+	check("audio: the scatter plays ambience one-shots by itself, respecting the cooldown (%d)" % n_sc, n_sc >= 2 and n_sc <= 3)
+	a.set_scatter([], Callable())
+	a.queue_free()
+	g.queue_free()
+	# a kill is credited to the tower whose shot finished it (its crew cheers now and then)
+	var gk := await _make_game()
+	gk.try_build("fire", Vector2i(11, 3))
+	var gr := await _night_with(gk, "grunt", GameConfig.SPAWNS["north"][1], 15.0)
+	check("audio: a kill is credited to the tower that shot it", not gr.alive and gk.towers[0].kills == 1)
+	var p := gk.ambience_point("forest")
+	var lp: Vector3 = gk.board.to_local(p)
+	var half := GameConfig.SIZE * GameConfig.CELL / 2.0
+	check("audio: forest one-shots sit on the board's edge ring", absf(absf(lp.x) - half) < GameConfig.CELL or absf(absf(lp.z) - half) < GameConfig.CELL)
+	gk.queue_free()
