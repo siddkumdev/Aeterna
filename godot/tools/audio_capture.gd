@@ -12,7 +12,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 10:
 		await process_frame
-	g.trust = 100000
+	g.FAITH = 100000
 	var built := 0
 	for x in range(4, 20, 3):
 		for y in range(4, 20, 3):

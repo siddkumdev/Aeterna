@@ -10,7 +10,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.trust = 500
+	g.FAITH = 500
 	g.try_build("fire", Vector2i(5, 12))  # (6,12) now holds village props
 	g.try_build("crossbow", Vector2i(11, 12))
 	g.try_build("airship", Vector2i(17, 12))

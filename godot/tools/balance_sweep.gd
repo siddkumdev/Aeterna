@@ -1,8 +1,8 @@
 extends SceneTree
-## Balance sweep: a bot with a sensible build order plays whole 5-loop runs (3 seeds) under different trust
+## Balance sweep: a bot with a sensible build order plays whole 5-loop runs (3 seeds) under different FAITH
 ## settings and prints how far each run gets. For M3 tuning:
 ##   <godot console> --headless --xr-mode off --path godot -s res://tools/balance_sweep.gd
-## Extra trust is added by hand on top of the current rules, so GameConfig stays untouched.
+## Extra FAITH is added by hand on top of the current rules, so GameConfig stays untouched.
 
 # a sensible player's build order: one Fire Tower on each approach, an Airship in the village centre (it reaches
 # every house), then Longbows and more fire on the approaches, Braziers by the houses, a second Airship
@@ -15,7 +15,7 @@ const PLAN := [["fire", Vector2i(11, 4)], ["fire", Vector2i(4, 11)], ["fire", Ve
 
 func _initialize() -> void:
 	await process_frame
-	# [label, start trust, dawn per standing house, clear reward per night number]
+	# [label, start FAITH, dawn per standing house, clear reward per night number]
 	var variants := [["now", 200, 5, 10], ["start 300", 300, 5, 10], ["income x2", 200, 10, 20],
 		["start 300 + income x2", 300, 10, 20], ["start 300 + income x3", 300, 15, 30], ["start 400 + income x3", 400, 15, 30]]
 	for v in variants:
@@ -41,7 +41,7 @@ func _run(sd: int, start: int, dawn: int, clear: int) -> String:
 			continue
 		if g.loop != last_loop:
 			last_loop = g.loop
-			g.trust += start - GameConfig.START_TRUST
+			g.FAITH += start - GameConfig.START_FAITH
 		for item in PLAN:  # in order: waits to afford the next one rather than skipping it
 			if g.towers.any(func(t): return t.cell == item[1]):
 				continue
@@ -57,7 +57,7 @@ func _run(sd: int, start: int, dawn: int, clear: int) -> String:
 			if int(t / 0.05) % 40 == 0:
 				await process_frame
 		if g.phase == Game.Phase.DAY and g.loop == lp:
-			g.trust += g.standing_houses().size() * (dawn - GameConfig.DAWN_TRUST_PER_HOUSE) + (clear - GameConfig.NIGHT_CLEAR_TRUST_PER_NIGHT) * (n + 1)
+			g.FAITH += g.standing_houses().size() * (dawn - GameConfig.DAWN_FAITH_PER_HOUSE) + (clear - GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT) * (n + 1)
 		elif g.loop_won or (g.phase == Game.Phase.CARDS and g.loop_won):
 			log.append("L%d WON" % (lp + 1))
 		else:

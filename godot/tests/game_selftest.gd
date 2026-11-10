@@ -160,10 +160,10 @@ func _play_night(g: Game) -> void:
 func _nights() -> void:
 	# 1) No towers: Grunts must reach the houses and hurt them.
 	var g := await _make_game()
-	check("starts in day with the start trust", g.phase == Game.Phase.DAY and g.trust == GameConfig.START_TRUST)
-	g.trust = 10
+	check("starts in day with the start FAITH", g.phase == Game.Phase.DAY and g.FAITH == GameConfig.START_FAITH)
+	g.FAITH = 10
 	check("unaffordable tower refused", not g.try_build("fire", Vector2i(1, 1)) and g.towers.is_empty())
-	g.trust = GameConfig.START_TRUST
+	g.FAITH = GameConfig.START_FAITH
 	await _play_night(g)
 	var hurt := 0
 	for h in g.houses:
@@ -173,14 +173,14 @@ func _nights() -> void:
 	check("undefended: Grunts reach and damage houses", hurt > 0 or g.phase != Game.Phase.NIGHT)
 	check("losing loop 1 offers exactly 1 Common card", g.phase == Game.Phase.CARDS and g.offers.size() == 1 and g.offers[0]["rarity"] == 0)
 	var offered: String = g.offers[0]["id"] if not g.offers.is_empty() else ""
-	check("taking it rewinds to loop 2, day 1, trust and towers reset, card kept",
+	check("taking it rewinds to loop 2, day 1, FAITH and towers reset, card kept",
 		g.choose_card(0) and g.loop == 1 and g.night == 0 and g.phase == Game.Phase.DAY and g.towers.is_empty() and g.cards.has(offered))
 	g.queue_free()
 	await process_frame
 
 	# 2) A whole run (2 loops) by a bot that keeps building round the village and takes the first card offered.
 	g = await _make_game()
-	check("build costs trust", g.try_build("fire", Vector2i(11, 11)) and g.trust == GameConfig.START_TRUST - 60)
+	check("build costs FAITH", g.try_build("fire", Vector2i(11, 11)) and g.FAITH == GameConfig.START_FAITH - 60)
 	g.queue_free()
 	await process_frame
 	var run := await _run_bot(true, true)
@@ -221,7 +221,7 @@ func _nights() -> void:
 
 
 func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
-	## 3 towers on day 1 near the village, then either nothing more or every day all trust spent on spots
+	## 3 towers on day 1 near the village, then either nothing more or every day all FAITH spent on spots
 	## round the village; takes the first card offered. Plays loop 1 only, or the whole run.
 	## Returns {"lost_on": night lost in loop 1 (7 = beat the boss), "loops", "phase", "log"}.
 	var g := await _make_game()
@@ -294,9 +294,9 @@ func _cards() -> void:
 	var g := await _make_game()
 	g.cards = {"quick_fuse": 2, "shield_wall": 1, "long_draw": 0, "sturdy_homes": 1, "deep_pockets": 0}
 	g._start_loop("test")
-	check("Deep Pockets: +30 starting trust", g.trust == GameConfig.START_TRUST + 30)
+	check("Deep Pockets: +30 starting FAITH", g.FAITH == GameConfig.START_FAITH + 30)
 	check("Sturdy Homes Rare: houses 60 -> 90 HP", is_equal_approx(g.houses[0].max_hp, 90.0) and is_equal_approx(g.houses[0].hp, 90.0))
-	g.trust = 1000
+	g.FAITH = 1000
 	g.try_build("fire", Vector2i(11, 11))
 	g.try_build("guard", Vector2i(11, 4))
 	g.try_build("crossbow", Vector2i(5, 11))
@@ -338,20 +338,20 @@ func _step2() -> void:
 
 	# Airship: shoots the Wisp down, ignores ground enemies; no limit on how many (Siddharth 2026-10-23)
 	g = await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	check("Airship builds", g.try_build("airship", Vector2i(11, 3)))
 	check("second Airship builds", g.try_build("airship", Vector2i(4, 4)))
 	check("a third Airship builds too (no cap)", g.try_build("airship", Vector2i(17, 4)) and not g.at_max("airship"))
 	g._press_button("airship")
-	check("the Airship sign still picks one up with 3 out", g.selected == "airship" and g._buttons["airship"]["label"].text.contains("35 trust"))
+	check("the Airship sign still picks one up with 3 out", g.selected == "airship" and g._buttons["airship"]["label"].text.contains("35 FAITH"))
 	g._press_button("airship")
 	g._press_button("fire")
 	check("other towers build with Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 7)))
 	g._press_button("fire")
-	g.trust = 10
+	g.FAITH = 10
 	g._press_button("guard")
 	check("a sign you cannot afford does not pick up a tower", g.selected == "")
-	g.trust = 1000
+	g.FAITH = 1000
 	w = await _night_with(g, "wisp", north, 25.0)
 	check("the Airship shoots a Wisp down", not is_instance_valid(w) or not w.alive)
 	g.queue_free()
@@ -365,7 +365,7 @@ func _step2() -> void:
 
 	# Tunneler: cannot be hit underground, comes up next to a house, then towers can hit it
 	g = await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	g.try_build("guard", Vector2i(11, 2))  # right where it leaves the forest
 	g.start_night()
 	g._spawn_queue.clear()
@@ -399,7 +399,7 @@ func _step2() -> void:
 	g = await _make_game()
 	g.cards = {"long_mooring": 2, "twin_cannons": 2, "long_draw": 2}
 	g._start_loop("test")
-	g.trust = 1000
+	g.FAITH = 1000
 	g.try_build("airship", Vector2i(11, 3))
 	g.try_build("crossbow", Vector2i(4, 18))  # out of reach of the north gap, so only the Airship hits there
 	var a: Tower = g.towers[0]
@@ -564,9 +564,9 @@ func _sell() -> void:
 	var g := await _make_game()
 	g.try_build("fire", Vector2i(11, 4))
 	var t: Tower = g.towers[0]
-	var before := g.trust
+	var before := g.FAITH
 	check("the tower under any of its 4 cells is found", g.tower_at(Vector2i(12, 5)) == t and g.tower_at(Vector2i(13, 5)) == null)
-	check("selling on the day it was built refunds the full cost", g.sell(t) and g.trust == before + 60 and g.towers.is_empty())
+	check("selling on the day it was built refunds the full cost", g.sell(t) and g.FAITH == before + 60 and g.towers.is_empty())
 	check("its cells open up again (can build there)", g.can_build("fire", Vector2i(11, 4)))
 	g.try_build("fire", Vector2i(11, 4))
 	g.try_build("guard", Vector2i(4, 11))
@@ -591,10 +591,10 @@ func _sell() -> void:
 	check("no selling during the night", not g.sell(g.towers[0]) and g.towers.size() == 2)
 	g._clear_night()
 	g._end_night()
-	before = g.trust
-	check("after a night: half back (Fire 30)", g.sell(g.towers[0]) and g.trust == before + 30)
-	before = g.trust
-	check("after a night: half back (Guard Tower 35)", g.sell(g.towers[0]) and g.trust == before + 35)
+	before = g.FAITH
+	check("after a night: half back (Fire 30)", g.sell(g.towers[0]) and g.FAITH == before + 30)
+	before = g.FAITH
+	check("after a night: half back (Guard Tower 35)", g.sell(g.towers[0]) and g.FAITH == before + 35)
 	g.queue_free()
 	await process_frame
 
@@ -611,7 +611,7 @@ func _requests() -> void:
 	for r in g.requests:
 		by[r.kind] = r
 	var C := GameConfig.CELL
-	var t0 := g.trust
+	var t0 := g.FAITH
 
 	var ch: HelpRequest = by["chimney"]
 	var home: Vector3 = ch.prop.position
@@ -620,12 +620,12 @@ func _requests() -> void:
 	check("chimney: a small tug does nothing, the rubble goes back", not g.release_request() and ch.prop.position == home and not ch.done)
 	g.grab_request(ch)
 	ch.move_to(home + Vector3(0, 2.0 * C, 0))
-	check("chimney: pulled out -> done, +15 trust", g.release_request() and ch.done and g.trust == t0 + 15)
+	check("chimney: pulled out -> done, +15 FAITH", g.release_request() and ch.done and g.FAITH == t0 + 15)
 
 	var bd: HelpRequest = by["bird"]
 	g.grab_request(bd)
 	bd.move_to(bd.prop.position + Vector3(2.5 * C, 0, 0))
-	check("bird: moved off the chimney -> done, +10", g.release_request() and bd.done and g.trust == t0 + 25)
+	check("bird: moved off the chimney -> done, +10", g.release_request() and bd.done and g.FAITH == t0 + 25)
 
 	var ln: HelpRequest = by["lantern"]
 	g.grab_request(ln)
@@ -633,7 +633,7 @@ func _requests() -> void:
 	check("lantern: dropped away from its house stays on the grass", not g.release_request() and not ln.done and ln.prop.position.y == 0.0)
 	g.grab_request(ln)
 	ln.move_to(ln._goal + Vector3(0.5 * C, 0.02, 0))
-	check("lantern: carried to its house -> done, +20", g.release_request() and ln.done and ln.prop.position == ln._goal and g.trust == t0 + 45)
+	check("lantern: carried to its house -> done, +20", g.release_request() and ln.done and ln.prop.position == ln._goal and g.FAITH == t0 + 45)
 
 	var ct: HelpRequest = by["cart"]
 	var cart_home: Vector3 = ct.prop.position
@@ -643,14 +643,14 @@ func _requests() -> void:
 	check("cart: a short push does nothing", not g.release_request() and ct.prop.position == cart_home)
 	g.grab_request(ct)
 	ct.move_to(cart_home + Vector3(0, 0, 2.5 * C))
-	check("cart: pushed clear -> done, +25", g.release_request() and ct.done and g.trust == t0 + 70)
+	check("cart: pushed clear -> done, +25", g.release_request() and ct.done and g.FAITH == t0 + 70)
 	check("a finished request cannot be grabbed again", not g.grab_request(ch))
 
 	# a tower built on or beside a loose lantern or cart carries it to open ground (it used to hide it)
 	g.queue_free()
 	await process_frame
 	g = await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	for kind in ["lantern", "cart"]:
 		var rq: HelpRequest = g.requests.filter(func(x): return x.kind == kind)[0]
 		var cc := NavGrid.local_to_cell(rq.prop.position)
@@ -689,9 +689,9 @@ func _requests() -> void:
 	hand.global_position += Vector3(0.0, 0.05, 0.12)
 	g._update_held()
 	check("the prop follows the hand", bird.prop.global_position.distance_to(hand.global_position) < 0.001)
-	var before := g.trust
+	var before := g.FAITH
 	g.hand_released(hand)
-	check("letting go far enough finishes it", bird.done and g.trust == before + 10)
+	check("letting go far enough finishes it", bird.done and g.FAITH == before + 10)
 	hand.global_position = g.board.global_position + Vector3(0, 0.3, 0)
 	g.hand_pressed(hand)
 	check("a pinch away from every prop grabs nothing", g._held_req == null)
@@ -806,7 +806,7 @@ func _spells() -> void:
 	var shots := []
 	for rage in [false, true]:
 		g = await _make_game()
-		g.trust = 1000
+		g.FAITH = 1000
 		g.try_build("fire", Vector2i(11, 4))
 		_night_start(g)
 		_still(g, "boss", _at(11, 8))
@@ -1015,7 +1015,7 @@ func _village_life() -> void:
 				on_solid = on_solid or (g.nav.kind.has(c) and g.nav.kind[c] != "spawn")
 	check("a minute later the watchers are still by the tree line", trees_only.call())
 	check("no one's route crosses a house, prop or the forest", not on_solid)
-	var trust := g.trust
+	var FAITH := g.FAITH
 	var hp: float = g.houses[0].hp
 	g.start_night()
 	check("at nightfall the watchers go", life.lurkers.is_empty())
@@ -1023,7 +1023,7 @@ func _village_life() -> void:
 	for i in 200:  # 10 seconds is plenty at 6 cells a second
 		life.tick(0.05)
 	check("within 10 s all 12 are inside", life.villagers.all(func(v): return v.state == "inside" and not v.visible))
-	check("running home changes no rule", g.trust == trust and g.houses[0].hp == hp)
+	check("running home changes no rule", g.FAITH == FAITH and g.houses[0].hp == hp)
 	g.houses[0].damage(99999.0)
 	g._end_night()
 	check("after dawn the watchers are back", life.lurkers.size() >= 4)
@@ -1056,7 +1056,7 @@ func _real_models() -> void:
 	var g: Game = load("res://scripts/game/game.gd").new()
 	root.add_child(g)
 	await process_frame
-	g.trust = 900
+	g.FAITH = 900
 	g.cards = {}
 	g.try_build("fire", Vector2i(5, 12))
 	g.try_build("guard", Vector2i(18, 12))
@@ -1105,7 +1105,7 @@ func _real_models() -> void:
 
 func _crews() -> void:
 	var g := await _make_game()
-	g.trust = 500
+	g.FAITH = 500
 	g.try_build("fire", Vector2i(5, 12))  # (6,12) now holds village props
 	g.try_build("crossbow", Vector2i(11, 12))
 	g.try_build("airship", Vector2i(17, 12))  # (16,13) now holds a village prop
@@ -1129,7 +1129,7 @@ func _crews() -> void:
 func _guards() -> void:
 	var C := GameConfig.CELL
 	var g := await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	g.try_build("guard", Vector2i(11, 11))
 	var gt: Tower = g.towers[0]
 	check("a built Guard Tower has 3 Guards, each on its own free post touching the tower",
@@ -1186,7 +1186,7 @@ func _guards() -> void:
 
 	g = await _make_game()
 	g.cards = {"shield_wall": 2}
-	g.trust = 1000
+	g.FAITH = 1000
 	g._start_loop("test")
 	g.try_build("guard", Vector2i(11, 11))
 	gt = g.towers[0]
@@ -1216,7 +1216,7 @@ func _guards() -> void:
 
 	g = await _make_game()
 	g.cards = {"friendly_faces": 1}
-	g.trust = 1000
+	g.FAITH = 1000
 	g._start_loop("test")
 	g.try_build("guard", Vector2i(11, 11))
 	gt = g.towers[0]
@@ -1242,7 +1242,7 @@ func _distinct_posts(t: Tower) -> bool:
 
 func _decor() -> void:
 	var g := await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	check("the village has prop cells", g.decor_cells.size() >= 10)
 	var c: Vector2i = g.decor_cells[0]
 	var top_left := c  # a 2 x 2 tower whose top-left cell is the prop cell
@@ -1258,7 +1258,7 @@ func _decor() -> void:
 
 func _grass() -> void:
 	var g := await _make_game()
-	g.trust = 1000
+	g.FAITH = 1000
 	var n: int = g.grass.tuft_count()
 	check("the meadow has tufts, within the triangle budget (%d tufts, %d tris)" % [n, n * GrassField.TRIS_PER_TUFT], n > 1500 and n * GrassField.TRIS_PER_TUFT < 60000)
 	g.grass.gust(Vector3.ZERO, Vector3(0.2, 0, 0))
@@ -1288,7 +1288,7 @@ func _grass() -> void:
 
 func _vfx() -> void:
 	var g := await _make_game()
-	g.trust = 500
+	g.FAITH = 500
 	g.try_build("fire", Vector2i(5, 12))
 	var wiz: Tower = g.towers[0]
 	check("the Wizard Tower has its effects, with the orb at the model's orb anchor", wiz.fx != null and wiz.fx.orb != null and wiz.fx.orb.get_parent().name.ends_with("orb_anchor"))
@@ -1316,7 +1316,7 @@ func _vfx() -> void:
 	gr.queue_free()
 	await process_frame
 	var g2 := await _make_game()
-	g2.trust = 500
+	g2.FAITH = 500
 	g2.try_build("guard", Vector2i(5, 12))
 	var gt: Tower = g2.towers[0]
 	check("the Guard Tower has its effects (banner and gate leaves found)", gt.fx != null and gt.fx._banner != null and gt.fx._door_l != null and gt.fx._door_r != null)
@@ -1335,7 +1335,7 @@ func _vfx() -> void:
 	g2.queue_free()
 	await process_frame
 	var g3 := await _make_game()
-	g3.trust = 500
+	g3.FAITH = 500
 	g3.try_build("crossbow", Vector2i(5, 12))
 	var bw: Tower = g3.towers[0]
 	g3.start_night()
@@ -1352,7 +1352,7 @@ func _vfx() -> void:
 	g3.queue_free()
 	await process_frame
 	var g4 := await _make_game()
-	g4.trust = 500
+	g4.FAITH = 500
 	g4.try_build("airship", Vector2i(5, 12))
 	var sh: Tower = g4.towers[0]
 	check("the Airship has its effects (burner and muzzle anchors found)", sh.fx != null and sh.fx._burner_at != null and sh.fx._muzzle_at != null)

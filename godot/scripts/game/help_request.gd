@@ -1,6 +1,6 @@
 class_name HelpRequest
 extends Node3D
-## One villager help request (spec 18), done by hand during the day for trust:
+## One villager help request (spec 18), done by hand during the day for FAITH:
 ##   chimney  rubble plugs the house's chimney: grab it and pull it out (move it 1.5 cells from the socket)
 ##   bird     a songbird is stuck on the chimney: grab it and move it 2 cells away; it flies off
 ##   lantern  a lantern lies out on the grass: carry it back and let go within 1.5 cells of the house's

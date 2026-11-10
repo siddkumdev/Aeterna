@@ -50,18 +50,18 @@ Existing benchmark assets (house about 3 x 2.6 cells, tower about 2.6 cells wide
 ### 4. Tower placement
 - Placed on grid cells, one tower per cell, large preview ghost, snap on release. Throw the ghost off the island to cancel before placing.
 - **Once placed, a tower stays** (no moving), but it can be sold at day with the Sell sign (see 5).
-- **Cap:** none (Siddharth 2026-10-23 removed the 2-Airship limit; the old 8 + 2 hut cap was never built). Trust is the only limit.
+- **Cap:** none (Siddharth 2026-10-23 removed the 2-Airship limit; the old 8 + 2 hut cap was never built). FAITH is the only limit.
 - **Upgrades:** none per tower in the competition build; progression comes from loop unlocks (see 15).
 
-### 5. Economy (trust)
-- Start: 200 trust per loop (loop 1 night 1). (Was 100; raised 2026-10-22 by Siddharth.)
-- **Day income:** helping villagers (see 18): 4 requests per day, 10-25 trust each. Siddharth 2026-10-23: far too frequent, retune with trust in the M3 balance pass.
-- **Dawn income:** +5 trust per standing house.
-- **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives trust, paid ON TOP OF the dawn income. DECIDED 2026-10-22: 10 x the night number.
+### 5. Economy (FAITH)
+- Start: 200 FAITH per loop (loop 1 night 1). (Was 100; raised 2026-10-22 by Siddharth.)
+- **Day income:** helping villagers (see 18): 4 requests per day, 10-25 FAITH each. Siddharth 2026-10-23: far too frequent, retune with FAITH in the M3 balance pass.
+- **Dawn income:** +5 FAITH per standing house.
+- **Night-clear reward (Siddharth 2026-10-21):** clearing a night (all groups spawned and every enemy defeated) also gives FAITH, paid ON TOP OF the dawn income. DECIDED 2026-10-22: 10 x the night number.
 - **Dawn repair (Siddharth 2026-10-23):** damage carries over between nights; each dawn every house heals 10 HP (a shuttered house with HP again opens up). The hourglass rewind still repairs everything.
 - **Selling (Siddharth 2026-10-23):** day only, with the Sell sign; full cost back on the day the tower was built, half (rounded down) after a night.
 - **Costs:** Fire Tower 60, Blast Brazier 50, Longbow Tower 55, Airship 35 (was 70; halved 2026-10-22 by Siddharth, for now).
-- **Spells cost no resource**; they are limited only by cooldowns (see 11). Trust is the only currency.
+- **Spells cost no resource**; they are limited only by cooldowns (see 11). FAITH is the only currency.
 - Fate Coin can modify income (see 17).
 
 ### 6. Loop structure (competition build)
@@ -169,7 +169,7 @@ M1 uses 3D signs hit by a ray (VR pinch, desktop mouse hand) and number keys; th
 ## D. Progression
 
 ### 15. Time loop
-- **Resets:** night/day counter, trust, spell cooldowns, towers and huts, village damage.
+- **Resets:** night/day counter, FAITH, spell cooldowns, towers and huts, village damage.
 - **Persists:** chosen abilities, Foresight tier, tower/troop unlocks, villager memories, loop count.
 - **Beating the boss:** the game shows 3 ability cards drawn from the pool; keep 1. (Confirmed by Siddharth.)
 - **Losing a night:** shows 1 card; keep it (no choice).
@@ -196,7 +196,7 @@ M1 uses 3D signs hit by a ray (VR pinch, desktop mouse hand) and number keys; th
 | 11 | ~~CUT~~ Friendly Faces | Watch Hut | 4 troops per hut (base 3) | 4, respawn 25% faster | 5, respawn 50% faster | troops standing near the rally flag heal 2 HP/s |
 | 12 | Quick Hands | all spells | cooldowns 15% shorter | 25% | 40% | each spell cast has a 25% chance to come back off cooldown instantly |
 | 13 | Sturdy Homes | houses | +25% HP | +50% | +100% | once per night, the first house that would be shuttered holds at 1 HP instead |
-| 14 | Deep Pockets | trust | +30 starting trust | +50 | +80 | +5 trust after every night in which no house was shuttered |
+| 14 | Deep Pockets | FAITH | +30 starting FAITH | +50 | +80 | +5 FAITH after every night in which no house was shuttered |
 
 - Dropped: Far Sight (Foresight already sharpens each loop), Thunder Drop (spell, not tower/troop).
 - A larger pool comes later.
@@ -209,17 +209,17 @@ M1 uses 3D signs hit by a ray (VR pinch, desktop mouse hand) and number keys; th
 Flicked each morning with the thumb; the landed face shows a glyph. Outcomes (starting weights equal):
 | Glyph | Name | Effect for that day/night |
 |---|---|---|
-| 1 | Market Day | trust from requests x2 |
-| 2 | Lucky Find | +60 trust immediately |
+| 1 | Market Day | FAITH from requests x2 |
+| 2 | Lucky Find | +60 FAITH immediately |
 | 3 | Gentle Rain | spell cooldowns 40% shorter, flyers slowed 30% |
-| 4 | Foggy Night | Foresight drops one tier; +50% dawn trust |
+| 4 | Foggy Night | Foresight drops one tier; +50% dawn FAITH |
 | 5 | Full Moon | towers +20% damage, enemies +20% HP |
 | 6 | Restless Night | +1 enemy group; houses heal 10 HP at dawn |
 Two good, two neutral-mixed, two risky, so the player always plans around the coin.
 
 ### 18. Villagers
 - **Cast for the slice:** 5 villagers sharing one part-based design (reference #29 for proportions).
-- **Help requests (4 kinds):** Blocked chimney (grab and pull out the rubble), Stuck bird (grab and move it), Lost lantern (carry it back to its house), Stuck cart (push it clear). Rewards: 10-25 trust. **Built 2026-10-23 (M1 stand-in):** each day 4 requests, one of each kind on different standing houses; rewards bird 10, chimney 15, lantern 20, cart 25; unfinished ones vanish at night. Placeholder capsule villagers stand by the request houses until Durva's villagers exist.
+- **Help requests (4 kinds):** Blocked chimney (grab and pull out the rubble), Stuck bird (grab and move it), Lost lantern (carry it back to its house), Stuck cart (push it clear). Rewards: 10-25 FAITH. **Built 2026-10-23 (M1 stand-in):** each day 4 requests, one of each kind on different standing houses; rewards bird 10, chimney 15, lantern 20, cart 25; unfinished ones vanish at night. Placeholder capsule villagers stand by the request houses until Durva's villagers exist.
 - **Memory dialogue (MOVED TO M2 2026-10-25; Hades-style reactive lines):** loop 1 none; loop 2 the baker says "Haven't we met?" and two other villagers show small recognition; loop 3 (if built) someone helps on purpose for free.
 
 ---

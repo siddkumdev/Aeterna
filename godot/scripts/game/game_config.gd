@@ -7,10 +7,10 @@ const CELL := 0.05
 const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 x 12)
 
 # Economy (spec 5)
-const START_TRUST := 200  # 2026-10-22 (Siddharth): 100 was too low; 200 = three towers before night 1
-const DAWN_TRUST_PER_HOUSE := 5
+const START_FAITH := 200  # 2026-10-22 (Siddharth): 100 was too low; 200 = three towers before night 1
+const DAWN_FAITH_PER_HOUSE := 5
 # Clearing a night pays 10 x the night number on top of dawn income (Siddharth 2026-10-22): night 1 = 10 ... boss night = 60
-const NIGHT_CLEAR_TRUST_PER_NIGHT := 10
+const NIGHT_CLEAR_FAITH_PER_NIGHT := 10
 
 # Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
 const NIGHTS_PER_LOOP := 6
@@ -40,8 +40,8 @@ const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle
 const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]
 
 # Villager help requests (spec 18; step 5 of the full loop). Each day REQUESTS_PER_DAY requests, one of each
-# kind, on different standing houses; done by hand for trust. Rewards are Claude's stand-ins inside the spec's
-# 10-25 range (harder gesture, more trust). Unfinished requests vanish at night.
+# kind, on different standing houses; done by hand for FAITH. Rewards are Claude's stand-ins inside the spec's
+# 10-25 range (harder gesture, more FAITH). Unfinished requests vanish at night.
 const REQUESTS := {
 	"chimney": {"name": "Blocked chimney", "reward": 15, "scene": "res://assets/village/ew_village_chimney_rubble_v01.glb"},
 	"bird": {"name": "Stuck bird", "reward": 10, "scene": "res://assets/village/ew_village_songbird_v01.glb"},
