@@ -16,7 +16,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.FAITH = 2000
+	g.faith = 2000
 	g.cards = {}
 	for t in [["fire", Vector2i(5, 12)], ["airship", Vector2i(15, 14)], ["guard", Vector2i(9, 16)], ["crossbow", Vector2i(16, 8)]]:
 		g.try_build(t[0], t[1])

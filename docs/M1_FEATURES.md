@@ -10,12 +10,12 @@ Verify any time (Godot console exe from `local.env` as `GODOT_EXE`):
 |---|---|---|
 | 1 | Board 24 x 24 cells, village of 6 houses, forest ring, 3 spawn edges | flat island, procedural forest |
 | 2 | Run structure: 5 loops x (5 nights + boss night) | later loops: enemy HP x(1 + 0.4 x loop), +1 group per night |
-| 3 | Day / dusk / night / dawn loop, hourglass rewind (resets FAITH, towers, damage; keeps cards) | the video-style rewind is M2 |
+| 3 | Day / dusk / night / dawn loop, hourglass rewind (resets faith, towers, damage; keeps cards) | the video-style rewind is M2 |
 | 4 | Wave generator (seeded threat budget, 3 groups, guard rails) | |
 | 5 | Enemies: Grunt, Scout, Splitter (+ Splitlings), Wisp (flyer), Tunneler (underground), Fog variant | |
 | 6 | Pathfinding with towers and houses as obstacles; a build that would wall off every house is refused | |
 | 7 | Towers: Wizard (was Fire), Guard Tower (spawns Guards; replaced the Blast Brazier 2026-10-26), Longbow (piercing), Airship (air only); each manned by a placeholder animated NPC; no cap; sell at day (full refund same day, half later) | |
-| 8 | Economy: 200 start FAITH, dawn +5 per house, night-clear 10 x night number, request rewards 10-25 | |
+| 8 | Economy: 200 start faith, dawn +5 per house, night-clear 10 x night number, request rewards 10-25 | |
 | 9 | Dawn repair: damage carries over, +10 HP per house per dawn; a shuttered house reopens with HP | |
 | 10 | Villager help requests: 4 per day (chimney, bird, lantern, cart), grab by hand, placeholder villagers | far too frequent: M3 |
 | 11 | Foresight: Crystal Lens, 3 tiers over the 5 loops, tier-3 "close a path" rewrite | |
@@ -42,7 +42,7 @@ Verify any time (Godot console exe from `local.env` as `GODOT_EXE`):
 Hands-only menus (palm wheel), villager memory lines (Hades-style), the wordless tutorial, the video-style rewind, all VFX, real models, animation, audio, UI design, 72 fps on Quest.
 
 ## Moved to M3 (balance)
-FAITH and request frequency tuned together, loops 3-5 scaling, spell numbers, boss numbers, difficulty curve across both loops, comfort.
+Faith and request frequency tuned together, loops 3-5 scaling, spell numbers, boss numbers, difficulty curve across both loops, comfort.
 
 ## Moved to M4
 The opening cutscene (barrier, the annual ritual, the Warden breaking it).

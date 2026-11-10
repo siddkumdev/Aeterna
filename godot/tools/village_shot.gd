@@ -45,7 +45,7 @@ func _initialize() -> void:
 	cam.current = true
 	cam.fov = 40
 	var centre: Vector3 = g.board.global_position
-	g.FAITH = 500
+	g.faith = 500
 	g.cards = {}
 	g.try_build("fire", Vector2i(5, 12))
 	g.try_build("crossbow", Vector2i(18, 12))

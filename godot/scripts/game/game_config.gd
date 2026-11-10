@@ -40,8 +40,8 @@ const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle
 const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]
 
 # Villager help requests (spec 18; step 5 of the full loop). Each day REQUESTS_PER_DAY requests, one of each
-# kind, on different standing houses; done by hand for FAITH. Rewards are Claude's stand-ins inside the spec's
-# 10-25 range (harder gesture, more FAITH). Unfinished requests vanish at night.
+# kind, on different standing houses; done by hand for faith. Rewards are Claude's stand-ins inside the spec's
+# 10-25 range (harder gesture, more faith). Unfinished requests vanish at night.
 const REQUESTS := {
 	"chimney": {"name": "Blocked chimney", "reward": 15, "scene": "res://assets/village/ew_village_chimney_rubble_v01.glb"},
 	"bird": {"name": "Stuck bird", "reward": 10, "scene": "res://assets/village/ew_village_songbird_v01.glb"},

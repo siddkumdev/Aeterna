@@ -1,10 +1,10 @@
 class_name Game
 extends Node3D
-## The game loop (spec 6 + 15). Day = spend FAITH on towers and help villagers (requests, done by hand);
+## The game loop (spec 6 + 15). Day = spend faith on towers and help villagers (requests, done by hand);
 ## Night = enemies walk from the forest gaps to the houses; Dawn = income (+5 per standing house, +10 x night
 ## for clearing it) and +10 HP for each house (damage carries over). A loop is 5 nights + a boss night
 ## (the 3-phase Warden). Beating the boss offers 3 ability cards (keep 1); losing a night offers 1
-## Common card. Either way the hourglass turns: the next loop starts, harder, with FAITH, towers and damage
+## Common card. Either way the hourglass turns: the next loop starts, harder, with faith, towers and damage
 ## reset but cards kept. A run is 5 loops. Runs in the Meta XR Simulator (hand
 ## rays, pinch) or on the desktop with the mouse when OpenXR is not running.
 ##
@@ -57,7 +57,7 @@ var towers: Array[Tower] = []
 var enemies: Array[Enemy] = []
 var shots: Array[Projectile] = []
 var shots_root: Node3D
-var FAITH := GameConfig.START_FAITH
+var faith := GameConfig.START_FAITH
 var night := 0  # 0-based, within the loop; GameConfig.BOSS_NIGHT is the boss night
 var loop := 0  # 0-based; a run is GameConfig.LOOPS_PER_RUN loops
 var cards := {}  # ability cards held: id -> rarity (0 Common, 1 Rare, 2 Legendary); kept through the loop
@@ -188,11 +188,11 @@ func new_run(rng_seed: int) -> void:
 	cards = {}
 	offers = []
 	speed = 1.0
-	_start_loop("Day 1. Spend FAITH on towers, then start the night.")
+	_start_loop("Day 1. Spend faith on towers, then start the night.")
 
 
 func _start_loop(message: String) -> void:
-	## Everything the time loop resets (spec 15): night counter, FAITH, towers, village damage.
+	## Everything the time loop resets (spec 15): night counter, faith, towers, village damage.
 	for t in towers:
 		t.queue_free()
 	towers.clear()
@@ -209,7 +209,7 @@ func _start_loop(message: String) -> void:
 		h.max_hp = GameConfig.HOUSE_HP * (1.0 + (Cards.value("sturdy_homes", sturdy) / 100.0 if sturdy >= 0 else 0.0))
 		h.repair()
 	var pockets := card("deep_pockets")
-	FAITH = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
+	faith = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
 	night = 0
 	closed_spawn = ""
 	_set_phase(Phase.DAY, message)
@@ -510,16 +510,16 @@ func release_request() -> bool:
 		return false
 	snd("help_done")
 	snd("trust_chime")
-	FAITH += r.reward
+	faith += r.reward
 	if with_rig:
-		_FAITH_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
-	last_message = "%s: thank you! +%d FAITH" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
+		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
+	last_message = "%s: thank you! +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
 	_refresh_ui()
 	return true
 
 
-func _FAITH_sparkle(at: Vector3) -> void:
-	## FAITH earned: a little rise of gold (X08).
+func _faith_sparkle(at: Vector3) -> void:
+	## Faith earned: a little rise of gold (X08).
 	VfxKit.burst(shots_root, at, VfxKit.FIRE_YELLOW, VfxKit.FIRE_ORANGE, 10, 0.05, 0.8, 0.006, 0.06)
 
 
@@ -574,10 +574,10 @@ func _end_night() -> void:
 	var income := standing * GameConfig.DAWN_FAITH_PER_HOUSE + GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT * (night + 1)
 	if card("deep_pockets") == 2 and standing == houses.size():
 		income += 5  # Deep Pockets Legendary: no house shuttered tonight
-	FAITH += income
+	faith += income
 	for h in houses:
 		if with_rig and not h.is_shuttered:
-			_FAITH_sparkle(h.global_position + Vector3(0, 0.1, 0))  # the dawn income, house by house
+			_faith_sparkle(h.global_position + Vector3(0, 0.1, 0))  # the dawn income, house by house
 		h.heal(GameConfig.DAWN_REPAIR)  # damage carries over (Siddharth 2026-10-23)
 	for t in towers:
 		if t.cfg["kind"] == "spawner":
@@ -589,7 +589,7 @@ func _end_night() -> void:
 	night += 1
 	closed_spawn = ""
 	var next :="Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
-	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d FAITH. %s" % [standing, income, next])
+	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d faith. %s" % [standing, income, next])
 
 
 func _end_loop(won: bool) -> void:
@@ -788,18 +788,18 @@ func sell_value(t: Tower) -> int:
 
 
 func sell(t: Tower) -> bool:
-	## Day only: the tower goes, its cells open up again, and FAITH comes back (sell_value).
+	## Day only: the tower goes, its cells open up again, and faith comes back (sell_value).
 	if phase != Phase.DAY or t == null or not towers.has(t):
 		return false
 	var back := sell_value(t)
-	FAITH += back
+	faith += back
 	nav.remove_tower(t.cell, GameConfig.TOWER_SIZE)
 	grass.refresh(nav)
 	towers.erase(t)
 	VfxKit.build_pop(shots_root, t.global_position)
 	snd("sell", t.global_position)
 	t.queue_free()
-	last_message = "%s sold: +%d FAITH." % [GameConfig.TOWERS[t.kind]["name"], back]
+	last_message = "%s sold: +%d faith." % [GameConfig.TOWERS[t.kind]["name"], back]
 	if foresight.showing:
 		foresight.refresh()
 	_update_ghost()
@@ -808,7 +808,7 @@ func sell(t: Tower) -> bool:
 
 
 func can_build(kind: String, cell: Vector2i) -> bool:
-	return phase == Phase.DAY and FAITH >= GameConfig.TOWERS[kind]["cost"] and not at_max(kind) \
+	return phase == Phase.DAY and faith >= GameConfig.TOWERS[kind]["cost"] and not at_max(kind) \
 		and nav.can_build(cell, GameConfig.TOWER_SIZE, standing_houses())
 
 
@@ -820,7 +820,7 @@ func at_max(kind: String) -> bool:
 func try_build(kind: String, cell: Vector2i) -> bool:
 	if not can_build(kind, cell):
 		return false
-	FAITH -= GameConfig.TOWERS[kind]["cost"]
+	faith -= GameConfig.TOWERS[kind]["cost"]
 	nav.add_tower(cell, GameConfig.TOWER_SIZE)
 	grass.refresh(nav)
 	var t := Tower.new()
@@ -842,8 +842,8 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 	tower_placed.emit(kind, t.global_position)
 	for r in requests:
 		r.dodge(NavGrid.footprint(cell, GameConfig.TOWER_SIZE))
-	last_message = "%s built. %d FAITH left." % [GameConfig.TOWERS[kind]["name"], FAITH]
-	if FAITH < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
+	last_message = "%s built. %d faith left." % [GameConfig.TOWERS[kind]["name"], faith]
+	if faith < GameConfig.TOWERS[kind]["cost"] or at_max(kind):
 		select("")
 	if foresight.showing:
 		foresight.refresh()  # a new tower can change the routes the lens draws
@@ -950,7 +950,7 @@ func _update_ghost() -> void:
 		if t:
 			_ghost.position = NavGrid.footprint_centre(t.cell, GameConfig.TOWER_SIZE)
 			var when := "built today: full cost" if t.built_night == night else "half cost after a night"
-			_msg.text = "Sell %s: +%d FAITH (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
+			_msg.text = "Sell %s: +%d faith (%s)" % [GameConfig.TOWERS[t.kind]["name"], sell_value(t), when]
 		elif _msg:
 			_msg.text = "Pick a tower to sell. Full cost back on the day it was built, half after that."
 		return
@@ -1057,8 +1057,8 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	elif not try_build(selected, c):
 		if at_max(selected):
 			last_message = "At most %d of those on the board." % GameConfig.TOWERS[selected]["max"]
-		elif FAITH < GameConfig.TOWERS[selected]["cost"]:
-			last_message = "Not enough FAITH."
+		elif faith < GameConfig.TOWERS[selected]["cost"]:
+			last_message = "Not enough faith."
 		else:
 			last_message = "Can't build there (blocked, or it would cut the forest off from every house)."
 		_refresh_ui()
@@ -1088,8 +1088,8 @@ func _press_button(id: String) -> void:
 					last_message = "At most %d of those on the board. Sell one to move it." % GameConfig.TOWERS[id]["max"]
 					_refresh_ui()
 					return
-				if FAITH < GameConfig.TOWERS[id]["cost"]:
-					last_message = "Not enough FAITH for a %s." % GameConfig.TOWERS[id]["name"]
+				if faith < GameConfig.TOWERS[id]["cost"]:
+					last_message = "Not enough faith for a %s." % GameConfig.TOWERS[id]["name"]
 					_refresh_ui()
 					return
 			select("" if selected == id else id)
@@ -1202,7 +1202,7 @@ func _build_ui() -> void:
 	var ui := _child(board, "UI")
 	var specs := []
 	for k in GameConfig.TOWER_ORDER:
-		specs.append([k, "%s\n%d FAITH" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
+		specs.append([k, "%s\n%d faith" % [GameConfig.TOWERS[k]["name"], GameConfig.TOWERS[k]["cost"]]])
 	for sid: String in GameConfig.SPELL_ORDER:
 		specs.append(["spell_" + sid, GameConfig.SPELLS[sid]["name"]])
 	specs.append(["sell", "Sell\ntower"])
@@ -1438,7 +1438,7 @@ func _refresh_hud() -> void:
 	var n := "Boss night" if night == GameConfig.BOSS_NIGHT else "%s %d" % [phase_name, night + 1]
 	if phase == Phase.CARDS or phase == Phase.DONE:
 		n = phase_name
-	var t := "Loop %d   |   %s   |   FAITH %d   |   Houses %d/%d" % [loop + 1, n, FAITH, standing_houses().size(), houses.size()]
+	var t := "Loop %d   |   %s   |   Faith %d   |   Houses %d/%d" % [loop + 1, n, faith, standing_houses().size(), houses.size()]
 	if phase == Phase.DAY:
 		t += "   |   Foresight %d" % foresight_tier()
 		if closed_spawn != "":
@@ -1502,8 +1502,8 @@ func _refresh_buttons() -> void:
 				b["node"].visible = day
 				var cfg: Dictionary = GameConfig.TOWERS[id]
 				b["label"].text = "%s\n%d/%d placed" % [cfg["name"], cfg["max"], cfg["max"]] if at_max(id) \
-					else "%s\n%d FAITH" % [cfg["name"], cfg["cost"]]
-				if not day or FAITH < GameConfig.TOWERS[id]["cost"] or at_max(id):
+					else "%s\n%d faith" % [cfg["name"], cfg["cost"]]
+				if not day or faith < GameConfig.TOWERS[id]["cost"] or at_max(id):
 					c = Color8(0x8A, 0x84, 0x7C)
 				elif selected == id:
 					c = Color8(0xF0, 0xB0, 0x4A)

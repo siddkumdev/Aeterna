@@ -10,7 +10,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.FAITH = 500
+	g.faith = 500
 	g.try_build("guard", Vector2i(11, 11))
 	var gt: Tower = g.towers[0]
 	g.night = 2

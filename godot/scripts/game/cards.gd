@@ -45,9 +45,9 @@ const POOL := {
 	"sturdy_homes": {"name": "Sturdy Homes", "applies": "houses", "values": [25, 50, 100],
 		"text": "Houses +%s%% HP",
 		"legend": "Once per night, the first house that would be shuttered holds at 1 HP instead"},
-	"deep_pockets": {"name": "Deep Pockets", "applies": "FAITH", "values": [30, 50, 80],
-		"text": "+%s starting FAITH",
-		"legend": "+5 FAITH after every night in which no house was shuttered"},
+	"deep_pockets": {"name": "Deep Pockets", "applies": "faith", "values": [30, 50, 80],
+		"text": "+%s starting faith",
+		"legend": "+5 faith after every night in which no house was shuttered"},
 }
 
 

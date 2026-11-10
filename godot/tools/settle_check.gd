@@ -11,7 +11,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.FAITH = 2000
+	g.faith = 2000
 	g._hud.visible = false
 	g._msg.visible = false
 	g.try_build("fire", Vector2i(5, 12))

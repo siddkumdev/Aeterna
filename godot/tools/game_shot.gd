@@ -37,7 +37,7 @@ func _initialize() -> void:
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_hand.png")
 	g._mouse_hand.global_position = Vector3(0, 3, 0)  # out of the later shots
 	g.select("")
-	g.FAITH = 200
+	g.faith = 200
 	g.try_build("crossbow", Vector2i(3, 9))
 	g.try_build("guard", Vector2i(19, 9))
 	g.set_process(true)
@@ -53,7 +53,7 @@ func _initialize() -> void:
 	# air and underground (step 2): Wisps flying in at the Airships, a Tunneler's mound, Fog variants walking
 	g._clear_night()
 	g.phase = Game.Phase.DAY
-	g.FAITH = 200
+	g.faith = 200
 	g.try_build("airship", Vector2i(14, 5))
 	g.try_build("airship", Vector2i(5, 14))
 	g.loop = 1
@@ -78,7 +78,7 @@ func _initialize() -> void:
 	g.phase = Game.Phase.DAY
 	g.loop = 0
 	g.night = 2
-	g.FAITH = 400
+	g.faith = 400
 	g.try_build("fire", Vector2i(4, 9))
 	g.try_build("crossbow", Vector2i(18, 9))
 	g.start_night()

@@ -17,7 +17,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.FAITH = 500
+	g.faith = 500
 	g.cards = {}
 	var spot := {"fire": Vector2i(5, 12), "crossbow": Vector2i(5, 12), "airship": Vector2i(5, 12), "guard": Vector2i(5, 12)}
 	g.try_build(which, spot[which])

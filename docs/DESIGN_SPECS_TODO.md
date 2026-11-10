@@ -7,7 +7,7 @@ Answer in rough bullets. Claude turns answers into `docs/GAME_SPEC.md` and build
 2. **What enemies attack:** houses, villagers, a village core, or towers? What does "losing a night" mean (houses lost, core HP)?
 3. **Night rules:** length, how a night is won, what happens when the player does nothing.
 4. **Tower placement rules:** cost model, max count, can towers be moved, sold or upgraded?
-5. **Economy (FAITH):** starting amount, how it is earned in the day, what each building costs, how many numbers per night.
+5. **Economy (faith):** starting amount, how it is earned in the day, what each building costs, how many numbers per night.
 6. **Loop structure for the competition build:** number of nights before the boss, day length, is the day skippable.
 
 ## B. Rosters (after A)
@@ -26,7 +26,7 @@ Answer in rough bullets. Claude turns answers into `docs/GAME_SPEC.md` and build
 15. **Time loop:** what resets, what persists, the 3-ability choice (list the 5-6 abilities for the competition), the 1-ability choice after a loss.
 16. **Loop 2 difficulty:** more enemies, new mechanics, or both? What must be visibly different for the demo video?
 17. **Fate Coin:** the outcome table (e.g. 6 outcomes) and effects.
-18. **Villagers:** 3-4 kinds of help request, FAITH rewards, and the memory dialogue per loop.
+18. **Villagers:** 3-4 kinds of help request, faith rewards, and the memory dialogue per loop.
 
 ## E. Story and presentation (last)
 19. **Boss and reveal:** who is it, why did the forest turn, and the title.

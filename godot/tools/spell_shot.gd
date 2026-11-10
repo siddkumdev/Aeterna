@@ -16,7 +16,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	for i in 5:
 		await process_frame
-	g.FAITH = 500
+	g.faith = 500
 	g.cards = {}
 	if which == "rage":  # a tower inside the ring, so its pulse shows
 		print("SPELLSHOT tower ", g.try_build("fire", Vector2i(10, 12)))

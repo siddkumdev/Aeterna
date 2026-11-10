@@ -20,7 +20,7 @@ func _initialize() -> void:
 	root.add_child(g)
 	await process_frame
 	await process_frame
-	g.FAITH = 500
+	g.faith = 500
 	g.try_build("fire", Vector2i(5, 12))
 	g.try_build("crossbow", Vector2i(11, 12))
 	g.try_build("airship", Vector2i(17, 12))
