@@ -1,4 +1,4 @@
-# Art decisions log
+﻿# Art decisions log
 
 Newest at the bottom. Record every decision Siddharth makes, with the board ids he referenced.
 
@@ -313,3 +313,4 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - 2026-11-10 (Siddharth, round 10): likes Storm Cloud 2 (rolling swell) and Root Ward 1 (rustle); wants a thunder sound when a strike hits an enemy (short low thunder crack, his choice) and less creaking in Root Ward, "other wood sounds" (search our library first, no downloads). Our grain library has no branch/twig recordings; round 11 uses wooden-toy rummaging, wood knocks and leaves. In the game the strike crack must be its own sound per chained hit (to build when hooking up).
 - 2026-11-10 (Siddharth): asked for a Fire Orb with real recordings. Round 12: fire whooshes (CC BY 4.0) + campfire bed + cannon-body thump, only dull crackle grains (the bright ones sound like sparks); upper mids lifted because real fire whooshes are dark (~880 Hz centroid). Pending his verdict.
 - 2026-11-10 (the user working with Claude): the currency "Trust" is renamed "Faith" in code, tests, tools and docs/GAME_SPEC.md, M1_FEATURES.md, DESIGN_SPECS_TODO.md. Old log rows keep "trust". Kept as-is for now: asset names ew_village_trust_heart/trust_coin, generator make_trust_heart.py and the sound id trust_chime (a faith asset comes in a later round). New story direction (tiny god, the Warden as the rival god, night 5 always falls, hand-placed physical cards, look-through lens, god-hands) is drafted in docs/STORY.md and awaits approval.
+- 2026-11-10 (Siddharth): approved the real-recording Fire Orb (round 12 `fire_orb_real`). All five spells now approved (Fire Orb r12, Boulder r9, Storm Cloud r11, Rage r9, Root Ward r11 `root_a`); none are in the game yet.
