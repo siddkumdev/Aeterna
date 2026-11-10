@@ -236,9 +236,40 @@ def cannon_pkg(seed):
 
 ROUNDS_R5 = {"longbow": longbow_pkg, "guard": guard_pkg, "airship": cannon_pkg}
 
+# Round r6: Longbow Tower rebuilt as a CROSSBOW (Siddharth 2026-11-10: round 5 "doesn't sound like a bow, sounds so random";
+# chose crossbow: a short tight 'thunk' of the release, one quick bolt whoosh, a soft 'thup' per pierced enemy).
+# One coherent event instead of knock + unrelated swish: thunk, string snap and whoosh start together.
+def xbow_shot(thunk_hz, snap, snap_hi, whoosh_g, body):
+    def fn(r):
+        thunk = S.modal(thunk_hz, 0.14, "wood", r, hardness=0.3, nmodes=4)
+        low = S.thud(0.12, 210, 130, 0.05, r, grit=0.0)
+        sn = S.bp(S.noise(0.06, r, "white"), 1800, snap_hi) * S.exp_env(0.06, 0.012, 0.0008)
+        wh = S.sweep_bp(S.noise(0.2, r, "white"), S.curve([(0, 3200), (0.2, 1400)], 0.2), 1.2) * S.exp_env(0.2, 0.06, 0.004)
+        return _open(S.mix((thunk, 0, 0.9), (low, 0, body), (S.pk(sn), 0, snap), (S.pk(wh), 0.015, whoosh_g)), HZ5)
+    return fn
+
+
+def xbow_thup(r):  # a soft pierce: short muted pat, not a tick
+    pat = S.lp(S.noise(0.07, r, "white"), 3200) * S.exp_env(0.07, 0.02, 0.001)
+    low = S.thud(0.08, 260, 160, 0.03, r, grit=0.0)
+    return _open(S.mix((S.pk(pat), 0, 1.1), (low, 0, 0.5)), HZ5)
+
+
+def xbow_pkg(shot):
+    def fn(seed):
+        r = S.rng(seed)
+        x = S.mix((shot(r), 0, 1.0), (xbow_thup(r), 0.4, 0.6), (xbow_thup(r), 0.52, 0.5), (xbow_thup(r), 0.64, 0.45))
+        return S.normalise(S.room(x, 0.2, 0.07), -5.0, -21.0, -3.0)
+    return fn
+
+
+ROUNDS_R6 = {"xbow_a": xbow_pkg(xbow_shot(480, 0.9, 5000, 0.8, 0.4)),
+             "xbow_b": xbow_pkg(xbow_shot(430, 0.9, 5500, 0.6, 0.5)),
+             "xbow_c": xbow_pkg(xbow_shot(400, 0.7, 4000, 0.6, 0.7))}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
