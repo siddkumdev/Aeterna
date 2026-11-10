@@ -8,7 +8,7 @@ extends Node3D
 ## Ticked by Game.step().
 
 var game  # Game
-const SHOT_SOUNDS := {"fire": "fireball_launch", "crossbow": "crossbow_shot", "airship": "airship_shot"}
+const SHOT_SOUNDS := {"fire": "wizard_launch", "crossbow": "crossbow_shot", "airship": "airship_shot"}
 const CHEER_CHANCE := 0.3  # a kill makes the crew cheer now and then (the bark's own cooldown keeps it rare)
 var kind := "fire"
 var cfg: Dictionary
@@ -303,6 +303,8 @@ func _spawn_guard(from_gate: bool) -> Guard:
 		g.state = "idle"
 	g.global_position = at
 	guards.append(g)
+	if from_gate and game != null:
+		game.snd("guard_clop", at)  # a replacement Guard steps out (not the whole ring at dawn)
 	return g
 
 

@@ -19,6 +19,61 @@
   "tracker": "A43",
   "vary": 0.03
  },
+ "airship_hit": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.04,
+  "duck": false,
+  "files": [
+   {
+    "file": "airship_hit_1.wav",
+    "peak_db": -3.3,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.54
+   },
+   {
+    "file": "airship_hit_2.wav",
+    "peak_db": -3.5,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.564
+   },
+   {
+    "file": "airship_hit_3.wav",
+    "peak_db": -2.0,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.517
+   },
+   {
+    "file": "airship_hit_4.wav",
+    "peak_db": -2.0,
+    "rms_db": -20.7,
+    "seam": null,
+    "seconds": 0.582
+   },
+   {
+    "file": "airship_hit_5.wav",
+    "peak_db": -3.1,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.504
+   },
+   {
+    "file": "airship_hit_6.wav",
+    "peak_db": -3.2,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.556
+   }
+  ],
+  "loop": false,
+  "note": "Airship cannonball lands: heavy soft thump (restart r5)",
+  "spatial": true,
+  "tracker": "A16",
+  "vary": 0.07
+ },
  "airship_shot": {
   "bus": "sfx",
   "combo": false,
@@ -27,37 +82,37 @@
   "files": [
    {
     "file": "airship_shot_1.wav",
-    "peak_db": -1.0,
-    "rms_db": -17.9,
+    "peak_db": -2.0,
+    "rms_db": -20.2,
     "seam": null,
-    "seconds": 0.8
+    "seconds": 0.49
    },
    {
     "file": "airship_shot_2.wav",
-    "peak_db": -1.0,
-    "rms_db": -19.1,
+    "peak_db": -2.0,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.838
+    "seconds": 0.512
    },
    {
     "file": "airship_shot_3.wav",
-    "peak_db": -1.0,
-    "rms_db": -18.2,
+    "peak_db": -2.0,
+    "rms_db": -20.0,
     "seam": null,
-    "seconds": 0.766
+    "seconds": 0.47
    },
    {
     "file": "airship_shot_4.wav",
-    "peak_db": -1.0,
-    "rms_db": -18.0,
+    "peak_db": -2.0,
+    "rms_db": -19.3,
     "seam": null,
-    "seconds": 0.865
+    "seconds": 0.528
    }
   ],
   "loop": false,
-  "note": "the Airship's cannon: a real far cannon pitched up (toy-sized) and a stone thump",
+  "note": "Airship cannon shot: round thoomp (restart r5)",
   "spatial": true,
-  "tracker": "A43",
+  "tracker": "A16",
   "vary": 0.05
  },
  "amb_bird": {
@@ -710,24 +765,38 @@
   "vary": 0.03
  },
  "boulder_fall": {
-  "bus": "sfx",
+  "bus": "ui",
   "combo": false,
-  "cooldown": 0.0,
+  "cooldown": 0.05,
   "duck": false,
   "files": [
    {
-    "file": "boulder_fall.wav",
-    "peak_db": -2.0,
-    "rms_db": -17.9,
+    "file": "boulder_fall_1.wav",
+    "peak_db": -8.1,
+    "rms_db": -24.6,
     "seam": null,
-    "seconds": 0.399
+    "seconds": 0.623
+   },
+   {
+    "file": "boulder_fall_2.wav",
+    "peak_db": -10.7,
+    "rms_db": -24.6,
+    "seam": null,
+    "seconds": 0.639
+   },
+   {
+    "file": "boulder_fall_3.wav",
+    "peak_db": -10.5,
+    "rms_db": -24.6,
+    "seam": null,
+    "seconds": 0.602
    }
   ],
   "loop": false,
-  "note": "a boulder falls: a real flying-object whoosh, slowed and falling in pitch as it nears the ground",
-  "spatial": true,
-  "tracker": "A25",
-  "vary": 0.03
+  "note": "Boulder released: a short falling whoosh (restart r9)",
+  "spatial": false,
+  "tracker": "A20",
+  "vary": 0.06
  },
  "boulder_hit": {
   "bus": "sfx",
@@ -737,37 +806,37 @@
   "files": [
    {
     "file": "boulder_hit_1.wav",
-    "peak_db": -1.0,
-    "rms_db": -20.8,
+    "peak_db": -2.6,
+    "rms_db": -20.0,
     "seam": null,
-    "seconds": 0.502
+    "seconds": 0.62
    },
    {
     "file": "boulder_hit_2.wav",
-    "peak_db": -1.0,
-    "rms_db": -23.3,
+    "peak_db": -2.0,
+    "rms_db": -20.4,
     "seam": null,
-    "seconds": 1.257
+    "seconds": 0.569
    },
    {
     "file": "boulder_hit_3.wav",
-    "peak_db": -1.4,
-    "rms_db": -18.5,
+    "peak_db": -2.5,
+    "rms_db": -20.0,
     "seam": null,
-    "seconds": 0.492
+    "seconds": 0.587
    },
    {
     "file": "boulder_hit_4.wav",
-    "peak_db": -1.0,
-    "rms_db": -23.4,
+    "peak_db": -2.0,
+    "rms_db": -24.2,
     "seam": null,
-    "seconds": 1.297
+    "seconds": 1.394
    }
   ],
   "loop": false,
-  "note": "a boulder lands: real stones knocking, soil and a far thunder thump",
+  "note": "Boulder lands: heavy stone thud, dust and rumble (restart r9)",
   "spatial": true,
-  "tracker": "A25",
+  "tracker": "A20",
   "vary": 0.03
  },
  "build_pop": {
@@ -777,36 +846,15 @@
   "duck": false,
   "files": [
    {
-    "file": "build_pop_1.wav",
-    "peak_db": -2.0,
-    "rms_db": -24.6,
+    "file": "build_pop.wav",
+    "peak_db": -240.0,
+    "rms_db": -240.0,
     "seam": null,
-    "seconds": 0.556
-   },
-   {
-    "file": "build_pop_2.wav",
-    "peak_db": -2.0,
-    "rms_db": -25.3,
-    "seam": null,
-    "seconds": 0.556
-   },
-   {
-    "file": "build_pop_3.wav",
-    "peak_db": -2.7,
-    "rms_db": -23.4,
-    "seam": null,
-    "seconds": 0.573
-   },
-   {
-    "file": "build_pop_4.wav",
-    "peak_db": -2.6,
-    "rms_db": -23.4,
-    "seam": null,
-    "seconds": 0.575
+    "seconds": 0.05
    }
   ],
   "loop": false,
-  "note": "a clatter of wooden blocks, a bubbly pop and two music-box sparkles",
+  "note": "SILENT on purpose: the approved placing sound is the wooden knock alone (2026-11-10)",
   "spatial": false,
   "tracker": "A12",
   "vary": 0.0
@@ -940,51 +988,51 @@
   "files": [
    {
     "file": "crossbow_pierce_1.wav",
-    "peak_db": -8.0,
-    "rms_db": -24.8,
+    "peak_db": -2.9,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.155
+    "seconds": 0.194
    },
    {
     "file": "crossbow_pierce_2.wav",
-    "peak_db": -8.0,
-    "rms_db": -23.7,
+    "peak_db": -6.8,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.139
+    "seconds": 0.215
    },
    {
     "file": "crossbow_pierce_3.wav",
-    "peak_db": -8.0,
-    "rms_db": -23.1,
+    "peak_db": -6.8,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.12
+    "seconds": 0.203
    },
    {
     "file": "crossbow_pierce_4.wav",
-    "peak_db": -8.0,
-    "rms_db": -26.2,
+    "peak_db": -4.9,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.199
+    "seconds": 0.215
    },
    {
     "file": "crossbow_pierce_5.wav",
-    "peak_db": -8.0,
-    "rms_db": -23.1,
+    "peak_db": -5.5,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.19
+    "seconds": 0.193
    },
    {
     "file": "crossbow_pierce_6.wav",
-    "peak_db": -8.0,
-    "rms_db": -27.3,
+    "peak_db": -6.9,
+    "rms_db": -24.7,
     "seam": null,
-    "seconds": 0.166
+    "seconds": 0.212
    }
   ],
   "loop": false,
-  "note": "the bolt passes through: a real stick whoosh",
+  "note": "bolt pierces an enemy: one soft thup (restart r7)",
   "spatial": true,
-  "tracker": "A43",
+  "tracker": "A16",
   "vary": 0.08
  },
  "crossbow_shot": {
@@ -995,51 +1043,51 @@
   "files": [
    {
     "file": "crossbow_shot_1.wav",
+    "peak_db": -5.6,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.278
+   },
+   {
+    "file": "crossbow_shot_2.wav",
+    "peak_db": -5.1,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.28
+   },
+   {
+    "file": "crossbow_shot_3.wav",
+    "peak_db": -5.8,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.268
+   },
+   {
+    "file": "crossbow_shot_4.wav",
     "peak_db": -4.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.282
+   },
+   {
+    "file": "crossbow_shot_5.wav",
+    "peak_db": -3.4,
     "rms_db": -22.4,
     "seam": null,
     "seconds": 0.249
    },
    {
-    "file": "crossbow_shot_2.wav",
-    "peak_db": -6.0,
-    "rms_db": -22.4,
-    "seam": null,
-    "seconds": 0.306
-   },
-   {
-    "file": "crossbow_shot_3.wav",
+    "file": "crossbow_shot_6.wav",
     "peak_db": -5.1,
     "rms_db": -22.4,
     "seam": null,
-    "seconds": 0.234
-   },
-   {
-    "file": "crossbow_shot_4.wav",
-    "peak_db": -6.4,
-    "rms_db": -22.4,
-    "seam": null,
-    "seconds": 0.18
-   },
-   {
-    "file": "crossbow_shot_5.wav",
-    "peak_db": -6.0,
-    "rms_db": -22.4,
-    "seam": null,
-    "seconds": 0.207
-   },
-   {
-    "file": "crossbow_shot_6.wav",
-    "peak_db": -4.3,
-    "rms_db": -22.4,
-    "seam": null,
-    "seconds": 0.254
+    "seconds": 0.265
    }
   ],
   "loop": false,
-  "note": "the Wind Crossbow: a real bow release and a rush of air",
+  "note": "Longbow Tower shot: tight crossbow thunk with a wood click (restart r7)",
   "spatial": true,
-  "tracker": "A43",
+  "tracker": "A16",
   "vary": 0.05
  },
  "dawn_bell": {
@@ -1130,29 +1178,15 @@
   "duck": false,
   "files": [
    {
-    "file": "enemy_death_1.wav",
-    "peak_db": -5.5,
-    "rms_db": -21.9,
+    "file": "enemy_death.wav",
+    "peak_db": -240.0,
+    "rms_db": -240.0,
     "seam": null,
-    "seconds": 0.32
-   },
-   {
-    "file": "enemy_death_2.wav",
-    "peak_db": -6.7,
-    "rms_db": -21.9,
-    "seam": null,
-    "seconds": 0.21
-   },
-   {
-    "file": "enemy_death_3.wav",
-    "peak_db": -6.4,
-    "rms_db": -21.9,
-    "seam": null,
-    "seconds": 0.461
+    "seconds": 0.05
    }
   ],
   "loop": false,
-  "note": "1 grunt: a squelch and a cloth poof; 2 scout: a high squelch; 3 flyer: a flutter of wings",
+  "note": "SILENT on purpose: he asked for silent or minimal enemy deaths (2026-11-10)",
   "spatial": true,
   "tracker": "A17",
   "vary": 0.08
@@ -1477,6 +1511,102 @@
   "tracker": "A08",
   "vary": 0.06
  },
+ "guard_clop": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.05,
+  "duck": false,
+  "files": [
+   {
+    "file": "guard_clop_1.wav",
+    "peak_db": -6.9,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.226
+   },
+   {
+    "file": "guard_clop_2.wav",
+    "peak_db": -4.9,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.233
+   },
+   {
+    "file": "guard_clop_3.wav",
+    "peak_db": -6.9,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.206
+   },
+   {
+    "file": "guard_clop_4.wav",
+    "peak_db": -7.8,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.256
+   }
+  ],
+  "loop": false,
+  "note": "a Guard steps out: soft wood and cloth clop (restart r5)",
+  "spatial": true,
+  "tracker": "A16",
+  "vary": 0.1
+ },
+ "guard_hit": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.05,
+  "duck": false,
+  "files": [
+   {
+    "file": "guard_hit_1.wav",
+    "peak_db": -8.2,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.297
+   },
+   {
+    "file": "guard_hit_2.wav",
+    "peak_db": -7.7,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.303
+   },
+   {
+    "file": "guard_hit_3.wav",
+    "peak_db": -9.4,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.292
+   },
+   {
+    "file": "guard_hit_4.wav",
+    "peak_db": -8.9,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.328
+   },
+   {
+    "file": "guard_hit_5.wav",
+    "peak_db": -7.9,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.278
+   },
+   {
+    "file": "guard_hit_6.wav",
+    "peak_db": -8.7,
+    "rms_db": -25.7,
+    "seam": null,
+    "seconds": 0.313
+   }
+  ],
+  "loop": false,
+  "note": "a Guard hits an enemy: dull light thud (restart r5)",
+  "spatial": true,
+  "tracker": "A16",
+  "vary": 0.1
+ },
  "heal_chime": {
   "bus": "sfx",
   "combo": false,
@@ -1504,17 +1634,24 @@
   "duck": true,
   "files": [
    {
-    "file": "help_done.wav",
-    "peak_db": -6.8,
+    "file": "help_done_1.wav",
+    "peak_db": -8.4,
     "rms_db": -24.0,
     "seam": null,
-    "seconds": 2.04
+    "seconds": 0.64
+   },
+   {
+    "file": "help_done_2.wav",
+    "peak_db": -8.1,
+    "rms_db": -24.0,
+    "seam": null,
+    "seconds": 0.641
    }
   ],
   "loop": false,
-  "note": "a request finished: a four note marimba jingle (C5 E5 G5 C6) and a bell",
+  "note": "help done: the first plink note only; plays together with trust_chime (arrangement, restart r13)",
   "spatial": false,
-  "tracker": "A34",
+  "tracker": "A14",
   "vary": 0.0
  },
  "hit_soft": {
@@ -1634,15 +1771,22 @@
   "duck": false,
   "files": [
    {
-    "file": "invalid.wav",
-    "peak_db": -6.7,
-    "rms_db": -18.5,
+    "file": "invalid_1.wav",
+    "peak_db": -4.2,
+    "rms_db": -22.0,
     "seam": null,
-    "seconds": 0.42
+    "seconds": 0.246
+   },
+   {
+    "file": "invalid_2.wav",
+    "peak_db": -5.7,
+    "rms_db": -22.0,
+    "seam": null,
+    "seconds": 0.259
    }
   ],
   "loop": false,
-  "note": "can't place or can't afford: two soft low marimba knocks, falling (E3 D3)",
+  "note": "not allowed: a soft low wooden bop (restart r13)",
   "spatial": false,
   "tracker": "A11",
   "vary": 0.0
@@ -1816,6 +1960,88 @@
   "tracker": "A43",
   "vary": 0.03
  },
+ "orb_hit": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.04,
+  "duck": false,
+  "files": [
+   {
+    "file": "orb_hit_1.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.3,
+    "seam": null,
+    "seconds": 0.555
+   },
+   {
+    "file": "orb_hit_2.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.3,
+    "seam": null,
+    "seconds": 0.58
+   },
+   {
+    "file": "orb_hit_3.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.4,
+    "seam": null,
+    "seconds": 0.532
+   },
+   {
+    "file": "orb_hit_4.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.3,
+    "seam": null,
+    "seconds": 0.598
+   }
+  ],
+  "loop": false,
+  "note": "Fire Orb spell burst: real cannon thump and fire (restart r12)",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.07
+ },
+ "orb_launch": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "orb_launch_1.wav",
+    "peak_db": -2.0,
+    "rms_db": -18.3,
+    "seam": null,
+    "seconds": 0.946
+   },
+   {
+    "file": "orb_launch_2.wav",
+    "peak_db": -2.0,
+    "rms_db": -18.0,
+    "seam": null,
+    "seconds": 0.99
+   },
+   {
+    "file": "orb_launch_3.wav",
+    "peak_db": -2.0,
+    "rms_db": -18.0,
+    "seam": null,
+    "seconds": 0.906
+   },
+   {
+    "file": "orb_launch_4.wav",
+    "peak_db": -2.0,
+    "rms_db": -18.4,
+    "seam": null,
+    "seconds": 1.021
+   }
+  ],
+  "loop": false,
+  "note": "Fire Orb spell launch: real fire whooshes (restart r12)",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.05
+ },
  "pinch": {
   "bus": "ui",
   "combo": false,
@@ -1824,35 +2050,35 @@
   "files": [
    {
     "file": "pinch_1.wav",
-    "peak_db": -4.0,
-    "rms_db": -25.9,
+    "peak_db": -2.0,
+    "rms_db": -28.0,
     "seam": null,
-    "seconds": 0.053
+    "seconds": 0.162
    },
    {
     "file": "pinch_2.wav",
-    "peak_db": -4.0,
-    "rms_db": -27.1,
+    "peak_db": -2.0,
+    "rms_db": -27.8,
     "seam": null,
-    "seconds": 0.082
+    "seconds": 0.169
    },
    {
     "file": "pinch_3.wav",
-    "peak_db": -4.0,
-    "rms_db": -26.9,
+    "peak_db": -2.0,
+    "rms_db": -27.8,
     "seam": null,
-    "seconds": 0.081
+    "seconds": 0.156
    },
    {
     "file": "pinch_4.wav",
-    "peak_db": -4.0,
-    "rms_db": -25.4,
+    "peak_db": -2.0,
+    "rms_db": -27.9,
     "seam": null,
-    "seconds": 0.055
+    "seconds": 0.174
    }
   ],
   "loop": false,
-  "note": "finger and thumb meet: a real small analog click",
+  "note": "hand pinch: a soft paper flip (restart r13)",
   "spatial": false,
   "tracker": "A08",
   "vary": 0.06
@@ -1865,49 +2091,49 @@
   "files": [
    {
     "file": "place_thunk_1.wav",
-    "peak_db": -2.1,
-    "rms_db": -17.2,
+    "peak_db": -4.3,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.206
+    "seconds": 0.383
    },
    {
     "file": "place_thunk_2.wav",
-    "peak_db": -2.6,
-    "rms_db": -17.2,
+    "peak_db": -3.9,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.198
+    "seconds": 0.394
    },
    {
     "file": "place_thunk_3.wav",
-    "peak_db": -1.0,
-    "rms_db": -21.9,
+    "peak_db": -6.6,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.537
+    "seconds": 0.378
    },
    {
     "file": "place_thunk_4.wav",
-    "peak_db": -1.0,
-    "rms_db": -22.3,
+    "peak_db": -3.2,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.564
+    "seconds": 0.451
    },
    {
     "file": "place_thunk_5.wav",
-    "peak_db": -4.0,
-    "rms_db": -17.2,
+    "peak_db": -6.6,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.214
+    "seconds": 0.358
    },
    {
     "file": "place_thunk_6.wav",
-    "peak_db": -1.0,
-    "rms_db": -23.5,
+    "peak_db": -5.8,
+    "rms_db": -19.9,
     "seam": null,
-    "seconds": 0.436
+    "seconds": 0.38
    }
   ],
   "loop": false,
-  "note": "a tower sets down on the board: a real game piece on wood, a deep wooden knock and a stone",
+  "note": "a tower is placed: hollow wooden box knock (restart r1 tap_b)",
   "spatial": false,
   "tracker": "A10",
   "vary": 0.05
@@ -1939,17 +2165,24 @@
   "duck": false,
   "files": [
    {
-    "file": "rage_cast.wav",
-    "peak_db": -6.6,
-    "rms_db": -19.9,
+    "file": "rage_cast_1.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.4,
     "seam": null,
-    "seconds": 1.048
+    "seconds": 1.985
+   },
+   {
+    "file": "rage_cast_2.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.1,
+    "seam": null,
+    "seconds": 2.087
    }
   ],
   "loop": false,
-  "note": "Rage: two real war-drum hits and a shout",
+  "note": "Rage: a swelling heartbeat from a real drum (restart r9)",
   "spatial": true,
-  "tracker": "A48",
+  "tracker": "A20",
   "vary": 0.03
  },
  "rain_loop": {
@@ -2220,17 +2453,65 @@
   "duck": false,
   "files": [
    {
-    "file": "storm_cloud.wav",
-    "peak_db": -3.5,
-    "rms_db": -24.0,
+    "file": "storm_cloud_1.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.0,
     "seam": null,
-    "seconds": 2.011
+    "seconds": 2.676
+   },
+   {
+    "file": "storm_cloud_2.wav",
+    "peak_db": -5.2,
+    "rms_db": -22.0,
+    "seam": null,
+    "seconds": 2.583
    }
   ],
   "loop": false,
-  "note": "Storm Cloud: a real thunder roll and real rain",
+  "note": "Storm Cloud cast: a dark rolling thunder swell (restart r11)",
   "spatial": true,
-  "tracker": "A48",
+  "tracker": "A20",
+  "vary": 0.03
+ },
+ "storm_crack": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "storm_crack_1.wav",
+    "peak_db": -3.1,
+    "rms_db": -20.0,
+    "seam": null,
+    "seconds": 0.246
+   },
+   {
+    "file": "storm_crack_2.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.2,
+    "seam": null,
+    "seconds": 0.236
+   },
+   {
+    "file": "storm_crack_3.wav",
+    "peak_db": -4.5,
+    "rms_db": -20.0,
+    "seam": null,
+    "seconds": 0.28
+   },
+   {
+    "file": "storm_crack_4.wav",
+    "peak_db": -5.4,
+    "rms_db": -20.0,
+    "seam": null,
+    "seconds": 0.293
+   }
+  ],
+  "loop": false,
+  "note": "a Storm Cloud strike hits an enemy: a short low thunder crack (restart r11)",
+  "spatial": true,
+  "tracker": "A20",
   "vary": 0.03
  },
  "throw_whoosh": {
@@ -2281,17 +2562,24 @@
   "duck": false,
   "files": [
    {
-    "file": "trust_chime.wav",
-    "peak_db": -4.0,
+    "file": "trust_chime_1.wav",
+    "peak_db": -6.4,
     "rms_db": -22.3,
     "seam": null,
-    "seconds": 2.115
+    "seconds": 0.763
+   },
+   {
+    "file": "trust_chime_2.wav",
+    "peak_db": -5.9,
+    "rms_db": -22.3,
+    "seam": null,
+    "seconds": 0.765
    }
   ],
   "loop": false,
-  "note": "trust gained: two music-box notes (E6 B6)",
+  "note": "reward: wooden marimba plink C5 G5 (restart r13)",
   "spatial": false,
-  "tracker": "A33",
+  "tracker": "A14",
   "vary": 0.0
  },
  "tunneler_pop": {
@@ -2450,17 +2738,24 @@
   "duck": false,
   "files": [
    {
-    "file": "ward_cast.wav",
-    "peak_db": -4.0,
+    "file": "ward_cast_1.wav",
+    "peak_db": -3.3,
     "rms_db": -21.3,
     "seam": null,
-    "seconds": 2.067
+    "seconds": 1.969
+   },
+   {
+    "file": "ward_cast_2.wav",
+    "peak_db": -2.3,
+    "rms_db": -21.3,
+    "seam": null,
+    "seconds": 2.153
    }
   ],
   "loop": false,
-  "note": "a rune lights: a struck bell (A5) and a singing bowl swelling",
+  "note": "Root Ward: roots and branches sliding, leaf rustle (restart r11 root_a)",
   "spatial": true,
-  "tracker": "A28",
+  "tracker": "A20",
   "vary": 0.0
  },
  "ward_hum": {
@@ -2522,5 +2817,129 @@
   "spatial": true,
   "tracker": "A19",
   "vary": 0.04
+ },
+ "wizard_hit": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.04,
+  "duck": false,
+  "files": [
+   {
+    "file": "wizard_hit_1.wav",
+    "peak_db": -2.0,
+    "rms_db": -21.0,
+    "seam": null,
+    "seconds": 0.552
+   },
+   {
+    "file": "wizard_hit_2.wav",
+    "peak_db": -2.0,
+    "rms_db": -23.0,
+    "seam": null,
+    "seconds": 0.581
+   },
+   {
+    "file": "wizard_hit_3.wav",
+    "peak_db": -2.0,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.542
+   },
+   {
+    "file": "wizard_hit_4.wav",
+    "peak_db": -2.0,
+    "rms_db": -20.7,
+    "seam": null,
+    "seconds": 0.625
+   },
+   {
+    "file": "wizard_hit_5.wav",
+    "peak_db": -2.0,
+    "rms_db": -22.9,
+    "seam": null,
+    "seconds": 0.533
+   },
+   {
+    "file": "wizard_hit_6.wav",
+    "peak_db": -2.4,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.578
+   },
+   {
+    "file": "wizard_hit_7.wav",
+    "peak_db": -2.0,
+    "rms_db": -21.7,
+    "seam": null,
+    "seconds": 0.539
+   },
+   {
+    "file": "wizard_hit_8.wav",
+    "peak_db": -2.3,
+    "rms_db": -20.5,
+    "seam": null,
+    "seconds": 0.591
+   }
+  ],
+  "loop": false,
+  "note": "Wizard Tower fireball lands: soft fwoomf burst (restart r4 wiz_a)",
+  "spatial": true,
+  "tracker": "A15",
+  "vary": 0.07
+ },
+ "wizard_launch": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "wizard_launch_1.wav",
+    "peak_db": -2.0,
+    "rms_db": -19.1,
+    "seam": null,
+    "seconds": 0.646
+   },
+   {
+    "file": "wizard_launch_2.wav",
+    "peak_db": -2.7,
+    "rms_db": -18.3,
+    "seam": null,
+    "seconds": 0.691
+   },
+   {
+    "file": "wizard_launch_3.wav",
+    "peak_db": -2.8,
+    "rms_db": -18.3,
+    "seam": null,
+    "seconds": 0.639
+   },
+   {
+    "file": "wizard_launch_4.wav",
+    "peak_db": -2.3,
+    "rms_db": -18.3,
+    "seam": null,
+    "seconds": 0.711
+   },
+   {
+    "file": "wizard_launch_5.wav",
+    "peak_db": -2.3,
+    "rms_db": -18.3,
+    "seam": null,
+    "seconds": 0.609
+   },
+   {
+    "file": "wizard_launch_6.wav",
+    "peak_db": -2.0,
+    "rms_db": -18.8,
+    "seam": null,
+    "seconds": 0.682
+   }
+  ],
+  "loop": false,
+  "note": "Wizard Tower shot: whoosh and flame rush (restart r4 wiz_a)",
+  "spatial": true,
+  "tracker": "A15",
+  "vary": 0.05
  }
 }
