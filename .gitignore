@@ -17,3 +17,6 @@ godot/android/
 watch/build/
 watch/.gradle/
 watch/local.properties
+# Local Codex-compatible copies of the Claude skills/agents/config; not shared.
+.agents/
+.codex/
