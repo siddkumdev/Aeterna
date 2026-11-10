@@ -92,6 +92,8 @@ var _held_card_hand: GameHand
 var _lens: Node3D  # the Crystal Lens model (spec 13)
 var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
 var _lens_grip := Vector3.ZERO  # the grip anchor in the lens model's own space
+var _lens_centre := Vector3.ZERO  # the middle of the glass, in the lens model's own space
+var _lens_view: LensView  # the window on the glass (headset only)
 var _lens_hand: GameHand  # the hand holding it, or null
 var _xr_cam: XRCamera3D
 var easy_reach := false  # desktop and simulator: grab distances x GameConfig.EASY_REACH and the reach bubbles show
@@ -163,6 +165,8 @@ func _ready() -> void:
 	foresight = Foresight.new()
 	foresight.name = "Foresight"
 	foresight.game = self
+	if with_rig and _xr:
+		foresight.overlay_layers = LensView.OVERLAY_LAYER  # drawn only through the lens window
 	board.add_child(foresight)
 	_requests_root = _child(board, "Requests")
 	_build_ui()
@@ -1331,6 +1335,7 @@ func _process(delta: float) -> void:
 		return
 	_update_mouse_hand()
 	_update_lens()
+	_tick_lens_window()
 	_update_held()
 	for h in _hands:
 		h.set_bubble_hot(grabbable_near(h.global_position))
@@ -1479,11 +1484,20 @@ func _build_lens() -> void:
 		return
 	_lens = res.instantiate()
 	board.add_child(_lens)
-	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5), Vector3(HALF - 0.08, 0.012, HALF + 0.07))
+	var s := Basis.from_scale(Vector3.ONE * GameConfig.LENS_SCALE)
+	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5) * s, Vector3(HALF - 0.1, 0.012, HALF + 0.09))
 	_lens.transform = _lens_rest
 	for n in ModelUtil.walk(_lens):
 		if n is Marker3D and str(n.name).ends_with("grip_anchor"):
 			_lens_grip = ModelUtil.xform_to(n, _lens).origin
+		elif n is Marker3D and str(n.name).ends_with("lens_anchor"):
+			_lens_centre = ModelUtil.xform_to(n, _lens).origin
+	if with_rig and _xr:
+		# the window on the glass (see LensView): only in the headset, where the Foresight overlay is hidden from the main eyes
+		_lens_view = LensView.new()
+		_lens_view.name = "LensView"
+		add_child(_lens_view)
+		_lens_view.setup(_lens, _lens_centre, Vector2(0.066, 0.098))
 
 
 func lens_grip_position() -> Vector3:
@@ -1604,9 +1618,12 @@ func _update_lens() -> void:
 	if _lens_hand:
 		# the grip in the hand, the glass standing up out of the fist
 		var xf := _lens_hand.global_transform * Transform3D(Basis(Vector3.RIGHT, -PI / 2.0), Vector3.ZERO)
-		_lens.global_transform = xf * Transform3D(Basis.IDENTITY, -_lens_grip)
+		var sc := Basis.from_scale(Vector3.ONE * GameConfig.LENS_SCALE)
+		_lens.global_transform = xf * Transform3D(sc, -_lens_grip * GameConfig.LENS_SCALE)
 		var up := _lens.global_position.y > board.global_position.y + GameConfig.LENS_RAISE
-		if up and _xr_cam:
+		if up and _xr_cam and _lens_view:
+			set_lens(true)  # every gap: the lens window crops to what you look at through the glass
+		elif up and _xr_cam:
 			set_lens(true, _xr_cam.global_position, -_xr_cam.global_transform.basis.z)
 		elif up:
 			set_lens(true)  # desktop: every gap
@@ -1616,6 +1633,16 @@ func _update_lens() -> void:
 		var held := Input.is_key_pressed(KEY_L) and phase == Phase.DAY
 		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)) if held else _lens_rest
 		set_lens(held)
+
+
+func _tick_lens_window() -> void:
+	## The glass shows the future only while the lens is up and it is day; the window camera follows your eye.
+	if _lens_view == null or _xr_cam == null:
+		return
+	var on := foresight.showing and phase == Phase.DAY
+	_lens_view.set_active(on)
+	if on:
+		_lens_view.aim(_xr_cam.global_position, _lens.global_transform * _lens_centre)
 
 
 func set_lens(up: bool, eye := Vector3.INF, look := Vector3.ZERO) -> void:
@@ -1888,6 +1915,7 @@ func _build_rig() -> void:
 	add_child(origin)
 	var cam := XRCamera3D.new()
 	cam.position = Vector3(0, 1.2, 0)  # seated eye height
+	cam.cull_mask = 0xFFFFF & ~LensView.OVERLAY_LAYER  # Foresight's drawings are for the lens window only
 	origin.add_child(cam)
 	_xr_cam = cam
 	for hand in ["left_hand", "right_hand"]:

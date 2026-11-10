@@ -36,6 +36,7 @@ const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Fores
 const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
 const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to grab it (one reach for requests and spells; god-hands plan C1)
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
+const LENS_SCALE := 2.0  # 2026-11-10 (the user): the lens is bigger and you look THROUGH it (LensView), not at it
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
 # Easy reach (debug aid, 2026-10-25): grab distances are multiplied by this on the desktop (mouse hand) and when
 # the env var AETERNA_EASY_REACH=1 (set by run_sim.ps1), so keyboard-driven hands can find small objects. Real

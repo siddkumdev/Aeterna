@@ -15,6 +15,7 @@ var game  # Game
 var tier := 1
 var showing := false
 
+var overlay_layers := 1  # render layer of the drawings: 1 = everyone sees them; 2 = only the lens window (LensView) does
 var _views: Array = []  # [{"spawn", "node": Node3D, "at": Vector3 board-local}]
 var _mat: StandardMaterial3D
 var _mat_soft: StandardMaterial3D
@@ -78,6 +79,10 @@ func refresh() -> void:
 		merged[e["spawn"]].append(e)
 	for spawn in merged:
 		_views.append(_draw(spawn, merged[spawn]))
+		if overlay_layers != 1:
+			for n in ModelUtil.walk(_views[-1]["node"]):
+				if n is VisualInstance3D:
+					(n as VisualInstance3D).layers = overlay_layers
 	game.foresight_signs(tier >= GameConfig.FORESIGHT_TIERS and game.closed_spawn == "")
 
 
