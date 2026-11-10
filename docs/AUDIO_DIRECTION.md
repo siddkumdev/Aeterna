@@ -91,3 +91,11 @@ Answers to the first taste questions, kept in his words. Nothing here is a techn
 - Loudness tiers: left to the agent's judgement from sound-design theory (frequent = quiet and short; rare = bigger). Proposal sent 2026-11-10, awaiting his OK on the per-tower voices.
 - No ambient bed for now.
 - Hackathon: synthesised sound is allowed (Siddharth confirmed 2026-11-10). Still no AI-generated audio, no NC licences.
+
+## Restart brief, batch 3 (Siddharth, 2026-11-10)
+- Wizard Tower: feel like the Wizard in Clash Royale (his reference; private analysis-only clips only, never shipped).
+- Guard Tower: soft cloth and wood, small "clop" on a Guard spawning, dull light thud on hits (agent's proposal, confirmed).
+- Longbow Tower: springy wooden "thwip", soft "tick" per piercing hit (agent's proposal, confirmed).
+- Airship: like the cannon sounds in Clash Royale.
+- Spells: defined, distinct sounds, NOT small.
+- Hit sound does not change between normal and boss enemies (the tower decides). Confirmed.
