@@ -50,9 +50,9 @@ const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]
 # kind, on different standing houses; done by hand for faith. Rewards are Claude's stand-ins inside the spec's
 # 10-25 range (harder gesture, more faith). Unfinished requests vanish at night.
 const REQUESTS := {
-	"chimney": {"name": "Blocked chimney", "reward": 15, "scene": "res://assets/village/ew_village_chimney_rubble_v01.glb"},
-	"bird": {"name": "Stuck bird", "reward": 10, "scene": "res://assets/village/ew_village_songbird_v01.glb"},
-	"lantern": {"name": "Lost lantern", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
+	"chimney": {"name": "Kite on the roof", "reward": 15, "scene": ""},  # Wren's kite (a primitives stand-in, made in HelpRequest)
+	"bird": {"name": "Lost lamb", "reward": 10, "scene": "res://assets/village/ew_village_kid_bunny_v01.glb"},  # the bunny kid stands in for the lamb
+	"lantern": {"name": "Festival lantern", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
 	"cart": {"name": "Stuck cart", "reward": 25, "scene": "res://assets/village/ew_village_handcart_v01.glb"},
 }
 const REQUESTS_PER_DAY := 4

@@ -683,7 +683,7 @@ func _requests() -> void:
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
-	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "bird")[0]
+	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "chimney")[0]
 	hand.global_position = bird.grab_point()
 	g.hand_pressed(hand)
 	check("a pinch at a request prop grabs it", g._held_req == bird)
@@ -927,7 +927,7 @@ func _mouse_hand_rules() -> void:
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
-	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "bird")[0]
+	var bird: HelpRequest = g.requests.filter(func(r): return r.kind == "chimney")[0]
 	var near := bird.grab_point() + Vector3(0.08, 0, 0)  # 8 cm away: out of the normal 5 cm reach, inside the easy 10 cm
 	hand.global_position = near
 	check("normal reach: 8 cm is too far to grab", not g.easy_reach and g.request_near(near) == null and not g.grabbable_near(near))

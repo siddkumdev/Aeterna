@@ -1,11 +1,14 @@
 class_name HelpRequest
 extends Node3D
-## One villager help request (spec 18), done by hand during the day for faith:
-##   chimney  rubble plugs the house's chimney: grab it and pull it out (move it 1.5 cells from the socket)
-##   bird     a songbird is stuck on the chimney: grab it and move it 2 cells away; it flies off
-##   lantern  a lantern lies out on the grass: carry it back and let go within 1.5 cells of the house's
-##            lantern hook; it stands by the door
-##   cart     a handcart is stuck in a rut next to the house: push it 2 cells clear along the ground
+## One villager help request (spec 18), done by hand during the day for faith. Kindnesses with a little story
+## (docs/STORY.md section 13; the villagers say a line when it is posted and another when it is done):
+##   chimney  (Wren's kite) the kite is caught on the roof: grab it and pull it down (move it 1.5 cells from the roof)
+##   bird     (the lost lamb) a lamb is lost beside the house: lead it 2 cells along the ground; it trots home
+##   lantern  (festival lantern) a lantern lies out on the grass: carry it back and let go within 1.5 cells of the
+##            house's lantern hook; it stands by the door
+##   cart     (a fallen plank / stuck cart) a handcart is stuck in a rut next to the house: push it 2 cells clear
+## The mechanics keep their old ids (tests and Game use them); the names and words are the story's. Stand-ins to model
+## later: the kite (primitives), the lamb (the bunny kid).
 ## Each has the "!" marker over its house and a STAND-IN villager (capsule body, round head) by the door
 ## until the real villagers exist. Let go too early and the prop goes back (a lantern stays where dropped).
 ## Positions are board-local (this node is a child of the board at its origin).
@@ -35,12 +38,16 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 	var cfg: Dictionary = GameConfig.REQUESTS[kind]
 	reward = cfg["reward"]
 	var h: House = game.houses[house]
-	prop = load(cfg["scene"]).instantiate()
+	prop = _make_kite() if cfg["scene"] == "" else load(cfg["scene"]).instantiate()
+	if kind == "bird":
+		prop.scale = Vector3.ONE * 0.8  # the lamb: the bunny kid as a stand-in
 	add_child(prop)
 	var socket := _anchor(h, "rubble_anchor")
 	match kind:
-		"chimney", "bird":
+		"chimney":
 			_home = socket
+		"bird":
+			_home = _free_beside(h)
 		"lantern":
 			_home = lantern_at
 			var hook := _anchor(h, "lantern_anchor")
@@ -59,15 +66,13 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 			var tw := _marker.create_tween().set_loops()
 			tw.tween_property(_marker, "position:y", _marker.position.y + 0.008, 0.6).set_trans(Tween.TRANS_SINE)
 			tw.tween_property(_marker, "position:y", _marker.position.y, 0.6).set_trans(Tween.TRANS_SINE)
-	if kind == "lantern" or kind == "cart":
+	if kind == "lantern" or kind == "cart" or kind == "bird":
 		var pm = load(GameConfig.HELP_MARKER_SCENE)
 		if pm:
 			_prop_marker = pm.instantiate()
 			_prop_marker.scale = Vector3.ONE * MARK_SCALE
 			prop.add_child(_prop_marker)
 			_prop_marker.position = Vector3(0, ModelUtil.bounds(prop).end.y + 0.004, 0)
-	if kind == "chimney":
-		h.chimney_blocked = true
 	var stand := _beside_door(h, 1.2) + h.basis.x * GameConfig.CELL * 0.8
 	if game.life != null:
 		_helper = game.life.help_wanted(house, stand)  # one of the house's own people walks over and waves
@@ -76,6 +81,7 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 		add_child(_villager)
 		_villager.position = stand
 		_villager.rotation.y = h.rotation.y
+	_say("before")
 
 
 func grab_point() -> Vector3:
@@ -94,8 +100,8 @@ func move_to(local: Vector3) -> void:
 	## While held: the prop follows the hand (board-local). The cart and lantern stay on the ground.
 	if not held:
 		return
-	if kind == "cart":
-		local.y = 0.0
+	if kind == "cart" or kind == "bird":
+		local.y = 0.0  # the cart and the lamb stay on the ground
 	prop.position = local
 
 
@@ -113,9 +119,9 @@ func release() -> bool:
 				_toss(prop)
 				return true
 		"bird":
-			if moved.length() >= 2.0 * GameConfig.CELL:
+			if flat >= 2.0 * GameConfig.CELL:
 				_finish()
-				_fly_off(prop)
+				_trot_home(prop)
 				return true
 		"lantern":
 			var to_goal := prop.position - _goal
@@ -139,7 +145,7 @@ func release() -> bool:
 func dodge(footprint: Array[Vector2i]) -> void:
 	## A tower was just built: a lantern or cart on or right beside its cells (a tall tower hides what is
 	## next to it from the seat) is carried to the nearest open ground. Not while someone is holding it.
-	if done or held or (kind != "lantern" and kind != "cart"):
+	if done or held or (kind != "lantern" and kind != "cart" and kind != "bird"):
 		return
 	var c := NavGrid.local_to_cell(prop.position)
 	for f in footprint:
@@ -159,11 +165,7 @@ func _finish() -> void:
 		_marker.visible = false
 	if _prop_marker:
 		_prop_marker.visible = false
-	if kind == "chimney":
-		var h: House = game.houses[house]
-		h.chimney_blocked = false
-		if h.fx and is_inside_tree() and h._smoke_at != null:
-			VfxKit.toon_smoke(h.get_parent(), h._smoke_at.global_position, 0.05, 1.8)  # the stuck smoke comes out at once
+	_say("after")
 	if _helper:
 		_helper.thank()
 	if _villager and _villager.is_inside_tree():
@@ -181,13 +183,54 @@ func _toss(n: Node3D) -> void:
 	tw.tween_callback(func(): n.visible = false)
 
 
-func _fly_off(n: Node3D) -> void:
+func _trot_home(n: Node3D) -> void:
+	## The lamb trots to the door and is gone.
 	if not n.is_inside_tree():
 		n.visible = false
 		return
+	var door := _beside_door(game.houses[house], 1.0)
 	var tw := n.create_tween()
-	tw.tween_property(n, "position", n.position + Vector3(0.15, 0.25, -0.2), 1.2).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(n, "position", Vector3(door.x, 0.0, door.z), 1.2).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(func(): n.visible = false)
+
+
+const TASK_ID := {"chimney": "kite_in_oak", "bird": "lost_lamb", "lantern": "festival_lanterns", "cart": "broken_plank"}
+
+
+func _say(which: String) -> void:
+	## "before" when posted, "after" when done: a parchment bubble over the villager who asked (with the rig only).
+	if not game.with_rig or not is_inside_tree():
+		return
+	var line := StoryText.task(TASK_ID.get(kind, ""), which)
+	if line == "":
+		return
+	var who: Node3D = _helper if _helper else _villager
+	if who and who.is_inside_tree():
+		Bubble.say(who, Vector3(0, 0.1, 0), line, 6.0)
+
+
+static func _make_kite() -> Node3D:
+	## STAND-IN (to model later): a pink diamond kite with a red tail, from primitives, palette colours only.
+	var k := Node3D.new()
+	var diamond := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(0.016, 0.016)
+	diamond.mesh = q
+	diamond.rotation.z = PI / 4.0
+	diamond.position.y = 0.012
+	var mat := ModelUtil.flat_material(Color("EE8FA8"))  # flower_pink
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	diamond.material_override = mat
+	k.add_child(diamond)
+	for i in 3:
+		var bow := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.004, 0.003, 0.001)
+		bow.mesh = bm
+		bow.position = Vector3(0.002 * i, 0.0045 - i * 0.004, 0)
+		bow.material_override = ModelUtil.flat_material(Color("E8452C"))  # fire_red
+		k.add_child(bow)
+	return k
 
 
 func _anchor(h: House, suffix: String) -> Vector3:
