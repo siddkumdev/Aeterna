@@ -487,9 +487,44 @@ def root11(dense, knock, creak):
 
 ROUNDS_R11 = {"storm": _pkg9(storm11), "root_a": _pkg9(root11(1.0, 0.35, 0.15)), "root_b": _pkg9(root11(0.6, 0.6, 0.0))}
 
+# Round r12: Fire Orb from REAL fire recordings (Siddharth 2026-11-10: "give me one with real recording"). Fire whooshes (CC BY 4.0,
+# mikiko850) and a campfire bed (CC BY 4.0, newlocknew) for flame, a cannon-body grain for the round thump. Only the DULL crackle
+# grains (02, 05, 18) are used, at low level: the bright ones sound like sparks, which he hated in Storm Cloud.
+def _pick(kit, name, pitch=1.0, seconds=None, lpf=9000, hpf=90):
+    from scipy.io import wavfile
+    sr_, x = wavfile.read(os.path.join(ROOT, "assets", "audio_src", "grains", kit, name))
+    x = MA._mono(x.astype(float) / 32768.0)
+    if pitch != 1.0:
+        n = max(16, int(len(x) / pitch))
+        x = np.interp(np.linspace(0, len(x) - 1, n), np.arange(len(x)), x)
+    if seconds is not None:
+        x = x[: S.n_of(seconds)].copy()
+        m = min(len(x) // 3, S.n_of(0.08))
+        x[-m:] *= np.linspace(1, 0, m)
+        x = np.concatenate([x, np.zeros(S.n_of(seconds) - len(x))])  # a pitched-up grain is shorter: pad to the exact length
+    return S.fade(S.lp(S.hp(x, hpf), lpf), 0.002, 0.03)
+
+
+def fire_orb12(r):
+    sw = S.curve([(0, 0.05), (0.35, 1.0), (0.9, 0.05)], 0.9, log=False)
+    launch = [(S.pk(_pick("fire_whoosh", "fire_whoosh_01.wav", 1.15, 0.9)) * sw, 0.0, 1.0),
+              (S.pk(_pick("fire_whoosh", "fire_whoosh_05.wav", 1.35, 0.9)) * sw, 0.05, 0.6),
+              (S.pk(_pick("bed_fire", "bed_fire_02.wav", 1.0, 0.9, 8000)) * sw, 0.0, 0.45)]
+    hit = [(_pick("cannon", "cannon_01.wav", 0.9, 0.5, 2500), 1.0, 1.3),
+           (S.pk(_pick("fire_whoosh", "fire_whoosh_02.wav", 1.5, 0.5)) * S.exp_env(0.5, 0.16, 0.003), 1.0, 1.0),
+           (_pick("fire_whoosh", "fire_whoosh_04.wav", 0.8, 0.2), 1.0, 0.8),
+           (S.pk(_pick("bed_fire", "bed_fire_02.wav", 1.0, 0.5, 8000)) * S.exp_env(0.5, 0.2, 0.003), 1.0, 0.4),
+           (_pick("crackle", "crackle_05.wav", 1.0, 0.3, 4500, 200), 1.12, 0.25),
+           (_pick("crackle", "crackle_18.wav", 1.0, 0.3, 4500, 200), 1.25, 0.2)]
+    x = S.mix(*launch, *hit)
+    return S.lp(x + 1.3 * S.hp(x, 1500), 9000)  # real fire whooshes are dark (~880 Hz): lift the upper mids so it is not muffled
+
+
+ROUNDS_R12 = {"fire_orb_real": _pkg9(fire_orb12)}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
