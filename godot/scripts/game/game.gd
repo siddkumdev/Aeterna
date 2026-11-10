@@ -239,9 +239,17 @@ func _start_loop(message: String) -> void:
 	else:
 		grass.refresh(nav)
 	var sturdy := card("sturdy_homes")
+	var dark := 0
 	for h in houses:
 		h.max_hp = GameConfig.HOUSE_HP * (1.0 + (Cards.value("sturdy_homes", sturdy) / 100.0 if sturdy >= 0 else 0.0))
-		h.repair()
+		if with_rig and h.is_shuttered and is_inside_tree():
+			dark += 1
+			var i := houses.find(h)
+			get_tree().create_timer(0.5 + 0.45 * (houses.size() - 1 - i)).timeout.connect(func():  # the rewind: windows light again, last house first
+				if is_instance_valid(h):
+					h.repair())
+		else:
+			h.repair()
 	var pockets := card("deep_pockets")
 	faith = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
 	night = 0
@@ -1552,7 +1560,7 @@ func _build_ui() -> void:
 		_hourglass = hg.instantiate()
 		_hourglass.scale = Vector3.ONE * 2.0
 		_hourglass.visible = false
-		ui.add_child(_hourglass)
+		board.add_child(_hourglass)  # on the board, not the UI: the intro plays it while the UI is hidden
 	_build_close_signs(ui)
 	_build_spell_tokens(ui, x0, w, gap)
 	if with_rig:

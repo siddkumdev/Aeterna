@@ -188,17 +188,51 @@ func _close_panel() -> void:
 
 
 func _wake() -> void:
+	## The opening, played on the island itself (the user, 2026-11-10: "explain the story piece by piece in an
+	## in-game rendered animation"). Each beat is a caption on the parchment and something that happens to the
+	## real island: the Veil glows and knits, faith rises from the houses, the dusk comes, Skotos's crack runs
+	## over the Veil, it shatters, the hourglass turns time back, dawn returns. Any press skips it.
 	_state = "narrating"
 	_skip = false
-	for i in NARRATION.size():
-		_panel.show_text(NARRATION[i])
-		var left := 3.2
+	_title.visible = false
+	var v: VeilDome = game.veil
+	var lines := [
+		["You are the god of this small island.", func():
+			if v: v.snap(1.0, 0.0)],
+		["Your Veil keeps the dark away.", func():
+			if v: v.knit(1.6)],
+		["It is woven from the faith of the people who live here.", func():
+			for h in game.houses:
+				VfxKit.burst(game.shots_root, h.global_position + Vector3(0, 0.1, 0), Color("FFD45A"), Color("F6A45D"), 14, 0.08, 1.6, 0.005, 0.02)],
+		["But a god the world forgot is watching from the Dark Wood.", func():
+			game._set_light(1)],
+		["His name is Skotos. And at every nightfall, he breaks the Veil.", func():
+			if v: v.crack(1.8)],
+		["The dark pours in.", func():
+			if v: v.shatter(1.2)
+			VfxKit.burst(game.shots_root, game.board.global_position + Vector3(0, 0.1, 0), Color("9C3EB0"), Color("E8452C"), 40, 0.2, 1.6, 0.007, 0.05)],
+		["When the village falls, you do what only a god can.", func():
+			game._play_hourglass()],
+		["You turn time back, and try again.", func():
+			game._set_light(0)
+			if v: v.knit(1.8)],
+		["Watch over them.", func():
+			pass],
+	]
+	for entry in lines:
+		_panel.position = Vector3(0, 0.34, 0.15)
+		_panel.show_text(entry[0])
+		entry[1].call()
+		var left := 3.6
 		while left > 0.0 and not _skip:
 			await get_tree().process_frame
 			left -= get_process_delta_time()
 		if _skip:
 			break
 	_panel.hide_panel()
+	game._set_light(0)
+	if v:
+		v.snap(1.0, 0.0)
 	game.snd("dawn_bell")
 	_title.queue_free()
 	game.asleep = false
