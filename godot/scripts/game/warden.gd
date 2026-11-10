@@ -65,6 +65,9 @@ func step(delta: float) -> void:
 func _phase_over() -> bool:
 	## The boss reached 0 HP: true = the phase ended and it lives on, false = it dies (phase 3).
 	if phase != 1:
+		if game.is_doomed_night():
+			boss.hp = 1.0  # the fall cannot be won: the Warden keeps a sliver of life (Game.step starts the doom)
+			return true
 		return false
 	phase = 2
 	_timer = 0.0

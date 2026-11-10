@@ -13,8 +13,13 @@ const DAWN_FAITH_PER_HOUSE := 5
 const NIGHT_CLEAR_FAITH_PER_NIGHT := 10
 
 # Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
-const NIGHTS_PER_LOOP := 6
-const BOSS_NIGHT := 5  # 0-based: the 6th night
+const NIGHTS_PER_LOOP := 5  # 2026-11-10 (the user): every loop is 5 days; night 5 is the Warden's (docs/STORY.md)
+const BOSS_NIGHT := 4  # 0-based: the 5th night
+# Night 5 always falls in loops 1-4 (the player is never told): the Warden cannot be killed, and DOOM_AT seconds
+# into the night their horn sounds and a house is shuttered every DOOM_STEP seconds until the village is lost.
+# The last loop of a run is not doomed (the ending is the user's to choose, see docs/STORY.md).
+const DOOM_AT := 70.0
+const DOOM_STEP := 1.1
 const LOOPS_PER_RUN := 5  # 2026-10-22 (Siddharth): 5 loops for M1
 # Each loop after the first (spec 16 for loop 2: +40% enemy HP and one extra group per night; Claude's stand-in
 # for loops 3-5: the same step again each loop). Loop n (0-based) = HP x(1 + 0.4 n), n extra groups per night.

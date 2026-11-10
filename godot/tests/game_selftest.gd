@@ -25,6 +25,7 @@ func _initialize() -> void:
 	await _spells()
 	await _mouse_hand_rules()
 	await _warden()
+	await _doom()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -949,6 +950,7 @@ func _mouse_hand_rules() -> void:
 
 func _warden() -> void:
 	var g := await _make_game()
+	g.loop = GameConfig.LOOPS_PER_RUN - 1  # the last loop: the Warden can die (loops 1-4 are the doomed fall, tested in _doom)
 	g.night = GameConfig.BOSS_NIGHT
 	g.start_night()
 	g._spawn_queue.clear()
@@ -992,6 +994,37 @@ func _warden() -> void:
 	_run(g, 0.1)
 	check("Warden: empty phase-3 HP kills it", not boss.alive and g.warden == null)
 	g.queue_free()
+
+
+func _doom() -> void:
+	## Night 5 of loops 1-4 always falls: the Warden cannot die, and DOOM_AT seconds in the houses go dark.
+	var g := await _make_game()
+	check("a loop is 5 nights and night 5 is the boss night", GameConfig.NIGHTS_PER_LOOP == 5 and GameConfig.BOSS_NIGHT == 4)
+	g.night = GameConfig.BOSS_NIGHT
+	g.start_night()
+	g._spawn_queue.clear()
+	var boss: Enemy = g._spawn(Vector2i(12, 3), "boss", _at(12, 3))
+	boss.slow(0.0001, 100000.0)
+	g.warden = Warden.new(g, boss)
+	check("night 5 of loop 1 is doomed", g.is_doomed_night())
+	boss.take_damage(boss.hp + 1.0)  # phase 1 ends
+	g.warden.crystals.clear()
+	g.warden.step(0.1)  # no crystals: enrage into phase 3
+	boss.take_damage(boss.hp + 1.0)
+	_run(g, 0.1)
+	check("doomed Warden keeps a sliver of life", boss.alive and boss.hp > 0.0 and g.warden != null)
+	check("no horn before DOOM_AT", not g._doom_started)
+	g.night_time = GameConfig.DOOM_AT - 0.2  # skip ahead: the test's own Wisps would otherwise wear the houses down first
+	_run(g, 0.5)
+	check("the horn sounds at DOOM_AT", g._doom_started)
+	_run(g, GameConfig.DOOM_STEP * 4.0)
+	check("the village falls and the loop is lost", g.phase != Game.Phase.NIGHT and not g.loop_won)
+	g.queue_free()
+	var f := await _make_game()
+	f.loop = GameConfig.LOOPS_PER_RUN - 1
+	f.night = GameConfig.BOSS_NIGHT
+	check("the last loop is not doomed", not f.is_doomed_night())
+	f.queue_free()
 
 
 func _village_life() -> void:

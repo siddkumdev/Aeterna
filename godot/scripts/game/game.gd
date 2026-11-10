@@ -81,6 +81,10 @@ var _held_req: HelpRequest  # the request prop being moved
 var _held_req_hand: GameHand  # the hand holding it, or null for the mouse
 var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
 
+var veil: VeilDome  # the warm dome over the island: cracks at dusk, shatters in the night, knits at dawn (with the rig only)
+var haze: HazeDome  # the dim warm haze over the passthrough room (with the rig only)
+var _doom_started := false  # night 5 of loops 1-4: the Warden's horn has sounded
+var _doom_timer := 0.0
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the card in a hand (or on the mouse hand)
@@ -169,6 +173,13 @@ func _ready() -> void:
 		add_child(audio)
 		audio.setup()
 		_build_rig()
+		haze = HazeDome.new()
+		haze.name = "Haze"
+		add_child(haze)
+		haze.set_active(lighting.enable_passthrough())  # false on the desktop and in the simulator: nothing changes there
+		veil = VeilDome.new()
+		veil.name = "Veil"
+		board.add_child(veil)
 	if with_rig or with_life:
 		life = VillageLife.new()
 		life.name = "VillageLife"
@@ -287,15 +298,56 @@ func _set_phase(p: int, message: String) -> void:
 	elif _requests_root:
 		_clear_requests()
 	_set_light(p)
+	_veil_for(was, p)
 	_refresh_ui()
 	_phase_sound(was, p)
 	phase_changed.emit(p)
+
+
+func _veil_for(was: int, p: int) -> void:
+	## Dusk: a purple crack runs over the Veil, then it shatters. Dawn: it knits back. Rewind or a new run: whole again.
+	if veil == null:
+		return
+	if p == Phase.NIGHT and was != Phase.NIGHT:
+		veil.crack()
+		get_tree().create_timer(1.8).timeout.connect(func():
+			if is_instance_valid(veil) and phase == Phase.NIGHT:
+				veil.shatter())
+	elif p == Phase.DAY and was == Phase.NIGHT:
+		veil.knit()
+	elif p != Phase.NIGHT:
+		veil.snap(1.0, 0.0)
+
+
+func is_doomed_night() -> bool:
+	## Night 5 of loops 1-4 is the Warden's fall: it cannot be won (see GameConfig.DOOM_AT and docs/STORY.md).
+	return night == GameConfig.BOSS_NIGHT and loop < GameConfig.LOOPS_PER_RUN - 1
+
+
+func _doom_step(delta: float) -> void:
+	if not is_doomed_night() or night_time < GameConfig.DOOM_AT:
+		return
+	if not _doom_started:
+		_doom_started = true
+		_doom_timer = 0.0
+		last_message = "The Warden's horn sounds. The Veil breaks."
+		snd("boss_roar")
+		_refresh_ui()
+	_doom_timer += delta
+	if _doom_timer >= GameConfig.DOOM_STEP:
+		_doom_timer = 0.0
+		for h in houses:
+			if not h.is_shuttered:
+				h.damage(h.max_hp * 2.0)  # a house goes dark; the third one ends the night (_on_house_shuttered)
+				break
 
 
 func start_night() -> bool:
 	if phase != Phase.DAY:
 		return false
 	night_time = 0.0
+	_doom_started = false
+	_doom_timer = 0.0
 	_spawn_queue.clear()
 	spells.reset()
 	_rng.seed = run_seed * 31 + night
@@ -711,6 +763,9 @@ func step(delta: float) -> void:
 			e.step(delta)
 	if warden:
 		warden.step(delta)
+	_doom_step(delta)
+	if phase != Phase.NIGHT:
+		return  # the third house going dark ends the night
 	for t in towers:
 		t.step(delta)
 	spells.step(delta)
@@ -727,7 +782,7 @@ func step(delta: float) -> void:
 	if phase != Phase.NIGHT:
 		return  # a house falling can end the night inside the loop above
 	var stuck := enemies.all(func(e): return e.target_house == -1)
-	if _spawn_queue.is_empty() and (enemies.is_empty() or stuck):
+	if _spawn_queue.is_empty() and (enemies.is_empty() or stuck) and not (is_doomed_night() and warden != null):  # the doomed night ends only by the fall
 		_end_night()
 	else:
 		_refresh_hud()
@@ -1442,10 +1497,9 @@ func hand_released(h: GameHand) -> void:
 			if absf(local.x) <= HALF and absf(local.z) <= HALF:
 				cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
 					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
-			if cell.x >= 0 and try_build(id, cell):
-				pass
-			else:
-				select("")
+			if cell.x >= 0:
+				try_build(id, cell)
+			select("")  # built or not, this card is done: no armed tower and no grid left behind
 		elif absf(local.x) <= HALF and absf(local.z) <= HALF:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
 			cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
@@ -1632,6 +1686,10 @@ func _refresh_tray() -> void:
 				list.append(CardData.ability(o["id"], o["rarity"]))
 	if key != _tray_key:
 		_tray_key = key
+		if _held_card:  # the phase changed under a held card: put it down cleanly
+			spells.hide_aim()
+			if phase != Phase.DAY:
+				select("")
 		_held_card = null
 		_held_card_hand = null
 		_tray.set_cards(list)
