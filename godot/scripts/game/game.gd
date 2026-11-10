@@ -81,6 +81,15 @@ var _held_req: HelpRequest  # the request prop being moved
 var _held_req_hand: GameHand  # the hand holding it, or null for the mouse
 var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
 
+var press_override := Callable()  # the title screen takes presses first: func(world_pos, ray_origin, ray_dir) -> bool (true = used)
+var asleep := false:  # the title screen shows the island asleep: no cards, signs or HUD, no pressing
+	set(v):
+		asleep = v
+		var ui := board.get_node_or_null("UI") if board else null
+		if ui:
+			ui.visible = not v
+		if _lens:
+			_lens.visible = not v  # the lens lies on the table only once the game is awake
 var veil: VeilDome  # the warm dome over the island: cracks at dusk, shatters in the night, knits at dawn (with the rig only)
 var haze: HazeDome  # the dim warm haze over the passthrough room (with the rig only)
 var _doom_started := false  # night 5 of loops 1-4: the Warden's horn has sounded
@@ -1248,6 +1257,10 @@ func say_at_shrine(line: String, colour := Bubble.INK) -> void:
 
 
 func _press(origin: Vector3, dir: Vector3) -> void:
+	if press_override.is_valid() and press_override.call(origin, origin, dir):
+		return
+	if asleep:
+		return
 	var b := _button_at(origin, dir)
 	if b != "":
 		_press_button(b)
@@ -1583,6 +1596,10 @@ func lens_grip_position() -> Vector3:
 func hand_pressed(h: GameHand) -> void:
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
+	if press_override.is_valid() and press_override.call(h.global_position, h.ray_origin(), h.ray_dir()):
+		return
+	if asleep:
+		return
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(h.global_position, reach(GameConfig.TOUCH_REACH * 1.6))
 		if cd and _grab_card(cd, h):
