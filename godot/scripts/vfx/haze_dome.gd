@@ -22,10 +22,13 @@ static func try_enable_passthrough(vp: Viewport, env: Environment) -> bool:
 	var xr := XRServer.find_interface("OpenXR")
 	if xr == null or not xr.is_initialized():
 		return false
+	if xr.has_method("is_passthrough_supported") and xr.is_passthrough_supported() and not xr.is_passthrough_enabled():
+		xr.start_passthrough()  # Meta passthrough (project setting xr/openxr/extensions/meta/passthrough)
 	var modes: Array = xr.get_supported_environment_blend_modes()
-	if not modes.has(XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND):
+	if not modes.has(XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND) and not (xr.has_method("is_passthrough_enabled") and xr.is_passthrough_enabled()):
 		return false
-	xr.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND
+	if modes.has(XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND):
+		xr.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND
 	vp.transparent_bg = true
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.0, 0.0, 0.0, 0.0)

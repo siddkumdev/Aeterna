@@ -22,6 +22,9 @@ textures/vram_compression/import_etc2_astc=true
 openxr/enabled=true
 openxr/extensions/hand_tracking=true
 openxr/extensions/hand_interaction_profile=true
+openxr/extensions/meta/passthrough=true
+openxr/extensions/meta/hand_tracking_aim=true
+openxr/extensions/meta/hand_tracking_capsules=true
 shaders/enabled=true
 
 [importer_defaults]

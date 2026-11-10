@@ -95,6 +95,8 @@ var veil: VeilDome  # the warm dome over the island: cracks at dusk, shatters in
 var haze: HazeDome  # the dim warm haze over the passthrough room (with the rig only)
 var _doom_started := false  # night 5 of loops 1-4: the Warden's horn has sounded
 var _doom_timer := 0.0
+var _ui_rig: Node3D  # headset: the cards, buttons and messages float here, in front of you (follows your head)
+var _ui_yaw := 0.0
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the card in a hand (or on the mouse hand)
@@ -188,6 +190,8 @@ func _ready() -> void:
 		add_child(audio)
 		audio.setup()
 		_build_rig()
+		if _xr:
+			_mount_ui_rig()
 		haze = HazeDome.new()
 		haze.name = "Haze"
 		add_child(haze)
@@ -1461,6 +1465,7 @@ func _process(delta: float) -> void:
 		return
 	_update_mouse_hand()
 	_update_lens()
+	_update_ui_rig(delta)
 	_tick_lens_window()
 	_update_held()
 	for h in _hands:
@@ -1747,10 +1752,22 @@ func _update_lens() -> void:
 		return
 	if _lens_hand:
 		# the grip in the hand, the glass standing up out of the fist
-		var xf := _lens_hand.global_transform * Transform3D(Basis(Vector3.RIGHT, -PI / 2.0), Vector3.ZERO)
 		var sc := Basis.from_scale(Vector3.ONE * GameConfig.LENS_SCALE)
-		_lens.global_transform = xf * Transform3D(sc, -_lens_grip * GameConfig.LENS_SCALE)
-		var up := _lens.global_position.y > board.global_position.y + GameConfig.LENS_RAISE
+		var hold_at := _lens_hand.global_position
+		var basis_held := Basis.IDENTITY
+		if _xr_cam:
+			# like a hand mirror: upright, the glass turned toward your eyes (the model's front is +Z)
+			var to_eye := _xr_cam.global_position - hold_at
+			to_eye.y = 0.0
+			if to_eye.length() < 0.001:
+				to_eye = Vector3.BACK
+			var turn := Basis.looking_at(-to_eye.normalized(), Vector3.UP)  # -Z toward the far side, so +Z faces you
+			var tilt := Basis(Vector3.RIGHT, -0.25)  # leaned back a little, so you look into it
+			basis_held = turn * tilt
+		else:
+			basis_held = _lens_hand.global_transform.basis * Basis(Vector3.RIGHT, -PI / 2.0)
+		_lens.global_transform = Transform3D(basis_held * sc, hold_at - basis_held * sc * _lens_grip)
+		var up := (_lens.global_transform * _lens_centre).y > board.global_position.y + GameConfig.LENS_RAISE
 		if up and _xr_cam and _lens_view:
 			set_lens(true)  # every gap: the lens window crops to what you look at through the glass
 		elif up and _xr_cam:
@@ -1763,6 +1780,47 @@ func _update_lens() -> void:
 		var held := Input.is_key_pressed(KEY_L) and phase == Phase.DAY
 		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)) if held else _lens_rest
 		set_lens(held)
+
+
+func _mount_ui_rig() -> void:
+	## 2026-11-10 (the user): the UI on the table was painful to reach. In the headset the cards, the buttons and the
+	## messages float about 40 cm in front of you, a little below eye level, and turn with you when you look far away.
+	_ui_rig = Node3D.new()
+	_ui_rig.name = "UiRig"
+	add_child(_ui_rig)
+	if _tray:
+		_tray.get_parent().remove_child(_tray)
+		_ui_rig.add_child(_tray)
+		_tray.position = Vector3(0, -0.30, -0.42)
+	var spots := {"sell": Vector3(-0.17, -0.40, -0.40), "night": Vector3(0.17, -0.40, -0.40),
+		"restart": Vector3(0.17, -0.40, -0.40), "speed": Vector3(0.17, -0.40, -0.40)}
+	for id in spots:
+		if _buttons.has(id):
+			var n: Node3D = _buttons[id]["node"]
+			n.get_parent().remove_child(n)
+			_ui_rig.add_child(n)
+			n.position = spots[id]
+			n.rotation_degrees = Vector3(-35, 0, 0)
+	for l in [_hud, _msg]:
+		if l:
+			l.get_parent().remove_child(l)
+			_ui_rig.add_child(l)
+	if _hud:
+		_hud.position = Vector3(0, 0.02, -0.62)
+	if _msg:
+		_msg.position = Vector3(0, -0.04, -0.62)
+
+
+func _update_ui_rig(delta: float) -> void:
+	## Sits at your head, turned to where you face; it only swings round once you have turned well away from it.
+	if _ui_rig == null or _xr_cam == null:
+		return
+	var f := -_xr_cam.global_transform.basis.z
+	var head_yaw := atan2(-f.x, -f.z)
+	if absf(angle_difference(_ui_yaw, head_yaw)) > 0.7:
+		_ui_yaw = head_yaw
+	_ui_rig.rotation.y = lerp_angle(_ui_rig.rotation.y, _ui_yaw, minf(1.0, delta * 3.0))
+	_ui_rig.global_position = _xr_cam.global_position
 
 
 func _tick_lens_window() -> void:
