@@ -4,6 +4,9 @@ The handoff file. Read this first after a break or a compaction (skill `lean-con
 
 Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
 
+## Two sessions
+- Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
+
 ## On the headset
 - Installed build: 2026-11-10, 14:45. Everything listed under "Untested on the Quest" is newer than it.
 - OVR Metrics Tool: not installed. The user downloads it (needs a Meta sign-in) and gives the file name; it goes on with the next game install.
@@ -29,8 +32,8 @@ Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
 2. DONE Declutter and controls: no Sell / Start night / Speed slabs and no HUD text in the played game. Day ends by itself after `GameConfig.DAY_LENGTH` (180 s) with a sun on an arc; tray hourglass = fast (day x10; night shows "2x", runs x4; Tab on desktop); sell = pinch and hold a built tower (`crush_start/step/cancel`; desktop: hold the mouse on it); faith on a wax seal on the tray; one fading toast line. Not done: the dusk bell (Siddharth removed the bells on 2026-11-08; ask before bringing one back). The red "!" go in step 3.
 3. DONE Quests: `Game._plan_quests` deals 4 kinds a day from a shuffled deck of 8 (chimney/kite, bird/lamb, lantern, cart, rain, warm, lights, prayer), posted one by one at `GameConfig.QUEST_TIMES` of the day (`_tick_quests`); day 1 of loop 1 starts with the prayer. Gold mote over the asker, no "!". Ghost hand (`scripts/ui/ghost_hand.gd`) plays once per kind. `HelpRequest.info()` feeds the ledger. Tests use `force_quests([...])`. Shot tool: `godot/tools/quest_shot.gd`. Stand-ins from primitives: cloud, dry field, ghost hand (to model later).
 4. DONE The ledger: `scripts/ui/ledger.gd` + `ledger_page.gd` (four tabbed pages drawn like the cards), data from `Game.ledger_data()`. Headset: left palm up for 0.3 s (`palm_pose`, `ledger_from_palm`; hand-joint palm first, left grip pose as fallback), B/Y or menu button latches it open. Desktop: L, then , and . turn pages; tabs can be clicked or poked. Shot tool: `godot/tools/ledger_shot.gd`. UNVERIFIED on the Quest: the palm normal's sign (OpenXR says the palm joint's +Y leaves the back of the hand).
-5. After the hourglass: gilded text, "Time has been rewound" + "Loop II" (the user wants the loop named).
-6. Opening: title first, but alive (Veil shimmering, villagers asleep, one big gilded Wake seal), then the story animation. No quest markers or bubbles on the title or during the story.
+5. DONE Rewind words: `scripts/ui/title_card.gd` (`TitleCard.show_over`), "TIME HAS BEEN REWOUND / Loop II", shown by `Game.show_rewind_words` 3.4 s after `_rewind`.
+6. DONE Opening: night title with the gilded name, a breathing Wake plaque and a small Tale plaque (the placeholder Hands plaque is gone); Wake plays 8 beats as gilded words over the island (dawn, people wake, faith into the Veil, Skotos, crack, shatter, hourglass, dawn) then "THE FIRST DAWN". No quests or bubbles until awake.
 7. Statue replaces the shrine: the little god, hooded, cupped hands holding the ember, on a plinth, clearly bigger than a thumb ("i should be bigger than a thumb"). make-asset: 4 variants, the user picks.
 8. Move and resize the island: pinch the table rim with one hand to drag and turn; both hands on the rim to resize (about 0.6x to 2x).
 9. Quest build: user exports, install game + OVR Metrics Tool, read the headset log for hands and passthrough.

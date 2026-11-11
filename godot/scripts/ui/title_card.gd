@@ -12,12 +12,14 @@ const EDGE := Color("5B2920")  # wood_dark
 
 var title := ""
 var sub := ""
+var title_px := 84
 var _mat: StandardMaterial3D
 
 
 class Face extends Control:
 	var title := ""
 	var sub := ""
+	var px := 84
 
 	func _draw() -> void:
 		var f := ThemeDB.fallback_font
@@ -30,7 +32,7 @@ class Face extends Control:
 			for x in [140.0, TitleCard.SIZE.x - 140.0]:
 				draw_circle(Vector2(x, y), 9, TitleCard.EDGE)
 				draw_circle(Vector2(x, y), 6, TitleCard.GOLD_LIGHT)
-		_line(f, title, 168, 84, TitleCard.GOLD_LIGHT)
+		_line(f, title, 168 + (px - 84) * 0.3, px, TitleCard.GOLD_LIGHT)
 		_line(f, sub, 262, 64, TitleCard.GOLD_LIGHT)
 
 	func _line(f: Font, s: String, y: float, px: int, col: Color) -> void:
@@ -42,7 +44,7 @@ class Face extends Control:
 		draw_string(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
-static func show_over(parent: Node3D, at: Vector3, line: String, under := "", hold := 3.2) -> TitleCard:
+static func show_over(parent: Node3D, at: Vector3, line: String, under := "", hold := 3.2, px := 84) -> TitleCard:
 	var old := parent.get_node_or_null("TitleCard")
 	if old:
 		old.name = "TitleCardOld"
@@ -51,6 +53,7 @@ static func show_over(parent: Node3D, at: Vector3, line: String, under := "", ho
 	t.name = "TitleCard"
 	t.title = line
 	t.sub = under
+	t.title_px = px
 	parent.add_child(t)
 	t.position = at
 	t._play(hold)
@@ -67,6 +70,7 @@ func _ready() -> void:
 	face.size = SIZE
 	face.title = title
 	face.sub = sub
+	face.px = title_px
 	vp.add_child(face)
 	var quad := MeshInstance3D.new()
 	var q := QuadMesh.new()
@@ -89,6 +93,15 @@ func _play(hold: float) -> void:
 	var tw := create_tween()
 	tw.tween_property(_mat, "albedo_color:a", 1.0, 0.5)
 	tw.parallel().tween_property(self, "scale", Vector3.ONE, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if hold < 0.0:
+		return  # stays until dismiss()
 	tw.tween_interval(hold)
 	tw.tween_property(_mat, "albedo_color:a", 0.0, 0.8)
+	tw.tween_callback(queue_free)
+
+
+func dismiss() -> void:
+	name = "TitleCardOld"
+	var tw := create_tween()
+	tw.tween_property(_mat, "albedo_color:a", 0.0, 0.4)
 	tw.tween_callback(queue_free)

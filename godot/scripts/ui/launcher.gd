@@ -9,13 +9,6 @@ extends Node
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
-const NARRATION := [
-	"You are the god of this small island.",
-	"Your Veil keeps the dark away.",
-	"It is woven from the faith of the people who live here.",
-	"Tonight, something is coming.",
-	"Watch over them.",
-]
 const TALE := "You are a very small god. Your whole world is this island: a meadow, twelve people, a well and a shrine.\n\nYour Veil, woven from their faith, keeps the Dark Wood out. But Skotos, a god the world forgot, has cursed it: every nightfall, it breaks.\n\nPlace towers. Cast your spells. Help your people. And if the worst happens... you are a god. You can try again."
 const HINTS := [
 	"Pick up a card from the tray.",
@@ -35,7 +28,7 @@ var _state := "title"  # title / tale / narrating / playing
 var _skip := false
 var _step := 0
 var _step_time := 0.0
-var _title_label: Label3D
+var _card: TitleCard
 var _t := 0.0
 
 
@@ -50,49 +43,37 @@ func _ready() -> void:
 	if stale:
 		stale.queue_free()
 	game.press_override = _on_press
+	if game.lighting:
+		game.lighting.set_mood("night", 0.05)  # the island sleeps under the Veil until you wake it
+	if game.life:
+		game.life._nightfall()  # everyone is indoors
 	_build_title()
 
 
 func _build_title() -> void:
+	## 2026-11-11 (the user: "starting it up is boring"): night over the sleeping island, the Veil glowing, fireflies,
+	## the gilded name, and one large Wake plaque that breathes. The Tale sits small beside it.
 	var half := GameConfig.SIZE * GameConfig.CELL / 2.0
 	_title = Node3D.new()
 	_title.name = "Title"
 	game.board.add_child(_title)
-	_title_label = Label3D.new()
-	_title_label.text = "AETERNA"
-	_title_label.font_size = 150
-	_title_label.pixel_size = 0.0011
-	_title_label.modulate = GOLD
-	_title_label.outline_size = 22
-	_title_label.outline_modulate = OUTLINE
-	_title_label.no_depth_test = true
-	_title_label.render_priority = 10
-	_title_label.position = Vector3(0, 0.36, -0.12)
-	_title_label.rotation_degrees.x = -18
-	_title.add_child(_title_label)
-	var sub := Label3D.new()
-	sub.name = "Sub"
-	sub.text = "a tiny god, a tiny land"
-	sub.font_size = 60
-	sub.pixel_size = 0.0007
-	sub.modulate = Color("F4E4B8")  # wall_cream
-	sub.outline_size = 10
-	sub.outline_modulate = OUTLINE
-	sub.no_depth_test = true
-	sub.render_priority = 10
-	sub.position = Vector3(0, 0.27, -0.09)
-	sub.rotation_degrees.x = -18
-	_title.add_child(sub)
-	var x := -0.2
-	for spec in [["wake", "Wake"], ["tale", "The Tale"], ["hands", "Hands / Controllers"]]:
-		var p := Plaque.make(spec[1])
-		p.position = Vector3(x, 0.02, half + 0.1)
-		p.rotation_degrees.x = -50
-		_title.add_child(p)
-		_plaques[spec[0]] = p
-		x += 0.2
+	_card = TitleCard.show_over(_title, Vector3(0, 0.34, -0.1), "AETERNA", "a tiny god, a tiny land", -1.0, 132)
+	var wake := Plaque.make("Wake")
+	wake.position = Vector3(0, 0.06, half + 0.1)
+	wake.rotation_degrees.x = -50
+	wake.scale = Vector3.ONE * 1.7
+	_title.add_child(wake)
+	_plaques["wake"] = wake
+	var tale := Plaque.make("The Tale")
+	tale.position = Vector3(0.3, 0.03, half + 0.1)
+	tale.rotation_degrees.x = -50
+	tale.scale = Vector3.ONE * 0.8
+	_title.add_child(tale)
+	_plaques["tale"] = tale
 	_panel = StoryPanel.make(game.board, Vector3(0, 0.34, 0.15))
 	_title.add_child(_fireflies())
+	if game.veil:
+		game.veil.snap(1.0, 0.0)
 
 
 func _fireflies() -> CPUParticles3D:
@@ -118,11 +99,11 @@ func _fireflies() -> CPUParticles3D:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _title_label and is_instance_valid(_title_label):
-		_title_label.modulate = GOLD.lerp(GLOW, 0.5 + 0.5 * sin(_t * 1.6))  # a gentle shimmer
 	if _state != "playing":
 		for id in _plaques:
 			var p: Plaque = _plaques[id]
+			if not is_instance_valid(p):
+				continue
 			var hot := false
 			for h in game._hands:
 				hot = hot or p.hit_point(h.global_position) or p.hit_ray(h.ray_origin(), h.ray_dir())
@@ -132,6 +113,8 @@ func _process(delta: float) -> void:
 				var m := get_viewport().get_mouse_position()
 				hot = hot or p.hit_ray(game._camera.project_ray_origin(m), game._camera.project_ray_normal(m))
 			p.hot = hot
+			if id == "wake":
+				p.scale = Vector3.ONE * (1.7 + 0.08 * sin(_t * 2.2))  # it breathes: press me
 	elif game.loop == 0 and _step < HINTS.size():
 		_tutorial(delta)
 
@@ -166,77 +149,81 @@ func _press_plaque(id: String) -> void:
 			else:
 				_state = "tale"
 				_show_panel(TALE)
-		"hands":
-			prefer_controllers = not prefer_controllers
-			_plaques["hands"]._label.text = "Controllers" if prefer_controllers else "Hands / Controllers"
-			_show_panel("Hands and controllers both work. You chose: %s." % ("controllers" if prefer_controllers else "whatever the headset finds first"))
-			_state = "tale"
 
 
 func _show_panel(line: String) -> void:
 	## The title steps aside while a parchment is open.
-	_title_label.visible = false
-	_title.find_child("Sub", true, false).visible = false
+	if is_instance_valid(_card):
+		_card.visible = false
 	_panel.position = Vector3(0, 0.3, 0.1)
 	_panel.show_text(line)
 
 
 func _close_panel() -> void:
 	_panel.hide_panel()
-	_title_label.visible = true
-	_title.find_child("Sub", true, false).visible = true
+	if is_instance_valid(_card):
+		_card.visible = true
 
 
 func _wake() -> void:
 	## The opening, played on the island itself (the user, 2026-11-10: "explain the story piece by piece in an
-	## in-game rendered animation"). Each beat is a caption on the parchment and something that happens to the
-	## real island: the Veil glows and knits, faith rises from the houses, the dusk comes, Skotos's crack runs
-	## over the Veil, it shatters, the hourglass turns time back, dawn returns. Any press skips it.
+	## in-game rendered animation"). Each beat is a line of gilded words and something that happens to the real
+	## island: dawn, the people waking, their faith rising into the Veil, the dusk, Skotos's crack, the Veil
+	## shattering, the hourglass turning time back, dawn again. Any press skips it.
 	_state = "narrating"
 	_skip = false
+	_panel.hide_panel()
 	_title.visible = false
 	var v: VeilDome = game.veil
+	var gold := Color("FFD45A")  # fire_yellow
+	var amber := Color("F6A45D")  # lantern_glow
+	var north := Vector3(0, 0.08, -GameConfig.SIZE * GameConfig.CELL / 2.0)
 	var lines := [
-		["You are the god of this small island.", func():
-			if v: v.snap(1.0, 0.0)],
-		["Your Veil keeps the dark away.", func():
-			if v: v.knit(1.6)],
-		["It is woven from the faith of the people who live here.", func():
+		["You are the god of this small island.", "", func():
+			if game.lighting: game.lighting.set_mood("dawn", 2.0)],
+		["Each morning your people wake,", "and they believe in you.", func():
+			if game.lighting: game.lighting.set_mood("day", 2.0)
+			if game.life: game.life._morning()],
+		["Their faith weaves your Veil.", "It keeps the dark away.", func():
 			for h in game.houses:
-				VfxKit.burst(game.shots_root, h.global_position + Vector3(0, 0.1, 0), Color("FFD45A"), Color("F6A45D"), 14, 0.08, 1.6, 0.005, 0.02)],
-		["But a god the world forgot is watching from the Dark Wood.", func():
-			game._set_light(1)],
-		["His name is Skotos. And at every nightfall, he breaks the Veil.", func():
+				VfxKit.burst(game.shots_root, h.global_position + Vector3(0, 0.1, 0), gold, amber, 14, 0.08, 1.6, 0.005, 0.02)
+			if v: v.knit(1.6)],
+		["But a god the world forgot", "is watching from the Dark Wood.", func():
+			game._set_light(1)
+			VfxKit.burst(game.shots_root, game.board.to_global(north), Color("9C3EB0"), Color("5A2A78"), 30, 0.12, 2.4, 0.008, 0.01)],
+		["His name is Skotos.", "At every nightfall, he breaks the Veil.", func():
+			if game.life: game.life._nightfall()
 			if v: v.crack(1.8)],
-		["The dark pours in.", func():
+		["The dark pours in.", "", func():
 			if v: v.shatter(1.2)
 			VfxKit.burst(game.shots_root, game.board.global_position + Vector3(0, 0.1, 0), Color("9C3EB0"), Color("E8452C"), 40, 0.2, 1.6, 0.007, 0.05)],
-		["When the village falls, you do what only a god can.", func():
+		["When the village falls,", "you do what only a god can.", func():
 			game._play_hourglass()],
-		["You turn time back, and try again.", func():
+		["You turn time back,", "and try again.", func():
 			game._set_light(0)
-			if v: v.knit(1.8)],
-		["Watch over them.", func():
-			pass],
+			if v: v.knit(1.8)
+			if game.life: game.life._morning()],
 	]
 	for entry in lines:
-		_panel.position = Vector3(0, 0.34, 0.15)
-		_panel.show_text(entry[0])
-		entry[1].call()
-		var left := 3.6
+		TitleCard.show_over(game.board, Vector3(0, 0.36, -0.1), entry[0], entry[1], -1.0)
+		entry[2].call()
+		var left := 3.8
 		while left > 0.0 and not _skip:
 			await get_tree().process_frame
 			left -= get_process_delta_time()
 		if _skip:
 			break
-	_panel.hide_panel()
 	game._set_light(0)
 	if v:
 		v.snap(1.0, 0.0)
+	if game.life and _skip:
+		game.life._morning()
 	game.snd("dawn_bell")
 	_title.queue_free()
+	_plaques.clear()
 	game.asleep = false
 	_state = "playing"
+	TitleCard.show_over(game.board, Vector3(0, 0.36, -0.1), "THE FIRST DAWN", "Watch over them.")
 	game.say_at_shrine(StoryText.prayer(0, 0))
 	_step = 0
 	_step_time = 0.0
