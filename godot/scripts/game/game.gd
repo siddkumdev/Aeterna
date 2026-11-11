@@ -78,6 +78,7 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var _perf_log_t := 0.0
 var _palm_log_t := 0.0
 var _fast_pending := {}  # hand -> seconds it has held a pinch on the tray hourglass
 var _clock: Label3D  # the big countdown over the island
@@ -1735,6 +1736,10 @@ func _process(delta: float) -> void:
 	_tick_day(delta)
 	_tick_quests(delta)
 	_tick_rim(delta)
+	_perf_log_t -= delta
+	if _xr and _perf_log_t <= 0.0:
+		_perf_log_t = 5.0
+		print("[perf] fps=%d" % Engine.get_frames_per_second())
 	if _xr and ledger:
 		var palm := palm_pose()
 		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())
@@ -2730,6 +2735,9 @@ func _init_xr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
 	if xr and xr.is_initialized():
 		get_viewport().use_xr = true
+		if "foveation_level" in xr:  # the Quest renders the edges of each eye cheaper (the user: it lags a lot)
+			xr.set("foveation_level", 2)
+			xr.set("foveation_dynamic", true)
 		print("[game] OpenXR running: hand rays + pinch")
 		return true
 	print("[game] OpenXR not running: desktop mode (mouse + keys)")

@@ -55,6 +55,7 @@ var _hot := false
 var _manual := false  # set_pose_from was used: ignore the tracker
 var _hot_amount := 0.0
 var _lost := 0.0  # seconds without tracking data
+var _was_live := false
 var _spark_boost := false
 
 
@@ -115,7 +116,7 @@ func _bone_mesh() -> Mesh:
 	m.top_radius = 1.0  # straight tubes: the joint balls carry the taper, so tube and ball meet without a step
 	m.bottom_radius = 1.0
 	m.height = 1.0
-	m.radial_segments = 16
+	m.radial_segments = 10
 	m.rings = 1
 	m.cap_top = false
 	m.cap_bottom = false
@@ -126,8 +127,8 @@ func _ball_mesh() -> Mesh:
 	var m := SphereMesh.new()
 	m.radius = 1.0
 	m.height = 2.0
-	m.radial_segments = 16
-	m.rings = 8
+	m.radial_segments = 12
+	m.rings = 6
 	return m
 
 
@@ -221,7 +222,12 @@ func _process(delta: float) -> void:
 	var ok := false
 	if _tracker == null or not is_instance_valid(_tracker):
 		_tracker = XRServer.get_tracker(_tracker_name()) as XRHandTracker
-	if _tracker != null and _tracker.has_tracking_data:
+	var flags := _tracker.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) if _tracker != null else 0
+	var live := _tracker != null and _tracker.has_tracking_data and (flags & XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED) != 0  # a frozen last-known pose is not live
+	if live != _was_live:
+		_was_live = live
+		print("[hand] %s %s (data=%s flags=%d fps=%d)" % [side, "tracked" if live else "LOST", str(_tracker != null and _tracker.has_tracking_data), flags, Engine.get_frames_per_second()])
+	if live:
 		for i in J_COUNT:
 			_joints[i] = _tracker.get_hand_joint_transform(i)
 			_radii[i] = maxf(_tracker.get_hand_joint_radius(i), 0.004)
