@@ -35,10 +35,12 @@ Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
 5. DONE Rewind words: `scripts/ui/title_card.gd` (`TitleCard.show_over`), "TIME HAS BEEN REWOUND / Loop II", shown by `Game.show_rewind_words` 3.4 s after `_rewind`.
 6. DONE Opening: night title with the gilded name, a breathing Wake plaque and a small Tale plaque (the placeholder Hands plaque is gone); Wake plays 8 beats as gilded words over the island (dawn, people wake, faith into the Veil, Skotos, crack, shatter, hourglass, dawn) then "THE FIRST DAWN". No quests or bubbles until awake.
 7. Statue replaces the shrine: the little god, hooded, cupped hands holding the ember, on a plinth, clearly bigger than a thumb ("i should be bigger than a thumb"). make-asset: 4 variants, the user picks.
-8. Move and resize the island: pinch the table rim with one hand to drag and turn; both hands on the rim to resize (about 0.6x to 2x).
+8. DONE (untested on the Quest) Move and resize: pinch the table rim (`Game.on_rim`, `rim_transform`, `_tick_rim`). One hand drags and turns with the wrist; two hands turn and resize within `GameConfig.BOARD_SCALE` (0.6 to 2.0). Headset hands only.
 9. Quest build: user exports, install game + OVR Metrics Tool, read the headset log for hands and passthrough.
 
 ## Still open after the plan
+- The boss (Warden / Skotos) has no body (the user, 2026-11-11): find out why and give it one.
+- HOLD (agreed with Siddharth's session 2026-11-11): no pushes to game.gd, launcher.gd, game_config.gd, game_selftest.gd until that session has rebased and pushed its hand-touch commit d6d2831; pull before touching them again.
 - Hand tracking quality; critic runs; approvals for hourglass v02 and trees; kite and lamb stand-ins; oak models not placed.
 - `docs/QUEST_BUILD.md` passthrough manifest line; log decisions in `art/decisions.md` / `docs/VFX_NOTES.md`; update `docs/STORY.md` (statue, thumb line) and `docs/GAME_SPEC.md` (day timer, sell, quests).
 

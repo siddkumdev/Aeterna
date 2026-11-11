@@ -30,6 +30,7 @@ func _initialize() -> void:
 	await _day_clock()
 	await _quests()
 	await _ledger()
+	await _rim()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -1698,5 +1699,32 @@ func _ledger() -> void:
 	check("a fingertip on a tab finds that tab", g.ledger.tab_at_point(world, 0.03) == 2)
 	check("a ray at a tab finds that tab", g.ledger.tab_at_ray(world + g.ledger.global_basis.z.normalized() * 0.3, -g.ledger.global_basis.z.normalized()) == 2)
 	check("a point off the panel finds nothing", g.ledger.tab_at_point(world + Vector3(1, 0, 0), 0.03) == -1)
+	g.queue_free()
+	await process_frame
+
+
+func _rim() -> void:
+	## 2026-11-11 (the user): grab the table rim to move, turn and resize the island.
+	var g := await _make_game()
+	var edge: Vector3 = g.board.to_global(Vector3(Game.HALF + 0.04, 0, 0))
+	check("the rim is just outside the island's edge, not on the grass or far away", g.on_rim(edge) 		and not g.on_rim(g.board.to_global(Vector3(0.2, 0, 0))) and not g.on_rim(g.board.to_global(Vector3(Game.HALF + 0.4, 0, 0))))
+	var start: Transform3D = g.board.global_transform
+	var one: Array[Vector3] = [edge]
+	var moved: Array[Vector3] = [edge + Vector3(0.1, 0.05, -0.2)]
+	var t := Game.rim_transform(start, one, moved)
+	check("one hand drags the island with it", t.origin.is_equal_approx(start.origin + Vector3(0.1, 0.05, -0.2)) and t.basis.is_equal_approx(start.basis))
+	t = Game.rim_transform(start, one, one, PI / 2.0)
+	check("one hand turning turns it about the hand", absf(t.basis.get_euler().y - start.basis.get_euler().y - PI / 2.0) < 0.001 and (t * start.affine_inverse() * edge).is_equal_approx(edge))
+	var two: Array[Vector3] = [edge, edge - Vector3(2.0 * (Game.HALF + 0.04), 0, 0)]
+	var mid := (two[0] + two[1]) / 2.0
+	var wide: Array[Vector3] = [mid + (two[0] - mid) * 1.5, mid + (two[1] - mid) * 1.5]
+	t = Game.rim_transform(start, two, wide)
+	check("two hands pulled apart make it bigger about their middle", is_equal_approx(t.basis.get_scale().x, 1.5) and (t * start.affine_inverse() * mid).is_equal_approx(mid))
+	var huge: Array[Vector3] = [mid + (two[0] - mid) * 9.0, mid + (two[1] - mid) * 9.0]
+	var tiny: Array[Vector3] = [mid + (two[0] - mid) * 0.1, mid + (two[1] - mid) * 0.1]
+	check("the size stays within its limits", is_equal_approx(Game.rim_transform(start, two, huge).basis.get_scale().x, GameConfig.BOARD_SCALE.y) 		and is_equal_approx(Game.rim_transform(start, two, tiny).basis.get_scale().x, GameConfig.BOARD_SCALE.x))
+	var turned: Array[Vector3] = [mid + (two[0] - mid).rotated(Vector3.UP, 0.5), mid + (two[1] - mid).rotated(Vector3.UP, 0.5)]
+	t = Game.rim_transform(start, two, turned)
+	check("two hands turning turn it, and it stays level", absf(t.basis.get_euler().y - start.basis.get_euler().y - 0.5) < 0.001 and absf(t.basis.y.normalized().dot(Vector3.UP) - 1.0) < 0.001)
 	g.queue_free()
 	await process_frame

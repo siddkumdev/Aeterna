@@ -218,3 +218,7 @@ const CRUSH_HOLD := 1.2  # s
 const PALM_UP_OPEN := 0.6  # dot of the palm's normal with straight up, to open
 const PALM_UP_CLOSE := 0.25  # below this it folds shut
 const PALM_UP_HOLD := 0.3  # s
+
+# Moving the island (the user, 2026-11-11): pinch the table rim. One hand drags and turns, two hands resize.
+const RIM_WIDTH := 0.1  # m outside the island's edge that counts as the rim
+const BOARD_SCALE := Vector2(0.6, 2.0)

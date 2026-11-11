@@ -78,6 +78,10 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var _rim_hands: Array = []  # the hands pinching the table rim (move, turn, resize the island)
+var _rim_start := Transform3D.IDENTITY  # the board when the current grip began
+var _rim_p0: Array[Vector3] = []  # where each gripping hand was then
+var _rim_yaw0 := 0.0  # one hand: its wrist yaw then
 var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in the headset, L on the desktop
 var _ledger_latched := false  # opened by a button or key: stays until closed the same way
 var _palm_time := 0.0  # how long the left palm has been turned up
@@ -1712,6 +1716,7 @@ func _process(delta: float) -> void:
 		return
 	_tick_day(delta)
 	_tick_quests(delta)
+	_tick_rim()
 	if _xr and ledger:
 		var palm := palm_pose()
 		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())
@@ -2117,6 +2122,11 @@ func hand_pressed(h: GameHand) -> void:
 			if Vector2(d.x, d.z).length() <= GameConfig.CELL * 1.1 and d.y > -0.01 and d.y <= 0.16:
 				crush_start(t, h, h.global_position)
 				return
+	if h != _mouse_hand and not placing() and on_rim(h.global_position):
+		_rim_hands.append(h)
+		_rim_anchor()
+		snd("grab")
+		return
 	_active_hand = h
 	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())
@@ -2161,7 +2171,61 @@ func _eye() -> Vector3:
 	return cam.global_position if cam else Vector3(0, 1.4, 0.6)
 
 
+func on_rim(world: Vector3) -> bool:
+	## Is this point on the table's rim: just outside the island's edge, near its height?
+	var l := board.to_local(world)
+	var m := maxf(absf(l.x), absf(l.z))
+	return m >= HALF - 0.01 and m <= HALF + GameConfig.RIM_WIDTH and l.y >= -0.12 and l.y <= 0.08
+
+
+func _rim_anchor() -> void:
+	_rim_start = board.global_transform
+	_rim_p0.clear()
+	for h in _rim_hands:
+		_rim_p0.append(h.global_position)
+	if _rim_hands.size() == 1:
+		_rim_yaw0 = _hand_yaw(_rim_hands[0])
+
+
+static func _hand_yaw(h: Node3D) -> float:
+	var f := -h.global_basis.z
+	return atan2(-f.x, -f.z)
+
+
+static func rim_transform(start: Transform3D, p0: Array[Vector3], p: Array[Vector3], yaw := 0.0) -> Transform3D:
+	## The board after a rim grip (the user, 2026-11-11). One hand: it follows the hand and turns with the wrist
+	## (`yaw`, radians). Two hands: it follows their midpoint, turns with the line between them and grows or
+	## shrinks with their distance, kept within GameConfig.BOARD_SCALE. It always stays level.
+	if p.size() == 1:
+		return Transform3D(Basis(Vector3.UP, yaw), p[0]) * Transform3D(Basis.IDENTITY, -p0[0]) * start
+	var a0 := p0[1] - p0[0]
+	var a := p[1] - p[0]
+	var d0 := Vector2(a0.x, a0.z)
+	var d := Vector2(a.x, a.z)
+	var turn := 0.0 if d0.length() < 0.01 or d.length() < 0.01 else -d0.angle_to(d)
+	var s0 := start.basis.get_scale().x
+	var k := clampf(s0 * (a.length() / maxf(a0.length(), 0.01)), GameConfig.BOARD_SCALE.x, GameConfig.BOARD_SCALE.y) / s0
+	var mid0 := (p0[0] + p0[1]) / 2.0
+	var mid := (p[0] + p[1]) / 2.0
+	return Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * k), mid) * Transform3D(Basis.IDENTITY, -mid0) * start
+
+
+func _tick_rim() -> void:
+	if _rim_hands.is_empty():
+		return
+	var p: Array[Vector3] = []
+	for h in _rim_hands.slice(0, 2):
+		p.append(h.global_position)
+	var p0: Array[Vector3] = _rim_p0.slice(0, 2)
+	board.global_transform = rim_transform(_rim_start, p0, p, _hand_yaw(_rim_hands[0]) - _rim_yaw0 if p.size() == 1 else 0.0)
+
+
 func hand_released(h: GameHand) -> void:
+	if _rim_hands.has(h):
+		_rim_hands.erase(h)
+		_rim_anchor()
+		snd("release")
+		return
 	if not _crush.is_empty() and (_crush["hand"] == h or (_crush["hand"] == null and h == _mouse_hand)):
 		crush_cancel()
 	if _held_card and _held_card_hand == h:
