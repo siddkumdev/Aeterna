@@ -64,3 +64,14 @@ The users often read on a phone with no terminal, so reports must stand alone:
 - Third-party Godot skills in `.claude/skills/` (installed 2026-10-22 with Siddharth's OK, text only): `godot-gdscript-patterns` (wshobson/agents, MIT) and `godot-development` (omer-metin, Apache-2.0). General Godot 4 guidance, mostly 2D; each starts with a project note: our rules win and the user decides, never "correct" a user's choice from them.
 - Third-party audio skill `game-audio-principles` (davila7/claude-code-templates, MIT, installed 2026-11-08 with Siddharth's OK, text only): general game-audio guidance; `docs/AUDIO_DIRECTION.md` wins over it.
 - `.mcp.json`: the Blender MCP connection (needs `uv` and the Blender add-on; optional, see `docs/SETUP.md`).
+
+## 7. Spending context carefully
+Asked for by the teammate (sykeriin), 2026-11-11. The how is in the skill `lean-context`; the routine Quest build is in `quest-build`.
+- **Start from `docs/STATUS.md`**, not from the transcript or `git log`. Update it before stopping; keep it short.
+- **Never read a big script whole** (`game.gd`, `game_selftest.gd`, `spells.gd`, `vfx_kit.gd`). Use `python tools/code_map.py <script>` for the outline, `python tools/code_map.py <script> <func>...` for bodies, `--find <name>` for callers.
+- **Run the self-test with `python tools/selftest.py`** (failures and the total only). Pipe any other chatty command through `tail` or `grep`.
+- **One shot per change, looked at once.** No re-renders without a change.
+- **Batch**: independent commands in one call, open design questions in one AskUserQuestion.
+- **Critics get a commit range and the files that matter**, and return a verdict plus at most ten findings. Two refused spawns means stop and say so.
+- **Reports do not recap.** Result, what changed, what is unverified.
+- New rules go here only if they change behaviour every session; this file and `CLAUDE.md` are loaded each time, so every line costs.

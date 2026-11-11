@@ -72,3 +72,4 @@ _work/      scratch input (git-ignored)
 - ARCHIVED 2026-11-03 (headset permission arrived; nice-to-have only) watch input test (Galaxy Watch through the bridge laptop, `WATCH_BRIDGE` in `local.env`): `python watch/watch_bridge.py` (see `watch/README.md`)
 - Characters: `blender --factory-startup -b -P tools/export_characters.py` then sync; pose sheets `godot/tools/village_shot.gd` (skill: character-kit)
 - Machine check: `python tools/doctor.py`
+- Code without whole-file reads: `python tools/code_map.py [script [func...]]`; quiet self-test: `python tools/selftest.py` (skill: lean-context). Status handoff: `docs/STATUS.md`. Quest build: skill `quest-build`.
