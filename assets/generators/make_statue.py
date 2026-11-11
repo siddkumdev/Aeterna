@@ -43,16 +43,17 @@ def figure(z0, scale=1.0, seated=False, long_robe=False, sleeves=False):
     s = scale
     P = []
     if seated:  # a folded-legs mound with the robe spread round it
-        P.append(bc.cone("robe", 0.034 * s, 0.020 * s, 0.032 * s, (0, 0, z0 + 0.016 * s), ROBE, 14))
-        P.append(bc.cone("hem", 0.036 * s, 0.036 * s, 0.004 * s, (0, 0, z0 + 0.002 * s), TRIM, 14))
+        P.append(bc.cone("robe", 0.034 * s, 0.020 * s, 0.032 * s, (0, 0, z0 + 0.016 * s), ROBE, 12))
+        P.append(bc.cone("hem", 0.036 * s, 0.036 * s, 0.004 * s, (0, 0, z0 + 0.002 * s), TRIM, 12))
         body_top = z0 + 0.034 * s
         P.append(bc.cone("torso", 0.020 * s, 0.015 * s, 0.026 * s, (0, 0, body_top + 0.010 * s), ROBE, 12))
         body_top += 0.026 * s
     else:
         h = 0.060 * s if not long_robe else 0.072 * s
         r0 = 0.026 * s if not long_robe else 0.034 * s
-        P.append(bc.cone("robe", r0, 0.014 * s, h, (0, 0, z0 + h / 2), ROBE, 14))
-        P.append(bc.cone("hem", r0 * 1.04, r0 * 1.04, 0.004 * s, (0, 0, z0 + 0.002 * s), TRIM, 14))
+        P.append(bc.cone("robe", r0, 0.014 * s, h, (0, 0, z0 + h / 2), ROBE, 12))
+        P.append(bc.cone("hem", r0 * 1.04, r0 * 1.04, 0.004 * s, (0, 0, z0 + 0.002 * s), TRIM, 12))
+        P.append(bc.cone("skirt", r0 * 1.02, r0 * 0.90, 0.016 * s, (0, 0, z0 + 0.010 * s), ROBE_D, 12))
         P.append(bc.cone("belt", 0.0175 * s, 0.0175 * s, 0.003 * s, (0, 0, z0 + h * 0.62), TRIM, 12))
         body_top = z0 + h
     # the hood: a rounded cowl with a peak, the face a dark opening (two tiny stone eyes, no glow)
@@ -76,8 +77,8 @@ def figure(z0, scale=1.0, seated=False, long_robe=False, sleeves=False):
 
 def cracks(top):
     out = []
-    for (x, y, h, rot) in ((-0.022, -0.036, 0.016, 12.0), (0.030, -0.026, 0.012, -20.0), (0.004, -0.040, 0.010, 6.0)):
-        out.append(bc.box("crack", (0.0012, 0.0010, h), (x, y, top), "ink", rot))
+    for (x, y, w, rot) in ((-0.026, -0.030, 0.012, 25.0), (0.030, -0.022, 0.009, -35.0), (0.004, -0.036, 0.007, 8.0)):
+        out.append(bc.box("crack", (w, 0.0022, 0.0006), (x, y, top), "ink", rot))
     return out
 
 
@@ -131,12 +132,9 @@ def variant_m():
     body = [bc.cone("plinth", 0.046, 0.040, 0.014, (0, 0, 0.007), STONE, 16), bc.cone("plinth_top", 0.036, 0.034, 0.006, (0, 0, 0.017), STONE_D, 16)]
     body += moss_and_flowers()
     fig, ez, bz, top = figure(0.020, 1.0, long_robe=True, sleeves=True)
-    z = top - 0.012
-    fig += [bc.cone("stalk", 0.0022, 0.0022, 0.026, (0, 0.016, top - 0.026), STONE_D, 6),
-            place_disc("sun", 0.021, (0, 0.019, z), TRIM), place_disc("sunrim", 0.026, (0, 0.0205, z), ROBE_D)]
-    for k in range(10):
-        a = 2 * PI * k / 10
-        fig.append(bc.box("ray", (0.0030, 0.0020, 0.0070), (math.cos(a) * 0.0280, 0.0180, z + math.sin(a) * 0.0280), TRIM, 0.0))
+    z = top - 0.004
+    fig += [bc.cone("stalk", 0.0036, 0.0036, 0.030, (0, 0.016, top - 0.020), STONE_D, 6),
+            place_disc("sun", 0.024, (0, 0.019, z), TRIM), place_disc("sunrim", 0.030, (0, 0.0215, z), ROBE_D)]
     return body + fig, ez, bz, top + 0.014, 0.0200, 0.010
 
 
@@ -151,7 +149,7 @@ def build(variant, ver="v01"):
     bc.clear_scene()
     name = "ew_village_statue_%s" % ver
     parts, ember_z, brow_z, top, crack_z, _ = VARIANTS[variant]()
-    root = bc.assemble(name, [("", parts, (0, 0, 0), None), ("cracks", cracks(crack_z + 0.004), (0, 0, 0), "", False)])
+    root = bc.assemble(name, [("", parts, (0, 0, 0), None), ("cracks", cracks(0.0204), (0, 0, 0), "", False)])
     bc.anchor(root, "candle_anchor", (0, -0.019, ember_z), size=0.008)
     bc.anchor(root, "offering_anchor", (0, -0.036, 0.0200), size=0.012)
     bc.anchor(root, "sigil_anchor", (0, -0.0145, brow_z), size=0.008)
