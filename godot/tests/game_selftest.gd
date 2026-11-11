@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await _elites()
 	await _doom()
 	await _endings()
+	await _review_fixes()
 	await _day_clock()
 	await _quests()
 	await _ledger()
@@ -1138,6 +1139,127 @@ func _endings() -> void:
 	check("beating the Warden in the last loop offers the two endings", g.phase == Game.Phase.CARDS and g.ending_choice and g.offers.size() == 2)
 	check("choosing an ending finishes the run with its words", g.choose_card(1) and g.phase == Game.Phase.DONE and g.last_message.contains("Skotos"))
 	g.queue_free()
+
+
+class NightEnder extends Enemy:
+	## Test stand-in: its step ends the night (as the third house going dark would).
+	var g: Game
+	func step(_delta: float) -> void:
+		g._end_loop(false)
+
+
+class Watcher extends Enemy:
+	var acted := false
+	func step(_delta: float) -> void:
+		acted = true
+
+
+func _review_fixes() -> void:
+	## Code review 2026-11-11 (findings 1, 2, 4, 8, 9).
+	# 1: a hand losing tracking mid-pinch cancels instead of releasing
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	var got: Array[String] = []
+	hand.released.connect(func(_h): got.append("released"))
+	hand.cancelled.connect(func(_h): got.append("cancelled"))
+	hand._press_key("pinch")
+	hand._pinching = true
+	hand._update_pinch()  # no tracked visual: the grace is over
+	hand.press()
+	hand.release()
+	check("tracking lost mid-pinch emits cancelled; a real let-go still emits released", got.size() == 2 and got[0] == "cancelled" and got[1] == "released")
+	var g := await _make_game()
+	var spot := NavGrid.footprint_centre(Vector2i(16, 11), GameConfig.TOWER_SIZE)
+	var cd := Card3D.new().setup({"kind": "tower", "id": "fire"})
+	g.add_child(cd)
+	var before := g.towers.size()
+	var faith := g.faith
+	g.select("fire")
+	g._held_card = cd
+	g._held_card_hand = hand
+	hand.global_position = g.board.to_global(spot + Vector3(0, 0.07, 0))
+	g.hand_released(hand, true)
+	check("tracking lost holding a tower card: nothing built, no faith spent, card put back", g.towers.size() == before and g.faith == faith and g._held_card == null and not g.placing())
+	g.select("fire")
+	g._held_card = cd
+	g._held_card_hand = hand
+	g.hand_released(hand)
+	check("the same card let go on purpose builds there", g.towers.size() == before + 1)
+	var start := g.board.global_transform
+	g._rim_hands.append(hand)
+	g._rim_anchor()
+	g.board.global_transform = start.translated(Vector3(0.1, 0, 0))
+	g.hand_released(hand, true)
+	check("tracking lost while moving the island: the move is undone", g._rim_hands.is_empty() and g.board.global_transform.is_equal_approx(start))
+	g.force_quests(["chimney"])
+	var ch: HelpRequest = g.requests.filter(func(r): return r.kind == "chimney")[0]
+	hand.global_position = ch.grab_point()
+	g.hand_pressed(hand)
+	var held := g._held_req == ch
+	hand.global_position = ch.grab_point() + Vector3(0.0, 0.2, 0.0)
+	g._update_held()
+	g.hand_released(hand, true)
+	check("tracking lost holding a request prop: it goes back unfinished", held and not ch.done and not ch.held and g._held_req == null and ch.prop.position.is_equal_approx(ch._home))
+	_night_start(g)
+	g._refresh_buttons()
+	hand.global_position = g.spells.tokens["boulder"].global_position
+	g.hand_pressed(hand)
+	held = g._held_spell == "boulder"
+	hand.global_position = g.board.to_global(Vector3(0.05, 0.4, 0.05))
+	g._update_held()
+	g.hand_released(hand, true)
+	check("tracking lost holding a spell: not cast, still ready, token home", held and g._held_spell == "" and g.spells.is_ready("boulder") 		and g.spells.tokens["boulder"].position.is_equal_approx(g.spells.tokens["boulder"].get_meta("home")))
+	g.queue_free()
+	await process_frame
+	# 2: a restart during the ending offer clears it
+	g = await _make_game()
+	g.loop = GameConfig.LOOPS_PER_RUN - 1
+	g.night = GameConfig.BOSS_NIGHT
+	g._end_loop(true)
+	g.new_run(7)
+	check("a new run clears the ending offer", not g.ending_choice)
+	g._end_loop(false)
+	check("the new run's first lost-night card is a card, not an ending", g.choose_card(0) and g.phase != Game.Phase.DONE and g.loop == 1)
+	# 8: a rewind's hourglass animation and words do not outlive a new run
+	g._hourglass = Node3D.new()
+	g.board.add_child(g._hourglass)
+	g._play_hourglass()
+	var tw := g._rewind_tween
+	var serial := g._rewind_serial
+	g.new_run(8)
+	check("a new run stops the rewind's hourglass and its pending words", tw != null and not tw.is_valid() and not g._hourglass.visible and g._rewind_serial != serial)
+	g.queue_free()
+	await process_frame
+	# 4: once an enemy ends the night, no other enemy acts in that tick
+	g = await _make_game()
+	g.start_night()
+	g._spawn_queue.clear()
+	for e in g.enemies:
+		e.queue_free()
+	g.enemies.clear()
+	var ender := NightEnder.new()
+	ender.g = g
+	var watcher := Watcher.new()
+	g.enemies.append(ender)
+	g.enemies.append(watcher)
+	g.step(0.05)
+	check("an enemy ending the night stops the rest acting that tick", g.phase != Game.Phase.NIGHT and not watcher.acted)
+	g.queue_free()
+	hand.queue_free()
+	await process_frame
+	# 9: the plaque touch pad is a world distance at any scale
+	var p := Plaque.make("Wake")
+	root.add_child(p)
+	var pad := GameConfig.XR_PLAQUE_PAD
+	var ok := true
+	for s in [1.0, 1.7]:
+		p.scale = Vector3.ONE * s
+		var edge: float = Plaque.SIZE.x / 2.0 * s
+		ok = ok and p.hit_point(Vector3(edge + pad - 0.001, 0, 0), pad) and not p.hit_point(Vector3(edge + pad + 0.001, 0, 0), pad)
+	check("the plaque pad is the same world distance at scale 1.0 and 1.7", ok)
+	p.queue_free()
+	await process_frame
 
 
 func _village_life() -> void:

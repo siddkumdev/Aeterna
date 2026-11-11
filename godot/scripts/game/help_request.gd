@@ -167,6 +167,13 @@ func move_to(local: Vector3) -> void:
 	prop.position = local
 
 
+func put_back() -> void:
+	## The hand holding the prop lost tracking: the prop goes home, nothing is finished.
+	if held:
+		prop.position = _home
+		held = false
+
+
 func release() -> bool:
 	## Let go: true when that finished the request.
 	if not held:

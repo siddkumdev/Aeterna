@@ -17,7 +17,8 @@ extends XRController3D
 ##   default POKE_RADIUS m) fires once per touch. For plaques and villagers.
 
 signal pressed(hand: GameHand)
-signal released(hand: GameHand)  # the last held pinch/grasp let go
+signal released(hand: GameHand)
+signal cancelled(hand: GameHand)  # the press ended because tracking was lost, not because the player let go  # the last held pinch/grasp let go
 signal poked(node: Node3D)  # the index fingertip touched a node of the group "ew_pokable"
 
 const PRESS_ACTIONS := ["trigger_click", "grip_click", "select_button"]
@@ -110,11 +111,15 @@ func _press_key(key: String) -> void:
 	_show_thread(true)
 
 
-func _release_key(key: String) -> void:
+func _release_key(key: String, lost := false) -> void:
+	## lost: the hand stopped being tracked mid-pinch, so whatever it held is dropped back, never played.
 	if _down.has(key):
 		_down.erase(key)
 		if _down.is_empty():
-			released.emit(self)
+			if lost:
+				cancelled.emit(self)
+			else:
+				released.emit(self)
 			_show_thread(false)
 
 
@@ -169,7 +174,7 @@ func _update_pinch() -> void:
 	if visual == null or not visual.tracked:
 		if _pinching:
 			_pinching = false
-			_release_key("pinch")
+			_release_key("pinch", true)  # tracking lost (grace over): a cancel, not a release
 		return
 	var s := visual.pinch_strength
 	if not _pinching and s >= PINCH_PRESS:

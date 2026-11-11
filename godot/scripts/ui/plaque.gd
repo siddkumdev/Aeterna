@@ -73,5 +73,8 @@ func hit_ray(origin: Vector3, dir: Vector3) -> bool:
 
 
 func hit_point(world: Vector3, pad := 0.02) -> bool:
+	## pad is a world-space distance (metres), the same at any scale (the Wake plaque breathes round 1.7x).
 	var local := global_transform.affine_inverse() * world
-	return AABB(-SIZE / 2.0 - Vector3.ONE * pad, SIZE + Vector3.ONE * pad * 2.0).has_point(local)
+	var s := global_transform.basis.get_scale()
+	var lp := Vector3(pad / maxf(s.x, 0.0001), pad / maxf(s.y, 0.0001), pad / maxf(s.z, 0.0001))
+	return AABB(-SIZE / 2.0 - lp, SIZE + lp * 2.0).has_point(local)

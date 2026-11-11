@@ -135,6 +135,8 @@ var _hand_ring: MeshInstance3D
 var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
 var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
 var _hourglass: Node3D
+var _rewind_tween: Tween  # the hourglass animation of the latest rewind (killed by new_run)
+var _rewind_serial := 0  # bumped by new_run so a pending rewind-words timer from the old run does nothing
 var day_time := 0.0  # seconds of this day gone (the day ends by itself at GameConfig.DAY_LENGTH)
 var day_fast := false  # the tray hourglass, by day: the day runs GameConfig.DAY_FAST times as fast
 var day_clock := true  # the day only runs out in a played game (with the rig, awake)
@@ -252,7 +254,13 @@ func new_run(rng_seed: int) -> void:
 	loop = 0
 	cards = {}
 	offers = []
+	ending_choice = false  # a restart during the ending offer must not turn the next card offer into an ending
 	speed = 1.0
+	_rewind_serial += 1  # the last run's pending rewind words are stale
+	if _rewind_tween and _rewind_tween.is_valid():
+		_rewind_tween.kill()  # no old hourglass animation in the new run
+	if _hourglass:
+		_hourglass.visible = false
 	_start_loop("Day 1. Build before the sun sets.")
 
 
@@ -900,7 +908,10 @@ func _rewind() -> void:
 	_start_loop("The hourglass turns. Loop %d: enemies are tougher. Cards kept: %s" % [loop + 1, kept if kept != "" else "none"])
 	if with_rig and is_inside_tree():
 		_toast_last = last_message  # the gilded words say it; no small line as well
-		get_tree().create_timer(3.4).timeout.connect(show_rewind_words)  # once the hourglass has turned
+		var serial := _rewind_serial
+		get_tree().create_timer(3.4).timeout.connect(func():  # once the hourglass has turned
+			if serial == _rewind_serial:  # not if a new run started meanwhile
+				show_rewind_words())
 
 
 func show_rewind_words() -> TitleCard:
@@ -924,7 +935,10 @@ func _play_hourglass() -> void:
 	var gold := Color("FFD45A")  # fire_yellow
 	var amber := Color("F6A45D")  # lantern_glow
 	VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 36, 0.12, 1.1, 0.006, 0.02)  # embers rise as it wakes
+	if _rewind_tween and _rewind_tween.is_valid():
+		_rewind_tween.kill()
 	var tw := create_tween()
+	_rewind_tween = tw  # new_run kills it
 	tw.tween_property(_hourglass, "position:y", 0.3, 0.8).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(_hourglass, "rotation:z", PI, 0.9).set_trans(Tween.TRANS_BACK)
 	if top and bottom:  # once flipped, the sand runs upward: the "top" bulb (now below) empties into the other
@@ -1078,8 +1092,12 @@ func step(delta: float) -> void:
 		if ev["kind"] == "boss":
 			warden = Warden.new(self, born)
 	for e in enemies.duplicate():
+		if phase != Phase.NIGHT:
+			return  # an enemy just ended the night: the rest (freed only at frame end) must not act this tick
 		if is_instance_valid(e):
 			e.step(delta)
+	if phase != Phase.NIGHT:
+		return
 	if warden:
 		warden.step(delta)
 	_doom_step(delta)
@@ -2302,7 +2320,8 @@ func _tick_rim(delta := 0.0) -> void:
 	board.global_transform = rim_transform(_rim_start, p0, p, _hand_yaw(_rim_hands[0]) - _rim_yaw0 if p.size() == 1 else 0.0)
 
 
-func hand_released(h: GameHand) -> void:
+func hand_released(h: GameHand, cancelled := false) -> void:
+	## cancelled: the hand lost tracking mid-pinch (GameHand.cancelled). Nothing is built, cast, delivered or moved.
 	if _fast_pending.has(h):
 		_fast_pending.erase(h)
 		return
@@ -2310,6 +2329,8 @@ func hand_released(h: GameHand) -> void:
 		_rim_pending.erase(h)
 		return
 	if _rim_hands.has(h):
+		if cancelled:
+			board.global_transform = _rim_start  # undo this grip's move/turn
 		_rim_hands.erase(h)
 		_rim_anchor()
 		snd("release")
@@ -2323,6 +2344,11 @@ func hand_released(h: GameHand) -> void:
 		_held_card = null
 		_held_card_hand = null
 		spells.hide_aim()
+		if cancelled:
+			if cd.data.get("kind", "") == "tower":
+				select("")
+			cd.release_to_home()
+			return
 		if cd.data.get("kind", "") == "tower":
 			var cell := Vector2i(-1, -1)
 			if absf(local.x) <= HALF and absf(local.z) <= HALF:
@@ -2343,11 +2369,13 @@ func hand_released(h: GameHand) -> void:
 		_held_spell_hand = null
 		spells.hide_aim()
 		spells.tokens[id].position = spells.tokens[id].get_meta("home")
-		if absf(local.x) <= HALF and absf(local.z) <= HALF:
+		if not cancelled and absf(local.x) <= HALF and absf(local.z) <= HALF:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
 			cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 		return
 	if _held_req and _held_req_hand == h:
+		if cancelled:
+			_held_req.put_back()  # back home and no longer held, so the release below cannot finish it
 		release_request()
 		return
 	if h == _lens_hand:
@@ -2783,6 +2811,7 @@ func _build_rig() -> void:
 		origin.add_child(c)
 		c.pressed.connect(hand_pressed)
 		c.released.connect(hand_released)
+		c.cancelled.connect(hand_released.bind(true))  # tracking lost mid-pinch: drop everything back, play nothing
 		if easy_reach:
 			c.make_bubble(reach(GameConfig.REQUEST_GRAB_REACH))
 		_hands.append(c)
