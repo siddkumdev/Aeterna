@@ -99,9 +99,14 @@ def place_knock(r):
                       (S.thud(0.25, 190, 110, 0.07, r, grit=0.15), 0, 0.9)), 0.18, 0.12)
 
 
+def wizard_launch(r):
+    x = M.wizard_launch_real_a(r).mean(axis=1)  # mono: this is a spatial sound in Godot
+    return S.soft_clip(S.normalise(x, peak_db=-3.0), 2.5)  # tame the transient so it reaches the existing RMS level
+
+
 # id: (render fn(r), takes, target rms dB or None = silent, manifest entry to copy bus/spatial/cooldown/vary from, tracker, note)
 INSTALL = {
-    "wizard_launch": (lambda r: room(M.wiz4_launch(5500, 0.35, 0.6, 7500)(r)), 6, -18.3, "fireball_launch", "A15", "Wizard Tower shot: whoosh and flame rush (restart r4 wiz_a)"),
+    "wizard_launch": (wizard_launch, 6, -18.3, "fireball_launch", "A15", "Wizard Tower shot: warm rush built from real fire recordings (restart r14 wizard_launch_a_warm_rush)"),
     "wizard_hit": (lambda r: room(M.wiz4_hit(7500, 0.4, 0.5)(r)), 8, -20.5, "fireball_hit", "A15", "Wizard Tower fireball lands: soft fwoomf burst (restart r4 wiz_a)"),
     "orb_launch": (lambda r: room(fire_orb_parts(r)[0], 0.25, 0.08), 4, -17.5, "fireball_launch", "A20", "Fire Orb spell launch: real fire whooshes (restart r12)"),
     "orb_hit": (lambda r: room(fire_orb_parts(r)[1], 0.25, 0.08), 4, -18.5, "fireball_hit", "A20", "Fire Orb spell burst: real cannon thump and fire (restart r12)"),

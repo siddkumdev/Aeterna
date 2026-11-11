@@ -2895,49 +2895,49 @@
   "files": [
    {
     "file": "wizard_launch_1.wav",
-    "peak_db": -2.0,
-    "rms_db": -19.1,
+    "peak_db": -3.8,
+    "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.646
+    "seconds": 0.649
    },
    {
     "file": "wizard_launch_2.wav",
-    "peak_db": -2.7,
+    "peak_db": -3.8,
     "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.691
+    "seconds": 0.679
    },
    {
     "file": "wizard_launch_3.wav",
-    "peak_db": -2.8,
+    "peak_db": -3.8,
     "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.639
+    "seconds": 0.622
    },
    {
     "file": "wizard_launch_4.wav",
-    "peak_db": -2.3,
+    "peak_db": -3.8,
     "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.711
+    "seconds": 0.7
    },
    {
     "file": "wizard_launch_5.wav",
-    "peak_db": -2.3,
+    "peak_db": -3.7,
     "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.609
+    "seconds": 0.605
    },
    {
     "file": "wizard_launch_6.wav",
-    "peak_db": -2.0,
-    "rms_db": -18.8,
+    "peak_db": -3.7,
+    "rms_db": -18.3,
     "seam": null,
-    "seconds": 0.682
+    "seconds": 0.668
    }
   ],
   "loop": false,
-  "note": "Wizard Tower shot: whoosh and flame rush (restart r4 wiz_a)",
+  "note": "Wizard Tower shot: warm rush built from real fire recordings (restart r14 wizard_launch_a_warm_rush)",
   "spatial": true,
   "tracker": "A15",
   "vary": 0.05
