@@ -36,6 +36,8 @@ Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
 6. DONE Opening: night title with the gilded name, a breathing Wake plaque and a small Tale plaque (the placeholder Hands plaque is gone); Wake plays 8 beats as gilded words over the island (dawn, people wake, faith into the Veil, Skotos, crack, shatter, hourglass, dawn) then "THE FIRST DAWN". No quests or bubbles until awake.
 7. Statue replaces the shrine: the little god, hooded, cupped hands holding the ember, on a plinth, clearly bigger than a thumb ("i should be bigger than a thumb"). make-asset: 4 variants, the user picks.
 8. DONE (untested on the Quest) Move and resize: pinch the table rim (`Game.on_rim`, `rim_transform`, `_tick_rim`). One hand drags and turns with the wrist; two hands turn and resize within `GameConfig.BOARD_SCALE` (0.6 to 2.0). Headset hands only.
+10. DONE Boss: the Warden is the Eclipse Bloom (`assets/generators/make_boss9.py`, forms a-d) = 4 phases, one body each (a summons, b crystals, c enrage, d final stand with healing vines; `Warden`, `Enemy.BOSS_FORMS`, effects in `scripts/vfx/boss_vfx.gd`, shot `godot/tools/boss_shot.gd`). Not built: vines slowing tower fire, `hit_pulse` wiring, the 15k-triangle budget untested on a Quest.
+11. DONE Elites: Cinder Mammoth / Gravemaw Bear / Furnace Orc walk one a night from night 3 (`GameConfig.ELITES`, `Game.night_plan`); only embers on `flame_anchor` so far, stand-in numbers.
 9. Quest build: user exports, install game + OVR Metrics Tool, read the headset log for hands and passthrough.
 
 ## Still open after the plan
