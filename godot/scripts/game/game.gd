@@ -78,6 +78,9 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var quest_plan: Array = []  # today's quests not posted yet: [{"kind", "house"}]
+var _quest_deck: Array = []  # the kinds still to come round before the deck is reshuffled
+var _quest_rng := RandomNumberGenerator.new()
 var _held_req: HelpRequest  # the request prop being moved
 var _held_req_hand: GameHand  # the hand holding it, or null for the mouse
 var closed_spawn := ""  # Foresight tier 3 rewrite: the gap closed for the coming night
@@ -344,7 +347,7 @@ func _set_phase(p: int, message: String) -> void:
 	if foresight and foresight.showing:
 		set_lens(false)  # the lens only reads the coming night; it goes blank when the day ends
 	if _requests_root and p == Phase.DAY:
-		_post_requests()
+		_plan_quests()
 	elif _requests_root:
 		_clear_requests()
 	_set_light(p)
@@ -488,25 +491,119 @@ func surface_cell(house: int, p: Vector3) -> Vector2i:
 	return best
 
 
-func _post_requests() -> void:
-	## The day's requests: one of each kind, on different standing houses, in a seeded order.
+func _plan_quests() -> void:
+	## The day's quests (the user, 2026-11-11): at most REQUESTS_PER_DAY, dealt from a shuffled deck of every kind so
+	## they cycle, on different standing houses. They are posted one by one as the day goes on (post_next_quest).
 	_clear_requests()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = run_seed * 53 + loop * 11 + night
+	quest_plan.clear()
+	_quest_rng.seed = run_seed * 53 + loop * 11 + night
 	var where: Array = standing_houses()
-	var kinds: Array = GameConfig.REQUESTS.keys()
-	for arr in [where, kinds]:
-		for i in range(arr.size() - 1, 0, -1):
-			var j := rng.randi_range(0, i)
-			var t = arr[i]
-			arr[i] = arr[j]
-			arr[j] = t
-	for i in range(mini(GameConfig.REQUESTS_PER_DAY, mini(where.size(), kinds.size()))):
-		var r := HelpRequest.new()
-		r.game = self
-		_requests_root.add_child(r)
-		r.setup(kinds[i], where[i], _lantern_spot(where[i], rng) if kinds[i] == "lantern" else Vector3.ZERO)
-		requests.append(r)
+	_shuffle(where, _quest_rng)
+	var today: Array[String] = []
+	if loop == 0 and night == 0:
+		today.append("prayer")  # the very first quest is the smallest: Maren's prayer, answered with a tap
+		_quest_deck.erase("prayer")
+	var guard := 0
+	while today.size() < GameConfig.REQUESTS_PER_DAY and guard < 64:
+		guard += 1
+		if _quest_deck.is_empty():
+			_quest_deck = GameConfig.REQUESTS.keys()
+			_shuffle(_quest_deck, _quest_rng)
+		var k: String = _quest_deck.pop_front()
+		if today.has(k):
+			_quest_deck.append(k)
+		else:
+			today.append(k)
+	for i in mini(today.size(), where.size()):
+		quest_plan.append({"kind": today[i], "house": where[i]})
+
+
+static func _shuffle(arr: Array, rng: RandomNumberGenerator) -> void:
+	for i in range(arr.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t = arr[i]
+		arr[i] = arr[j]
+		arr[j] = t
+
+
+func post_next_quest() -> HelpRequest:
+	## Posts the next planned quest of the day (null when there is none left, or it is not day).
+	if phase != Phase.DAY or quest_plan.is_empty() or _requests_root == null:
+		return null
+	var q: Dictionary = quest_plan.pop_front()
+	return _post_quest(q["kind"], q["house"])
+
+
+func post_all_quests() -> void:
+	while post_next_quest() != null:
+		pass
+
+
+func force_quests(kinds: Array) -> void:
+	## Tests and shot tools: today's quests are exactly these kinds, posted now.
+	_clear_requests()
+	quest_plan.clear()
+	var where: Array = standing_houses()
+	for i in mini(kinds.size(), where.size()):
+		_post_quest(kinds[i], where[i])
+
+
+func _post_quest(kind: String, house: int) -> HelpRequest:
+	var r := HelpRequest.new()
+	r.game = self
+	_requests_root.add_child(r)
+	r.setup(kind, house, _lantern_spot(house, _quest_rng) if kind == "lantern" else Vector3.ZERO)
+	requests.append(r)
+	if with_rig and not asleep:
+		last_message = "New quest: %s" % GameConfig.REQUESTS[kind]["name"]
+		_refresh_ui()
+	return r
+
+
+func quests_posted_by(day_seconds: float) -> int:
+	## How many of the day's quests should be out after this much of the day.
+	var n := 0
+	for f: float in GameConfig.QUEST_TIMES:
+		if day_seconds >= f * GameConfig.DAY_LENGTH:
+			n += 1
+	return n
+
+
+func _tick_quests(delta: float) -> void:
+	## Posts the day's quests as their times come, and runs the ones done without carrying anything:
+	## a hand held over a house (warm), a fingertip on a lantern (lights).
+	if phase != Phase.DAY or asleep:
+		return
+	while requests.size() < quests_posted_by(day_time) and not quest_plan.is_empty():
+		post_next_quest()
+	var points: Array[Vector3] = []
+	for h in _hands:
+		points.append(h.global_position)
+	if _mouse_hand:
+		points.append(_mouse_hand.global_position)
+	for r in requests:
+		if r.done:
+			continue
+		if r.kind == "warm":
+			if r.warm_step(delta, points.any(func(p): return r.hand_over_house(p))):
+				_pay_quest(r)
+		elif r.kind == "lights":
+			for p in points:
+				if r.touch(p, reach(GameConfig.TOUCH_REACH)):
+					_pay_quest(r)
+					break
+
+
+func _pay_quest(r: HelpRequest) -> void:
+	snd("help_done")
+	snd("trust_chime")
+	faith += r.reward
+	_helped += 1
+	_update_shrine()
+	if with_rig:
+		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
+	last_message = "%s: +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
+	_refresh_ui()
 
 
 func _open_at(c: Vector2i) -> bool:
@@ -618,15 +715,7 @@ func release_request() -> bool:
 	if not r.release():
 		snd("release")
 		return false
-	snd("help_done")
-	snd("trust_chime")
-	faith += r.reward
-	_helped += 1
-	_update_shrine()
-	if with_rig:
-		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
-	last_message = "%s: thank you! +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
-	_refresh_ui()
+	_pay_quest(r)
 	return true
 
 
@@ -1328,6 +1417,10 @@ func tap_villager(v: Villager) -> String:
 	## Tap a villager: a bubble with their next thought for this loop; they turn to look at you.
 	if v == null or v.voice == "":
 		return ""
+	for r in requests:
+		if r.answer(v):  # the one who prays was heard
+			_pay_quest(r)
+			return StoryText.task("answer_prayer", "after")
 	var line := StoryText.thought(v.voice, loop, v.taps)
 	v.taps += 1
 	if line == "":
@@ -1591,6 +1684,7 @@ func _process(delta: float) -> void:
 	if not with_rig:
 		return
 	_tick_day(delta)
+	_tick_quests(delta)
 	crush_step(delta)
 	_tick_tray_bits(delta)
 	_update_mouse_hand()

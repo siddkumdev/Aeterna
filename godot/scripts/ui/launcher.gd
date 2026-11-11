@@ -20,7 +20,7 @@ const TALE := "You are a very small god. Your whole world is this island: a mead
 const HINTS := [
 	"Pick up a card from the tray.",
 	"Set it on the grass and let go.",
-	"Someone needs help: find a red ! and lift what they need.",
+	"Someone is praying. Find the gold mote and tap them.",
 	"Tap a villager to hear their thoughts.",
 	"Night falls on its own. Pinch the hourglass to hurry the day.",
 ]
@@ -236,8 +236,6 @@ func _wake() -> void:
 	game.snd("dawn_bell")
 	_title.queue_free()
 	game.asleep = false
-	for r in game.requests:
-		r._say("before")  # the villagers say what they need now that the game is awake
 	_state = "playing"
 	game.say_at_shrine(StoryText.prayer(0, 0))
 	_step = 0

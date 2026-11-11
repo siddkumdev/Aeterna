@@ -26,6 +26,7 @@ func _initialize() -> void:
 	root.get_viewport().get_texture().get_image().save_png(prefix + "_sell.png")
 	# the desktop mouse hand near the lost lantern: the bubble lights up when something can be grabbed
 	g.select("")
+	g.force_quests(["chimney", "bird", "lantern", "cart"])
 	var lan: HelpRequest = g.requests.filter(func(r): return r.kind == "lantern")[0]
 	g._hand_height = 0.045
 	g._mouse_hand.global_position = lan.grab_point() + Vector3(0.05, g._hand_height - 0.008, 0.03)

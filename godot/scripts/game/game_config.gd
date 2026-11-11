@@ -52,9 +52,15 @@ const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]
 const REQUESTS := {
 	"chimney": {"name": "Kite on the roof", "reward": 15, "scene": ""},  # Wren's kite (a primitives stand-in, made in HelpRequest)
 	"bird": {"name": "Lost lamb", "reward": 10, "scene": "res://assets/village/ew_village_kid_bunny_v01.glb"},  # the bunny kid stands in for the lamb
-	"lantern": {"name": "Festival lantern", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
+	"lantern": {"name": "Lost lantern", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
 	"cart": {"name": "Stuck cart", "reward": 25, "scene": "res://assets/village/ew_village_handcart_v01.glb"},
+	# 2026-11-11 (the user): more kinds than "carry a thing". Rewards are Claude's stand-ins in the same 10-25 range.
+	"rain": {"name": "Rain for the field", "reward": 20, "scene": ""},
+	"warm": {"name": "The sick child", "reward": 15, "scene": ""},
+	"lights": {"name": "Festival lanterns", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
+	"prayer": {"name": "A small sign", "reward": 10, "scene": ""},
 }
+const QUEST_TIMES := [0.03, 0.25, 0.5, 0.72]  # the fraction of the day at which each of the day's quests is posted
 const REQUESTS_PER_DAY := 4
 const HELP_MARKER_SCENE := "res://assets/ui/ew_ui_help_marker_v01.glb"
 const REQUEST_GRAB_REACH := TOUCH_REACH  # alias kept for game.gd: m from a hand (or the mouse ray) to a prop to grab it

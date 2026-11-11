@@ -28,6 +28,7 @@ func _initialize() -> void:
 	await _doom()
 	await _endings()
 	await _day_clock()
+	await _quests()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -615,12 +616,13 @@ func _sell() -> void:
 
 func _requests() -> void:
 	var g := await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 	var kinds := {}
 	var where := {}
 	for r in g.requests:
 		kinds[r.kind] = true
 		where[r.house] = true
-	check("day 1: 4 requests, one of each kind, on 4 different houses", g.requests.size() == 4 and kinds.size() == 4 and where.size() == 4)
+	check("4 quests of 4 kinds on 4 different houses", g.requests.size() == 4 and kinds.size() == 4 and where.size() == 4)
 	var by := {}
 	for r in g.requests:
 		by[r.kind] = r
@@ -664,6 +666,7 @@ func _requests() -> void:
 	g.queue_free()
 	await process_frame
 	g = await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 	g.faith = 1000
 	for kind in ["lantern", "cart"]:
 		var rq: HelpRequest = g.requests.filter(func(x): return x.kind == kind)[0]
@@ -681,18 +684,22 @@ func _requests() -> void:
 	g.queue_free()
 	await process_frame
 	g = await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 
 	# night: requests go away and cannot be grabbed; a new set comes with the next day
 	g.start_night()
 	check("requests vanish at night", g.requests.is_empty())
 	g._clear_night()
 	g._end_night()
-	check("the next day brings 4 new requests", g.requests.size() == 4 and g.requests.all(func(r): return not r.done))
+	check("the next day plans 4 new quests, none posted yet", g.quest_plan.size() == 4 and g.requests.is_empty())
+	g.post_all_quests()
+	check("posted, the day has 4 open quests", g.requests.size() == 4 and g.requests.all(func(r): return not r.done))
 	g.queue_free()
 	await process_frame
 
 	# VR hand: pinch at the prop, move the hand, let go
 	g = await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
@@ -715,6 +722,7 @@ func _requests() -> void:
 
 	# dawn repair: damage carries over, +10 HP a dawn; a shuttered house opens again with 10 HP
 	g = await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 	g.start_night()
 	g._spawn_queue.clear()
 	g.houses[0].damage(30.0)
@@ -937,6 +945,7 @@ func _spells() -> void:
 
 func _mouse_hand_rules() -> void:
 	var g := await _make_game()
+	g.force_quests(["cart", "lantern", "chimney", "bird"])
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
@@ -1588,5 +1597,60 @@ func _day_clock() -> void:
 	check("a full hold sells the tower for its sell value", sold and g.towers.is_empty() and g.faith == before + GameConfig.TOWERS["fire"]["cost"])
 	g.start_night()
 	check("no crushing at night", not g.crush_start(null, null, Vector3.ZERO))
+	g.queue_free()
+	await process_frame
+
+
+func _quests() -> void:
+	## 2026-11-11 (the user): quests, at most 4 a day, posted one by one, cycling through every kind.
+	var g := await _make_game()
+	check("day 1 plans 4 quests and posts none at once", g.quest_plan.size() == 4 and g.requests.is_empty())
+	check("the very first quest is the prayer", g.quest_plan[0]["kind"] == "prayer")
+	var day1: Array = g.quest_plan.map(func(q): return q["kind"])
+	check("a day's quests are 4 different kinds", day1.size() == 4 and day1.all(func(k): return day1.count(k) == 1))
+	check("posted by the day's clock: 1 early, 2 by a quarter, 4 late", g.quests_posted_by(10.0) == 1 \
+		and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.3) == 2 and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.9) == 4)
+	var first := g.post_next_quest()
+	check("post_next_quest posts one and leaves three planned", first != null and g.requests.size() == 1 and g.quest_plan.size() == 3)
+	g.start_night()
+	g._clear_night()
+	g._end_night()
+	var day2: Array = g.quest_plan.map(func(q): return q["kind"])
+	var seen := {}
+	for k in day1 + day2:
+		seen[k] = true
+	check("two days cycle through every kind once", seen.size() == GameConfig.REQUESTS.size())
+	for k: String in GameConfig.REQUESTS:
+		check("quest %s has its words and its how-to" % k, StoryText.task(HelpRequest.TASK_ID[k], "before") != "" and HelpRequest.HOW[k] != "")
+
+	g.force_quests(["rain", "warm", "lights", "prayer"])
+	var by := {}
+	for r in g.requests:
+		by[r.kind] = r
+	var C := GameConfig.CELL
+	var t0 := g.faith
+	var rain: HelpRequest = by["rain"]
+	g.grab_request(rain)
+	rain.move_to(rain._goal + Vector3(5.0 * C, 0.08, 0))
+	check("rain: the cloud let go away from the field goes back", not g.release_request() and not rain.done)
+	g.grab_request(rain)
+	rain.move_to(rain._goal + Vector3(0.5 * C, 0.08, 0))
+	check("rain: the cloud let go over the field rains, +20", g.release_request() and rain.done and g.faith == t0 + 20)
+	var warm: HelpRequest = by["warm"]
+	var over: Vector3 = g.board.to_global(g.houses[warm.house].position + Vector3(0, 0.1, 0))
+	check("warm: a hand over the house counts, far away does not", warm.hand_over_house(over) and not warm.hand_over_house(over + Vector3(0.4, 0, 0)))
+	check("warm: half the hold is not enough", not warm.warm_step(HelpRequest.WARM_HOLD * 0.5, true) and not warm.done)
+	warm.warm_step(1.0, false)
+	check("warm: taking the hand away drains it", warm.progress < HelpRequest.WARM_HOLD * 0.5)
+	check("warm: the full hold finishes it", warm.warm_step(HelpRequest.WARM_HOLD, true) and warm.done)
+	var lights: HelpRequest = by["lights"]
+	check("lights: three unlit lanterns stand by the door", lights._lamps.size() == 3 and not lights._lit.has(true))
+	check("lights: two touched is not done", not lights.touch(lights._lamps[0].global_position, 0.03) and not lights.touch(lights._lamps[1].global_position, 0.03) and lights.progress == 2.0)
+	check("lights: the third finishes it", lights.touch(lights._lamps[2].global_position, 0.03) and lights.done)
+	var prayer: HelpRequest = by["prayer"]
+	check("prayer: nothing to carry", not prayer.grabbable() and g.request_near(prayer.asker().global_position) == null)
+	check("prayer: tapping someone else does not answer it", not prayer.answer(g))
+	check("prayer: tapping the one who prays answers it", prayer.answer(prayer.asker()) and prayer.done)
+	check("every quest has a gold mote, never a '!'", g.requests.all(func(r): return r._mote != null) and not FileAccess.get_file_as_string("res://scripts/game/help_request.gd").contains("HELP_MARKER_SCENE"))
 	g.queue_free()
 	await process_frame

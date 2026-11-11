@@ -99,5 +99,7 @@
 "rain_for_field": {"before": "Look at that barley. Thirsty as a fish on a plank. A little rain, anyone?", "after": "Rain! Real rain! Thank you, little god. The field is singing."},
 "broken_plank": {"before": "A plank's snapped on the bridge. Somebody will turn an ankle.", "after": "Mended, and sturdy. Thank you, little god. Nobody falls on my watch."},
 "festival_lanterns": {"before": "The festival lanterns won't light. I've tried everything. Matches, hope, swearing.", "after": "They're glowing! Thank you, little god. Look how pretty the village is."},
-"sick_child": {"before": "The little one has a fever and a shiver. A bit of warmth would help.", "after": "She's resting easy now, cheeks pink. Thank you, little god. Truly."}}
+"sick_child": {"before": "The little one has a fever and a shiver. A bit of warmth would help.", "after": "She's resting easy now, cheeks pink. Thank you, little god. Truly."},
+"lost_lantern": {"before": "My lantern's gone walking. It was on its hook last night, I swear it.", "after": "Back on its hook! Thank you, little god. The door feels like home again."},
+"answer_prayer": {"before": "Little god... if you're there, give me a sign. Any small sign.", "after": "You heard me. You really heard me."}}
 }
