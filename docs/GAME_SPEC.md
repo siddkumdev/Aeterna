@@ -264,3 +264,13 @@ Two good, two neutral-mixed, two risky, so the player always plans around the co
 
 ## Open questions
 Selling (built) and the tower cap (none) are settled. Remaining: the M1 stand-in numbers (loops 3-5, request rewards, spell numbers, boss) are confirmed or retuned in M3.
+
+## 2026-11-11 additions (the user; built, untested on the Quest)
+- **Day clock:** a day lasts `DAY_LENGTH` 180 s; the player can hurry it (hourglass, Tab); night speed shows "2x" (runs `NIGHT_FAST` 4x). No Start-night button; no HUD text.
+- **Sell:** pinch and hold a built tower (`CRUSH_HOLD` 1.2 s), "crush to embers".
+- **Quests** (replace the old requests): up to 4 a day, posted one by one from a cycling deck of 8 kinds (chimney/kite, bird/lamb, lantern, cart, rain, warm a sick child, festival lights, answer a prayer); a gold mote marks each; a ghost hand shows each kind once.
+- **Ledger:** left palm up (L on desktop) opens four pages: the God, the Village, the Cards, Quests.
+- **Rim:** grab the table rim to move, turn (one hand) and resize (two hands, 0.6x to 2x) the island.
+- **Rewind title:** "TIME HAS BEEN REWOUND / Loop N" in gilded words.
+- **The Warden has 4 phases, 4 bodies (Eclipse Bloom a-d):** 1 summons Grunts; 2 crystal shield; 3 enrage plus Wisps; 4 final stand: 3 thorn vines ring it and heal it 4 HP/s while any stands (vines slowing tower fire: not built). Night 5 of loops 1-4 still floors it at 1 HP in phase 4.
+- **Elites:** Cinder Mammoth, Gravemaw Bear, Furnace Orc walk with the wave, one a night from the third night, never on the boss night (stand-in numbers in `GameConfig.ENEMIES`).
