@@ -87,6 +87,9 @@ func _make_visual() -> void:
 		host.add_child.call_deferred(visual)
 
 
+var press_started_ms := -1  # Time.get_ticks_msec() when the current press began
+
+
 func _make_desktop_tip() -> void:
 	## Desktop/simulator without OpenXR: keep a small warm tip so the hand can be seen (the mouse hand is
 	## moved by Game).
@@ -101,6 +104,7 @@ func _make_desktop_tip() -> void:
 
 func _press_key(key: String) -> void:
 	if _down.is_empty():
+		press_started_ms = Time.get_ticks_msec()
 		pressed.emit(self)
 	_down[key] = true
 	_show_thread(true)
@@ -225,6 +229,11 @@ func release() -> void:
 func is_pressing() -> bool:
 	## A pinch, grasp or mouse press is being held.
 	return not _down.is_empty()
+
+
+func pressed_within(seconds: float) -> bool:
+	## A press is held and began less than `seconds` ago (the UI rig holds still only for that short window).
+	return is_pressing() and press_started_ms >= 0 and Time.get_ticks_msec() - press_started_ms < int(seconds * 1000.0)
 
 
 func touch_point() -> Vector3:

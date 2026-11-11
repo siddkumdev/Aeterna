@@ -588,7 +588,7 @@ func _tick_quests(delta: float) -> void:
 		post_next_quest()
 	var points: Array[Vector3] = []
 	for h in _hands:
-		points.append(h.global_position)
+		points.append(h.touch_point())  # the drawn fingers in the headset (the node's position otherwise)
 	if _mouse_hand:
 		points.append(_mouse_hand.global_position)
 	for r in requests:
@@ -1037,7 +1037,7 @@ func crush_step(delta: float) -> bool:
 		return false
 	var t: Tower = _crush["tower"]
 	var hand: GameHand = _crush["hand"]
-	if not is_instance_valid(t) or phase != Phase.DAY or (hand and hand.global_position.distance_to(_crush["at"]) > 0.05):
+	if not is_instance_valid(t) or phase != Phase.DAY or (hand and hand.touch_point().distance_to(_crush["at"]) > 0.05):
 		crush_cancel()
 		return false
 	_crush["t"] += delta
@@ -2094,41 +2094,42 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if asleep:
 		return
+	var tp := h.touch_point()  # where the player sees the pinch (the node's position for controllers and the mouse)
 	if ledger and ledger.open:
-		var tab := ledger.tab_at_point(h.global_position, 0.03)
+		var tab := ledger.tab_at_point(tp, 0.03)
 		if tab != -1:
 			ledger.set_page(tab)
 			return
 	if _tray and _held_card == null:
-		var cd := _tray.card_near(h.touch_point(), card_reach())
+		var cd := _tray.card_near(tp, card_reach())
 		if cd and _grab_card(cd, h):
 			return
 	if not placing():
 		if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
 			_lens_hand = h
 			return
-		if grab_request(request_near(h.global_position), h):
+		if grab_request(request_near(tp), h):
 			return
 		var tok := spells.token_near(h.global_position) if phase == Phase.NIGHT and _held_spell == "" else ""
 		if tok != "" and spells.is_ready(tok):
 			_held_spell = tok
 			_held_spell_hand = h
 			return
-	if _fast_glass and _fast_glass.is_visible_in_tree() and h.global_position.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4):
+	if _fast_glass and _fast_glass.is_visible_in_tree() and tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4):
 		toggle_fast()
 		return
 	if life and not placing():
 		for v in life.villagers:  # a pinch right at a villager (arm's reach, no ray needed)
-			if v.visible and h.global_position.distance_to(v.global_position + Vector3(0, 0.035, 0)) <= reach(GameConfig.TOUCH_REACH):
+			if v.visible and tp.distance_to(v.global_position + Vector3(0, 0.035, 0)) <= reach(GameConfig.TOUCH_REACH):
 				tap_villager(v)
 				return
 	if not placing() and phase == Phase.DAY and h != _mouse_hand:
 		for t in towers:  # a pinch right on a built tower, held: it is crushed back into faith
-			var d := h.global_position - t.global_position
+			var d := tp - t.global_position
 			if Vector2(d.x, d.z).length() <= GameConfig.CELL * 1.1 and d.y > -0.01 and d.y <= 0.16:
-				crush_start(t, h, h.global_position)
+				crush_start(t, h, tp)  # crush_step measures the drift from this same touch point
 				return
-	if h != _mouse_hand and not placing() and on_rim(h.global_position):
+	if h != _mouse_hand and not placing() and on_rim(tp):
 		_rim_hands.append(h)
 		_rim_anchor()
 		snd("grab")
@@ -2188,7 +2189,7 @@ func _rim_anchor() -> void:
 	_rim_start = board.global_transform
 	_rim_p0.clear()
 	for h in _rim_hands:
-		_rim_p0.append(h.global_position)
+		_rim_p0.append(h.touch_point())  # the same point on_rim tested and _tick_rim follows
 	if _rim_hands.size() == 1:
 		_rim_yaw0 = _hand_yaw(_rim_hands[0])
 
@@ -2221,7 +2222,7 @@ func _tick_rim() -> void:
 		return
 	var p: Array[Vector3] = []
 	for h in _rim_hands.slice(0, 2):
-		p.append(h.global_position)
+		p.append(h.touch_point())
 	var p0: Array[Vector3] = _rim_p0.slice(0, 2)
 	board.global_transform = rim_transform(_rim_start, p0, p, _hand_yaw(_rim_hands[0]) - _rim_yaw0 if p.size() == 1 else 0.0)
 
@@ -2237,7 +2238,7 @@ func hand_released(h: GameHand) -> void:
 	if _held_card and _held_card_hand == h:
 		var cd := _held_card
 		var id: String = cd.data.get("id", "")
-		var local := board.to_local(h.global_position)
+		var local := board.to_local(h.touch_point())  # the same point _update_held drew the ghost at
 		_held_card = null
 		_held_card_hand = null
 		spells.hide_aim()
@@ -2344,8 +2345,8 @@ func _update_ui_rig(delta: float) -> void:
 		return
 	var f := -_xr_cam.global_transform.basis.z
 	var head_yaw := atan2(-f.x, -f.z)
-	if _held_card or _hands.any(func(h: GameHand): return is_instance_valid(h) and h.is_pressing()):
-		return  # hold still while a pinch or a card is in progress, so the target does not move under the fingers
+	if _held_card or _hands.any(func(h: GameHand): return is_instance_valid(h) and h.pressed_within(GameConfig.UI_RIG_PRESS_HOLD)):
+		return  # hold still while a card is held or a pinch has just begun, so the target does not move under the fingers
 	if absf(angle_difference(_ui_yaw, head_yaw)) > 0.7:
 		_ui_yaw = head_yaw
 	_ui_rig.rotation.y = lerp_angle(_ui_rig.rotation.y, _ui_yaw, minf(1.0, delta * 3.0))

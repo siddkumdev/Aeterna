@@ -38,12 +38,14 @@ const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to
 # Headset hand comfort (2026-11-11, after the Quest 3 test): in the real headset (not the desktop or the simulator) a
 # tray card is grabbed within XR_CARD_REACH of the pinch (nearest card wins) and a title plaque is pressed within
 # XR_PLAQUE_PAD of its face (nearest plaque wins). The floating UI rig ignores head moves under UI_RIG_DEADZONE,
-# catches up at UI_RIG_FOLLOW per second, snaps past UI_RIG_SNAP, and holds still while a pinch or a card is held.
+# catches up at UI_RIG_FOLLOW per second, snaps past UI_RIG_SNAP, and holds still while a card is held or for
+# UI_RIG_PRESS_HOLD after a pinch begins (so a long lens or rim grasp does not leave the tray behind).
 const XR_CARD_REACH := 0.10  # m
 const XR_PLAQUE_PAD := 0.035  # m (plaques are 15 cm wide, 5 cm apart)
 const UI_RIG_DEADZONE := 0.06  # m
 const UI_RIG_FOLLOW := 4.0  # 1/s
 const UI_RIG_SNAP := 0.5  # m
+const UI_RIG_PRESS_HOLD := 0.5  # s
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
 const LENS_SCALE := 2.0  # 2026-11-10 (the user): the lens is bigger and you look THROUGH it (LensView), not at it
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
