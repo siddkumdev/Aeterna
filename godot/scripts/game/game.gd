@@ -1908,7 +1908,7 @@ func palm_pose() -> Array:
 			var mid: Vector3 = o * tr.get_hand_joint_transform(12).origin
 			var idx: Vector3 = o * tr.get_hand_joint_transform(7).origin
 			var lit: Vector3 = o * tr.get_hand_joint_transform(22).origin
-			var n := (mid - wrist).cross(lit - idx)
+			var n := (lit - idx).cross(mid - wrist)  # measured on the Quest 3 (log 2026-11-11 15:50: a palm held up read -0.99 with the opposite order)
 			if n.length() > 0.0001:
 				return [true, o * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM).origin, n.normalized()]
 	return [false, Vector3.ZERO, Vector3.ZERO]  # only the LEFT HAND's tracked palm counts: no controller or right-hand fallback (the user, 2026-11-11)
