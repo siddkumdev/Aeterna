@@ -222,10 +222,24 @@ func release() -> void:
 	_release_key("mouse")
 
 
+func is_pressing() -> bool:
+	## A pinch, grasp or mouse press is being held.
+	return not _down.is_empty()
+
+
+func touch_point() -> Vector3:
+	## Where this hand touches things: for a tracked hand, between the thumb and index tips the player sees (the
+	## runtime's aim pose sits a few cm away from the drawn fingers). Controllers, the mouse hand and a hand that
+	## has lost tracking: this node's own position, as before.
+	if camera == null and visual != null and is_instance_valid(visual) and visual.tracked and visual.is_inside_tree():
+		return (visual.thumb_tip_global() + visual.index_tip_global()) * 0.5
+	return global_position
+
+
 func ray_origin() -> Vector3:
 	if camera:
 		return camera.project_ray_origin(get_viewport().get_mouse_position())
-	return global_position
+	return touch_point()
 
 
 func ray_dir() -> Vector3:

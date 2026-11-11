@@ -109,6 +109,7 @@ var _doom_started := false  # night 5 of loops 1-4: the Warden's horn has sounde
 var _doom_timer := 0.0
 var _ui_rig: Node3D  # headset: the cards, buttons and messages float here, in front of you (follows your head)
 var _ui_yaw := 0.0
+var _ui_follow := false  # the rig is gliding after the head (past GameConfig.UI_RIG_DEADZONE)
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the card in a hand (or on the mouse hand)
@@ -676,6 +677,11 @@ func reach(metres: float) -> float:
 	return metres * (GameConfig.EASY_REACH if easy_reach else 1.0)
 
 
+func card_reach() -> float:
+	## How far a pinch may be from a tray card: wider in the real headset, where the tray floats with your head.
+	return GameConfig.XR_CARD_REACH if _xr and not easy_reach else reach(GameConfig.TOUCH_REACH * 1.6)
+
+
 func grabbable_near(world: Vector3) -> bool:
 	## Is anything a pinch here would pick up (the lens, a request prop, a spell token) within reach?
 	if placing():
@@ -737,7 +743,7 @@ func _update_held() -> void:
 	if _held_card and _held_card_hand:
 		# the card rides in the hand, face toward the eyes; over the board a tower shows its ghost and range ring
 		# on the cell under the card, a spell its aim
-		var hp := _held_card_hand.global_position
+		var hp := _held_card_hand.touch_point()  # the drawn fingers, so the ghost sits under the pinch
 		_held_card.global_position = hp + Vector3(0, 0.05, 0.02)  # a little above the fingers, so the ghost under it stays visible
 		_held_card.face_toward(_eye())
 		var local := board.to_local(hp)
@@ -2084,7 +2090,7 @@ func lens_grip_position() -> Vector3:
 func hand_pressed(h: GameHand) -> void:
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
-	if press_override.is_valid() and press_override.call(h.global_position, h.ray_origin(), h.ray_dir()):
+	if press_override.is_valid() and press_override.call(h.touch_point(), h.ray_origin(), h.ray_dir()):
 		return
 	if asleep:
 		return
@@ -2094,7 +2100,7 @@ func hand_pressed(h: GameHand) -> void:
 			ledger.set_page(tab)
 			return
 	if _tray and _held_card == null:
-		var cd := _tray.card_near(h.global_position, reach(GameConfig.TOUCH_REACH * 1.6))
+		var cd := _tray.card_near(h.touch_point(), card_reach())
 		if cd and _grab_card(cd, h):
 			return
 	if not placing():
@@ -2338,10 +2344,28 @@ func _update_ui_rig(delta: float) -> void:
 		return
 	var f := -_xr_cam.global_transform.basis.z
 	var head_yaw := atan2(-f.x, -f.z)
+	if _held_card or _hands.any(func(h: GameHand): return is_instance_valid(h) and h.is_pressing()):
+		return  # hold still while a pinch or a card is in progress, so the target does not move under the fingers
 	if absf(angle_difference(_ui_yaw, head_yaw)) > 0.7:
 		_ui_yaw = head_yaw
 	_ui_rig.rotation.y = lerp_angle(_ui_rig.rotation.y, _ui_yaw, minf(1.0, delta * 3.0))
-	_ui_rig.global_position = _xr_cam.global_position
+	_ui_rig.global_position = ui_rig_step(_ui_rig.global_position, _xr_cam.global_position, delta)
+
+
+func ui_rig_step(at: Vector3, head: Vector3, delta: float) -> Vector3:
+	## Small head moves are ignored; past the deadzone the rig glides after the head, and a big jump snaps.
+	var gap := at.distance_to(head)
+	if gap > GameConfig.UI_RIG_SNAP:
+		_ui_follow = false
+		return head
+	if gap > GameConfig.UI_RIG_DEADZONE:
+		_ui_follow = true
+	if not _ui_follow:
+		return at
+	if gap < 0.005:
+		_ui_follow = false
+		return head
+	return at.lerp(head, minf(1.0, delta * GameConfig.UI_RIG_FOLLOW))
 
 
 func _tick_lens_window() -> void:

@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_nav()
 	await _nights()
 	await _cards()
+	await _hand_reach()
 	await _step2()
 	await _foresight()
 	await _sell()
@@ -324,6 +325,50 @@ func _cards() -> void:
 	check("available card returns to its normal colour", is_equal_approx(visual._print_materials[0].get_shader_parameter("unavailable"), 0.0) \
 		and (visual._body.material_override as StandardMaterial3D).albedo_color == Card3D.GOLD)
 	visual.queue_free()
+	await process_frame
+
+
+func _hand_reach() -> void:
+	## 2026-11-11 (Quest 3 test): the headset touch point is the drawn pinch, reach is wider there, nearest wins.
+	check("headset card reach is wider than the old one (10 cm vs 6.4 cm)", is_equal_approx(GameConfig.XR_CARD_REACH, 0.10) 		and GameConfig.XR_CARD_REACH > GameConfig.TOUCH_REACH * 1.6 and GameConfig.XR_PLAQUE_PAD > 0.012)
+	var g := await _make_game()
+	g._xr = false
+	g.easy_reach = true
+	check("desktop card reach unchanged (6.4 cm x easy reach)", is_equal_approx(g.card_reach(), g.reach(GameConfig.TOUCH_REACH * 1.6)))
+	g._xr = true
+	g.easy_reach = false
+	check("headset card reach is GameConfig.XR_CARD_REACH", is_equal_approx(g.card_reach(), GameConfig.XR_CARD_REACH))
+	var tray := CardTray.new()
+	root.add_child(tray)
+	tray.set_cards([CardData.tower("fire"), CardData.tower("guard"), CardData.tower("crossbow")] as Array[Dictionary])
+	await process_frame
+	var c1: Card3D = tray.cards[1]
+	var toward0 := (tray.cards[0].global_position - c1.global_position).normalized()
+	var p := c1.global_position + toward0 * 0.025  # inside both cards' 10 cm reach, nearer the middle card
+	check("wide reach: two cards in reach, the nearer one is picked", tray.cards[0].global_position.distance_to(p) <= 0.10 		and tray.card_near(p, GameConfig.XR_CARD_REACH) == c1)
+	tray.queue_free()
+	var at := Vector3(0, 1.2, 0.3)
+	g._ui_follow = false
+	check("UI rig ignores a small head move", g.ui_rig_step(at, at + Vector3(0.03, 0, 0), 0.016) == at)
+	var moved := g.ui_rig_step(at, at + Vector3(0.2, 0, 0), 0.016)
+	check("UI rig glides after a bigger head move", moved.x > at.x and moved.x < at.x + 0.2)
+	check("UI rig snaps after a jump", g.ui_rig_step(at, at + Vector3(1, 0, 0), 0.016) == at + Vector3(1, 0, 0))
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	hand.global_position = Vector3(0.1, 1.0, 0.2)
+	check("no tracked hand: touch point and ray origin are the node (controllers unchanged)", hand.touch_point() == hand.global_position 		and hand.ray_origin() == hand.global_position)
+	var v := GodHandVisual.new()
+	root.add_child(v)
+	await process_frame
+	v.set_pose_from(GodHandVisual.demo_joints(0.2, 1.0))
+	hand.visual = v
+	var mid := (v.thumb_tip_global() + v.index_tip_global()) * 0.5
+	check("tracked hand: touch point is between the drawn thumb and index tips", hand.touch_point().is_equal_approx(mid) 		and hand.ray_origin().is_equal_approx(mid))
+	hand.visual = null
+	v.queue_free()
+	hand.queue_free()
+	g.queue_free()
 	await process_frame
 
 

@@ -106,7 +106,7 @@ func _process(delta: float) -> void:
 				continue
 			var hot := false
 			for h in game._hands:
-				hot = hot or p.hit_point(h.global_position) or p.hit_ray(h.ray_origin(), h.ray_dir())
+				hot = hot or p.hit_point(h.touch_point(), maxf(0.02, _touch_pad())) or p.hit_ray(h.ray_origin(), h.ray_dir())
 			if game._mouse_hand:
 				hot = hot or p.hit_point(game._mouse_hand.global_position)
 			if game._camera:
@@ -126,15 +126,30 @@ func _on_press(world: Vector3, origin: Vector3, dir: Vector3) -> bool:
 	if _state == "narrating":
 		_skip = true
 		return true
+	var touched := ""  # a fingertip on a plaque beats the ray; the nearest plaque wins when the pads overlap
+	var best := INF
 	for id in _plaques:
 		var p: Plaque = _plaques[id]
-		if p.hit_ray(origin, dir) or p.hit_point(world, 0.012):
-			_press_plaque(id)
-			return true
+		if p.hit_point(world, _touch_pad()) and p.global_position.distance_to(world) < best:
+			best = p.global_position.distance_to(world)
+			touched = id
+	if touched == "":
+		for id in _plaques:
+			if (_plaques[id] as Plaque).hit_ray(origin, dir):
+				touched = id
+				break
+	if touched != "":
+		_press_plaque(touched)
+		return true
 	if _state == "tale":
 		_state = "title"
 		_close_panel()
 	return true  # nothing else can be pressed while the title is up
+
+
+func _touch_pad() -> float:
+	## How far outside a plaque a press still counts: wider in the real headset (GameConfig.XR_PLAQUE_PAD).
+	return GameConfig.XR_PLAQUE_PAD if game._xr and not game.easy_reach else 0.012
 
 
 func _press_plaque(id: String) -> void:
