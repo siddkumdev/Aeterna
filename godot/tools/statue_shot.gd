@@ -12,8 +12,8 @@ func _initialize() -> void:
 	cam.current = true
 	cam.fov = 45
 	g._camera = null
-	var c := g.board.to_global(Vector3(0, 0.09, 0))
-	cam.global_position = c + Vector3(0.0, 0.10, 0.22)
+	var c := g.board.to_global(Vector3(0, 0.15, 0))
+	cam.global_position = c + Vector3(0.0, 0.30, 0.75)
 	cam.look_at(c, Vector3.UP)
 	for i in 8:
 		await process_frame

@@ -30,6 +30,7 @@ var _step := 0
 var _step_time := 0.0
 var _card: TitleCard
 var _t := 0.0
+var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
 
 
 func _ready() -> void:
@@ -70,6 +71,20 @@ func _build_title() -> void:
 	tale.scale = Vector3.ONE * 0.8
 	_title.add_child(tale)
 	_plaques["tale"] = tale
+	if game._xr:
+		_xr_rig = Node3D.new()
+		_xr_rig.name = "TitleRig"
+		_xr_rig.visible = false  # shown when the headset's pose is known (_place_xr_rig)
+		game.add_child(_xr_rig)
+		for id in ["wake", "tale"]:
+			var pl: Node3D = _plaques[id]
+			pl.get_parent().remove_child(pl)
+			_xr_rig.add_child(pl)
+			pl.rotation_degrees = Vector3(-30, 0, 0)
+		(_plaques["wake"] as Node3D).position = Vector3(-0.07, 0, 0)
+		(_plaques["wake"] as Node3D).scale = Vector3.ONE * 1.5
+		(_plaques["tale"] as Node3D).position = Vector3(0.20, -0.03, 0.02)
+		(_plaques["tale"] as Node3D).scale = Vector3.ONE * 0.85
 	_panel = StoryPanel.make(game.board, Vector3(0, 0.34, 0.15))
 	_title.add_child(_fireflies())
 	if game.veil:
@@ -97,8 +112,25 @@ func _fireflies() -> CPUParticles3D:
 	return f
 
 
+func _place_xr_rig() -> void:
+	## Once, when the headset pose exists: half a metre ahead, a little below the eyes, turned to face you.
+	var cam: Camera3D = game._xr_cam
+	if _xr_rig == null or cam == null or _xr_rig.visible:
+		return
+	var f := -cam.global_transform.basis.z
+	f.y = 0.0
+	if f.length() < 0.1:
+		return
+	f = f.normalized()
+	_xr_rig.global_position = cam.global_position + f * 0.5 + Vector3(0, -0.2, 0)
+	_xr_rig.rotation.y = atan2(-f.x, -f.z)
+	_xr_rig.visible = true
+
+
 func _process(delta: float) -> void:
 	_t += delta
+	if _state != "playing":
+		_place_xr_rig()
 	if _state != "playing":
 		for id in _plaques:
 			var p: Plaque = _plaques[id]
@@ -189,6 +221,9 @@ func _wake() -> void:
 	_skip = false
 	_panel.hide_panel()
 	_title.visible = false
+	if _xr_rig:
+		_xr_rig.queue_free()
+		_xr_rig = null
 	var v: VeilDome = game.veil
 	var gold := Color("FFD45A")  # fire_yellow
 	var amber := Color("F6A45D")  # lantern_glow

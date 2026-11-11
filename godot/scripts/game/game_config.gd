@@ -243,5 +243,6 @@ const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 
 # Moving the island (the user, 2026-11-11): pinch the table rim. One hand drags and turns, two hands resize.
 const RIM_WIDTH := 0.05  # m outside the island's edge that counts as the rim (was 0.1: it picked the island up by accident)
+const FAST_HOLD := 1.0  # s a pinch must stay on the tray hourglass to hurry the day (the user: it triggered by itself)
 const RIM_HOLD := 0.6  # s a pinch must be held on the rim before the island follows the hand
 const BOARD_SCALE := Vector2(0.6, 2.0)

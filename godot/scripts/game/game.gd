@@ -78,6 +78,8 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var _fast_pending := {}  # hand -> seconds it has held a pinch on the tray hourglass
+var _clock: Label3D  # the big countdown over the island
 var _rim_pending := {}  # hand -> seconds it has held a pinch on the rim; the island only moves after GameConfig.RIM_HOLD (the user: it moved by itself)
 var _rim_hands: Array = []  # the hands pinching the table rim (move, turn, resize the island)
 var _rim_start := Transform3D.IDENTITY  # the board when the current grip began
@@ -108,6 +110,7 @@ var veil: VeilDome  # the warm dome over the island: cracks at dusk, shatters in
 var haze: HazeDome  # the dim warm haze over the passthrough room (with the rig only)
 var _doom_started := false  # night 5 of loops 1-4: the Warden's horn has sounded
 var _doom_timer := 0.0
+var _ui_placed := false  # the tray has been put beside the player for this session
 var _ui_rig: Node3D  # headset: the cards, buttons and messages float here, in front of you (follows your head)
 var _ui_yaw := 0.0
 var _ui_follow := false  # the rig is gliding after the head (past GameConfig.UI_RIG_DEADZONE)
@@ -1608,7 +1611,10 @@ func _press_button(id: String) -> void:
 		return
 	match id:
 		"fast":
-			toggle_fast()
+			if _xr:
+				_show_toast("Hold the hourglass to hurry the day")  # a stray touch never speeds time (the user, 2026-11-11)
+			else:
+				toggle_fast()
 		"night":
 			start_night()
 		"restart":
@@ -2002,7 +2008,29 @@ func _build_tray_bits() -> void:
 	board.add_child(_sun)
 
 
+func _tick_clock() -> void:
+	## The countdown (the user: "there's no obvious countdown"): a big gilded m:ss over the island all day, red in the last 20 s.
+	if _clock == null:
+		_clock = Label3D.new()
+		_clock.name = "DayClock"
+		_clock.font_size = 220
+		_clock.pixel_size = 0.00045
+		_clock.outline_size = 24
+		_clock.outline_modulate = Color("5B2920")
+		_clock.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_clock.no_depth_test = true
+		_clock.render_priority = 12
+		_clock.position = Vector3(0, 0.30, 0)
+		board.add_child(_clock)
+	_clock.visible = phase == Phase.DAY and not asleep
+	if _clock.visible:
+		var left := int(ceil(day_left()))
+		_clock.text = "%d:%02d" % [left / 60, left % 60]
+		_clock.modulate = Color("E8452C") if left <= int(GameConfig.DAY_DUSK_WARN) else Color("FFD45A")
+
+
 func _tick_tray_bits(delta: float) -> void:
+	_tick_clock()
 	if _fast_glass:
 		var m := _fast_glass.get_node_or_null("Model")
 		if m:
@@ -2124,7 +2152,11 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell_hand = h
 			return
 	if _fast_glass and _fast_glass.is_visible_in_tree() and tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4):
-		toggle_fast()
+		if h == _mouse_hand:
+			toggle_fast()
+		else:
+			_fast_pending[h] = 0.0  # held for GameConfig.FAST_HOLD, then it hurries the day (see _tick_rim)
+			_show_toast("Hold to hurry the day")
 		return
 	if life and not placing():
 		for v in life.villagers:  # a pinch right at a villager (arm's reach, no ray needed)
@@ -2225,6 +2257,14 @@ static func rim_transform(start: Transform3D, p0: Array[Vector3], p: Array[Vecto
 
 
 func _tick_rim(delta := 0.0) -> void:
+	for h in _fast_pending.keys():
+		if not is_instance_valid(h) or _fast_glass == null or h.touch_point().distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) > reach(GameConfig.TOUCH_REACH * 2.0):
+			_fast_pending.erase(h)  # let go or slid away
+			continue
+		_fast_pending[h] += delta
+		if _fast_pending[h] >= GameConfig.FAST_HOLD:
+			_fast_pending.erase(h)
+			toggle_fast()
 	for h in _rim_pending.keys():
 		if not is_instance_valid(h):
 			_rim_pending.erase(h)
@@ -2247,6 +2287,9 @@ func _tick_rim(delta := 0.0) -> void:
 
 
 func hand_released(h: GameHand) -> void:
+	if _fast_pending.has(h):
+		_fast_pending.erase(h)
+		return
 	if _rim_pending.has(h):
 		_rim_pending.erase(h)
 		return
@@ -2341,7 +2384,7 @@ func _mount_ui_rig() -> void:
 	if _tray:
 		_tray.get_parent().remove_child(_tray)
 		_ui_rig.add_child(_tray)
-		_tray.position = Vector3(0, -0.30, -0.42)
+		_tray.position = Vector3(0.30, -0.34, -0.36)  # beside you, to the right, below the eyes
 	var spots := {"sell": Vector3(-0.17, -0.40, -0.40), "night": Vector3(0.17, -0.40, -0.40),
 		"restart": Vector3(0.17, -0.40, -0.40), "speed": Vector3(0.17, -0.40, -0.40)}
 	for id in spots:
@@ -2361,18 +2404,21 @@ func _mount_ui_rig() -> void:
 		_msg.position = Vector3(0, -0.04, -0.62)
 
 
-func _update_ui_rig(delta: float) -> void:
-	## Sits at your head, turned to where you face; it only swings round once you have turned well away from it.
+func _update_ui_rig(_delta: float) -> void:
+	## 2026-11-11 (the user: "it should just be still, beside me"): the tray is placed ONCE, beside you, when the game
+	## wakes, and then stays where it is. It is hidden on the title screen. Walk round the island and it stays put.
 	if _ui_rig == null or _xr_cam == null:
 		return
-	var f := -_xr_cam.global_transform.basis.z
-	var head_yaw := atan2(-f.x, -f.z)
-	if _held_card or _hands.any(func(h: GameHand): return is_instance_valid(h) and h.pressed_within(GameConfig.UI_RIG_PRESS_HOLD)):
-		return  # hold still while a card is held or a pinch has just begun, so the target does not move under the fingers
-	if absf(angle_difference(_ui_yaw, head_yaw)) > 0.7:
-		_ui_yaw = head_yaw
-	_ui_rig.rotation.y = lerp_angle(_ui_rig.rotation.y, _ui_yaw, minf(1.0, delta * 3.0))
-	_ui_rig.global_position = ui_rig_step(_ui_rig.global_position, _xr_cam.global_position, delta)
+	if asleep:
+		_ui_rig.visible = false
+		_ui_placed = false
+		return
+	if not _ui_placed:
+		var f := -_xr_cam.global_transform.basis.z
+		_ui_rig.rotation.y = atan2(-f.x, -f.z)
+		_ui_rig.global_position = _xr_cam.global_position
+		_ui_rig.visible = true
+		_ui_placed = true
 
 
 func ui_rig_step(at: Vector3, head: Vector3, delta: float) -> Vector3:
