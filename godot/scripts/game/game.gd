@@ -878,6 +878,14 @@ func _rewind() -> void:
 	_play_hourglass()
 	var kept := ", ".join(cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]))
 	_start_loop("The hourglass turns. Loop %d: enemies are tougher. Cards kept: %s" % [loop + 1, kept if kept != "" else "none"])
+	if with_rig and is_inside_tree():
+		_toast_last = last_message  # the gilded words say it; no small line as well
+		get_tree().create_timer(3.4).timeout.connect(show_rewind_words)  # once the hourglass has turned
+
+
+func show_rewind_words() -> TitleCard:
+	## After the hourglass (the user, 2026-11-11): gilded words over the island, naming the loop.
+	return TitleCard.show_over(board, Vector3(0, 0.36, 0.05), "TIME HAS BEEN REWOUND", "Loop %s" % LedgerPage.ROMAN[clampi(loop, 0, LedgerPage.ROMAN.size() - 1)])
 
 
 func _play_hourglass() -> void:
