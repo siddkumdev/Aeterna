@@ -78,6 +78,7 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var _palm_log_t := 0.0
 var _fast_pending := {}  # hand -> seconds it has held a pinch on the tray hourglass
 var _clock: Label3D  # the big countdown over the island
 var _rim_pending := {}  # hand -> seconds it has held a pinch on the rim; the island only moves after GameConfig.RIM_HOLD (the user: it moved by itself)
@@ -1900,10 +1901,16 @@ func palm_pose() -> Array:
 	if _xr_origin:
 		var tr := XRServer.get_tracker("/user/hand_tracker/left") as XRHandTracker
 		if tr and tr.has_tracking_data:
-			var good := XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_TRACKED | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
-			if (tr.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM) & good) == good:  # a guessed or lost pose never counts
-				var t := _xr_origin.global_transform * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
-				return [true, t.origin, -t.basis.y]  # OpenXR: the palm joint's +Y points out of the back of the hand
+			# The palm's normal from where the fingers actually are, so it does not depend on a joint-axis convention:
+			# (wrist -> middle knuckle) x (index knuckle -> little knuckle) points out of the LEFT palm.
+			var o := _xr_origin.global_transform
+			var wrist: Vector3 = o * tr.get_hand_joint_transform(1).origin
+			var mid: Vector3 = o * tr.get_hand_joint_transform(12).origin
+			var idx: Vector3 = o * tr.get_hand_joint_transform(7).origin
+			var lit: Vector3 = o * tr.get_hand_joint_transform(22).origin
+			var n := (mid - wrist).cross(lit - idx)
+			if n.length() > 0.0001:
+				return [true, o * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM).origin, n.normalized()]
 	return [false, Vector3.ZERO, Vector3.ZERO]  # only the LEFT HAND's tracked palm counts: no controller or right-hand fallback (the user, 2026-11-11)
 
 
@@ -1913,6 +1920,10 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 		return
 	var up := normal.dot(Vector3.UP) if found else -1.0
 	var d := at.distance_to(eye)
+	_palm_log_t -= delta
+	if found and _palm_log_t <= 0.0:
+		_palm_log_t = 2.0
+		print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [up, d, eye.y - at.y, ledger.open])  # for the headset log
 	if found and (d < GameConfig.PALM_REACH.x or d > GameConfig.PALM_REACH.y or at.y > eye.y - GameConfig.PALM_BELOW_EYE):
 		up = -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
 	if asleep or (_held_card and _hands.size() > 0 and _held_card_hand == _hands[0]):
