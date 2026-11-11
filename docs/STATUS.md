@@ -8,7 +8,7 @@ Last updated: 2026-11-11, at the statue commit (boss forms, elites, statue done;
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
 
 ## On the headset
-- Installed build: 2026-11-11, 15:36 (commit 946ce27: puppet-theatre opening, book ledger, hands). Everything listed under "Untested on the Quest" is newer than it.
+- Installed build: 2026-11-11, 15:47 (commit 3b8d70f: palm normal from finger joints, palm log). Everything listed under "Untested on the Quest" is newer than it.
 - OVR Metrics Tool: not installed. The user downloads it (needs a Meta sign-in) and gives the file name; it goes on with the next game install.
 
 ## Done (in `main`)
