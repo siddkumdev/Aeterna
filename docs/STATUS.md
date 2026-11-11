@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
+Last updated: 2026-11-11, at the statue commit (boss forms, elites, statue done; code-critic pass pending).
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -34,7 +34,7 @@ Last updated: 2026-11-11, at commit `6da9099` plus the lean-context tooling.
 4. DONE The ledger: `scripts/ui/ledger.gd` + `ledger_page.gd` (four tabbed pages drawn like the cards), data from `Game.ledger_data()`. Headset: left palm up for 0.3 s (`palm_pose`, `ledger_from_palm`; hand-joint palm first, left grip pose as fallback), B/Y or menu button latches it open. Desktop: L, then , and . turn pages; tabs can be clicked or poked. Shot tool: `godot/tools/ledger_shot.gd`. UNVERIFIED on the Quest: the palm normal's sign (OpenXR says the palm joint's +Y leaves the back of the hand).
 5. DONE Rewind words: `scripts/ui/title_card.gd` (`TitleCard.show_over`), "TIME HAS BEEN REWOUND / Loop II", shown by `Game.show_rewind_words` 3.4 s after `_rewind`.
 6. DONE Opening: night title with the gilded name, a breathing Wake plaque and a small Tale plaque (the placeholder Hands plaque is gone); Wake plays 8 beats as gilded words over the island (dawn, people wake, faith into the Veil, Skotos, crack, shatter, hourglass, dawn) then "THE FIRST DAWN". No quests or bubbles until awake.
-7. Statue replaces the shrine: the little god, hooded, cupped hands holding the ember, on a plinth, clearly bigger than a thumb ("i should be bigger than a thumb"). make-asset: 4 variants, the user picks.
+7. DONE Statue replaces the shrine: the hooded little god, A+C picked by the user (`make_statue.py` variant M, `ew_village_statue_v01`, `village_dresser._shrine`, embers light in `Game._setup_shrine`). Awaiting approval. The node is still called "Shrine".
 8. DONE (untested on the Quest) Move and resize: pinch the table rim (`Game.on_rim`, `rim_transform`, `_tick_rim`). One hand drags and turns with the wrist; two hands turn and resize within `GameConfig.BOARD_SCALE` (0.6 to 2.0). Headset hands only.
 10. DONE Boss: the Warden is the Eclipse Bloom (`assets/generators/make_boss9.py`, forms a-d) = 4 phases, one body each (a summons, b crystals, c enrage, d final stand with healing vines; `Warden`, `Enemy.BOSS_FORMS`, effects in `scripts/vfx/boss_vfx.gd`, shot `godot/tools/boss_shot.gd`). Not built: vines slowing tower fire, `hit_pulse` wiring, the 15k-triangle budget untested on a Quest.
 11. DONE Elites: Cinder Mammoth / Gravemaw Bear / Furnace Orc walk one a night from night 3 (`GameConfig.ELITES`, `Game.night_plan`); only embers on `flame_anchor` so far, stand-in numbers.

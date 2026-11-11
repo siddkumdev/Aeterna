@@ -2,6 +2,8 @@
 
 Status: APPROVED by the user 2026-11-10 (ending = a choice at the shrine; the Warden is named Skotos). Parts are being built (cards, hands, Veil, loop rules, thoughts data are in the game). Gameplay numbers stay in `docs/GAME_SPEC.md`; this file is story, cast and words.
 
+> 2026-11-11 (the user): the shrine is now a **statue** of the little god itself: hooded, hands cupped round a small ember, on a plinth, bigger than a thumb. "The shrine" in this file means that statue; the villagers still pray before it.
+
 Tone: warm, plain, a little funny, then quietly heartbreaking. Cozy, never grim. The sadness comes from love, not from gore. Short sentences. Villagers sound like neighbours, not prophets.
 
 ## 1. The premise in one breath
