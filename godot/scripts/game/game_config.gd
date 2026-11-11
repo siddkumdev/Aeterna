@@ -213,3 +213,8 @@ const DAY_DUSK_WARN := 20.0  # s before the end: the light turns to dusk
 const DAY_FAST := 10.0
 const NIGHT_FAST := 4.0
 const CRUSH_HOLD := 1.2  # s
+
+# The ledger (the user, 2026-11-11): turn the left palm up and hold it a moment.
+const PALM_UP_OPEN := 0.6  # dot of the palm's normal with straight up, to open
+const PALM_UP_CLOSE := 0.25  # below this it folds shut
+const PALM_UP_HOLD := 0.3  # s

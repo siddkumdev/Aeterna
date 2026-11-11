@@ -11,6 +11,7 @@ var life  # VillageLife
 var key := ""
 var job := ""
 var voice := ""  # which thoughts.json villager speaks through this one (StoryText)
+var said := ""  # the last thought it spoke (the ledger shows it)
 var taps := 0  # how many times it was tapped: which of its lines comes next
 var home := 0
 var rig: CharacterRig

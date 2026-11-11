@@ -27,6 +27,10 @@ static func villager_name(id: String) -> String:
 	return str(data().get("villagers", {}).get(id, {}).get("name", id.capitalize()))
 
 
+static func villager_role(id: String) -> String:
+	return str(data().get("villagers", {}).get(id, {}).get("role", ""))
+
+
 static func thought(id: String, loop: int, idx: int) -> String:
 	## The idx-th line (cycling) of villager `id` in loop `loop` (0-based).
 	var lines: Array = data().get("villagers", {}).get(id, {}).get("loops", {}).get(str(clampi(loop, 0, 4) + 1), [])

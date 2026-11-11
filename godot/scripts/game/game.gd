@@ -78,6 +78,11 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in the headset, L on the desktop
+var _ledger_latched := false  # opened by a button or key: stays until closed the same way
+var _palm_time := 0.0  # how long the left palm has been turned up
+var _palm: XRController3D  # the left hand's grip pose: its +X is the palm's normal (fallback when no joints)
+var _xr_origin: XROrigin3D
 var quest_plan: Array = []  # today's quests not posted yet: [{"kind", "house"}]
 var _quest_deck: Array = []  # the kinds still to come round before the deck is reshuffled
 var _quest_rng := RandomNumberGenerator.new()
@@ -1425,6 +1430,7 @@ func tap_villager(v: Villager) -> String:
 	v.taps += 1
 	if line == "":
 		return ""
+	v.said = line
 	snd("villager_blip", v.global_position)
 	Bubble.say(v, Vector3(0, 0.1, 0), "%s: %s" % [StoryText.villager_name(v.voice), line] if v.taps == 1 else line)
 	if v.state == "stay" or v.state == "go":
@@ -1518,6 +1524,11 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 		return
 	if asleep:
 		return
+	if ledger and ledger.open:
+		var tab := ledger.tab_at_ray(origin, dir)
+		if tab != -1:
+			ledger.set_page(tab)  # -2 (the panel, not a tab) changes nothing but still uses the press
+			return
 	var b := _button_at(origin, dir)
 	if b != "":
 		_press_button(b)
@@ -1618,6 +1629,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				start_night()
 			KEY_TAB:
 				toggle_fast()
+			KEY_L:
+				toggle_ledger()
+			KEY_COMMA:
+				if ledger and ledger.open:
+					ledger.turn(-1)
+			KEY_PERIOD:
+				if ledger and ledger.open:
+					ledger.turn(1)
 			KEY_F5:
 				if OS.is_debug_build():
 					set_speed(1.0 if speed == 5.0 else 5.0)
@@ -1685,6 +1704,11 @@ func _process(delta: float) -> void:
 		return
 	_tick_day(delta)
 	_tick_quests(delta)
+	if _xr and ledger:
+		var palm := palm_pose()
+		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())
+	elif ledger and ledger.open:
+		_place_ledger_in_front()
 	crush_step(delta)
 	_tick_tray_bits(delta)
 	_update_mouse_hand()
@@ -1790,6 +1814,85 @@ func _build_ui() -> void:
 		_hud.visible = false  # 2026-11-11 (the user): no text wall. Faith is on the seal, the day is the sun, the rest is in the ledger
 		_msg.visible = false
 		_build_tray_bits()
+		ledger = Ledger.new()
+		ledger.name = "Ledger"
+		ledger.game = self
+		add_child(ledger)
+
+
+func ledger_data() -> Dictionary:
+	## Everything the ledger's pages show. Read-only.
+	var folk := []
+	if life:
+		for v in life.villagers:
+			if v.voice != "":
+				folk.append({"name": StoryText.villager_name(v.voice), "role": StoryText.villager_role(v.voice), "said": v.said})
+	var left := int(ceil(day_left()))
+	return {
+		"loop": loop, "night": night, "days": GameConfig.NIGHTS_PER_LOOP, "faith": faith,
+		"houses": standing_houses().size(), "houses_total": houses.size(), "foresight": foresight_tier(),
+		"time_left": "%d:%02d" % [left / 60, left % 60] if phase == Phase.DAY else "night",
+		"gifts": cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]),
+		"villagers": folk,
+		"towers": GameConfig.TOWER_ORDER.map(func(id): return CardData.tower(id)),
+		"spells": GameConfig.SPELL_ORDER.map(func(id): return CardData.spell(id)),
+		"quests": requests.map(func(r): return r.info()),
+		"quests_to_come": quest_plan.size(),
+	}
+
+
+func toggle_ledger() -> void:
+	## A button or a key: opens it in front of you and keeps it there until pressed again.
+	if ledger == null or asleep:
+		return
+	_ledger_latched = not ledger.open
+	if _ledger_latched:
+		_place_ledger_in_front()
+	ledger.set_open(_ledger_latched)
+
+
+func _place_ledger_in_front() -> void:
+	var cam: Camera3D = _xr_cam if _xr_cam else _camera
+	if cam == null:
+		return
+	var at := cam.global_transform * Vector3(0, -0.02 if _xr_cam else 0.0, -0.5)
+	_face_ledger(at, cam.global_position)
+
+
+func _face_ledger(at: Vector3, eye: Vector3) -> void:
+	ledger.global_position = at
+	if at.distance_to(eye) > 0.01:
+		ledger.global_basis = Basis.looking_at(at - eye, Vector3.UP).scaled(Vector3.ONE * ledger.scale.x)  # its face (+Z) toward the eye
+
+
+func palm_pose() -> Array:
+	## [found, position, normal out of the palm] of the left hand, in world space.
+	if _xr_origin:
+		var tr := XRServer.get_tracker("/user/hand_tracker/left") as XRHandTracker
+		if tr and tr.has_tracking_data:
+			var t := _xr_origin.global_transform * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
+			return [true, t.origin, -t.basis.y]  # OpenXR: the palm joint's +Y points out of the back of the hand
+		if _palm and _palm.get_has_tracking_data():
+			return [true, _palm.global_position, _palm.global_basis.x]  # OpenXR grip pose, left hand: +X leaves the palm
+	return [false, Vector3.ZERO, Vector3.ZERO]
+
+
+func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, eye: Vector3) -> void:
+	## Palm turned up for a moment: the ledger unfolds over it and follows it. Turned away: it folds shut.
+	if ledger == null or _ledger_latched:
+		return
+	var up := normal.dot(Vector3.UP) if found else -1.0
+	if asleep or (_held_card and _hands.size() > 0 and _held_card_hand == _hands[0]):
+		up = -1.0
+	if not ledger.open:
+		_palm_time = _palm_time + delta if up > GameConfig.PALM_UP_OPEN else 0.0
+		if _palm_time >= GameConfig.PALM_UP_HOLD:
+			ledger.set_open(true)
+	elif up < GameConfig.PALM_UP_CLOSE:
+		_palm_time = 0.0
+		ledger.set_open(false)
+	if ledger.open and found:
+		_face_ledger(at + Vector3(0, 0.17, 0), eye)
 
 
 func _build_tray_bits() -> void:
@@ -1972,6 +2075,11 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if asleep:
 		return
+	if ledger and ledger.open:
+		var tab := ledger.tab_at_point(h.global_position, 0.03)
+		if tab != -1:
+			ledger.set_page(tab)
+			return
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(h.global_position, reach(GameConfig.TOUCH_REACH * 1.6))
 		if cd and _grab_card(cd, h):
@@ -2469,6 +2577,15 @@ func _build_rig() -> void:
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)
+	_xr_origin = origin
+	_palm = XRController3D.new()
+	_palm.tracker = "left_hand"
+	_palm.pose = &"grip"
+	_palm.name = "left_palm"
+	origin.add_child(_palm)
+	_palm.button_pressed.connect(func(action: String):
+		if action == "by_button" or action == "menu_button":
+			toggle_ledger())
 	var cam := XRCamera3D.new()
 	cam.position = Vector3(0, 1.2, 0)  # seated eye height
 	cam.cull_mask = 0xFFFFF & ~LensView.OVERLAY_LAYER  # Foresight's drawings are for the lens window only

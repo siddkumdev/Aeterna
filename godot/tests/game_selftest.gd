@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await _endings()
 	await _day_clock()
 	await _quests()
+	await _ledger()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -1652,5 +1653,50 @@ func _quests() -> void:
 	check("prayer: tapping someone else does not answer it", not prayer.answer(g))
 	check("prayer: tapping the one who prays answers it", prayer.answer(prayer.asker()) and prayer.done)
 	check("every quest has a gold mote, never a '!'", g.requests.all(func(r): return r._mote != null) and not FileAccess.get_file_as_string("res://scripts/game/help_request.gd").contains("HELP_MARKER_SCENE"))
+	g.queue_free()
+	await process_frame
+
+
+func _ledger() -> void:
+	## 2026-11-11 (the user): the stat screens, pulled up by turning the left palm up.
+	var g := await _make_game()
+	g.force_quests(["rain", "prayer"])
+	var d := g.ledger_data()
+	check("ledger data: day, loop, faith, homes, towers, spells, quests", d["night"] == 0 and d["loop"] == 0 and d["faith"] == g.faith \
+		and d["houses"] == d["houses_total"] and d["towers"].size() == GameConfig.TOWER_ORDER.size() and d["spells"].size() == GameConfig.SPELL_ORDER.size() \
+		and d["quests"].size() == 2 and d["quests"][0]["how"] != "" and d["quests"][0]["reward"] == 20)
+	g.ledger = Ledger.new()
+	g.ledger.game = g
+	g.add_child(g.ledger)
+	await process_frame
+	var palm := Vector3(0, 1.0, -0.3)
+	var eye := Vector3(0, 1.3, 0)
+	g.ledger_from_palm(0.1, true, palm, Vector3.UP, eye)
+	check("a palm turned up for an instant does not open the ledger", not g.ledger.open)
+	g.ledger_from_palm(GameConfig.PALM_UP_HOLD, true, palm, Vector3.UP, eye)
+	check("held up for a moment, it opens above the palm", g.ledger.open and g.ledger.global_position.y > palm.y + 0.1)
+	check("its face is toward the eye", g.ledger.global_basis.z.normalized().dot((eye - g.ledger.global_position).normalized()) > 0.9)
+	g.ledger_from_palm(0.1, true, palm, Vector3(1, 0.4, 0).normalized(), eye)
+	check("a tilted palm keeps it open", g.ledger.open)
+	g.ledger_from_palm(0.1, true, palm, Vector3.DOWN, eye)
+	check("palm turned away: it folds shut", not g.ledger.open)
+	g.ledger_from_palm(1.0, false, palm, Vector3.UP, eye)
+	check("no hand found: it stays shut", not g.ledger.open)
+	g.asleep = true
+	g.ledger_from_palm(1.0, true, palm, Vector3.UP, eye)
+	check("it never opens on the title screen", not g.ledger.open)
+	g.asleep = false
+	g.ledger.set_open(true)
+	check("the tabs turn the page and wrap", g.ledger.page == 0)
+	g.ledger.turn(1)
+	g.ledger.turn(-2)
+	check("turning back from the first page reaches the last", g.ledger.page == LedgerPage.TABS.size() - 1)
+	g.ledger.scale = Vector3.ONE
+	var tab2 := LedgerPage.tab_rect(2)
+	var local := Vector3((tab2.get_center().x / LedgerPage.SIZE.x - 0.5) * Ledger.W, (0.5 - tab2.get_center().y / LedgerPage.SIZE.y) * Ledger.H, 0)
+	var world: Vector3 = g.ledger._quad.global_transform * local
+	check("a fingertip on a tab finds that tab", g.ledger.tab_at_point(world, 0.03) == 2)
+	check("a ray at a tab finds that tab", g.ledger.tab_at_ray(world + g.ledger.global_basis.z.normalized() * 0.3, -g.ledger.global_basis.z.normalized()) == 2)
+	check("a point off the panel finds nothing", g.ledger.tab_at_point(world + Vector3(1, 0, 0), 0.03) == -1)
 	g.queue_free()
 	await process_frame
