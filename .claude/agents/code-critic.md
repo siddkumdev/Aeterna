@@ -1,4 +1,5 @@
 ---
+model: sonnet
 name: code-critic
 description: Independent code reviewer for Aeterna (Godot GDScript, shaders, Python tools, shell scripts). Use after writing or changing code, before reporting the work as done. Read-only; finds real bugs, not style nits.
 tools: Read, Glob, Grep, Bash

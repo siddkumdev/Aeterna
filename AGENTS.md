@@ -45,6 +45,20 @@ The users often read on a phone with no terminal, so reports must stand alone:
 - Either teammate can approve an asset; record who.
 
 ## 6. Plugins and tools that come with the repo
+- **Model routing (approved by Siddharth, 2026-11-11):** choose the listed primary and effort for every dispatch; use the fallback when Codex is at its limit (`agy`).
+
+  | Task | Primary | Effort | Fallback when Codex is at its limit (agy) |
+  |---|---|---|---|
+  | Status/log/git-sync checks | Codex gpt-6-luna | low | gemini-3.8-flash-low |
+  | Small mechanical edits | Codex gpt-6-luna | medium | gemini-3.8-flash-medium |
+  | Normal feature coding | Codex gpt-5.6-sol | medium | gemini-4-argon-medium |
+  | Hard bugs | Codex gpt-6.1-terra | high | gemini-4-argon-high |
+  | Code review | Claude code-critic on sonnet | medium | claude-sonnet-5-5-medium |
+  | Art/player critics | Claude art-critic, player-critic on sonnet | medium | claude-sonnet-5-5-medium |
+  | Planning | Claude senior-advisor on opus | medium | claude-opus-5-5-medium |
+  | Web research | agy gemini-3.8-flash-low | low | same |
+  | Audio-generation scripts | Codex gpt-5.6-sol | medium | gemini-4-argon-medium |
+
 - `.claude/skills/` and `.claude/agents/` (`art-critic`, `code-critic`, `player-critic`, `senior-advisor`): the project workflows (shared through git). `senior-advisor` (added 2026-11-08, Siddharth) is a read-only second opinion on design, UX, visuals, VFX, audio, performance and scope; ask it before big work or when the user wants a view. Its advice is not approval.
 - `.claude/settings.json` enables Siddharth's `i-have-adhd` output-style plugin (third-party, from GitHub `ayghri/i-have-adhd`). It does nothing unless someone types `/i-have-adhd`. If it is on, the project rule "no time estimates" still wins over its "give specific time estimates" rule.
 - Third-party Godot skills in `.claude/skills/` (installed 2026-10-22 with Siddharth's OK, text only): `godot-gdscript-patterns` (wshobson/agents, MIT) and `godot-development` (omer-metin, Apache-2.0). General Godot 4 guidance, mostly 2D; each starts with a project note: our rules win and the user decides, never "correct" a user's choice from them.

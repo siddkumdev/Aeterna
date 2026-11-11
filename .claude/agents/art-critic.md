@@ -1,4 +1,5 @@
 ---
+model: sonnet
 name: art-critic
 description: Independent art reviewer for Aeterna assets. Use after rendering a preview sheet, before showing an asset to Siddharth. Read-only; judges renders against the moodboard and art bible.
 tools: Read, Glob, Grep
