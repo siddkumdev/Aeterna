@@ -365,7 +365,8 @@ func _hand_reach() -> void:
 	v.set_pose_from(GodHandVisual.demo_joints(0.2, 1.0))
 	hand.visual = v
 	var mid := (v.thumb_tip_global() + v.index_tip_global()) * 0.5
-	check("tracked hand: touch point is between the drawn thumb and index tips", hand.touch_point().is_equal_approx(mid) 		and hand.ray_origin().is_equal_approx(mid))
+	check("tracked hand: the touch point is the hand's own position unless DRAWN_PINCH_TOUCH is on", hand.touch_point().is_equal_approx(mid if GameConfig.DRAWN_PINCH_TOUCH else hand.global_position)
+		and hand.ray_origin().is_equal_approx(hand.touch_point()))
 	hand.visual = null
 	v.queue_free()
 	hand.queue_free()
@@ -1755,7 +1756,7 @@ func _ledger() -> void:
 	g.add_child(g.ledger)
 	await process_frame
 	var palm := Vector3(0, 1.0, -0.3)
-	var eye := Vector3(0, 1.3, 0)
+	var eye := Vector3(0, 1.3, 0)  # the palm is 0.3 below and 0.42 away: inside PALM_REACH
 	g.ledger_from_palm(0.1, true, palm, Vector3.UP, eye)
 	check("a palm turned up for an instant does not open the ledger", not g.ledger.open)
 	g.ledger_from_palm(GameConfig.PALM_UP_HOLD, true, palm, Vector3.UP, eye)

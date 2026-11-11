@@ -78,6 +78,7 @@ var _held_spell := ""  # VR: the spell token in a hand
 var _held_spell_hand: GameHand
 var requests: Array[HelpRequest] = []
 var _requests_root: Node3D
+var _rim_pending := {}  # hand -> seconds it has held a pinch on the rim; the island only moves after GameConfig.RIM_HOLD (the user: it moved by itself)
 var _rim_hands: Array = []  # the hands pinching the table rim (move, turn, resize the island)
 var _rim_start := Transform3D.IDENTITY  # the board when the current grip began
 var _rim_p0: Array[Vector3] = []  # where each gripping hand was then
@@ -1726,7 +1727,7 @@ func _process(delta: float) -> void:
 		return
 	_tick_day(delta)
 	_tick_quests(delta)
-	_tick_rim()
+	_tick_rim(delta)
 	if _xr and ledger:
 		var palm := palm_pose()
 		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())
@@ -1893,11 +1894,11 @@ func palm_pose() -> Array:
 	if _xr_origin:
 		var tr := XRServer.get_tracker("/user/hand_tracker/left") as XRHandTracker
 		if tr and tr.has_tracking_data:
-			var t := _xr_origin.global_transform * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
-			return [true, t.origin, -t.basis.y]  # OpenXR: the palm joint's +Y points out of the back of the hand
-		if _palm and _palm.get_has_tracking_data():
-			return [true, _palm.global_position, _palm.global_basis.x]  # OpenXR grip pose, left hand: +X leaves the palm
-	return [false, Vector3.ZERO, Vector3.ZERO]
+			var good := XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_TRACKED | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+			if (tr.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM) & good) == good:  # a guessed or lost pose never counts
+				var t := _xr_origin.global_transform * tr.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
+				return [true, t.origin, -t.basis.y]  # OpenXR: the palm joint's +Y points out of the back of the hand
+	return [false, Vector3.ZERO, Vector3.ZERO]  # only the LEFT HAND's tracked palm counts: no controller or right-hand fallback (the user, 2026-11-11)
 
 
 func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, eye: Vector3) -> void:
@@ -1905,17 +1906,20 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 	if ledger == null or _ledger_latched:
 		return
 	var up := normal.dot(Vector3.UP) if found else -1.0
+	var d := at.distance_to(eye)
+	if found and (d < GameConfig.PALM_REACH.x or d > GameConfig.PALM_REACH.y or at.y > eye.y - GameConfig.PALM_BELOW_EYE):
+		up = -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
 	if asleep or (_held_card and _hands.size() > 0 and _held_card_hand == _hands[0]):
 		up = -1.0
 	if not ledger.open:
 		_palm_time = _palm_time + delta if up > GameConfig.PALM_UP_OPEN else 0.0
 		if _palm_time >= GameConfig.PALM_UP_HOLD:
+			_face_ledger(at + Vector3(0, 0.17, 0), eye)  # it appears once, over the palm, and stays where it opened
 			ledger.set_open(true)
+			print("[ledger] opened by the left palm, up=%.2f dist=%.2f" % [up, d])
 	elif up < GameConfig.PALM_UP_CLOSE:
 		_palm_time = 0.0
 		ledger.set_open(false)
-	if ledger.open and found:
-		_face_ledger(at + Vector3(0, 0.17, 0), eye)
 
 
 func _build_tray_bits() -> void:
@@ -2134,9 +2138,8 @@ func hand_pressed(h: GameHand) -> void:
 				crush_start(t, h, tp)  # crush_step measures the drift from this same touch point
 				return
 	if h != _mouse_hand and not placing() and on_rim(tp):
-		_rim_hands.append(h)
-		_rim_anchor()
-		snd("grab")
+		_rim_pending[h] = 0.0  # a deliberate hold, not a passing pinch, picks the island up
+		snd("pinch")
 		return
 	_active_hand = h
 	snd("pinch")
@@ -2221,7 +2224,19 @@ static func rim_transform(start: Transform3D, p0: Array[Vector3], p: Array[Vecto
 	return Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * k), mid) * Transform3D(Basis.IDENTITY, -mid0) * start
 
 
-func _tick_rim() -> void:
+func _tick_rim(delta := 0.0) -> void:
+	for h in _rim_pending.keys():
+		if not is_instance_valid(h):
+			_rim_pending.erase(h)
+			continue
+		_rim_pending[h] += delta
+		if _rim_pending[h] >= GameConfig.RIM_HOLD and on_rim(h.touch_point()):
+			_rim_pending.erase(h)
+			_rim_hands.append(h)
+			_rim_anchor()
+			snd("grab")
+		elif _rim_pending[h] >= GameConfig.RIM_HOLD:
+			_rim_pending.erase(h)  # slid off the rim while holding: nothing happens
 	if _rim_hands.is_empty():
 		return
 	var p: Array[Vector3] = []
@@ -2232,6 +2247,9 @@ func _tick_rim() -> void:
 
 
 func hand_released(h: GameHand) -> void:
+	if _rim_pending.has(h):
+		_rim_pending.erase(h)
+		return
 	if _rim_hands.has(h):
 		_rim_hands.erase(h)
 		_rim_anchor()

@@ -26,7 +26,8 @@ const CHAINS := [
 const KNUCKLES := [[6, 11], [11, 16], [16, 21]]  # the palm web between the finger bases
 const PINCH_NEAR := 0.012  # m between the thumb and index tips that counts as full pinch
 const PINCH_FAR := 0.06  # m at which the pinch value is 0
-const CHUNK := 1.18  # the hand is drawn a little plump: a god's hand, soft and readable, not a skeleton
+const CHUNK := 0.98  # 2026-11-11 (the user: "they look like gloves, they should be smooth hands"): true to the tracked bone width, no plump padding
+const LOST_GRACE := 0.6  # s a hand keeps its last pose when tracking blinks out (the user: "my hands disappear midway")
 
 # palette: fire_yellow FFD45A, lantern_glow F6A45D, fire_red E8452C (never blue)
 const SPARK_START := Color8(0xFF, 0xD4, 0x5A, 0xE0)
@@ -53,6 +54,7 @@ var _orb: MeshInstance3D
 var _hot := false
 var _manual := false  # set_pose_from was used: ignore the tracker
 var _hot_amount := 0.0
+var _lost := 0.0  # seconds without tracking data
 var _spark_boost := false
 
 
@@ -105,7 +107,6 @@ func _build_pairs() -> void:
 				_ball_joints.append(chain[i])
 	for k in KNUCKLES:
 		_bone_pairs.append([k[0], k[1], 0.0075])
-	_ball_joints.append(J_WRIST)
 	_ball_joints.append(-1)  # the palm: one flattened blob in the palm joint's frame (no overlapping bars to z-fight)
 
 
@@ -114,7 +115,7 @@ func _bone_mesh() -> Mesh:
 	m.top_radius = 1.0  # straight tubes: the joint balls carry the taper, so tube and ball meet without a step
 	m.bottom_radius = 1.0
 	m.height = 1.0
-	m.radial_segments = 12
+	m.radial_segments = 16
 	m.rings = 1
 	m.cap_top = false
 	m.cap_bottom = false
@@ -125,8 +126,8 @@ func _ball_mesh() -> Mesh:
 	var m := SphereMesh.new()
 	m.radius = 1.0
 	m.height = 2.0
-	m.radial_segments = 12
-	m.rings = 6
+	m.radial_segments = 16
+	m.rings = 8
 	return m
 
 
@@ -225,7 +226,13 @@ func _process(delta: float) -> void:
 			_joints[i] = _tracker.get_hand_joint_transform(i)
 			_radii[i] = maxf(_tracker.get_hand_joint_radius(i), 0.004)
 		ok = true
-	_set_tracked(ok)
+	if ok:
+		_lost = 0.0
+	else:
+		_lost += delta
+	var shown := ok or (tracked and _lost < LOST_GRACE)  # keep drawing the last pose through a short tracking blink
+	if shown != tracked:
+		_set_tracked(shown)
 	if ok:
 		_pose()
 	elif controller != null and is_instance_valid(controller):
@@ -287,7 +294,7 @@ func _pose() -> void:
 		var j: int = _ball_joints[n]
 		if j < 0:  # the palm blob: x = width across the knuckles, y = thickness (the joint's +Y points to the back of the hand), z = length
 			var pb := _joints[J_PALM].basis.orthonormalized()
-			pb = pb * Basis.from_scale(Vector3(0.03, 0.0105, 0.036))
+			pb = pb * Basis.from_scale(Vector3(0.028, 0.008, 0.034))
 			gm.set_instance_transform(n, Transform3D(pb, _joints[J_PALM].origin + _joints[J_PALM].basis.orthonormalized().z * -0.004))
 			continue
 		# a hair larger than the tubes (x1.06) so the ball and tube surfaces never coincide (no z-fighting at the joints)

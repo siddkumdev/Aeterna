@@ -40,6 +40,7 @@ const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to
 # XR_PLAQUE_PAD of its face (nearest plaque wins). The floating UI rig ignores head moves under UI_RIG_DEADZONE,
 # catches up at UI_RIG_FOLLOW per second, snaps past UI_RIG_SNAP, and holds still while a card is held or for
 # UI_RIG_PRESS_HOLD after a pinch begins (so a long lens or rim grasp does not leave the tray behind).
+const DRAWN_PINCH_TOUCH := false  # 2026-11-11 (the user): the headset's own touch point felt better than the drawn-pinch point, so the old behaviour is back; true brings the drawn-pinch point back
 const XR_CARD_REACH := 0.10  # m
 const XR_PLAQUE_PAD := 0.035  # m (plaques are 15 cm wide, 5 cm apart)
 const UI_RIG_DEADZONE := 0.06  # m
@@ -234,10 +235,13 @@ const NIGHT_FAST := 4.0
 const CRUSH_HOLD := 1.2  # s
 
 # The ledger (the user, 2026-11-11): turn the left palm up and hold it a moment.
-const PALM_UP_OPEN := 0.6  # dot of the palm's normal with straight up, to open
-const PALM_UP_CLOSE := 0.25  # below this it folds shut
-const PALM_UP_HOLD := 0.3  # s
+const PALM_UP_OPEN := 0.8  # dot of the palm's normal with straight up, to open
+const PALM_UP_CLOSE := 0.3  # below this it folds shut
+const PALM_UP_HOLD := 1.0  # s the LEFT palm must be held up (the user, 2026-11-11: a proper rule)
+const PALM_REACH := Vector2(0.15, 0.65)  # m from the eye: the palm counts only held out in front of you ...
+const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 
 # Moving the island (the user, 2026-11-11): pinch the table rim. One hand drags and turns, two hands resize.
-const RIM_WIDTH := 0.1  # m outside the island's edge that counts as the rim
+const RIM_WIDTH := 0.05  # m outside the island's edge that counts as the rim (was 0.1: it picked the island up by accident)
+const RIM_HOLD := 0.6  # s a pinch must be held on the rim before the island follows the hand
 const BOARD_SCALE := Vector2(0.6, 2.0)
