@@ -158,7 +158,7 @@ func _hit_enemy(e: Enemy) -> void:
 func _hit_sound() -> String:
 	## The hit sound belongs to the TOWER that fired, never to the enemy (Siddharth 2026-11-10).
 	if _fx_kind == "wizard":
-		return "wizard_hit"
+		return ""  # Wizard shots land silently (Siddharth 2026-11-11).
 	if _fx_kind == "fireball":  # the Airship's cannonball
 		return "airship_hit"
 	return "" if kind == "pierce" else "boulder_hit"  # a pierce bolt sounds when it hits, not at the end of its flight
