@@ -393,6 +393,8 @@ func take_damage(amount: float, flash := true, hit_sound := "") -> void:
 		_flash = 0.08
 		if _rig:
 			_rig.hit()
+		if _vfx:
+			_vfx.hit_pulse()
 		if game != null and game.with_rig and is_inside_tree() and Time.get_ticks_msec() - _spark_ms >= 120:
 			_spark_ms = Time.get_ticks_msec()
 			VfxKit.hit_spark(get_parent(), chest())

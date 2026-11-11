@@ -39,6 +39,10 @@ func _init(g, b: Enemy) -> void:
 
 func step(delta: float) -> void:
 	if not is_instance_valid(boss) or not boss.alive:
+		for c in crystals:  # shield crystals or vines still standing go with it
+			if is_instance_valid(c) and c.alive:
+				c.take_damage(99999.0, false)
+		crystals.clear()
 		game.warden = null
 		return
 	match phase:
