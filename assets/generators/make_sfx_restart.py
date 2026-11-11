@@ -575,13 +575,71 @@ def bad_bop(seed):  # a soft low wooden 'bop': dull and friendly
 
 ROUNDS_R13 = {"coin_a": coin_a, "coin_b": coin_b, "coin_c": coin_c, "pinch_cloth": pinch_cloth, "pinch_paper": pinch_paper, "bad_bop": bad_bop}
 
+# Round r14: Wizard Tower rebuilt from the existing REAL fire recordings only. These are candidate WAVs, not game installs.
+# It is the small sibling of r12's approved Fire Orb: shorter and quieter, warm but open through the upper mids. No crackle kit is
+# used because its bright cuts read as sparks; every source below is a kept fire_whoosh or campfire grain already in grains.json.
+def _wizard_real_finish(x, top=8200, rms=-23.0):
+    x = S.remove_dc(S.hp(x, 110))
+    x = S.lp(x + 0.55 * S.hp(x, 1400), top)  # keep audible flame air; do not leave the sound mostly at 120-400 Hz
+    x = S.fade(S.trim_silence(x, -55), 0.003, 0.055)
+    return S.normalise(S.room(x, 0.14, 0.06), -7.0, rms, -3.0)
+
+
+def wizard_launch_real_a(seed):  # compact warm flame rush: one broad whoosh with a quiet campfire body
+    sw = S.curve([(0, 0.02), (0.12, 1.0), (0.48, 0.72), (0.62, 0.0)], 0.62, log=False)
+    rush = S.pk(_pick("fire_whoosh", "fire_whoosh_01.wav", 1.38, 0.62, 8500, 110)) * sw
+    flame = S.pk(_pick("bed_fire", "bed_fire_02.wav", 1.08, 0.62, 8200, 130)) * sw
+    return _wizard_real_finish(S.mix((rush, 0, 1.0), (flame, 0.015, 0.28)), 8500)
+
+
+def wizard_launch_real_b(seed):  # soft double breath: a quick leading lick followed by the rounder rush
+    lead_env = S.curve([(0, 0.0), (0.07, 1.0), (0.28, 0.0)], 0.28, log=False)
+    body_env = S.curve([(0, 0.0), (0.14, 1.0), (0.58, 0.0)], 0.58, log=False)
+    lead = S.pk(_pick("fire_whoosh", "fire_whoosh_02.wav", 1.55, 0.28, 9000, 150)) * lead_env
+    body = S.pk(_pick("fire_whoosh", "fire_whoosh_05.wav", 1.28, 0.58, 8500, 110)) * body_env
+    return _wizard_real_finish(S.mix((lead, 0, 0.42), (body, 0.035, 1.0)), 8800)
+
+
+def wizard_launch_real_c(seed):  # roundest option: a low-mid flame bloom with enough open air to avoid muffling
+    env = S.curve([(0, 0.02), (0.18, 1.0), (0.66, 0.0)], 0.66, log=False)
+    broad = S.pk(_pick("fire_whoosh", "fire_whoosh_04.wav", 1.18, 0.66, 7800, 100)) * env
+    air = S.pk(_pick("fire_whoosh", "fire_whoosh_02.wav", 1.62, 0.45, 8200, 220)) * S.exp_env(0.45, 0.16, 0.004)
+    return _wizard_real_finish(S.mix((broad, 0, 1.0), (air, 0.025, 0.38)), 7800)
+
+
+def wizard_hit_real_a(seed):  # short soft fwoomf: recorded fire burst, no thud and no spark grains
+    env = S.exp_env(0.42, 0.13, 0.004)
+    burst = S.pk(_pick("fire_whoosh", "fire_whoosh_02.wav", 1.48, 0.42, 8500, 110)) * env
+    bed = S.pk(_pick("bed_fire", "bed_fire_01.wav", 1.15, 0.36, 7800, 160)) * S.exp_env(0.36, 0.15, 0.003)
+    return _wizard_real_finish(S.mix((burst, 0, 1.0), (bed, 0.015, 0.32)), 8200, -24.0)
+
+
+def wizard_hit_real_b(seed):  # wider bloom: two overlapping recorded flame puffs, still small and soft
+    a = S.pk(_pick("fire_whoosh", "fire_whoosh_04.wav", 1.34, 0.46, 8500, 110)) * S.exp_env(0.46, 0.17, 0.004)
+    b = S.pk(_pick("fire_whoosh", "fire_whoosh_05.wav", 1.58, 0.34, 9000, 180)) * S.exp_env(0.34, 0.11, 0.003)
+    return _wizard_real_finish(S.mix((a, 0, 1.0), (b, 0.025, 0.5)), 8600, -24.0)
+
+
+def wizard_hit_real_c(seed):  # warm tail: compact front puff with a tiny campfire exhale behind it
+    front = S.pk(_pick("fire_whoosh", "fire_whoosh_01.wav", 1.62, 0.32, 8500, 130)) * S.exp_env(0.32, 0.1, 0.003)
+    tail = S.pk(_pick("bed_fire", "bed_fire_03.wav", 1.2, 0.48, 7800, 160)) * S.exp_env(0.48, 0.2, 0.006)
+    return _wizard_real_finish(S.mix((front, 0, 1.0), (tail, 0.03, 0.4)), 8000, -24.0)
+
+
+ROUNDS_R14 = {"wizard_launch_a_warm_rush": wizard_launch_real_a,
+              "wizard_launch_b_double_breath": wizard_launch_real_b,
+              "wizard_launch_c_round_bloom": wizard_launch_real_c,
+              "wizard_hit_a_soft_fwoomf": wizard_hit_real_a,
+              "wizard_hit_b_wide_bloom": wizard_hit_real_b,
+              "wizard_hit_c_warm_tail": wizard_hit_real_c}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13, "r14": ROUNDS_R14}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
-    out = os.path.join(ROOT, "_work", "audio", "restart", rnd)
+    out = os.path.join(ROOT, "_work", "audio", "wizard_real" if rnd == "r14" else os.path.join("restart", rnd))
     os.makedirs(out, exist_ok=True)
     for name, fn in ROUNDS[rnd].items():
         S.write_wav(os.path.join(out, name + ".wav"), fn(1))
