@@ -243,8 +243,7 @@ def petal_halo(cz, R=0.0600, y=0.0240, n=14):
         for k in range(cnt):
             a = 2 * PI * k / cnt + off
             c = V((math.cos(a) * (R + L * 0.55), y - 0.0020 - layer * 0.0020, cz + math.sin(a) * (R + L * 0.55)))
-            H.append(place(bc.blob("petal", L, (0, 0, 0), cols[k % 2], 2, (1.0, 0.10, 0.34)), (0, 0, 0), tuple(c)))
-            H[-1].rotation_euler = (0, -a, 0)
+            H.append(place(bc.blob("petal", L, (0, 0, 0), cols[k % 2], 2, (1.0, 0.10, 0.34)), (0, -math.degrees(a), 0), tuple(c)))
             H.append(seg("tip", V((math.cos(a) * (R + L * 1.2), y - 0.0030, cz + math.sin(a) * (R + L * 1.2))), V((math.cos(a) * (R + L * 1.6), y - 0.0030, cz + math.sin(a) * (R + L * 1.6))), 0.0034, 0.0002, "shell_gold", 4))
     return H
 
@@ -375,3 +374,4 @@ if __name__ == "__main__":
     mc.smooth(obj)
     print("TRIS", key, mc.tri_count(obj))
     bc.save_blend(obj, "boss_eclipse_bloom_%s_v01" % key.lower())
+    print("EXPORT", bc.export_glb(obj, "boss"))

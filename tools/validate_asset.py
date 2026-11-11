@@ -20,7 +20,8 @@ BUDGETS = {"world": 800, "village": 2000, "defense": 2000, "enemy": 2000, "boss"
 # per-asset budgets that differ from the category default (the 12 x 12 board is one big model: ASSET_LIST W01 says 1-2k)
 BUDGET_OVERRIDES = {"ew_world_island": 4000, "ew_world_path_plaza": 1500, "ew_world_forest_clump_mix": 1200, "ew_world_forest_clump_dark": 1200, "ew_world_forest_clump_low": 1200, "ew_vfx_rewind_hourglass": 2000,  # v02 (the user 2026-11-10): ornate hero prop, one instance, only during the rewind "ew_world_island_underside": 8500,
                     # creature bosses (Durva 2026-11-02: "extreme detail", try a bigger budget): 20000 until tested on a Quest
-                    "ew_boss_lich_wyrm": 20000, "ew_boss_calavera_lich": 20000, "ew_boss_deathhead_moth": 20000, "ew_boss_cinder_mammoth": 20000, "ew_boss_gravemaw_bear": 20000, "ew_boss_furnace_orc": 20000}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
+                    "ew_boss_lich_wyrm": 20000, "ew_boss_calavera_lich": 20000, "ew_boss_deathhead_moth": 20000, "ew_boss_cinder_mammoth": 20000, "ew_boss_gravemaw_bear": 20000, "ew_boss_furnace_orc": 20000,
+                    "ew_boss_eclipse_bloom_a": 20000, "ew_boss_eclipse_bloom_b": 20000, "ew_boss_eclipse_bloom_c": 20000, "ew_boss_eclipse_bloom_d": 20000}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
 NAME = re.compile(r"^ew_(world|village|defense|enemy|boss|portal|vr|foresight|ui|vfx)_[a-z0-9_]+_v\d{2}$")
 
 INNER = r'''
