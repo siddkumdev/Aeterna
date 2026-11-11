@@ -15,7 +15,7 @@ const HINTS := [
 	"Set it on the grass and let go.",
 	"Someone is praying. Find the gold mote and tap them.",
 	"Tap a villager to hear their thoughts.",
-	"Night falls on its own. Pinch the hourglass to hurry the day.",
+	"Night falls on its own. Hold the hourglass to hurry the day.",
 ]
 
 static var prefer_controllers := false  # placeholder for the Hands / Controllers plaque

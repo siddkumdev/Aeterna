@@ -1,7 +1,7 @@
 extends SceneTree
 ## The ledger's pages (desktop window, not --headless):
 ##   <godot console> --xr-mode off --path godot -s res://tools/ledger_shot.gd -- OUT_PREFIX
-## Writes OUT_PREFIX_0.png .. _3.png (the god, the village, the cards, quests) from the seat.
+## Writes OUT_PREFIX_0.png .. _2.png (the three spreads) and _turn1/_turn2.png (a leaf mid-turn) from the seat.
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -30,9 +30,15 @@ func _initialize() -> void:
 	g.toggle_ledger()
 	for i in 30:
 		await process_frame
-	for p in LedgerPage.TABS.size():
-		g.ledger.set_page(p)
-		for i in 8:
+	for sp in Ledger.SPREADS:
+		if sp > 0:
+			g.ledger.turn(1)
+			for i in 12:  # mid-turn: the leaf standing up
+				await process_frame
+			root.get_viewport().get_texture().get_image().save_png("%s_turn%d.png" % [prefix, sp])
+			for i in 60:
+				await process_frame
+		for i in 12:
 			await process_frame
-		root.get_viewport().get_texture().get_image().save_png("%s_%d.png" % [prefix, p])
+		root.get_viewport().get_texture().get_image().save_png("%s_%d.png" % [prefix, sp])
 	quit()

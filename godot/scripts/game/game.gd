@@ -1551,9 +1551,9 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	if asleep:
 		return
 	if ledger and ledger.open:
-		var tab := ledger.tab_at_ray(origin, dir)
-		if tab != -1:
-			ledger.set_page(tab)  # -2 (the panel, not a tab) changes nothing but still uses the press
+		var side := ledger.page_hit_ray(origin, dir)
+		if side != 0:
+			ledger.turn(side)  # the right page turns forward, the left back; the press is used up either way
 			return
 	var b := _button_at(origin, dir)
 	if b != "":
@@ -2132,9 +2132,9 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	var tp := h.touch_point()  # where the player sees the pinch (the node's position for controllers and the mouse)
 	if ledger and ledger.open:
-		var tab := ledger.tab_at_point(tp, 0.03)
-		if tab != -1:
-			ledger.set_page(tab)
+		var side := ledger.page_hit_point(tp, 0.05)
+		if side != 0:
+			ledger.turn(side)
 			return
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(tp, card_reach())

@@ -1773,17 +1773,25 @@ func _ledger() -> void:
 	check("it never opens on the title screen", not g.ledger.open)
 	g.asleep = false
 	g.ledger.set_open(true)
-	check("the tabs turn the page and wrap", g.ledger.page == 0)
-	g.ledger.turn(1)
-	g.ledger.turn(-2)
-	check("turning back from the first page reaches the last", g.ledger.page == LedgerPage.TABS.size() - 1)
+	check("the book opens at its first spread", g.ledger.page == 0 and g.ledger.spread == 0)
+	check("turning back from the first spread does nothing", not g.ledger.turn(-1) and g.ledger.spread == 0)
+	check("tapping forward turns a leaf: the next spread", g.ledger.turn(1) and g.ledger.spread == 1 and g.ledger.page == 2)
+	check("a leaf cannot be turned while another is turning", not g.ledger.turn(1))
+	for i in 40:
+		await process_frame
+		await create_timer(0.02).timeout
+	check("the leaf lands and can be turned on", g.ledger.turn(1) and g.ledger.spread == 2)
+	for i in 40:
+		await process_frame
+		await create_timer(0.02).timeout
+	check("the last spread cannot turn further", not g.ledger.turn(1) and LedgerPage.COUNT == 6)
 	g.ledger.scale = Vector3.ONE
-	var tab2 := LedgerPage.tab_rect(2)
-	var local := Vector3((tab2.get_center().x / LedgerPage.SIZE.x - 0.5) * Ledger.W, (0.5 - tab2.get_center().y / LedgerPage.SIZE.y) * Ledger.H, 0)
-	var world: Vector3 = g.ledger._quad.global_transform * local
-	check("a fingertip on a tab finds that tab", g.ledger.tab_at_point(world, 0.03) == 2)
-	check("a ray at a tab finds that tab", g.ledger.tab_at_ray(world + g.ledger.global_basis.z.normalized() * 0.3, -g.ledger.global_basis.z.normalized()) == 2)
-	check("a point off the panel finds nothing", g.ledger.tab_at_point(world + Vector3(1, 0, 0), 0.03) == -1)
+	var right: Vector3 = g.ledger._book.global_transform * Vector3(Ledger.PW / 2.0, 0, 0)
+	var left: Vector3 = g.ledger._book.global_transform * Vector3(-Ledger.PW / 2.0, 0, 0)
+	var away: Vector3 = g.ledger._book.global_basis.z.normalized()
+	check("a fingertip on the right page finds it, on the left page finds it", g.ledger.page_hit_point(right, 0.05) == 1 and g.ledger.page_hit_point(left, 0.05) == -1)
+	check("a ray at the left page finds it", g.ledger.page_hit_ray(left + away * 0.3, -away) == -1)
+	check("a point off the book finds nothing", g.ledger.page_hit_point(right + Vector3(1, 0, 0), 0.05) == 0 and g.ledger.page_hit_point(right + away * 0.3, 0.05) == 0)
 	g.queue_free()
 	await process_frame
 
