@@ -907,7 +907,7 @@ func _play_hourglass() -> void:
 	if _hourglass == null or not is_inside_tree():
 		return
 	_hourglass.visible = true
-	_hourglass.position = Vector3(0, 0.11, 0)  # rises from the shrine (its __rewind_anchor)
+	_hourglass.position = Vector3(0, 0.17, 0)  # rises from the statue (its __rewind_anchor)
 	_hourglass.rotation = Vector3.ZERO
 	var top: Node3D = _hourglass.find_child("*__sand_top", true, false)
 	var bottom: Node3D = _hourglass.find_child("*__sand_bottom", true, false)
@@ -1481,15 +1481,15 @@ func _setup_shrine(node: Node3D) -> void:
 	if candle:
 		_shrine_flame = MeshInstance3D.new()  # a flame is Godot's job, never glowing geometry in the model
 		var fm := SphereMesh.new()
-		fm.radius = 0.0022
-		fm.height = 0.0075
+		fm.radius = 0.0034
+		fm.height = 0.0110
 		_shrine_flame.mesh = fm
 		_shrine_flame.material_override = ModelUtil.flat_material(Color("FFD45A"), true)  # fire_yellow
 		candle.add_child(_shrine_flame)
 		_shrine_light = OmniLight3D.new()
 		_shrine_light.light_color = Color("F6A45D")  # lantern_glow
-		_shrine_light.omni_range = 0.22
-		_shrine_light.light_energy = 0.4
+		_shrine_light.omni_range = 0.12  # the ember is in the statue's hands, close to its robe
+		_shrine_light.light_energy = 0.2
 		candle.add_child(_shrine_light)
 	_update_shrine()
 
@@ -1501,7 +1501,7 @@ func _update_shrine() -> void:
 	if _shrine_cracks:
 		_shrine_cracks.visible = loop >= 1
 	if _shrine_light:
-		_shrine_light.light_energy = 0.25 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.9
+		_shrine_light.light_energy = 0.15 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.35
 	var want := mini(_helped, 6)
 	var bowl: Node3D = shrine.find_child("*__offering_anchor", true, false)
 	if bowl == null:
@@ -2445,7 +2445,7 @@ func _refresh_hud() -> void:
 		_fast_label.text = "2x" if is_fast() else ""
 	_show_toast(last_message)
 	if _shrine_light:
-		_shrine_light.light_energy = 0.25 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.9
+		_shrine_light.light_energy = 0.15 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.35
 
 
 func _refresh_buttons() -> void:

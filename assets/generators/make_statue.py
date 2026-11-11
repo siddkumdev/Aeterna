@@ -59,9 +59,9 @@ def figure(z0, scale=1.0, seated=False, long_robe=False, sleeves=False):
     hz = body_top + 0.012 * s
     P.append(bc.blob("cowl", 0.0165 * s, (0, 0, hz), ROBE_D, 2, (1.0, 0.95, 1.15)))
     P.append(bc.cone("peak", 0.011 * s, 0.0008 * s, 0.014 * s, (0, 0.004 * s, hz + 0.018 * s), ROBE_D, 8))
-    P.append(bc.blob("face", 0.0105 * s, (0, -0.0095 * s, hz - 0.001 * s), "ink", 2, (0.95, 0.55, 1.1)))
+    P.append(bc.blob("face", 0.0105 * s, (0, -0.0128 * s, hz - 0.001 * s), "ink", 1, (0.95, 0.60, 1.1)))
     P.append(bc.box("brow", (0.014 * s, 0.002 * s, 0.002 * s), (0, -0.0140 * s, hz + 0.0065 * s), TRIM))
-    P.append(bc.blob("shoulders", 0.016 * s, (0, 0, body_top - 0.003 * s), ROBE_D, 2, (1.5, 0.8, 0.5)))
+    P.append(bc.blob("shoulders", 0.016 * s, (0, 0, body_top - 0.003 * s), ROBE_D, 1, (1.5, 0.8, 0.5)))
     # two cupped hands: forearms come forward from the shoulders, the palms meet under a small ember bowl
     ez = (z0 + 0.034 * s) if seated else body_top - 0.016 * s
     for sx in (-1, 1):
@@ -111,7 +111,7 @@ def variant_c():
 
 
 def place_disc(name, r, loc, col):
-    return bc.blob(name, r, loc, col, 2, (1.0, 0.14, 1.0))  # a flat disc facing -Y
+    return bc.blob(name, r, loc, col, 1, (1.0, 0.14, 1.0))  # a flat disc facing -Y
 
 
 def variant_d():
@@ -126,7 +126,21 @@ def variant_d():
     return body + fig, ez, bz, top, 0.0500, 0.012
 
 
-VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
+def variant_m():
+    """The pick (the user, 2026-11-11: "A+C"): A's round mossy plinth and straight pilgrim, C's long robe, drooping sleeves and gold sun-disc."""
+    body = [bc.cone("plinth", 0.046, 0.040, 0.014, (0, 0, 0.007), STONE, 16), bc.cone("plinth_top", 0.036, 0.034, 0.006, (0, 0, 0.017), STONE_D, 16)]
+    body += moss_and_flowers()
+    fig, ez, bz, top = figure(0.020, 1.0, long_robe=True, sleeves=True)
+    z = top - 0.012
+    fig += [bc.cone("stalk", 0.0022, 0.0022, 0.026, (0, 0.016, top - 0.026), STONE_D, 6),
+            place_disc("sun", 0.021, (0, 0.019, z), TRIM), place_disc("sunrim", 0.026, (0, 0.0205, z), ROBE_D)]
+    for k in range(10):
+        a = 2 * PI * k / 10
+        fig.append(bc.box("ray", (0.0030, 0.0020, 0.0070), (math.cos(a) * 0.0280, 0.0180, z + math.sin(a) * 0.0280), TRIM, 0.0))
+    return body + fig, ez, bz, top + 0.014, 0.0200, 0.010
+
+
+VARIANTS = {"M": variant_m, "A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
 
 
 def tris(objs):
