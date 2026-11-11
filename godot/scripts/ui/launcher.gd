@@ -6,6 +6,7 @@ extends Node
 ## (pick up a card, set it on the grass, help someone, tap a villager, start the night).
 ## It owns no game rules: it only drives Game's public state (asleep, press_override) and reads it.
 
+const AUTO_START := 6.0  # s of title before the story begins on its own
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
@@ -30,6 +31,9 @@ var _step := 0
 var _step_time := 0.0
 var _card: TitleCard
 var _t := 0.0
+var _hint_root: Node3D
+var _hint_card: TitleCard
+var _auto_at := -1.0  # when the story starts by itself (the title shows a few seconds first)
 var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
 
 
@@ -49,6 +53,7 @@ func _ready() -> void:
 	if game.life:
 		game.life._nightfall()  # everyone is indoors
 	_build_title()
+	_auto_at = AUTO_START
 
 
 func _build_title() -> void:
@@ -129,6 +134,12 @@ func _place_xr_rig() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _auto_at >= 0.0 and _state == "title":  # the whole story starts by itself; a press on Wake just starts it sooner
+		_auto_at -= delta
+		if _auto_at < 0.0:
+			_press_plaque("wake")
+	elif _state != "title":
+		_auto_at = -1.0
 	if _state != "playing":
 		_place_xr_rig()
 	if _state != "playing":
@@ -281,7 +292,20 @@ func _wake() -> void:
 
 
 func _hint(line: String) -> void:
-	Bubble.say(game.board.get_node("UI"), Vector3(0, 0.17, GameConfig.SIZE * GameConfig.CELL / 2.0 + 0.1), line, 600.0)  # on the UI node: the shrine bubbles use the board
+	## The tutorial, in the world and big, from the moment the story ends (the user, 2026-11-11: "the tutorial needs to be
+	## there when the game starts, not only in the ledger"). One gilded line over the island, its own parent so the story's
+	## title cards never replace it.
+	if _hint_root == null or not is_instance_valid(_hint_root):
+		_hint_root = Node3D.new()
+		_hint_root.name = "HintRoot"
+		game.board.add_child(_hint_root)
+	_hint_card = TitleCard.show_over(_hint_root, Vector3(0, 0.27, 0.15), line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 54)
+
+
+func _end_hints() -> void:
+	if _hint_card and is_instance_valid(_hint_card):
+		_hint_card.dismiss()
+	_hint_card = null
 
 
 func _tutorial(delta: float) -> void:
@@ -305,6 +329,4 @@ func _tutorial(delta: float) -> void:
 		if _step < HINTS.size():
 			_hint(HINTS[_step])
 		else:
-			var old := game.board.get_node("UI").get_node_or_null("Bubble")
-			if old:
-				old.queue_free()
+			_end_hints()
