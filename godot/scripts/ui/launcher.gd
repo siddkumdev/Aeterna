@@ -236,44 +236,24 @@ func _wake() -> void:
 		_xr_rig.queue_free()
 		_xr_rig = null
 	var v: VeilDome = game.veil
-	var gold := Color("FFD45A")  # fire_yellow
-	var amber := Color("F6A45D")  # lantern_glow
-	var north := Vector3(0, 0.08, -GameConfig.SIZE * GameConfig.CELL / 2.0)
-	var lines := [
-		["You are the god of this small island.", "", func():
-			if game.lighting: game.lighting.set_mood("dawn", 2.0)],
-		["Each morning your people wake,", "and they believe in you.", func():
-			if game.lighting: game.lighting.set_mood("day", 2.0)
-			if game.life: game.life._morning()],
-		["Their faith weaves your Veil.", "It keeps the dark away.", func():
-			for h in game.houses:
-				VfxKit.burst(game.shots_root, h.global_position + Vector3(0, 0.1, 0), gold, amber, 14, 0.08, 1.6, 0.005, 0.02)
-			if v: v.knit(1.6)],
-		["But a god the world forgot", "is watching from the Dark Wood.", func():
-			game._set_light(1)
-			VfxKit.burst(game.shots_root, game.board.to_global(north), Color("9C3EB0"), Color("5A2A78"), 30, 0.12, 2.4, 0.008, 0.01)],
-		["His name is Skotos.", "At every nightfall, he breaks the Veil.", func():
-			if game.life: game.life._nightfall()
-			if v: v.crack(1.8)],
-		["The dark pours in.", "", func():
-			if v: v.shatter(1.2)
-			VfxKit.burst(game.shots_root, game.board.global_position + Vector3(0, 0.1, 0), Color("9C3EB0"), Color("E8452C"), 40, 0.2, 1.6, 0.007, 0.05)],
-		["When the village falls,", "you do what only a god can.", func():
-			game._play_hourglass()],
-		["You turn time back,", "and try again.", func():
-			game._set_light(0)
-			if v: v.knit(1.8)
-			if game.life: game.life._morning()],
-	]
-	for entry in lines:
-		TitleCard.show_over(game.board, Vector3(0, 0.36, -0.1), entry[0], entry[1], -1.0)
-		entry[2].call()
-		var left := 3.8
-		while left > 0.0 and not _skip:
-			await get_tree().process_frame
-			left -= get_process_delta_time()
-		if _skip:
-			break
+	# The opening is a puppet theatre of its own in front of you (scripts/ui/opening_stage.gd), not the island acted out.
+	game.board.visible = false
+	if v:
+		v.snap(0.0, 0.0)
+	var stage := OpeningStage.new()
+	stage.game = game
+	stage.name = "OpeningStage"
+	game.add_child(stage)
+	var cam: Camera3D = game._xr_cam if game._xr_cam else get_viewport().get_camera_3d()
+	stage.place(cam, game.board.global_position + Vector3(0, 0.5, 1.0))
+	await stage.play()
+	_skip = stage._skipped
+	stage.queue_free()
+	game.board.visible = true
+	if game.lighting:
+		game.lighting.set_mood("dawn", 0.5)
+	if game.life:
+		game.life._morning()
 	game._set_light(0)
 	if v:
 		v.snap(1.0, 0.0)

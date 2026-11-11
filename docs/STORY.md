@@ -128,3 +128,14 @@ Proposed set (the user trims): kite in the oak (Wren); the lost lamb (Hob); rain
 2. The Warden's name (the inscription reveals it): propose three, e.g. Ysolen, Orrin, Maeve.
 3. Villager names and ages as above, or change any?
 4. Is the dawn-prayer device (Maren speaking to you each morning) the right clue carrier, or do you want a different one?
+
+## The opening (2026-11-11, the user: a puppet show, about two minutes)
+
+A paper-cutout puppet theatre in front of the player before the island appears (`godot/scripts/ui/opening_stage.gd`). Six chapters of 20 s, each with three gilded captions; hold a pinch to skip. Music and effects: the existing sounds (dawn bell, forest rumble, boss roar, night fall, heal chime).
+
+1. **The Island:** "Beyond the edge of the map, a very small island floats." / "Twelve people live on it, and one small god who watches over them." / "Their faith weaves the Veil: a warm dome of light that keeps the dark away."
+2. **The Forgotten:** "In the Dark Wood around it, another god once ruled." / "His name was Skotos. His temples rotted. His people forgot him." / "And a god who is forgotten goes hungry."
+3. **The Curse:** "So Skotos laid a curse upon your island:" / "At every nightfall, your Veil will fail." / "Let us see how long they believe in a god who cannot keep the dark out."
+4. **The Fall:** "Five days to build. Five nights to hold." / "The dark grows stronger each night." / "And on the fifth night, the village always falls."
+5. **The Hourglass:** "But you are a god." / "You turn the hourglass, and time runs back." / "The village wakes again. Only you remember."
+6. **Your Turn:** "Each day, build before the sun sets." / "Help your people. Their faith is your light." / "Watch over them."
