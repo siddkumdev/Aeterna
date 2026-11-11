@@ -6,20 +6,26 @@ extends Node3D
 const PARCHMENT := Color("F4E4B8")
 const EDGE := Color("A87A1C")
 const INK := Color("111C30")
-const WIDTH := 0.2  # m
+const WIDTH := 0.16  # m; compact enough for the village view while still readable at seated VR distance
+const FONT_SIZE := 42
+const PIXEL_SIZE := 0.00036
+const ACTIVE_GROUP := "active_speech_bubble"
 
 var label: Label3D
 var text := ""
 
 
 static func say(parent: Node3D, at: Vector3, line: String, seconds := 4.5, colour := INK) -> Bubble:
-	## Puts a bubble on `parent` at local position `at`, replacing one already there.
-	var old := parent.get_node_or_null("Bubble")
-	if old:
-		old.queue_free()
-		old.name = "BubbleOld"
+	## Puts one bubble over `parent`. Speech is globally exclusive so villagers cannot cover each other.
+	var tree := parent.get_tree()
+	if tree:
+		for old in tree.get_nodes_in_group(ACTIVE_GROUP):
+			old.remove_from_group(ACTIVE_GROUP)
+			old.name = "BubbleOld"
+			old.queue_free()
 	var b := Bubble.new()
 	b.name = "Bubble"
+	b.add_to_group(ACTIVE_GROUP)
 	b.position = at
 	parent.add_child(b)
 	b.set_text(line, colour)
@@ -34,9 +40,11 @@ static func say(parent: Node3D, at: Vector3, line: String, seconds := 4.5, colou
 
 func set_text(line: String, colour := INK) -> void:
 	text = line
-	var lines := ceili(float(line.length()) / 17.0) + 1  # ~19 characters fit a line; word wrapping wastes some, so plan a spare line
-	var h := 0.012 + lines * 0.021  # one line of 44 px text at 0.00042 m/px is ~0.022 m tall
-	position.y += (lines - 2) * 0.01  # taller boxes sit a little higher, so the foot stays where it was
+	var chars_per_line := 16.0
+	var lines := ceili(float(line.length()) / chars_per_line) + 1  # allow for word-wrap gaps
+	var line_height := FONT_SIZE * PIXEL_SIZE * 1.12
+	var h := 0.01 + lines * line_height
+	position.y += (lines - 2) * line_height * 0.45  # taller boxes sit higher, keeping their lower edge near the speaker
 	var edge := MeshInstance3D.new()
 	var eq := QuadMesh.new()
 	eq.size = Vector2(WIDTH + 0.008, h + 0.008)
@@ -52,8 +60,8 @@ func set_text(line: String, colour := INK) -> void:
 	add_child(paper)
 	label = Label3D.new()
 	label.text = line
-	label.font_size = 44
-	label.pixel_size = 0.00042
+	label.font_size = FONT_SIZE
+	label.pixel_size = PIXEL_SIZE
 	label.width = (WIDTH - 0.02) / label.pixel_size
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.modulate = colour
