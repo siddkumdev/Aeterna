@@ -22,7 +22,7 @@ const HINTS := [
 	"Set it on the grass and let go.",
 	"Someone needs help: find a red ! and lift what they need.",
 	"Tap a villager to hear their thoughts.",
-	"When you are ready, start the night.",
+	"Night falls on its own. Pinch the hourglass to hurry the day.",
 ]
 
 static var prefer_controllers := false  # placeholder for the Hands / Controllers plaque

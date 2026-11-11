@@ -199,3 +199,11 @@ const TOWER_ORDER: Array[String] = ["fire", "guard", "crossbow", "airship"]
 # (undo a mistake), half (rounded down) once a night has passed.
 const SELL_LATER := 0.5
 const TOWER_SIZE := Vector2i(2, 2)
+
+# The day (the user, 2026-11-11): it ends by itself; the tray hourglass hurries it. At night the hourglass reads
+# "2x" and really runs NIGHT_FAST times as fast. Selling is a pinch held on a built tower for CRUSH_HOLD seconds.
+const DAY_LENGTH := 180.0  # s
+const DAY_DUSK_WARN := 20.0  # s before the end: the light turns to dusk
+const DAY_FAST := 10.0
+const NIGHT_FAST := 4.0
+const CRUSH_HOLD := 1.2  # s

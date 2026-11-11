@@ -6,6 +6,7 @@ extends Node3D
 ## Layout: cards stand slightly tilted back in a shallow arc, front toward the player (who sits on +Z).
 
 const CARD_SPACING := 0.07
+const ENDS := 0.09  # room at each end of the tray for the faith seal and the small hourglass
 const FAN_ARC := 0.06  # radians of tilt per card away from the middle
 const OAK := Color("9A6538")  # wood_mid
 const OAK_DARK := Color("5B2920")  # wood_dark
@@ -44,7 +45,7 @@ func set_cards(list: Array[Dictionary]) -> void:
 			c.queue_free()
 	cards.clear()
 	var n := list.size()
-	_build_base(maxf(0.3, n * CARD_SPACING + 0.08))
+	_build_base(maxf(0.3, n * CARD_SPACING + ENDS * 2.0))
 	for i in n:
 		var card := Card3D.new()
 		add_child(card)  # in the tree first: the portrait render needs get_tree()

@@ -116,6 +116,18 @@ var _hand_ring: MeshInstance3D
 var _patches: Array = []  # burning ground (Hot Coals Legendary): {"pos", "r", "dps", "left"}
 var _held_tonight := false  # Sturdy Homes Legendary: one house held at 1 HP per night
 var _hourglass: Node3D
+var day_time := 0.0  # seconds of this day gone (the day ends by itself at GameConfig.DAY_LENGTH)
+var day_fast := false  # the tray hourglass, by day: the day runs GameConfig.DAY_FAST times as fast
+var day_clock := true  # the day only runs out in a played game (with the rig, awake)
+var _sun: MeshInstance3D  # travels its arc over the island through the day
+var _dusk_warned := false
+var _fast_glass: Node3D  # the small hourglass on the tray: pinch = fast
+var _fast_label: Label3D
+var _faith_seal: Node3D  # the wax seal at the tray's corner, with the faith on it
+var _faith_label: Label3D
+var _toast: Label3D  # the one short message line, fading
+var _toast_last := ""
+var _crush := {}  # selling by hand: {"tower", "hand", "t", "at"} while a built tower is pinched and held
 var warden: Warden  # the boss's phases, while the Warden is alive (null otherwise)
 var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i, "kind": String}], sorted by time
 var _rng := RandomNumberGenerator.new()  # seeded per night: cluster sizes, gap cells, walking offsets
@@ -222,7 +234,7 @@ func new_run(rng_seed: int) -> void:
 	cards = {}
 	offers = []
 	speed = 1.0
-	_start_loop("Day 1. Spend faith on towers, then start the night.")
+	_start_loop("Day 1. Build before the sun sets.")
 
 
 func _start_loop(message: String) -> void:
@@ -317,6 +329,13 @@ func _set_phase(p: int, message: String) -> void:
 	var was := phase
 	phase = p
 	last_message = message
+	day_fast = false
+	crush_cancel()
+	if p == Phase.DAY:
+		day_time = 0.0
+		_dusk_warned = false
+	if p != Phase.NIGHT and speed > 1.0 and speed <= GameConfig.NIGHT_FAST:
+		speed = 1.0  # the hourglass is let go when the night ends (debug speeds stay)
 	if p != Phase.DAY:
 		select("")
 	if p != Phase.NIGHT and spells:
@@ -836,6 +855,96 @@ func set_speed(s: float) -> void:
 	_refresh_ui()
 
 
+func toggle_fast() -> void:
+	## The tray hourglass (the user, 2026-11-11). By day it hurries the day on; at night it reads "2x" and runs
+	## GameConfig.NIGHT_FAST (4) times as fast.
+	if phase == Phase.DAY:
+		day_fast = not day_fast
+	elif phase == Phase.NIGHT:
+		set_speed(1.0 if speed > 1.0 else GameConfig.NIGHT_FAST)
+	snd("pinch")
+	_refresh_ui()
+
+
+func is_fast() -> bool:
+	return day_fast if phase == Phase.DAY else (phase == Phase.NIGHT and speed > 1.0)
+
+
+func day_left() -> float:
+	return maxf(0.0, GameConfig.DAY_LENGTH - day_time)
+
+
+func _tick_day(delta: float) -> void:
+	## The day runs out by itself (the user, 2026-11-11: "day ends at 3 min"). The sun crosses the island, the
+	## light warms toward dusk near the end, and the night begins.
+	var running := phase == Phase.DAY and day_clock and not asleep
+	if _sun:
+		_sun.visible = running
+	if not running:
+		return
+	day_time += delta * (GameConfig.DAY_FAST if day_fast else 1.0)
+	var f := clampf(day_time / GameConfig.DAY_LENGTH, 0.0, 1.0)
+	if _sun:
+		var a := lerpf(0.14, 0.97, f) * PI  # rises in the east (+X), sets in the west
+		_sun.position = Vector3(cos(a) * 0.78, 0.06 + sin(a) * 0.42, -0.3)
+		var low := clampf((f - 0.75) / 0.25, 0.0, 1.0)
+		(_sun.material_override as StandardMaterial3D).albedo_color = Color("FFD45A").lerp(Color("E8452C"), low)  # fire_yellow -> fire_red
+	if not _dusk_warned and day_left() <= GameConfig.DAY_DUSK_WARN:
+		_dusk_warned = true
+		if lighting:
+			lighting.set_mood("dusk", minf(GameConfig.DAY_DUSK_WARN, 8.0))
+		last_message = "Dusk is coming."
+		_refresh_ui()
+	if day_time >= GameConfig.DAY_LENGTH:
+		start_night()
+
+
+func crush_start(t: Tower, hand: GameHand, at: Vector3) -> bool:
+	## Selling (the user, 2026-11-11: "crush to embers"): pinch a built tower and hold. Day only.
+	if phase != Phase.DAY or t == null or not towers.has(t):
+		return false
+	_crush = {"tower": t, "hand": hand, "t": 0.0, "at": at}
+	last_message = "Hold to return the %s: +%d faith." % [GameConfig.TOWERS[t.kind]["name"], sell_value(t)]
+	_refresh_ui()
+	return true
+
+
+func crush_cancel() -> void:
+	if _crush.is_empty():
+		return
+	var t: Tower = _crush["tower"]
+	if is_instance_valid(t):
+		t.scale = Vector3.ONE
+		t.tint(null)
+	_crush = {}
+
+
+func crush_step(delta: float) -> bool:
+	## true when the hold finished and the tower was sold.
+	if _crush.is_empty():
+		return false
+	var t: Tower = _crush["tower"]
+	var hand: GameHand = _crush["hand"]
+	if not is_instance_valid(t) or phase != Phase.DAY or (hand and hand.global_position.distance_to(_crush["at"]) > 0.05):
+		crush_cancel()
+		return false
+	_crush["t"] += delta
+	var f := clampf(_crush["t"] / GameConfig.CRUSH_HOLD, 0.0, 1.0)
+	t.scale = Vector3(1.0 + f * 0.08, 1.0 - f * 0.45, 1.0 + f * 0.08)  # pressed down under the hand
+	if _sell_mat == null:
+		_make_sell_mat()
+	t.tint(_sell_mat if f > 0.15 else null)
+	if f < 1.0:
+		return false
+	var at := t.global_position + Vector3(0, 0.04, 0)
+	_crush = {}
+	t.scale = Vector3.ONE
+	sell(t)
+	VfxKit.burst(shots_root, at, VfxKit.FIRE_YELLOW, VfxKit.FIRE_ORANGE, 26, 0.09, 1.1, 0.006, 0.07)
+	_faith_sparkle(board.global_position + Vector3(0, 0.12, 0))  # the faith arrives at the centre
+	return true
+
+
 func step(delta: float) -> void:
 	## One game tick. Only the night moves; building happens on input.
 	if phase != Phase.NIGHT:
@@ -1099,12 +1208,16 @@ func _tint_sell_target() -> void:
 	_sell_target = hot
 	if hot:
 		if _sell_mat == null:
-			_sell_mat = ModelUtil.flat_material(Color(1.0, 0.3, 0.24))  # solid red (Siddharth 2026-11-04): over the palette's own colours, so a tower's parts stay readable
-			_sell_mat.albedo_texture = load("res://assets/palette/palette_atlas.png")
-			_sell_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-			_sell_mat.emission_enabled = true
-			_sell_mat.emission = Color(0.42, 0.04, 0.03)  # lifts the black hat and the dark parts into red too
+			_make_sell_mat()
 		hot.tint(_sell_mat)
+
+
+func _make_sell_mat() -> void:
+	_sell_mat = ModelUtil.flat_material(Color(1.0, 0.3, 0.24))  # solid red (Siddharth 2026-11-04): over the palette's own colours, so a tower's parts stay readable
+	_sell_mat.albedo_texture = load("res://assets/palette/palette_atlas.png")
+	_sell_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_sell_mat.emission_enabled = true
+	_sell_mat.emission = Color(0.42, 0.04, 0.03)  # lifts the black hat and the dark parts into red too
 
 
 func _update_ghost() -> void:
@@ -1332,6 +1445,8 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 			_refresh_ui()
 		return
 	if selected == "":
+		if _tray and phase == Phase.DAY:
+			crush_start(tower_at(_board_cell_at(origin, dir)), null, Vector3.ZERO)  # desktop: hold the mouse on a tower
 		return
 	if selected == "sell":
 		var bc := _board_cell_at(origin, dir)
@@ -1365,6 +1480,8 @@ func _press_button(id: String) -> void:
 		pick_spell(id.substr(6))
 		return
 	match id:
+		"fast":
+			toggle_fast()
 		"night":
 			start_night()
 		"restart":
@@ -1407,7 +1524,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 				start_night()
 			KEY_TAB:
-				set_speed(1.0 if speed == 2.0 else 2.0)
+				toggle_fast()
 			KEY_F5:
 				if OS.is_debug_build():
 					set_speed(1.0 if speed == 5.0 else 5.0)
@@ -1473,6 +1590,9 @@ func _process(delta: float) -> void:
 	_feed_grass()
 	if not with_rig:
 		return
+	_tick_day(delta)
+	crush_step(delta)
+	_tick_tray_bits(delta)
 	_update_mouse_hand()
 	_update_lens()
 	_update_ui_rig(delta)
@@ -1572,6 +1692,112 @@ func _build_ui() -> void:
 		ui.add_child(_tray)
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
+	if _tray:
+		_hud.visible = false  # 2026-11-11 (the user): no text wall. Faith is on the seal, the day is the sun, the rest is in the ledger
+		_msg.visible = false
+		_build_tray_bits()
+
+
+func _build_tray_bits() -> void:
+	## What stands on the tray beside the cards: the faith seal (left), the small hourglass (right) and the one
+	## fading message line above. And the sun that carries the day over the island.
+	_faith_seal = Node3D.new()
+	_faith_seal.name = "FaithSeal"
+	_tray.add_child(_faith_seal)
+	var wax := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.021
+	cyl.bottom_radius = 0.023
+	cyl.height = 0.006
+	cyl.radial_segments = 20
+	wax.mesh = cyl
+	wax.material_override = ModelUtil.flat_material(Color("E8452C"))  # fire_red wax
+	_faith_seal.add_child(wax)
+	var ring := MeshInstance3D.new()
+	var tor := TorusMesh.new()
+	tor.inner_radius = 0.0215
+	tor.outer_radius = 0.0245
+	tor.rings = 24
+	tor.ring_segments = 6
+	ring.mesh = tor
+	ring.material_override = ModelUtil.flat_material(Color("F2B630"))  # rarity_gold rim
+	ring.position.y = 0.002
+	_faith_seal.add_child(ring)
+	_faith_label = Label3D.new()
+	_faith_label.font_size = 64
+	_faith_label.pixel_size = 0.00036
+	_faith_label.outline_size = 10
+	_faith_label.modulate = Color("FFD45A")
+	_faith_label.outline_modulate = Color("5B2920")
+	_faith_label.rotation_degrees.x = -90
+	_faith_label.position.y = 0.0045
+	_faith_seal.add_child(_faith_label)
+	_faith_seal.rotation_degrees.x = 40  # tipped up toward the eyes
+	var hold := MeshInstance3D.new()  # the pressable spot (ray) around the small hourglass
+	hold.name = "FastGlass"
+	_tray.add_child(hold)
+	_fast_glass = hold
+	var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v02.glb")
+	if hg:
+		var m: Node3D = hg.instantiate()
+		m.name = "Model"
+		m.scale = Vector3.ONE * 0.34
+		hold.add_child(m)
+	_fast_label = Label3D.new()
+	_fast_label.font_size = 56
+	_fast_label.pixel_size = 0.00036
+	_fast_label.outline_size = 10
+	_fast_label.modulate = Color("FFD45A")
+	_fast_label.outline_modulate = Color("5B2920")
+	_fast_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_fast_label.position = Vector3(0, 0.06, 0)
+	hold.add_child(_fast_label)
+	var box := Vector3(0.045, 0.06, 0.045)
+	_buttons["fast"] = {"node": hold, "mat": StandardMaterial3D.new(), "label": _fast_label, "hover": false, "box": AABB(Vector3(-box.x / 2.0, 0, -box.z / 2.0), box)}
+	_toast = Label3D.new()
+	_toast.name = "Toast"
+	_toast.font_size = 44
+	_toast.pixel_size = 0.00036
+	_toast.outline_size = 10
+	_toast.modulate = Color("F4E4B8")  # wall_cream
+	_toast.outline_modulate = Color("5B2920")
+	_toast.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_toast.no_depth_test = true
+	_toast.render_priority = 10
+	_toast.position = Vector3(0, 0.125, 0)
+	_toast.modulate.a = 0.0
+	_tray.add_child(_toast)
+	_sun = MeshInstance3D.new()
+	_sun.name = "Sun"
+	var sm := SphereMesh.new()
+	sm.radius = 0.02
+	sm.height = 0.04
+	_sun.mesh = sm
+	_sun.material_override = ModelUtil.flat_material(Color("FFD45A"), true)
+	_sun.visible = false
+	board.add_child(_sun)
+
+
+func _tick_tray_bits(delta: float) -> void:
+	if _fast_glass:
+		var m := _fast_glass.get_node_or_null("Model")
+		if m:
+			m.rotation.z = fmod(m.rotation.z + delta * 5.0, TAU) if is_fast() else lerp_angle(m.rotation.z, 0.0, minf(1.0, delta * 6.0))
+	if _toast and _toast.modulate.a > 0.0:
+		var left: float = _toast.get_meta("left", 0.0) - delta
+		_toast.set_meta("left", left)
+		_toast.modulate.a = clampf(left / 0.6, 0.0, 1.0)
+
+
+func _show_toast(line: String) -> void:
+	if _toast == null or line == _toast_last:
+		return
+	_toast_last = line
+	if line == "" or asleep:
+		return
+	_toast.text = line
+	_toast.modulate.a = 1.0
+	_toast.set_meta("left", 3.2)
 
 
 func _build_spell_tokens(ui: Node3D, x0: float, w: float, gap: float) -> void:
@@ -1667,10 +1893,19 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell = tok
 			_held_spell_hand = h
 			return
+	if _fast_glass and _fast_glass.is_visible_in_tree() and h.global_position.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4):
+		toggle_fast()
+		return
 	if life and not placing():
 		for v in life.villagers:  # a pinch right at a villager (arm's reach, no ray needed)
 			if v.visible and h.global_position.distance_to(v.global_position + Vector3(0, 0.035, 0)) <= reach(GameConfig.TOUCH_REACH):
 				tap_villager(v)
+				return
+	if not placing() and phase == Phase.DAY and h != _mouse_hand:
+		for t in towers:  # a pinch right on a built tower, held: it is crushed back into faith
+			var d := h.global_position - t.global_position
+			if Vector2(d.x, d.z).length() <= GameConfig.CELL * 1.1 and d.y > -0.01 and d.y <= 0.16:
+				crush_start(t, h, h.global_position)
 				return
 	_active_hand = h
 	snd("pinch")
@@ -1717,6 +1952,8 @@ func _eye() -> Vector3:
 
 
 func hand_released(h: GameHand) -> void:
+	if not _crush.is_empty() and (_crush["hand"] == h or (_crush["hand"] == null and h == _mouse_hand)):
+		crush_cancel()
 	if _held_card and _held_card_hand == h:
 		var cd := _held_card
 		var id: String = cd.data.get("id", "")
@@ -1899,6 +2136,11 @@ func _refresh_hud() -> void:
 		t += "   |   x2"
 	_hud.text = t
 	_msg.text = last_message
+	if _faith_label:
+		_faith_label.text = str(faith)
+	if _fast_label:
+		_fast_label.text = "2x" if is_fast() else ""
+	_show_toast(last_message)
 	if _shrine_light:
 		_shrine_light.light_energy = 0.25 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.9
 
@@ -1928,6 +2170,8 @@ func _refresh_buttons() -> void:
 					c = Color8(0xF0, 0xB0, 0x4A)
 				if spells.tokens.has(sid):
 					spells.tokens[sid].visible = phase == Phase.NIGHT and cd <= 0.0
+			"fast":
+				pass
 			"sell":
 				b["node"].visible = day
 				if not day or towers.is_empty():
@@ -1957,6 +2201,10 @@ func _refresh_buttons() -> void:
 					c = Color8(0xF0, 0xB0, 0x4A)
 		if _tray and (GameConfig.TOWER_ORDER.has(id) or id.begins_with("spell_") or id.begins_with("card")):
 			b["node"].visible = false  # the physical cards take these signs' place
+		if _tray and id in ["sell", "night", "speed"]:
+			b["node"].visible = false  # 2026-11-11: no slabs. Selling is a held pinch, the day ends by itself, speed is the tray hourglass
+		if id == "fast":
+			b["node"].visible = phase == Phase.DAY or phase == Phase.NIGHT
 		if b["hover"]:
 			c = c.lightened(0.25)
 		b["mat"].albedo_color = c
@@ -1964,6 +2212,14 @@ func _refresh_buttons() -> void:
 		for sid in spells.tokens:
 			spells.tokens[sid].visible = false  # a spell is a card now, not a token on the table
 		_refresh_tray()
+
+
+func _place_tray_bits(n_cards: int) -> void:
+	var half_w := n_cards * CardTray.CARD_SPACING / 2.0  # the cards; the tray runs CardTray.ENDS further each side
+	if _faith_seal:
+		_faith_seal.position = Vector3(-half_w - 0.045, 0.012, 0.01)
+	if _fast_glass:
+		_fast_glass.position = Vector3(half_w + 0.045, 0.0, -0.005)
 
 
 func _refresh_tray() -> void:
@@ -1993,6 +2249,7 @@ func _refresh_tray() -> void:
 		_held_card = null
 		_held_card_hand = null
 		_tray.set_cards(list)
+		_place_tray_bits(list.size())
 	_refresh_card_availability()
 
 

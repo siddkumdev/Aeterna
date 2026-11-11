@@ -27,6 +27,7 @@ func _initialize() -> void:
 	await _warden()
 	await _doom()
 	await _endings()
+	await _day_clock()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -1550,3 +1551,42 @@ func _audio() -> void:
 	var half := GameConfig.SIZE * GameConfig.CELL / 2.0
 	check("audio: forest one-shots sit on the board's edge ring", absf(absf(lp.x) - half) < GameConfig.CELL or absf(absf(lp.z) - half) < GameConfig.CELL)
 	gk.queue_free()
+
+
+func _day_clock() -> void:
+	## 2026-11-11 (the user): the day ends by itself, the hourglass hurries it, a held pinch sells a tower.
+	var g := await _make_game()
+	g.faith = 500
+	g._tick_day(GameConfig.DAY_LENGTH - 30.0)
+	check("the day runs but is not over before its length", g.phase == Game.Phase.DAY and absf(g.day_left() - 30.0) < 0.01)
+	g.toggle_fast()
+	check("the hourglass by day hurries the day (not the night speed)", g.day_fast and g.is_fast() and g.speed == 1.0)
+	g._tick_day(1.5)
+	check("a hurried day passes DAY_FAST times as fast", absf(g.day_left() - (30.0 - 1.5 * GameConfig.DAY_FAST)) < 0.01)
+	g._tick_day(2.0)
+	check("when the day runs out the night starts by itself", g.phase == Game.Phase.NIGHT and not g.day_fast)
+	g.toggle_fast()
+	check("the hourglass at night runs NIGHT_FAST (shown as 2x)", g.speed == GameConfig.NIGHT_FAST and g.is_fast())
+	g._spawn_queue.clear()
+	g.step(0.05)
+	check("the next day starts from zero at normal speed", g.phase == Game.Phase.DAY and g.day_time == 0.0 and g.speed == 1.0)
+	g.asleep = true
+	g._tick_day(500.0)
+	check("the day does not run while the island is asleep (title screen)", g.phase == Game.Phase.DAY and g.day_time == 0.0)
+	g.asleep = false
+	g.try_build("fire", Vector2i(16, 11))
+	var t: Tower = g.towers[0]
+	var before := g.faith
+	check("a pinch on a built tower starts the crush", g.crush_start(t, null, Vector3.ZERO))
+	g.crush_step(GameConfig.CRUSH_HOLD * 0.5)
+	check("half a hold sells nothing and presses the tower down", g.towers.size() == 1 and t.scale.y < 1.0)
+	g.crush_cancel()
+	check("letting go early puts the tower back as it was", g.towers.size() == 1 and t.scale == Vector3.ONE and g._crush.is_empty())
+	g.crush_start(t, null, Vector3.ZERO)
+	g.crush_step(GameConfig.CRUSH_HOLD * 0.6)
+	var sold := g.crush_step(GameConfig.CRUSH_HOLD * 0.6)
+	check("a full hold sells the tower for its sell value", sold and g.towers.is_empty() and g.faith == before + GameConfig.TOWERS["fire"]["cost"])
+	g.start_night()
+	check("no crushing at night", not g.crush_start(null, null, Vector3.ZERO))
+	g.queue_free()
+	await process_frame
