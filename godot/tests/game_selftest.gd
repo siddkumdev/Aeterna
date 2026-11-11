@@ -1061,7 +1061,20 @@ func _warden() -> void:
 		wisps1 - wisps0 >= GameConfig.WARDEN_WISP_COUNT)
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)
-	check("Warden: empty phase-3 HP kills it", not boss.alive and g.warden == null)
+	check("Warden: empty phase-3 HP starts the final stand (phase 4): it lives, %d vines ring it" % Warden.WARDEN_VINES,
+		boss.alive and g.warden.phase == 4 and g.warden.crystals.size() == Warden.WARDEN_VINES and absf(boss.hp - Warden.WARDEN_P4_HP * scale) < 0.01)
+	boss.hp = 50.0
+	_run(g, 1.0)
+	check("Warden phase 4: it heals while a vine stands", boss.hp > 50.0)
+	for c in g.warden.crystals.duplicate():
+		c.take_damage(9999.0)
+	_run(g, 0.1)
+	var hp_no_vines := boss.hp
+	_run(g, 1.0)
+	check("Warden phase 4: no healing once the vines are down", is_equal_approx(boss.hp, hp_no_vines))
+	boss.take_damage(boss.hp + 1.0)
+	_run(g, 0.1)
+	check("Warden: empty phase-4 HP kills it", not boss.alive and g.warden == null)
 	g.queue_free()
 
 
@@ -1079,6 +1092,8 @@ func _doom() -> void:
 	boss.take_damage(boss.hp + 1.0)  # phase 1 ends
 	g.warden.crystals.clear()
 	g.warden.step(0.1)  # no crystals: enrage into phase 3
+	boss.take_damage(boss.hp + 1.0)
+	_run(g, 0.1)  # the final stand
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)
 	check("doomed Warden keeps a sliver of life", boss.alive and boss.hp > 0.0 and g.warden != null)
@@ -1226,7 +1241,10 @@ func _real_models() -> void:
 		check("%s: the model leaves its HP alone" % k, is_equal_approx(e.hp, hp0))
 	check("every enemy kind wears its model", all_rigged)
 	var boss: Enemy = g._spawn(Vector2i(12, 2), "boss")
-	check("the Warden stays a stand-in until Durva picks one", boss._rig == null)
+	check("the Warden wears the first of its four forms", boss._rig != null and boss._rig.key == "eclipse_bloom_a")
+	for i in 4:
+		boss.set_form(i)
+		check("Warden form %d is its own body (%s)" % [i + 1, Enemy.BOSS_FORMS[i]], boss._rig.key == Enemy.BOSS_FORMS[i] and boss._rig.parts.has("head"))
 	var victim: Enemy = g.enemies[0]
 	victim.take_damage(99999.0)
 	check("a dead enemy leaves its toppling body behind", g._enemies_root.get_children().any(func(c): return c is CharacterRig))

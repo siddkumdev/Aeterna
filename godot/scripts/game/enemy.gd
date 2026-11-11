@@ -23,7 +23,10 @@ const INK := Color(0.118, 0.102, 0.133)
 const MIST := Color(0.62, 0.62, 0.64)
 const DIRT := Color(0.36, 0.25, 0.17)
 const MODELS := {"grunt": ["blightbark", "bark"], "fog": ["blightbark", "bark"], "scout": ["veilrunner", "veil"], "splitter": ["sporebloom", "spore"],
-	"splitling": ["sporebud", "spore"], "wisp": ["lantern_spirit", "lantern"], "tunneler": ["mawdrill", "drill"]}
+	"splitling": ["sporebud", "spore"], "wisp": ["lantern_spirit", "lantern"], "tunneler": ["mawdrill", "drill"],
+	"boss": ["eclipse_bloom_a", "bloom"]}
+const BOSS_FORMS: Array[String] = ["eclipse_bloom_a", "eclipse_bloom_b", "eclipse_bloom_c", "eclipse_bloom_d"]  # one per Warden phase (the user, 2026-11-11: a -> b -> c -> d)
+const BOSS_SCALE := 0.6
 const MODEL_SCALE := 0.75
 
 var game  # Game
@@ -56,6 +59,7 @@ var _flash := 0.0
 var _spark_ms := 0  # last hit spark, so a fast tower does not spam them
 var _dust_t := 0.0  # a Tunneler's mound drops a puff of dirt now and then
 var _body: Node3D
+var _vfx: BossVfx  # the Warden's effects (scripts/vfx/boss_vfx.gd)
 var _rig: CharacterRig  # the real model and its animation (null when effects are off, or for the Warden and its crystals)
 var _mound: MeshInstance3D
 var _surface := Vector2i.ZERO  # where a Tunneler comes up
@@ -133,9 +137,12 @@ func _use_model() -> void:
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
 	_rig.setup(MODELS[kind][0], MODELS[kind][1])
-	_rig.scale = Vector3.ONE * MODEL_SCALE
+	_rig.scale = Vector3.ONE * (BOSS_SCALE if is_boss else MODEL_SCALE)
 	if stats.get("hidden", false):
 		_rig.set_misty()
+	if is_boss and game != null and game.with_rig:
+		_vfx = BossVfx.new()
+		_vfx.setup(self)
 
 
 func _capsule(r: float, h: float) -> void:
@@ -395,6 +402,22 @@ func take_damage(amount: float, flash := true, hit_sound := "") -> void:
 			_rig = null
 		died.emit(self)
 		queue_free()
+
+
+func set_form(i: int) -> void:
+	## The Warden changes body with each phase (BOSS_FORMS). Does nothing while the stand-in capsule is shown.
+	if _rig == null or not is_boss:
+		return
+	var old := _rig
+	_rig = CharacterRig.new()
+	_body.add_child(_rig)
+	_rig.setup(BOSS_FORMS[clampi(i, 0, BOSS_FORMS.size() - 1)], "bloom")
+	_rig.scale = Vector3.ONE * BOSS_SCALE
+	old.queue_free()
+	if _vfx == null:
+		_vfx = BossVfx.new()
+		_vfx.setup(self)
+	_vfx.enter_form(i, true)
 
 
 func set_tint(c: Color) -> void:

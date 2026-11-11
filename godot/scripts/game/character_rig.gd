@@ -49,6 +49,8 @@ var _sq := 1.0  # squash (< 1) and stretch (> 1)
 static func model_path(model_key: String) -> String:
 	if model_key in ["blightbark", "veilrunner", "sporebloom", "sporebud", "lantern_spirit", "mawdrill", "shroom_goblin"]:
 		return "res://assets/enemy/ew_enemy_%s_v01.glb" % model_key
+	if model_key.begins_with("eclipse_bloom_"):  # the Warden's four forms (boss round 9, the user 2026-11-11)
+		return "res://assets/boss/ew_boss_%s_v01.glb" % model_key
 	return "res://assets/village/ew_village_%s_v01.glb" % model_key
 
 
@@ -420,6 +422,19 @@ func _secondary() -> void:
 		_pose("web", Vector3(0.04 * sin(t * 1.3), 0, 0.04 * sin(t * 1.1)))
 	if parts.has("rings"):
 		_pose("rings", Vector3(0, t * (6.0 if anim == "attack" else 3.0), 0))
+	if family == "bloom":  # the Warden: rings turn, relics sway, the eye blinks, the halo and the orbit drift
+		_pose("ring_a", Vector3(0, 0, t * 0.5))
+		_pose("ring_b", Vector3(0, 0, -t * 0.8))
+		_pose("orbit", Vector3(0, t * 0.5, 0))
+		_pose("halo", Vector3(0, 0, t * 0.25))
+		_pose("fan", Vector3(0, 0, -t * 0.15))
+		_pose("petals_outer", Vector3(0, 0, 0.04 * sin(t * 0.9)))
+		_pose("head", Vector3(0.03 * sin(t * 0.7), 0.05 * sin(t * 0.5), 0))
+		for a in ["arm_ur", "arm_ul", "arm_mr", "arm_ml", "arm_lr", "arm_ll"]:
+			_pose(a, Vector3(0.06 * sin(t * 1.3 + a.hash() % 7), 0, 0.05 * sin(t * 0.9 + a.hash() % 5)))
+		var blink := clampf(absf(sin(t * 0.55)) * 30.0 - 28.0, 0.0, 1.0)  # a quick blink every few seconds
+		_pose("lid_top", Vector3(-0.5 * blink, 0, 0))
+		_pose("lid_bottom", Vector3(0.5 * blink, 0, 0))
 	if parts.has("veil"):
 		_pose("veil", Vector3(0.18 * sin(t * 4.0), 0.14 * sin(t * 2.6), 0))
 	if parts.has("spores"):

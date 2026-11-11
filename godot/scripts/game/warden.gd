@@ -8,7 +8,13 @@ extends RefCounted
 ##      crystal is broken (towers and spells hit them like any ground enemy).
 ##   3  Enraged (speed and damage x WARDEN_ENRAGE) with a fresh WARDEN_P3_HP; Wisps rise from random forest
 ##      edges every WARDEN_WISP_EVERY seconds. Killing it ends the night.
-## The loop-2+ 4th phase from the spec is not built.
+##   4  (the user, 2026-11-11: four forms, A -> B -> C -> D) The final stand: it blooms. Thorn vines (WARDEN_VINES,
+##      stand-in crystals) ring it; while any stands it heals WARDEN_VINE_HEAL HP a second. Killing it ends the night.
+## Each phase is its own body: Enemy.BOSS_FORMS[phase - 1]. NOT built yet: the vines slowing the towers' fire.
+
+const WARDEN_VINES := 3  # phase 4: how many vines (stand-in crystals) ring it
+const WARDEN_VINE_HEAL := 4.0  # phase 4: HP a second healed while a vine stands
+const WARDEN_P4_HP := 150.0  # phase 4 HP (before the night/loop scale)
 
 const PURPLE := Color(0.42, 0.25, 0.62)  # the Warden is purple (art bible); the shield tints it
 const ENRAGED := Color(0.45, 0.1, 0.08)
@@ -52,6 +58,14 @@ func step(delta: float) -> void:
 			for i in crystals.size():
 				var a := _spin + TAU * i / crystals.size()
 				crystals[i].position = boss.position + Vector3(cos(a), 0, sin(a)) * GameConfig.WARDEN_CRYSTAL_RING * GameConfig.CELL
+		4:
+			crystals = crystals.filter(func(c): return is_instance_valid(c) and c.alive)
+			_spin += delta * 1.2
+			for i in crystals.size():
+				var a := _spin + TAU * i / crystals.size()
+				crystals[i].position = boss.position + Vector3(cos(a), 0, sin(a)) * GameConfig.WARDEN_CRYSTAL_RING * GameConfig.CELL * 1.3
+			if not crystals.is_empty():
+				boss.hp = minf(boss.hp + WARDEN_VINE_HEAL * _scale * delta, WARDEN_P4_HP * _scale)
 		3:
 			_timer += delta
 			if _timer >= GameConfig.WARDEN_WISP_EVERY:
@@ -64,12 +78,16 @@ func step(delta: float) -> void:
 
 func _phase_over() -> bool:
 	## The boss reached 0 HP: true = the phase ended and it lives on, false = it dies (phase 3).
-	if phase != 1:
+	if phase == 3:
+		_final_stand()
+		return true
+	if phase == 4:
 		if game.is_doomed_night():
 			boss.hp = 1.0  # the fall cannot be won: the Warden keeps a sliver of life (Game.step starts the doom)
 			return true
 		return false
 	phase = 2
+	boss.set_form(1)
 	_timer = 0.0
 	boss.hp = 1.0
 	boss.shielded = true
@@ -88,3 +106,14 @@ func _enrage() -> void:
 	boss.stats["speed"] = GameConfig.ENEMIES["boss"]["speed"] * GameConfig.WARDEN_ENRAGE
 	boss.stats["dps"] = GameConfig.ENEMIES["boss"]["dps"] * GameConfig.WARDEN_ENRAGE
 	boss.set_tint(ENRAGED)
+	boss.set_form(2)
+
+
+func _final_stand() -> void:
+	phase = 4
+	_timer = 0.0
+	boss.hp = WARDEN_P4_HP * _scale
+	boss.set_tint(PURPLE)
+	boss.set_form(3)
+	for i in WARDEN_VINES:
+		crystals.append(game._spawn(boss.cell, "crystal", boss.position))
