@@ -26,6 +26,7 @@ func _initialize() -> void:
 	await _spells()
 	await _mouse_hand_rules()
 	await _warden()
+	await _elites()
 	await _doom()
 	await _endings()
 	await _day_clock()
@@ -1078,6 +1079,23 @@ func _warden() -> void:
 	g.queue_free()
 
 
+func _elites() -> void:
+	## 2026-11-11 (the user): the three scary bosses walk as elite enemies, one a night from the third night, never on the boss night.
+	var g := await _make_game()
+	var seen := {}
+	for n in GameConfig.NIGHTS_PER_LOOP:
+		g.night = n
+		var elites := 0
+		for grp in g.night_plan():
+			for k in grp["enemies"]:
+				if GameConfig.ELITES.has(k):
+					elites += 1
+					seen[k] = true
+		check("night %d plans %d elite(s)" % [n + 1, elites], elites == (1 if n >= GameConfig.ELITE_FROM_NIGHT and n < GameConfig.BOSS_NIGHT else 0))
+	g.queue_free()
+	await process_frame
+
+
 func _doom() -> void:
 	## Night 5 of loops 1-4 always falls: the Warden cannot die, and DOOM_AT seconds in the houses go dark.
 	var g := await _make_game()
@@ -1242,6 +1260,9 @@ func _real_models() -> void:
 	check("every enemy kind wears its model", all_rigged)
 	var boss: Enemy = g._spawn(Vector2i(12, 2), "boss")
 	check("the Warden wears the first of its four forms", boss._rig != null and boss._rig.key == "eclipse_bloom_a")
+	for k in GameConfig.ELITES:
+		var el: Enemy = g._spawn(Vector2i(12, 2), k)
+		check("elite %s wears its model and is not the Warden" % k, el._rig != null and not el.is_boss and el.stats["elite"])
 	for i in 4:
 		boss.set_form(i)
 		check("Warden form %d is its own body (%s)" % [i + 1, Enemy.BOSS_FORMS[i]], boss._rig.key == Enemy.BOSS_FORMS[i] and boss._rig.parts.has("head"))

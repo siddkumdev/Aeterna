@@ -444,6 +444,10 @@ func night_plan() -> Array[Dictionary]:
 	## The coming night's groups (WavePlan), with a Foresight rewrite applied (a closed spawn's groups come
 	## from the next edge instead) and, on the boss night, the boss as its own group. What Foresight reveals.
 	var plan := WavePlan.groups_for(night, run_seed, loop)
+	if night >= GameConfig.ELITE_FROM_NIGHT and night < GameConfig.BOSS_NIGHT:
+		var es: Array = GameConfig.SPAWNS.keys()
+		plan.append({"time": GameConfig.ELITE_DELAY, "spawn": es[(run_seed + loop + night) % es.size()],
+			"enemies": [GameConfig.ELITES[(run_seed + loop * 2 + night) % GameConfig.ELITES.size()]]})
 	if night == GameConfig.BOSS_NIGHT:
 		var edges: Array = GameConfig.SPAWNS.keys()
 		var r := RandomNumberGenerator.new()

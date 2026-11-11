@@ -49,6 +49,8 @@ var _sq := 1.0  # squash (< 1) and stretch (> 1)
 static func model_path(model_key: String) -> String:
 	if model_key in ["blightbark", "veilrunner", "sporebloom", "sporebud", "lantern_spirit", "mawdrill", "shroom_goblin"]:
 		return "res://assets/enemy/ew_enemy_%s_v01.glb" % model_key
+	if model_key in ["cinder_mammoth", "gravemaw_bear", "furnace_orc"]:  # the elites (boss round 5, v02 inferno form)
+		return "res://assets/boss/ew_boss_%s_v02.glb" % model_key
 	if model_key.begins_with("eclipse_bloom_"):  # the Warden's four forms (boss round 9, the user 2026-11-11)
 		return "res://assets/boss/ew_boss_%s_v01.glb" % model_key
 	return "res://assets/village/ew_village_%s_v01.glb" % model_key

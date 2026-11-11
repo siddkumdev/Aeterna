@@ -24,7 +24,9 @@ const MIST := Color(0.62, 0.62, 0.64)
 const DIRT := Color(0.36, 0.25, 0.17)
 const MODELS := {"grunt": ["blightbark", "bark"], "fog": ["blightbark", "bark"], "scout": ["veilrunner", "veil"], "splitter": ["sporebloom", "spore"],
 	"splitling": ["sporebud", "spore"], "wisp": ["lantern_spirit", "lantern"], "tunneler": ["mawdrill", "drill"],
-	"boss": ["eclipse_bloom_a", "bloom"]}
+	"boss": ["eclipse_bloom_a", "bloom"], "elite_mammoth": ["cinder_mammoth", "elite"], "elite_bear": ["gravemaw_bear", "elite"],
+	"elite_orc": ["furnace_orc", "elite"]}
+const ELITE_SCALE := 0.3
 const BOSS_FORMS: Array[String] = ["eclipse_bloom_a", "eclipse_bloom_b", "eclipse_bloom_c", "eclipse_bloom_d"]  # one per Warden phase (the user, 2026-11-11: a -> b -> c -> d)
 const BOSS_SCALE := 0.6
 const MODEL_SCALE := 0.75
@@ -137,7 +139,11 @@ func _use_model() -> void:
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
 	_rig.setup(MODELS[kind][0], MODELS[kind][1])
-	_rig.scale = Vector3.ONE * (BOSS_SCALE if is_boss else MODEL_SCALE)
+	_rig.scale = Vector3.ONE * (BOSS_SCALE if is_boss else (ELITE_SCALE if stats.get("elite", false) else MODEL_SCALE))
+	if stats.get("elite", false):
+		var fire := _rig.marker("flame_anchor")
+		if fire:
+			VfxKit.trail(fire, Color("F6A45D"), Color("E8452C"), 18, 0.9, 0.005).gravity = Vector3(0, 0.03, 0)
 	if stats.get("hidden", false):
 		_rig.set_misty()
 	if is_boss and game != null and game.with_rig:

@@ -128,11 +128,19 @@ const ENEMIES := {
 	# "hp" is phase 1 (WARDEN_P3_HP is the final stand). Speed and dps are stand-ins; phase 3 multiplies both.
 	"boss": {"name": "Warden", "hp": 150.0, "speed": 0.25, "dps": 6.0, "threat": 0, "unlock": 99, "weight": 0,
 		"boss": true},
+	# Elites (the user, 2026-11-11: the three scary bosses become elite enemies). One walks with the night's wave from
+	# ELITE_FROM_NIGHT on; they cost nothing from the wave budget and are not the Warden (no phases). Stand-in numbers.
+	"elite_mammoth": {"name": "Cinder Mammoth", "hp": 90.0, "speed": 0.22, "dps": 5.0, "threat": 0, "unlock": 99, "weight": 0, "elite": true},
+	"elite_bear": {"name": "Gravemaw Bear", "hp": 70.0, "speed": 0.35, "dps": 4.0, "threat": 0, "unlock": 99, "weight": 0, "elite": true},
+	"elite_orc": {"name": "Furnace Orc", "hp": 60.0, "speed": 0.3, "dps": 4.0, "threat": 0, "unlock": 99, "weight": 0, "elite": true},
 	# its shield crystals (phase 2): stand where the Warden puts them, break like any enemy
 	"crystal": {"name": "Warden crystal", "hp": 40.0, "speed": 0.0, "dps": 0.0, "threat": 0, "unlock": 99, "weight": 0,
 		"static": true},
 	"splitling": {"name": "Splitling", "hp": 8.0, "speed": 0.4, "dps": 1.0, "threat": 0, "unlock": 99, "weight": 0},
 }
+const ELITES: Array[String] = ["elite_mammoth", "elite_bear", "elite_orc"]
+const ELITE_FROM_NIGHT := 2  # 0-based: from the third night of a loop, one elite a night (not on the boss night)
+const ELITE_DELAY := 14.0  # s after nightfall
 const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter", "wisp", "tunneler", "fog"]  # what the wave plan may buy
 const FLYER_SHARE := 1.0 / 3.0  # spec 6a guard rail: flyers never more than a third of a night's threat
 # Enemy HP grows each night (2026-10-22, Siddharth: ramp per night): night n has x(1 + HP_RAMP * (n - 1)).
