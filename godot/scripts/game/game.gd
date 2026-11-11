@@ -857,6 +857,8 @@ func step(delta: float) -> void:
 	for t in towers:
 		t.step(delta)
 	spells.step(delta)
+	if _tray:
+		_refresh_card_availability()  # cooldown cards return to full colour on the first tick they become ready
 	for pt in _patches:
 		pt["left"] -= delta
 		for e in enemies.duplicate():
@@ -1991,6 +1993,11 @@ func _refresh_tray() -> void:
 		_held_card = null
 		_held_card_hand = null
 		_tray.set_cards(list)
+	_refresh_card_availability()
+
+
+func _refresh_card_availability() -> void:
+	## Cheap state-only update used every night tick; does not rebuild card data or allocate tray lists.
 	for c in _tray.cards:
 		var id: String = c.data.get("id", "")
 		match c.data.get("kind", ""):

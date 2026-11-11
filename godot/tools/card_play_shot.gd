@@ -3,7 +3,7 @@ extends SceneTree
 ##   <godot console> --xr-mode off --path godot -s res://tools/card_play_shot.gd -- OUT_PREFIX
 ## Day: picks up the Wizard card with the desktop hand, hovers over the grass (ghost + ring), drops it (a tower
 ## must appear), then night: picks up Fire Orb. Writes OUT_PREFIX_day.png, _held.png, _built.png, _night.png and
-## prints CARDPLAY lines with the checks.
+## _unaffordable.png / _cooldown.png state checks, and prints CARDPLAY lines with the checks.
 
 func _initialize() -> void:
 	var prefix := OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "card_play"
@@ -21,6 +21,11 @@ func _initialize() -> void:
 	cam.look_at(look, Vector3.UP)
 	g._camera = cam
 	await _shot(prefix + "_day")
+	g.faith = 0
+	g._refresh_ui()
+	await _shot(prefix + "_unaffordable")
+	g.faith = GameConfig.START_FAITH
+	g._refresh_ui()
 	var h: GameHand = g._mouse_hand
 	print("CARDPLAY tray cards: ", g._tray.cards.size(), " mouse hand: ", h != null)
 	var card: Card3D = g._tray.cards[0]
@@ -51,6 +56,11 @@ func _initialize() -> void:
 		await process_frame
 	print("CARDPLAY night tray: ", g._tray.cards.size(), " first=", g._tray.cards[0].data.get("id", ""))
 	card = g._tray.cards[0]
+	g.spells.cooldown[card.data["id"]] = 4.0
+	g._refresh_ui()
+	await _shot(prefix + "_cooldown")
+	g.spells.cooldown[card.data["id"]] = 0.0
+	g._refresh_ui()
 	h.global_position = card.global_position
 	g.hand_pressed(h)
 	h.global_position = g.board.to_global(Vector3(0.0, 0.05, -0.1))

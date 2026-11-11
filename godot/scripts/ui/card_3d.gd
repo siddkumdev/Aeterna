@@ -12,6 +12,18 @@ const H := 0.088
 const T := 0.002
 const LIFT_SCALE := 1.2
 const GOLD := Color("E8B83A")  # shell_gold
+const FACE_SHADER := """
+shader_type spatial;
+render_mode unshaded;
+uniform sampler2D face_texture : source_color;
+uniform float unavailable : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+	vec4 face = texture(face_texture, UV);
+	float value = dot(face.rgb, vec3(0.299, 0.587, 0.114));
+	ALBEDO = mix(face.rgb, vec3(value * 0.55), unavailable);
+	ALPHA = face.a;
+}
+"""
 
 var data: Dictionary = {}
 var home := Transform3D.IDENTITY  # where it rests in the tray (parent space)
@@ -22,6 +34,8 @@ var _face_vp: SubViewport
 var _face: CardFace
 var _tween: Tween
 var _body: MeshInstance3D
+var _availability_applied := false
+var _print_materials: Array[ShaderMaterial] = []
 
 
 func setup(card: Dictionary) -> Card3D:
@@ -65,10 +79,13 @@ func _add_quad(vp: SubViewport, z: float, flip: bool) -> void:
 	var m := QuadMesh.new()
 	m.size = Vector2(W - 0.002, H - 0.002)
 	q.mesh = m
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_texture = vp.get_texture()
+	var mat := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = FACE_SHADER
+	mat.shader = shader
+	mat.set_shader_parameter("face_texture", vp.get_texture())
 	q.material_override = mat
+	_print_materials.append(mat)
 	q.position.z = z
 	if flip:
 		q.rotation.y = PI
@@ -127,10 +144,13 @@ func _model_bounds(n: Node3D) -> AABB:
 
 
 func set_glow(on: bool) -> void:
-	if on == glow:
+	if _availability_applied and on == glow:
 		return
+	_availability_applied = true
 	glow = on
-	(_body.material_override as StandardMaterial3D).albedo_color = GOLD if on else GOLD.darkened(0.25)
+	(_body.material_override as StandardMaterial3D).albedo_color = GOLD if on else Color("575757")
+	for mat in _print_materials:
+		mat.set_shader_parameter("unavailable", 0.0 if on else 1.0)
 
 
 func lift(eye: Vector3) -> void:

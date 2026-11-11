@@ -311,6 +311,17 @@ func _cards() -> void:
 	g.queue_free()
 	await process_frame
 
+	# Visual availability uses the same Card3D path for tower affordability and spell cooldowns.
+	var visual := Card3D.new().setup(CardData.tower("fire"))
+	root.add_child(visual)
+	visual.set_glow(false)
+	check("unavailable card greys its printed face", is_equal_approx(visual._print_materials[0].get_shader_parameter("unavailable"), 1.0))
+	visual.set_glow(true)
+	check("available card returns to its normal colour", is_equal_approx(visual._print_materials[0].get_shader_parameter("unavailable"), 0.0) \
+		and (visual._body.material_override as StandardMaterial3D).albedo_color == Card3D.GOLD)
+	visual.queue_free()
+	await process_frame
+
 
 func _night_with(g: Game, kind: String, spawn_cell: Vector2i, seconds: float) -> Enemy:
 	## Starts a night with no planned waves and puts one enemy of `kind` at a spawn cell; plays `seconds`.
