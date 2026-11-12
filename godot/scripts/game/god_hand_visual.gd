@@ -227,12 +227,10 @@ func _process(delta: float) -> void:
 	var flags := _tracker.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) if _tracker != null else 0
 	var live := _tracker != null and _tracker.has_tracking_data and (flags & XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED) != 0  # a frozen last-known pose is not live
 	if live:
-		var same := true  # a real hand never repeats all 26 joints exactly; a runtime that keeps serving the last pose does
+		var incoming: Array = []
 		for i in J_COUNT:
-			if (_tracker.get_hand_joint_transform(i).origin - _joints[i].origin).length_squared() > 1e-10:
-				same = false
-				break
-		_still_t = _still_t + delta if same else 0.0
+			incoming.append(_tracker.get_hand_joint_transform(i).origin)
+		_still_t = still_time(incoming, _still_t, delta)
 		if is_stale(_still_t, controller != null and is_instance_valid(controller) and not controller.get_has_tracking_data()):
 			live = false  # frozen past the blink grace AND the aim pose is gone: the hand left tracking, do not keep drawing it
 	else:
@@ -252,6 +250,15 @@ func _process(delta: float) -> void:
 		_orb.global_position = controller.global_position  # the controller-only stand-in
 	_hot_amount = move_toward(_hot_amount, 1.0 if _hot else 0.0, delta * 6.0)
 	_update_glow()
+
+
+func still_time(origins: Array, prev: float, delta: float) -> float:
+	## Seconds the joints have been bit-for-bit the same as the pose held now: a real hand never repeats all 26 joints
+	## exactly; a runtime that keeps serving its last pose does.
+	for i in J_COUNT:
+		if ((origins[i] as Vector3) - _joints[i].origin).length_squared() > 1e-10:
+			return 0.0
+	return prev + delta
 
 
 static func is_stale(still_seconds: float, aim_gone: bool) -> bool:
@@ -276,10 +283,21 @@ func apply_tracking(ok: bool, delta: float) -> void:
 func _refresh_orb() -> void:
 	## The controller-only stand-in: only while no tracked hand has ever been seen and the controller has a pose. Exactly one
 	## representation (tracked hand or orb, never both, never a stale orb for a hand that left tracking).
-	var want: bool = not tracked and not ever_live and controller != null and is_instance_valid(controller) and controller.get_has_tracking_data()
+	var has_data := false
+	var on_ctrl := false
+	if controller != null and is_instance_valid(controller):
+		has_data = controller.get_has_tracking_data()
+		on_ctrl = controller.has_method("on_controller") and bool(controller.call("on_controller"))
+	var want := orb_wanted(has_data, on_ctrl)
 	if _orb != null:
 		_orb.visible = want
 	visible = tracked or want
+
+
+func orb_wanted(controller_has_pose: bool, on_real_controller: bool) -> bool:
+	## The orb shows for a controller with a pose when no hand is drawn: always for a real controller (also after hands
+	## were used), and for a never-tracked hand (the simulator). Back on hands, `tracked` hides it again.
+	return not tracked and controller_has_pose and (on_real_controller or not ever_live)
 
 
 func set_hot(hot: bool) -> void:

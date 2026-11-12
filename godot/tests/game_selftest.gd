@@ -384,6 +384,48 @@ func _hand_reach() -> void:
 	check("frozen joints past the grace with no aim pose count as stale", GodHandVisual.is_stale(GodHandVisual.LOST_GRACE + 0.1, true))
 	check("frozen joints with a live aim pose (simulator) are not stale", not GodHandVisual.is_stale(5.0, false) and not GodHandVisual.is_stale(0.1, true))
 	v.apply_tracking(false, 1.0)
+	# frozen joints: identical past the grace with no aim pose is lost; changing joints or an aim pose is not
+	var j0 := GodHandVisual.demo_joints(0.2, 0.0)
+	v.set_pose_from(j0)
+	var same_o: Array = []
+	var moved_o: Array = []
+	for t in j0:
+		same_o.append((t as Transform3D).origin)
+		moved_o.append((t as Transform3D).origin + Vector3(0, 0.001, 0))
+	var st := 0.0
+	for i in 5:
+		st = v.still_time(same_o, st, GodHandVisual.LOST_GRACE * 0.3)
+	check("identical joints for longer than the grace: stale without an aim pose", GodHandVisual.is_stale(st, true))
+	check("identical joints but the aim pose exists: not stale", not GodHandVisual.is_stale(st, false))
+	check("joints that change reset the still timer", v.still_time(moved_o, st, 0.1) == 0.0 and not GodHandVisual.is_stale(v.still_time(moved_o, st, 0.1), true))
+	# a hold is cancelled once when the hand is lost, and a late release leaves nothing stuck
+	v.apply_tracking(true, 0.016)
+	v.apply_tracking(false, 1.0)
+	var cancels := [0]
+	var releases := [0]
+	hand.cancelled.connect(func(_h): cancels[0] += 1)
+	hand.released.connect(func(_h): releases[0] += 1)
+	hand._down = {"trigger_click": true, "pinch": true}
+	hand._pinching = true
+	hand._update_pinch()
+	hand._update_pinch()
+	check("hold in progress when the hand is lost: cancelled exactly once, never released", cancels[0] == 1 and releases[0] == 0 and not hand.is_pressing())
+	hand._release_key("trigger_click")
+	check("a release arriving after the loss leaves nothing stuck and emits nothing", not hand.is_pressing() and cancels[0] == 1 and releases[0] == 0)
+	hand._poking[12345] = true
+	hand._update_poke()
+	check("poke state is clear while the hand is not tracked", hand._poking.is_empty())
+	# orb: a real controller always shows it (also after hands), hands hide it again
+	var ov := GodHandVisual.new()
+	ov.ever_live = true
+	check("hands used earlier, then a controller with a pose: orb shows", ov.orb_wanted(true, true))
+	check("lost hand (no controller): no orb", not ov.orb_wanted(true, false) and not ov.orb_wanted(false, true))
+	ov.tracked = true
+	check("back on hands: orb hidden", not ov.orb_wanted(true, true))
+	ov.tracked = false
+	ov.ever_live = false
+	check("a never-tracked hand with a pose (simulator) keeps its orb", ov.orb_wanted(true, false))
+	ov.free()
 	var orb_hand := GodHandVisual.new()  # never tracked (controllers only): no hidden hand, nothing lost
 	root.add_child(orb_hand)
 	await process_frame

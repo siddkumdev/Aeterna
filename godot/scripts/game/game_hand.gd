@@ -103,15 +103,20 @@ func _make_desktop_tip() -> void:
 	add_child(_orb)
 
 
+func on_controller() -> bool:
+	## A real controller (not hand tracking) drives this node: its tracker's interaction profile is not a hand profile.
+	var tr := XRServer.get_tracker(String(tracker)) as XRPositionalTracker
+	var profile: String = tr.profile if tr != null else ""
+	return profile != "" and not profile.contains("hand")
+
+
 func is_lost() -> bool:
 	## A headset hand that was tracked earlier and is not now (past the blink grace, visual hidden): it takes no part in
 	## touch, poke, hover, ray, pinch or grass pushing until tracking returns. Controllers, the mouse hand and the
 	## simulator (never a lost hand) are never "lost".
 	if camera != null or visual == null or not is_instance_valid(visual) or not visual.ever_live or visual.tracked:
 		return false
-	var tr := XRServer.get_tracker(String(tracker)) as XRPositionalTracker
-	var profile: String = tr.profile if tr != null else ""
-	return profile == "" or profile.contains("hand")  # a real controller in the hand keeps working
+	return not on_controller()  # a real controller in the hand keeps working
 
 
 func _press_key(key: String) -> void:
@@ -144,7 +149,10 @@ func _show_thread(on: bool) -> void:
 
 func _process(delta: float) -> void:
 	if camera == null and _xr_live:
-		_smooth_pose(delta)
+		if is_lost():
+			_f_ready = false  # the filter restarts at the real pose on the first frame after tracking returns
+		else:
+			_smooth_pose(delta)
 	_update_pinch()
 	_update_poke()
 
@@ -185,9 +193,15 @@ static func _alpha(cutoff: float, dt: float) -> float:
 func _update_pinch() -> void:
 	## The joint pinch with hysteresis, added to whatever the runtime reports.
 	if visual == null or not visual.tracked:
+		var had := not _down.is_empty()
 		if _pinching:
 			_pinching = false
-			_release_key("pinch", true)  # tracking lost (grace over): a cancel, not a release
+			_down.erase("pinch")
+		if is_lost():
+			_down.clear()  # the runtime may never send the release of a trigger or grip held when tracking was lost
+		if had and _down.is_empty():
+			cancelled.emit(self)  # tracking lost (grace over): one cancel, never also a release
+			_show_thread(false)
 		return
 	var s := visual.pinch_strength
 	if not _pinching and s >= PINCH_PRESS:
