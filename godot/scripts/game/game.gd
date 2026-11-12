@@ -2178,7 +2178,7 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if asleep:
 		return
-	var tp := h.touch_point()  # where the player sees the pinch (the node's position for controllers and the mouse)
+	var tp := h.target_point()  # small targets follow the visible pinch; dragging still follows the preferred aim pose
 	if ledger and ledger.open:
 		var side := ledger.page_hit_point(tp, 0.05)
 		if side != 0:
@@ -2192,6 +2192,7 @@ func hand_pressed(h: GameHand) -> void:
 			_tray_grab(h)
 			return
 		if cd and _grab_card(cd, h):
+			_hand_log(h, "target card:%s" % cd.data.get("id", "unknown"))
 			return
 	if not placing():
 		if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
@@ -2212,10 +2213,19 @@ func hand_pressed(h: GameHand) -> void:
 			_show_toast("Hold to hurry the day")
 		return
 	if life and not placing():
-		for v in life.villagers:  # a pinch right at a villager (arm's reach, no ray needed)
-			if v.visible and tp.distance_to(v.global_position + Vector3(0, 0.035, 0)) <= reach(GameConfig.TOUCH_REACH):
-				tap_villager(v)
-				return
+		var nearest_v: Villager = null
+		var nearest_d := reach(GameConfig.TOUCH_REACH)
+		for v in life.villagers:  # a pinch right at the nearest villager (arm's reach, no ray needed)
+			if not v.visible:
+				continue
+			var d := tp.distance_to(v.global_position + Vector3(0, 0.035, 0))
+			if d < nearest_d:
+				nearest_d = d
+				nearest_v = v
+		if nearest_v:
+			_hand_log(h, "target villager:%s" % nearest_v.name)
+			tap_villager(nearest_v)
+			return
 	if not placing() and phase == Phase.DAY and h != _mouse_hand:
 		for t in towers:  # a pinch right on a built tower, held: it is crushed back into faith
 			var d := tp - t.global_position
@@ -2229,6 +2239,11 @@ func hand_pressed(h: GameHand) -> void:
 	_active_hand = h
 	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())
+
+
+func _hand_log(h: GameHand, event: String) -> void:
+	if OS.is_debug_build():
+		print("[hand] %s %s" % [h.name, event])
 
 
 func _grab_card(cd: Card3D, h: GameHand) -> bool:
@@ -2373,18 +2388,24 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 			if cd.data.get("kind", "") == "tower":
 				select("")
 			cd.release_to_home()
+			_hand_log(h, "release card:%s cancelled" % id)
 			return
 		if cd.data.get("kind", "") == "tower":
 			var cell := Vector2i(-1, -1)
+			var built := false
 			if absf(local.x) <= HALF and absf(local.z) <= HALF:
 				cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
 					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
 			if cell.x >= 0:
-				try_build(id, cell)
+				built = try_build(id, cell)
+			_hand_log(h, "release card:%s %s cell:%s" % [id, "built" if built else "rejected", str(cell)])
 			select("")  # built or not, this card is done: no armed tower and no grid left behind
 		elif absf(local.x) <= HALF and absf(local.z) <= HALF:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
-			cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+			var cast := cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+			_hand_log(h, "release card:%s %s" % [id, "cast" if cast else "rejected"])
+		else:
+			_hand_log(h, "release card:%s off-board" % id)
 		cd.release_to_home()
 		return
 	if _held_spell != "" and _held_spell_hand == h:

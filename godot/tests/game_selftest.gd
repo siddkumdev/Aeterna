@@ -349,6 +349,9 @@ func _hand_reach() -> void:
 	var toward0 := (tray.cards[0].global_position - c1.global_position).normalized()
 	var p := c1.global_position + toward0 * 0.025  # inside both cards' 10 cm reach, nearer the middle card
 	check("wide reach: two cards in reach, the nearer one is picked", tray.cards[0].global_position.distance_to(p) <= 0.10 		and tray.card_near(p, GameConfig.XR_CARD_REACH) == c1)
+	var above_face := c1.to_global(Vector3(Card3D.W * 0.45, 0.0, 0.06))
+	check("overlapping card reach is measured from each card face", c1.touch_distance(above_face) < c1.global_position.distance_to(above_face)
+		and tray.card_near(above_face, GameConfig.XR_CARD_REACH) == c1)
 	tray.queue_free()
 	var bx := Transform3D(Basis.IDENTITY, Vector3(0, 0.75, -0.85))
 	var ts := Game.tray_start_transform(bx, Vector3(0, 1.2, 0.3))
@@ -374,6 +377,23 @@ func _hand_reach() -> void:
 	var mid := (v.thumb_tip_global() + v.index_tip_global()) * 0.5
 	check("tracked hand: the touch point is the hand's own position unless DRAWN_PINCH_TOUCH is on", hand.touch_point().is_equal_approx(mid if GameConfig.DRAWN_PINCH_TOUCH else hand.global_position)
 		and hand.ray_origin().is_equal_approx(hand.touch_point()))
+	check("tracked hand: direct target selection follows the visible pinch", hand.target_point().is_equal_approx(mid))
+	# The hand interaction profile and joint distance both report one physical pinch. The joint source replaces the
+	# duplicate runtime trigger so opening the fingers always produces one release.
+	var logical_presses := [0]
+	var logical_releases := [0]
+	hand.pressed.connect(func(_h): logical_presses[0] += 1)
+	hand.released.connect(func(_h): logical_releases[0] += 1)
+	hand._down.clear()
+	hand._pinching = false
+	hand._press_key("trigger_click")
+	v.pinch_strength = GameHand.PINCH_PRESS
+	hand._update_pinch()
+	check("joint pinch replaces the duplicate runtime trigger without pressing twice", logical_presses[0] == 1
+		and hand._down.size() == 1 and hand._down.has("pinch"))
+	v.pinch_strength = GameHand.PINCH_RELEASE
+	hand._update_pinch()
+	check("opening a joint pinch releases once without waiting for runtime trigger", logical_releases[0] == 1 and not hand.is_pressing())
 	# tracking lost: the hand keeps its pose only through the blink grace, then is hidden and takes part in nothing
 	v.controller = hand
 	v.apply_tracking(true, 0.016)

@@ -68,13 +68,17 @@ func body_distance(world_pos: Vector3) -> float:
 
 
 func card_near(world_pos: Vector3, reach: float) -> Card3D:
-	## The unlifted card whose centre is within `reach` of `world_pos` (a fingertip), nearest first.
+	## The unlifted card whose physical face is within `reach` of `world_pos` (a fingertip), nearest first.
 	var best: Card3D = null
 	var best_d := reach
 	for c in cards:
 		if c.lifted or not is_instance_valid(c):
 			continue
-		var d := c.global_position.distance_to(world_pos)
+		# Keep the established reach bubble so nearby wood remains grabbable; surface distance only decides which of
+		# the overlapping eligible cards is actually under the pinch.
+		if c.global_position.distance_to(world_pos) > reach:
+			continue
+		var d := c.touch_distance(world_pos)
 		if d <= best_d:
 			best_d = d
 			best = c

@@ -153,6 +153,17 @@ func set_glow(on: bool) -> void:
 		mat.set_shader_parameter("unavailable", 0.0 if on else 1.0)
 
 
+func touch_distance(world_pos: Vector3) -> float:
+	## World-space distance to this card's oriented box, rather than to its centre. This makes the face under a pinch
+	## win when the generous headset reach overlaps adjacent cards.
+	var p := to_local(world_pos)
+	var nearest := Vector3(
+		clampf(p.x, -W / 2.0, W / 2.0),
+		clampf(p.y, -H / 2.0, H / 2.0),
+		clampf(p.z, -T / 2.0, T / 2.0))
+	return world_pos.distance_to(to_global(nearest))
+
+
 func lift(eye: Vector3) -> void:
 	## Pick it up: turn the face toward `eye` (a world position) and grow a little.
 	lifted = true

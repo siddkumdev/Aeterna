@@ -58,7 +58,10 @@ func _ready() -> void:
 	_xr_live = xr != null and xr.is_initialized()
 	button_pressed.connect(func(action: String):
 		if action in PRESS_ACTIONS:
-			_press_key(action))
+			# Hand tracking reports the same pinch through trigger_click and the joint distance below. Keep one logical
+			# source so a late runtime trigger release cannot leave a card held after the fingers have opened.
+			if action != "trigger_click" or not _uses_joint_pinch():
+				_press_key(action))
 	button_released.connect(func(action: String):
 		_release_key(action))
 	# the far-grab ray: kept for aiming, but not drawn (the hand itself is the pointer)
@@ -117,6 +120,10 @@ func is_lost() -> bool:
 	if camera != null or visual == null or not is_instance_valid(visual) or not visual.ever_live or visual.tracked:
 		return false
 	return not on_controller()  # a real controller in the hand keeps working
+
+
+func _uses_joint_pinch() -> bool:
+	return camera == null and visual != null and is_instance_valid(visual) and visual.tracked and not on_controller()
 
 
 func _press_key(key: String) -> void:
@@ -206,7 +213,15 @@ func _update_pinch() -> void:
 	var s := visual.pinch_strength
 	if not _pinching and s >= PINCH_PRESS:
 		_pinching = true
-		_press_key("pinch")
+		var already_down := not _down.is_empty()
+		_down.erase("trigger_click")  # the runtime and joints describe the same physical pinch
+		if OS.is_debug_build():
+			print("[hand] %s pinch start %.2f" % [visual.side, s])
+		if already_down:
+			_down["pinch"] = true  # replace the source without emitting a second logical press
+			_show_thread(true)
+		else:
+			_press_key("pinch")
 	elif _pinching and s <= PINCH_RELEASE:
 		_pinching = false
 		_release_key("pinch")
@@ -273,6 +288,14 @@ func touch_point() -> Vector3:
 	if GameConfig.DRAWN_PINCH_TOUCH and camera == null and visual != null and is_instance_valid(visual) and visual.tracked and visual.is_inside_tree():
 		return (visual.thumb_tip_global() + visual.index_tip_global()) * 0.5
 	return global_position
+
+
+func target_point() -> Vector3:
+	## Direct selection follows the visible thumb/index pinch. The OpenXR aim pose remains the touch point used while
+	## dragging, because that was preferred in the headset; only choosing a small target needs visual agreement.
+	if camera == null and visual != null and is_instance_valid(visual) and visual.tracked and visual.is_inside_tree():
+		return (visual.thumb_tip_global() + visual.index_tip_global()) * 0.5
+	return touch_point()
 
 
 func ray_origin() -> Vector3:
