@@ -2036,13 +2036,13 @@ func _build_tray_bits() -> void:
 	_toast.name = "Toast"
 	_toast.font_size = 44
 	_toast.pixel_size = 0.00036
-	_toast.outline_size = 10
+	_toast.outline_size = 16
 	_toast.modulate = Color("F4E4B8")  # wall_cream
 	_toast.outline_modulate = Color("5B2920")
 	_toast.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_toast.no_depth_test = true
 	_toast.render_priority = 10
-	_toast.position = Vector3(0, 0.125, 0)
+	_toast.position = Vector3(0, -0.035, 0.105)  # below and in front of the front lip: no card, hourglass or island covers it from a seated view
 	_toast.modulate.a = 0.0
 	_tray.add_child(_toast)
 	_sun = MeshInstance3D.new()
@@ -2507,13 +2507,44 @@ static func tray_start_transform(board_xf: Transform3D, head: Vector3) -> Transf
 	return Transform3D(Basis(Vector3.UP, atan2(n.x, n.z)) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
 
 
-static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, head: Vector3) -> Transform3D:
-	## The tray while a hand holds it: it follows the touch point, keeps its tilt and yaws to face the headset.
+static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, head: Vector3, from_yaw := NAN, weight := 1.0) -> Transform3D:
+	## The tray while a hand holds it: it follows the touch point, keeps its tilt and yaws (eased, `weight` of the way
+	## per call, no snap) to face the headset.
 	var pos := touch + off
 	var d := head - pos
 	d.y = 0.0
 	var yaw := atan2(d.x, d.z) if d.length() > 0.05 else start.basis.get_euler().y
+	if not is_nan(from_yaw):
+		yaw = lerp_angle(from_yaw, yaw, weight)
 	return Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+
+
+static func tray_clamp(pos: Vector3, board_xf: Transform3D) -> Vector3:
+	## Technical safety: the tray stays between TRAY_MIN_Y and TRAY_MAX_Y, within TRAY_MAX_DIST of the board's middle,
+	## and never ends up inside the island's body (it is pushed out of the nearest edge).
+	var p := pos
+	p.y = clampf(p.y, GameConfig.TRAY_MIN_Y, GameConfig.TRAY_MAX_Y)
+	var flat := Vector3(p.x - board_xf.origin.x, 0.0, p.z - board_xf.origin.z)
+	if flat.length() > GameConfig.TRAY_MAX_DIST:
+		flat = flat.normalized() * GameConfig.TRAY_MAX_DIST
+		p.x = board_xf.origin.x + flat.x
+		p.z = board_xf.origin.z + flat.z
+	var l := board_xf.affine_inverse() * p
+	var lim := HALF + 0.06
+	if maxf(absf(l.x), absf(l.z)) < lim and l.y > -0.25 and l.y < 0.3:
+		if absf(l.x) > absf(l.z):
+			l.x = signf(l.x) * lim if l.x != 0.0 else lim
+		else:
+			l.z = signf(l.z) * lim if l.z != 0.0 else lim
+		p = board_xf * l
+	return p
+
+
+func _head_valid() -> bool:
+	## In the headset the first frames can report the head at the origin; the tray waits for a real pose.
+	if _xr and _xr_cam:
+		return _xr_cam.global_position.y > 0.3
+	return true
 
 
 func _update_tray() -> void:
@@ -2522,13 +2553,18 @@ func _update_tray() -> void:
 	if _tray == null or asleep:
 		return
 	if not _tray_placed:
+		if not _head_valid():
+			return  # retry every frame until the headset reports a real pose
 		_tray.global_transform = tray_start_transform(board.global_transform, _eye())
 		_tray_placed = true
 	if _tray_hand != null:
 		if not is_instance_valid(_tray_hand):
 			_tray_hand = null
 		else:
-			_tray.global_transform = tray_held_transform(_tray_start, _tray_hand.touch_point(), _tray_off, _eye())
+			var cur := _tray.global_transform
+			var t := tray_held_transform(_tray_start, _tray_hand.touch_point(), _tray_off, _eye(), cur.basis.get_euler().y, 1.0 - exp(-GameConfig.TRAY_YAW_EASE * get_process_delta_time()))
+			t.origin = tray_clamp(t.origin, board.global_transform)
+			_tray.global_transform = t
 
 
 func _on_tray_hourglass(tp: Vector3) -> bool:

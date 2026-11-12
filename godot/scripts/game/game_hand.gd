@@ -264,9 +264,6 @@ func is_pressing() -> bool:
 	return not _down.is_empty()
 
 
-func pressed_within(seconds: float) -> bool:
-	## A press is held and began less than `seconds` ago (the UI rig holds still only for that short window).
-	return is_pressing() and press_started_ms >= 0 and Time.get_ticks_msec() - press_started_ms < int(seconds * 1000.0)
 
 
 func touch_point() -> Vector3:

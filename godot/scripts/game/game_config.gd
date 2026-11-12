@@ -246,4 +246,8 @@ const BOARD_SCALE := Vector2(0.6, 2.0)
 const TRAY_OUT := 0.14  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
 const TRAY_DROP := -0.03  # m: the tray's middle sits this far below the board's top (negative = below)
 const TRAY_TILT_DEG := 15.0  # degrees the tray's face is tipped up toward the player's face (cards lean back 51 degrees on top of it)
+const TRAY_MIN_Y := 0.35  # m above the floor: the lowest the tray may be dropped
+const TRAY_MAX_Y := 1.5  # m above the floor: the highest
+const TRAY_MAX_DIST := 1.2  # m from the board's middle (horizontal): the furthest
+const TRAY_YAW_EASE := 8.0  # 1/s: how fast a held tray turns to face the headset
 const TRAY_GRAB_PAD := 0.02  # m: a pinch within this of the tray's wooden body (outside a card's face) grabs the tray

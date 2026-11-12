@@ -2077,6 +2077,40 @@ func _tray_rules() -> void:
 	for i in 3:
 		await process_frame
 	check("a new run keeps the tray where it was put", g._tray.global_transform.is_equal_approx(dropped))
+	var face := tray.cards[1].global_transform * Vector3(0, -0.042, 0)  # a card's lowest face, right over the wood
+	hand.global_position = face
+	check("the test point is over the wood and on a card face", tray.body_distance(face) <= GameConfig.TRAY_GRAB_PAD)
+	g.hand_pressed(hand)
+	check("a pinch on a card face over the wood picks the card, not the tray", g._held_card == tray.cards[1] and g._tray_hand == null)
+	g.hand_released(hand, true)
+	var bx := Transform3D(Basis.IDENTITY, Vector3(0, 0.75, -0.85))
+	var low := Game.tray_clamp(Vector3(0, -2.0, 0.5), bx)
+	var high := Game.tray_clamp(Vector3(0, 5.0, 0.5), bx)
+	var far := Game.tray_clamp(Vector3(9.0, 0.8, 0.5), bx)
+	var inside := Game.tray_clamp(Vector3(0.1, 0.75, -0.8), bx)
+	var li := bx.affine_inverse() * inside
+	check("the tray is clamped above the floor, below the ceiling, within reach of the board and out of the island",
+		is_equal_approx(low.y, GameConfig.TRAY_MIN_Y) and is_equal_approx(high.y, GameConfig.TRAY_MAX_Y) 		and Vector2(far.x, far.z - bx.origin.z).length() <= GameConfig.TRAY_MAX_DIST + 0.001 and maxf(absf(li.x), absf(li.z)) >= Game.HALF + 0.05)
+	var e := Game.tray_held_transform(dropped, Vector3(0, 0.8, 0), Vector3.ZERO, Vector3(2, 1.3, 0), 0.0, 0.3)
+	check("a grabbed tray eases its yaw toward the headset instead of snapping", e.basis.get_euler().y > 0.1 and e.basis.get_euler().y < PI / 2.0 - 0.1)
+	var g2: Game = load("res://scripts/game/game.gd").new()
+	g2.with_rig = true
+	root.add_child(g2)
+	for i in 3:
+		await process_frame
+	var cam := XRCamera3D.new()
+	root.add_child(cam)
+	g2._xr = true
+	g2._xr_cam = cam
+	g2._tray_placed = false
+	g2._tray.global_position = Vector3(7, 7, 7)
+	await process_frame
+	check("placement waits while the headset pose is invalid (head at the origin)", not g2._tray_placed and g2._tray.global_position.is_equal_approx(Vector3(7, 7, 7)))
+	cam.global_position = Vector3(0, 1.2, 0.3)
+	await process_frame
+	check("the tray is placed once the headset pose is valid", g2._tray_placed and g2._tray.global_position.z > g2.board.global_position.z)
+	g2.queue_free()
+	cam.queue_free()
 	g.queue_free()
 	hand.queue_free()
 	await process_frame
