@@ -606,7 +606,8 @@ func _tick_quests(delta: float) -> void:
 		post_next_quest()
 	var points: Array[Vector3] = []
 	for h in _hands:
-		points.append(h.touch_point())  # the drawn fingers in the headset (the node's position otherwise)
+		if not h.is_lost():
+			points.append(h.touch_point())  # the drawn fingers in the headset (the node's position otherwise)
 	if _mouse_hand:
 		points.append(_mouse_hand.global_position)
 	for r in requests:
@@ -1736,7 +1737,7 @@ func _feed_grass() -> void:
 				pts.append(Vector4(gd.global_position.x, gd.global_position.y, gd.global_position.z, 0.03))
 	var hands: Array = [_mouse_hand] if _mouse_hand != null else _hands
 	for h in hands:
-		if is_instance_valid(h):
+		if is_instance_valid(h) and not h.is_lost():
 			pts.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
 	if life:
 		pts.append_array(life.pushers())
@@ -1771,12 +1772,17 @@ func _process(delta: float) -> void:
 	_tick_lens_window()
 	_update_held()
 	for h in _hands:
-		h.set_bubble_hot(grabbable_near(h.global_position))
+		h.set_bubble_hot(not h.is_lost() and grabbable_near(h.global_position))
+		if h.bubble:
+			h.bubble.visible = not h.is_lost()
 	if _held_card:
 		pass  # a card in hand decides the cell (_update_held); the pointer must not overwrite it
 	elif _xr:
 		if _active_hand:
-			_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
+			if _active_hand.is_lost():
+				_hover(Vector3(0, 1000, 0), Vector3.UP)  # a hand that left tracking points at nothing
+			else:
+				_hover(_active_hand.ray_origin(), _active_hand.ray_dir())
 	elif _camera:
 		var m := get_viewport().get_mouse_position()
 		_hover(_camera.project_ray_origin(m), _camera.project_ray_normal(m))

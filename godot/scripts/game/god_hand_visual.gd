@@ -36,6 +36,7 @@ const SPARK_END := Color8(0xE8, 0x45, 0x2C, 0x00)
 var side := "left"  # "left" or "right"
 var controller: Node3D  # the GameHand, for the controller-only orb
 var tracked := false  # a tracked hand is being drawn
+var ever_live := false  # the hand tracker has delivered a live hand at least once (so a lost hand is hidden, never replaced by the controller orb)
 var pinch_strength := 0.0  # 0 open .. 1 thumb and index touching (raw, GameHand adds the hysteresis)
 
 var _tracker: XRHandTracker
@@ -56,6 +57,7 @@ var _manual := false  # set_pose_from was used: ignore the tracker
 var _hot_amount := 0.0
 var _lost := 0.0  # seconds without tracking data
 var _was_live := false
+var _still_t := 0.0  # seconds the tracker's joints have been bit-for-bit unchanged (a frozen last-known pose)
 var _spark_boost := false
 
 
@@ -224,6 +226,17 @@ func _process(delta: float) -> void:
 		_tracker = XRServer.get_tracker(_tracker_name()) as XRHandTracker
 	var flags := _tracker.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) if _tracker != null else 0
 	var live := _tracker != null and _tracker.has_tracking_data and (flags & XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED) != 0  # a frozen last-known pose is not live
+	if live:
+		var same := true  # a real hand never repeats all 26 joints exactly; a runtime that keeps serving the last pose does
+		for i in J_COUNT:
+			if (_tracker.get_hand_joint_transform(i).origin - _joints[i].origin).length_squared() > 1e-10:
+				same = false
+				break
+		_still_t = _still_t + delta if same else 0.0
+		if is_stale(_still_t, controller != null and is_instance_valid(controller) and not controller.get_has_tracking_data()):
+			live = false  # frozen past the blink grace AND the aim pose is gone: the hand left tracking, do not keep drawing it
+	else:
+		_still_t = 0.0
 	if live != _was_live:
 		_was_live = live
 		print("[hand] %s %s (data=%s flags=%d fps=%d)" % [side, "tracked" if live else "LOST", str(_tracker != null and _tracker.has_tracking_data), flags, Engine.get_frames_per_second()])
@@ -232,19 +245,41 @@ func _process(delta: float) -> void:
 			_joints[i] = _tracker.get_hand_joint_transform(i)
 			_radii[i] = maxf(_tracker.get_hand_joint_radius(i), 0.004)
 		ok = true
+	apply_tracking(ok, delta)
+	if ok:
+		_pose()
+	elif _orb.visible:
+		_orb.global_position = controller.global_position  # the controller-only stand-in
+	_hot_amount = move_toward(_hot_amount, 1.0 if _hot else 0.0, delta * 6.0)
+	_update_glow()
+
+
+static func is_stale(still_seconds: float, aim_gone: bool) -> bool:
+	## Joints frozen longer than the blink grace while the hand's aim pose has no data: the tracker is serving a last-known pose.
+	return still_seconds > LOST_GRACE and aim_gone
+
+
+func apply_tracking(ok: bool, delta: float) -> void:
+	## One frame of "is the hand tracked": a lost hand keeps its last pose for LOST_GRACE only, then the whole hand
+	## (mesh, glows, sparks, orb) is hidden until tracking returns; it is then drawn at the real pose at once.
 	if ok:
 		_lost = 0.0
+		ever_live = true
 	else:
 		_lost += delta
 	var shown := ok or (tracked and _lost < LOST_GRACE)  # keep drawing the last pose through a short tracking blink
 	if shown != tracked:
 		_set_tracked(shown)
-	if ok:
-		_pose()
-	elif controller != null and is_instance_valid(controller):
-		_orb.global_position = controller.global_position  # the controller-only stand-in
-	_hot_amount = move_toward(_hot_amount, 1.0 if _hot else 0.0, delta * 6.0)
-	_update_glow()
+	_refresh_orb()
+
+
+func _refresh_orb() -> void:
+	## The controller-only stand-in: only while no tracked hand has ever been seen and the controller has a pose. Exactly one
+	## representation (tracked hand or orb, never both, never a stale orb for a hand that left tracking).
+	var want: bool = not tracked and not ever_live and controller != null and is_instance_valid(controller) and controller.get_has_tracking_data()
+	if _orb != null:
+		_orb.visible = want
+	visible = tracked or want
 
 
 func set_hot(hot: bool) -> void:
@@ -282,7 +317,7 @@ func _set_tracked(on: bool) -> void:
 		g.visible = on
 	for s in _sparks:
 		s.emitting = on
-	_orb.visible = not on and controller != null
+	_refresh_orb()
 
 
 func _pose() -> void:

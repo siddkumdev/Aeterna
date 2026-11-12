@@ -103,7 +103,20 @@ func _make_desktop_tip() -> void:
 	add_child(_orb)
 
 
+func is_lost() -> bool:
+	## A headset hand that was tracked earlier and is not now (past the blink grace, visual hidden): it takes no part in
+	## touch, poke, hover, ray, pinch or grass pushing until tracking returns. Controllers, the mouse hand and the
+	## simulator (never a lost hand) are never "lost".
+	if camera != null or visual == null or not is_instance_valid(visual) or not visual.ever_live or visual.tracked:
+		return false
+	var tr := XRServer.get_tracker(String(tracker)) as XRPositionalTracker
+	var profile: String = tr.profile if tr != null else ""
+	return profile == "" or profile.contains("hand")  # a real controller in the hand keeps working
+
+
 func _press_key(key: String) -> void:
+	if is_lost():
+		return
 	if _down.is_empty():
 		press_started_ms = Time.get_ticks_msec()
 		pressed.emit(self)
@@ -187,6 +200,7 @@ func _update_pinch() -> void:
 
 func _update_poke() -> void:
 	if visual == null or not visual.tracked:
+		_poking.clear()
 		return
 	var tip := visual.index_tip_global()
 	for n in get_tree().get_nodes_in_group(POKE_GROUP):

@@ -368,6 +368,32 @@ func _hand_reach() -> void:
 	var mid := (v.thumb_tip_global() + v.index_tip_global()) * 0.5
 	check("tracked hand: the touch point is the hand's own position unless DRAWN_PINCH_TOUCH is on", hand.touch_point().is_equal_approx(mid if GameConfig.DRAWN_PINCH_TOUCH else hand.global_position)
 		and hand.ray_origin().is_equal_approx(hand.touch_point()))
+	# tracking lost: the hand keeps its pose only through the blink grace, then is hidden and takes part in nothing
+	v.controller = hand
+	v.apply_tracking(true, 0.016)
+	check("tracked hand: visible, counts as live", v.tracked and v.ever_live and v.visible and v._bones.visible and not hand.is_lost())
+	v.apply_tracking(false, GodHandVisual.LOST_GRACE * 0.5)
+	check("tracking blink within the grace: the last pose stays drawn", v.tracked and v.visible)
+	v.apply_tracking(false, GodHandVisual.LOST_GRACE * 0.6)
+	check("tracking lost beyond the grace: mesh, glows and orb hidden", not v.tracked and not v.visible and not v._bones.visible and not v._balls.visible and not v._orb.visible)
+	check("a lost hand is_lost and takes no press", hand.is_lost())
+	hand._press_key("trigger_click")
+	check("a lost hand cannot press", not hand.is_pressing())
+	v.apply_tracking(true, 0.016)
+	check("tracking returns: visible again at once, no longer lost", v.tracked and v.visible and v._bones.visible and not hand.is_lost())
+	check("frozen joints past the grace with no aim pose count as stale", GodHandVisual.is_stale(GodHandVisual.LOST_GRACE + 0.1, true))
+	check("frozen joints with a live aim pose (simulator) are not stale", not GodHandVisual.is_stale(5.0, false) and not GodHandVisual.is_stale(0.1, true))
+	v.apply_tracking(false, 1.0)
+	var orb_hand := GodHandVisual.new()  # never tracked (controllers only): no hidden hand, nothing lost
+	root.add_child(orb_hand)
+	await process_frame
+	var cvis := GameHand.new()
+	root.add_child(cvis)
+	cvis.visual = orb_hand
+	check("a hand never tracked is not 'lost' (controllers behave as before)", not cvis.is_lost())
+	cvis.visual = null
+	cvis.queue_free()
+	orb_hand.queue_free()
 	hand.visual = null
 	v.queue_free()
 	hand.queue_free()
