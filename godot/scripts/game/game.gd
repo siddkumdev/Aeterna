@@ -106,6 +106,10 @@ var asleep := false:  # the title screen shows the island asleep: no cards, sign
 		var ui := board.get_node_or_null("UI") if board else null
 		if ui:
 			ui.visible = not v
+		if _tray:
+			_tray.visible = not v
+		if v:
+			_tray_hand = null
 		if _lens:
 			_lens.visible = not v  # the lens lies on the table only once the game is awake
 var veil: VeilDome  # the warm dome over the island: cracks at dusk, shatters in the night, knits at dawn (with the rig only)
@@ -115,7 +119,10 @@ var _doom_timer := 0.0
 var _ui_placed := false  # the tray has been put beside the player for this session
 var _ui_rig: Node3D  # headset: the cards, buttons and messages float here, in front of you (follows your head)
 var _ui_yaw := 0.0
-var _ui_follow := false  # the rig is gliding after the head (past GameConfig.UI_RIG_DEADZONE)
+var _tray_placed := false  # the tray has been put at its start pose (once per app start; the player's spot is kept after that)
+var _tray_hand: GameHand  # the hand moving the tray
+var _tray_off := Vector3.ZERO  # tray origin minus the hand's touch point when it was grabbed
+var _tray_start := Transform3D.IDENTITY  # where the grab began (a lost hand snaps it back here)
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the card in a hand (or on the mouse hand)
@@ -1769,6 +1776,7 @@ func _process(delta: float) -> void:
 	_update_mouse_hand()
 	_update_lens()
 	_update_ui_rig(delta)
+	_update_tray()
 	_tick_lens_window()
 	_update_held()
 	for h in _hands:
@@ -1866,8 +1874,8 @@ func _build_ui() -> void:
 	if with_rig:
 		_tray = CardTray.new()
 		_tray.name = "CardTray"
-		_tray.position = Vector3(0, 0.0, HALF + 0.12)
-		ui.add_child(_tray)
+		add_child(_tray)  # on its own, not on the board: moving, turning or resizing the island leaves it where it is
+		_tray.visible = not asleep
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
 	_msg = _make_label(ui, Vector3(0, 0.195, -HALF - 0.03), 56)
 	if _tray:
@@ -2178,6 +2186,11 @@ func hand_pressed(h: GameHand) -> void:
 			return
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(tp, card_reach())
+		# The tray's own wood (outside a card's face) takes the whole tray: a pinch within TRAY_GRAB_PAD of the base
+		# grabs it unless the point is on a card's face (within half a card's height of its centre), where the card keeps priority.
+		if h != _mouse_hand and _tray_hand == null and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) 				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) 				and not _on_tray_hourglass(tp):
+			_tray_grab(h)
+			return
 		if cd and _grab_card(cd, h):
 			return
 	if not placing():
@@ -2191,7 +2204,7 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell = tok
 			_held_spell_hand = h
 			return
-	if _fast_glass and _fast_glass.is_visible_in_tree() and tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4):
+	if _on_tray_hourglass(tp):
 		if h == _mouse_hand:
 			toggle_fast()
 		else:
@@ -2334,6 +2347,12 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 	if _rim_pending.has(h):
 		_rim_pending.erase(h)
 		return
+	if _tray_hand == h:
+		if cancelled:
+			_tray.global_transform = _tray_start  # the hand was lost mid-move: back to where the grab began
+		_tray_hand = null
+		snd("release")
+		return
 	if _rim_hands.has(h):
 		if cancelled:
 			board.global_transform = _rim_start  # undo this grip's move/turn
@@ -2426,15 +2445,11 @@ func _update_lens() -> void:
 
 
 func _mount_ui_rig() -> void:
-	## 2026-11-10 (the user): the UI on the table was painful to reach. In the headset the cards, the buttons and the
+	## 2026-11-10 (the user): the UI on the table was painful to reach. In the headset the buttons and the
 	## messages float about 40 cm in front of you, a little below eye level, and turn with you when you look far away.
 	_ui_rig = Node3D.new()
 	_ui_rig.name = "UiRig"
 	add_child(_ui_rig)
-	if _tray:
-		_tray.get_parent().remove_child(_tray)
-		_ui_rig.add_child(_tray)
-		_tray.position = Vector3(0.30, -0.34, -0.36)  # beside you, to the right, below the eyes
 	var spots := {"sell": Vector3(-0.17, -0.40, -0.40), "night": Vector3(0.17, -0.40, -0.40),
 		"restart": Vector3(0.17, -0.40, -0.40), "speed": Vector3(0.17, -0.40, -0.40)}
 	for id in spots:
@@ -2471,20 +2486,62 @@ func _update_ui_rig(_delta: float) -> void:
 		_ui_placed = true
 
 
-func ui_rig_step(at: Vector3, head: Vector3, delta: float) -> Vector3:
-	## Small head moves are ignored; past the deadzone the rig glides after the head, and a big jump snaps.
-	var gap := at.distance_to(head)
-	if gap > GameConfig.UI_RIG_SNAP:
-		_ui_follow = false
-		return head
-	if gap > GameConfig.UI_RIG_DEADZONE:
-		_ui_follow = true
-	if not _ui_follow:
-		return at
-	if gap < 0.005:
-		_ui_follow = false
-		return head
-	return at.lerp(head, minf(1.0, delta * GameConfig.UI_RIG_FOLLOW))
+static func tray_start_transform(board_xf: Transform3D, head: Vector3) -> Transform3D:
+	## The tray's first pose (Siddharth 2026-11-12, seated play): along the board edge nearest the headset, TRAY_OUT
+	## beyond it, TRAY_DROP under the board's top, facing out toward the player and tipped up TRAY_TILT_DEG.
+	var half := HALF * board_xf.basis.get_scale().x
+	var to_head := head - board_xf.origin
+	to_head.y = 0.0
+	to_head = to_head.normalized() if to_head.length() > 0.001 else Vector3(0, 0, 1)
+	var n := Vector3(0, 0, 1)
+	var best := -2.0
+	for a in [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, -1)]:
+		var w: Vector3 = board_xf.basis * a
+		w.y = 0.0
+		w = w.normalized()
+		if w.dot(to_head) > best:
+			best = w.dot(to_head)
+			n = w
+	var pos := board_xf.origin + n * (half + GameConfig.TRAY_OUT)
+	pos.y = board_xf.origin.y + GameConfig.TRAY_DROP
+	return Transform3D(Basis(Vector3.UP, atan2(n.x, n.z)) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+
+
+static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, head: Vector3) -> Transform3D:
+	## The tray while a hand holds it: it follows the touch point, keeps its tilt and yaws to face the headset.
+	var pos := touch + off
+	var d := head - pos
+	d.y = 0.0
+	var yaw := atan2(d.x, d.z) if d.length() > 0.05 else start.basis.get_euler().y
+	return Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+
+
+func _update_tray() -> void:
+	## Placed once, when the game first wakes after app start; after that it stays where the player left it, through
+	## new runs, loops, rewinds, day and night, and whatever happens to the island.
+	if _tray == null or asleep:
+		return
+	if not _tray_placed:
+		_tray.global_transform = tray_start_transform(board.global_transform, _eye())
+		_tray_placed = true
+	if _tray_hand != null:
+		if not is_instance_valid(_tray_hand):
+			_tray_hand = null
+		else:
+			_tray.global_transform = tray_held_transform(_tray_start, _tray_hand.touch_point(), _tray_off, _eye())
+
+
+func _on_tray_hourglass(tp: Vector3) -> bool:
+	return _fast_glass != null and _fast_glass.is_visible_in_tree() and tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4)
+
+
+func _tray_grab(h: GameHand) -> void:
+	_tray_hand = h
+	_tray_start = _tray.global_transform
+	_tray_off = _tray.global_position - h.touch_point()
+	snd("grab")
+
+
 
 
 func _tick_lens_window() -> void:

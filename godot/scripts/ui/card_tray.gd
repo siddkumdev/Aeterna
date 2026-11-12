@@ -57,6 +57,16 @@ func set_cards(list: Array[Dictionary]) -> void:
 		cards.append(card)
 
 
+func body_distance(world_pos: Vector3) -> float:
+	## How far `world_pos` is from the tray's wooden base (0 on it): the part a pinch can take to move the whole tray.
+	if _base == null or not is_instance_valid(_base):
+		return INF
+	var half: Vector3 = (_base.mesh as BoxMesh).size / 2.0
+	var l := to_local(world_pos) - _base.position
+	var out := Vector3(maxf(absf(l.x) - half.x, 0.0), maxf(absf(l.y) - half.y, 0.0), maxf(absf(l.z) - half.z, 0.0))
+	return out.length()
+
+
 func card_near(world_pos: Vector3, reach: float) -> Card3D:
 	## The unlifted card whose centre is within `reach` of `world_pos` (a fingertip), nearest first.
 	var best: Card3D = null

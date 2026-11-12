@@ -37,16 +37,10 @@ const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
 const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to grab it (one reach for requests and spells; god-hands plan C1)
 # Headset hand comfort (2026-11-11, after the Quest 3 test): in the real headset (not the desktop or the simulator) a
 # tray card is grabbed within XR_CARD_REACH of the pinch (nearest card wins) and a title plaque is pressed within
-# XR_PLAQUE_PAD of its face (nearest plaque wins). The floating UI rig ignores head moves under UI_RIG_DEADZONE,
-# catches up at UI_RIG_FOLLOW per second, snaps past UI_RIG_SNAP, and holds still while a card is held or for
-# UI_RIG_PRESS_HOLD after a pinch begins (so a long lens or rim grasp does not leave the tray behind).
+# XR_PLAQUE_PAD of its face (nearest plaque wins). The card tray no longer follows the head or the island (see the TRAY_* constants below).
 const DRAWN_PINCH_TOUCH := false  # 2026-11-11 (the user): the headset's own touch point felt better than the drawn-pinch point, so the old behaviour is back; true brings the drawn-pinch point back
 const XR_CARD_REACH := 0.10  # m
 const XR_PLAQUE_PAD := 0.035  # m (plaques are 15 cm wide, 5 cm apart)
-const UI_RIG_DEADZONE := 0.06  # m
-const UI_RIG_FOLLOW := 4.0  # 1/s
-const UI_RIG_SNAP := 0.5  # m
-const UI_RIG_PRESS_HOLD := 0.5  # s
 const LENS_GRAB_REACH := 0.09  # m from the hand to the lens's grip for a grab
 const LENS_SCALE := 2.0  # 2026-11-10 (the user): the lens is bigger and you look THROUGH it (LensView), not at it
 const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the eye
@@ -246,3 +240,10 @@ const RIM_WIDTH := 0.05  # m outside the island's edge that counts as the rim (w
 const FAST_HOLD := 1.0  # s a pinch must stay on the tray hourglass to hurry the day (the user: it triggered by itself)
 const RIM_HOLD := 0.6  # s a pinch must be held on the rim before the island follows the hand
 const BOARD_SCALE := Vector2(0.6, 2.0)
+# The card tray (Siddharth 2026-11-12, after a headset recording; the game is played SITTING). It starts along the
+# board's front edge (the edge nearest the headset), low and tipped up toward the player, and can be grabbed and moved
+# on its own. It never follows the island. Start pose, measured from the island's edge and the board's top surface:
+const TRAY_OUT := 0.14  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
+const TRAY_DROP := -0.03  # m: the tray's middle sits this far below the board's top (negative = below)
+const TRAY_TILT_DEG := 15.0  # degrees the tray's face is tipped up toward the player's face (cards lean back 51 degrees on top of it)
+const TRAY_GRAB_PAD := 0.02  # m: a pinch within this of the tray's wooden body (outside a card's face) grabs the tray

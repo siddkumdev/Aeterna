@@ -23,7 +23,7 @@ Last updated: 2026-11-11, at the statue commit (boss forms, elites, statue done;
 - Wizard sounds (Siddharth).
 
 ## Untested on the Quest
-- Passthrough (may still need the blocked vendor plugin).
+- 2026-11-12: hands fixes 8daf5fe / 86911fe and the new card tray (starts at the board's front edge, low, tilted; grab the wood to move it; never follows the island; `Game._update_tray`, shot `godot/tools/tray_shot.gd`) are untested on the headset. Video review results: `_work/video_review/issues.md`.- Passthrough (may still need the blocked vendor plugin).
 - God hands: the last build showed only the ember orb. Cause unknown, the log was never read.
 - UI rig floating in front of the player; mirror held upright facing the eyes.
 

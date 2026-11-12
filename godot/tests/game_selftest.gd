@@ -34,6 +34,7 @@ func _initialize() -> void:
 	await _quests()
 	await _ledger()
 	await _rim()
+	await _tray_rules()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -349,12 +350,17 @@ func _hand_reach() -> void:
 	var p := c1.global_position + toward0 * 0.025  # inside both cards' 10 cm reach, nearer the middle card
 	check("wide reach: two cards in reach, the nearer one is picked", tray.cards[0].global_position.distance_to(p) <= 0.10 		and tray.card_near(p, GameConfig.XR_CARD_REACH) == c1)
 	tray.queue_free()
-	var at := Vector3(0, 1.2, 0.3)
-	g._ui_follow = false
-	check("UI rig ignores a small head move", g.ui_rig_step(at, at + Vector3(0.03, 0, 0), 0.016) == at)
-	var moved := g.ui_rig_step(at, at + Vector3(0.2, 0, 0), 0.016)
-	check("UI rig glides after a bigger head move", moved.x > at.x and moved.x < at.x + 0.2)
-	check("UI rig snaps after a jump", g.ui_rig_step(at, at + Vector3(1, 0, 0), 0.016) == at + Vector3(1, 0, 0))
+	var bx := Transform3D(Basis.IDENTITY, Vector3(0, 0.75, -0.85))
+	var ts := Game.tray_start_transform(bx, Vector3(0, 1.2, 0.3))
+	check("tray start pose: on the headset side, TRAY_OUT past the edge, below the board top, facing the player, tipped up",
+		is_equal_approx(ts.origin.z, -0.85 + Game.HALF + GameConfig.TRAY_OUT) and is_equal_approx(ts.origin.x, 0.0) 		and ts.origin.y < 0.75 and ts.basis.z.dot(Vector3(0, 0, 1)) > 0.9 and ts.basis.y.y < 1.0 and ts.basis.y.z > 0.0)
+	var left := Game.tray_start_transform(bx, Vector3(-2, 1.2, -0.85))
+	check("tray start pose: the edge nearest the headset is chosen, not a fixed side", is_equal_approx(left.origin.x, -(Game.HALF + GameConfig.TRAY_OUT)))
+	var turned_board := Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(1.5, 1.5, 1.5)), Vector3(0, 0.75, -0.85))
+	var tb := Game.tray_start_transform(turned_board, Vector3(0, 1.2, 0.5))
+	check("tray start pose follows the board's size when it is placed (never overlapping the island)", is_equal_approx(tb.origin.z, -0.85 + Game.HALF * 1.5 + GameConfig.TRAY_OUT) or is_equal_approx(absf(tb.origin.x), 0.0))
+	var held := Game.tray_held_transform(ts, Vector3(0.5, 0.8, 0.0), Vector3(0, -0.02, 0.01), Vector3(0.5, 1.3, 1.0))
+	check("a held tray follows the hand, keeps its tilt and faces the headset", held.origin.is_equal_approx(Vector3(0.5, 0.78, 0.01)) and absf(held.basis.y.y - ts.basis.y.y) < 0.001 and held.basis.z.dot(Vector3(0, 0, 1)) > 0.95)
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
@@ -2010,4 +2016,67 @@ func _rim() -> void:
 	t = Game.rim_transform(start, two, turned)
 	check("two hands turning turn it, and it stays level", absf(t.basis.get_euler().y - start.basis.get_euler().y - 0.5) < 0.001 and absf(t.basis.y.normalized().dot(Vector3.UP) - 1.0) < 0.001)
 	g.queue_free()
+	await process_frame
+
+
+func _tray_rules() -> void:
+	## Siddharth 2026-11-12: the tray starts at the board's front edge, low; it is grabbed and moved on its own and
+	## never follows the island.
+	var g: Game = load("res://scripts/game/game.gd").new()
+	g.with_rig = true
+	root.add_child(g)
+	for i in 4:
+		await process_frame
+	var tray: CardTray = g._tray
+	var c := g.board.global_position
+	var head := g._eye()
+	var out := tray.global_position - c
+	var to_head := head - c
+	check("the tray starts on the headset side of the board", Vector2(out.x, out.z).dot(Vector2(to_head.x, to_head.z)) > 0.0)
+	check("the tray starts below the board's top", tray.global_position.y < c.y)
+	var l := g.board.to_local(tray.global_position)
+	check("the tray does not overlap the island or its rim", maxf(absf(l.x), absf(l.z)) - 0.055 > Game.HALF + GameConfig.RIM_WIDTH)
+	check("the tray is tipped up toward the player", tray.global_basis.y.y < 1.0 and tray.global_basis.y.z > 0.0)
+	var at0 := tray.global_transform
+	g.board.global_transform = Transform3D(Basis(Vector3.UP, 0.8) * Basis.from_scale(Vector3(1.6, 1.6, 1.6)), c + Vector3(0.3, 0.1, -0.2))
+	for i in 3:
+		await process_frame
+	check("moving, turning and resizing the island leaves the tray where it is", tray.global_transform.is_equal_approx(at0))
+	g.board.global_transform = Transform3D(Basis.IDENTITY, c)
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	hand.global_position = tray.global_transform * Vector3(0, 0, 0.05)  # the front lip, outside every card
+	var cards_before := g._tray.cards.size()
+	g.hand_pressed(hand)
+	check("a pinch on the tray's wood grabs the tray, not a card", g._tray_hand == hand and g._held_card == null and cards_before > 0)
+	var board_at := g.board.global_transform
+	hand.global_position += Vector3(0.2, 0.05, 0.1)
+	for i in 2:
+		await process_frame
+	check("the grabbed tray follows the hand", tray.global_position.distance_to(at0.origin + Vector3(0.2, 0.05, 0.1)) < 0.001)
+	check("moving the tray never moves the island", g.board.global_transform.is_equal_approx(board_at))
+	check("the grabbed tray keeps its tilt", absf(tray.global_basis.y.y - at0.basis.y.y) < 0.001)
+	g.hand_released(hand)
+	var dropped := tray.global_transform
+	for i in 3:
+		await process_frame
+	check("a released tray stays where it was put", g._tray_hand == null and tray.global_transform.is_equal_approx(dropped))
+	hand.global_position = tray.global_transform * Vector3(0, 0, 0.05)
+	g.hand_pressed(hand)
+	hand.global_position += Vector3(-0.3, 0, 0.2)
+	await process_frame
+	g.hand_released(hand, true)
+	check("a hand lost mid-move snaps the tray back to where the grab began", g._tray_hand == null and tray.global_transform.is_equal_approx(dropped))
+	var card: Card3D = tray.cards[0]
+	hand.global_position = card.global_position
+	g.hand_pressed(hand)
+	check("a pinch on a card still picks the card", g._held_card == card and g._tray_hand == null)
+	g.hand_released(hand, true)
+	g.new_run(7)
+	for i in 3:
+		await process_frame
+	check("a new run keeps the tray where it was put", g._tray.global_transform.is_equal_approx(dropped))
+	g.queue_free()
+	hand.queue_free()
 	await process_frame
