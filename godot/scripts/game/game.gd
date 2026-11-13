@@ -32,6 +32,7 @@ enum Phase { DAY, NIGHT, CARDS, DONE }
 
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
+const TRAY_SUBTITLE_WIDTH := 620.0  # px: two short centred lines instead of a view-wide nightfall sentence
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "storm": "storm_cloud", "rage": "rage_cast", "roots": "ward_cast"}
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
@@ -2052,6 +2053,9 @@ func _build_tray_bits() -> void:
 	_toast.name = "Toast"
 	_toast.font_size = 44
 	_toast.pixel_size = 0.00036
+	_toast.width = TRAY_SUBTITLE_WIDTH
+	_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.outline_size = 16
 	_toast.modulate = Color("F4E4B8")  # wall_cream
 	_toast.outline_modulate = Color("5B2920")

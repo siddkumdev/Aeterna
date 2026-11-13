@@ -2205,6 +2205,14 @@ func _tray_rules() -> void:
 	cam.global_position = Vector3(0, 1.2, 0.3)
 	await process_frame
 	check("the tray is placed once the headset pose is valid", g2._tray_placed and g2._tray.global_position.z > g2.board.global_position.z)
+	check("the tray subtitle is centred and smart-wrapped within a compact view width",
+		g._toast.width == Game.TRAY_SUBTITLE_WIDTH and g._toast.autowrap_mode == TextServer.AUTOWRAP_WORD_SMART \
+		and g._toast.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER \
+		and g._toast.width * g._toast.pixel_size < 0.23)
+	g.start_night()
+	check("nightfall routes Skotos's long subtitle through the wrapped tray label",
+		g.phase == Game.Phase.NIGHT and g._toast.text == g.last_message \
+		and g._toast.text.begins_with("Skotos: ") and g._toast.text.length() > 50)
 	g2.queue_free()
 	cam.queue_free()
 	g.queue_free()
