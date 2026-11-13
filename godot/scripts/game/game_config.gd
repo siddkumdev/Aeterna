@@ -224,7 +224,7 @@ const TOWER_SIZE := Vector2i(2, 2)
 # "2x" and really runs NIGHT_FAST times as fast. Selling is a pinch held on a built tower for CRUSH_HOLD seconds.
 const DAY_LENGTH := 180.0  # s
 const DAY_DUSK_WARN := 20.0  # s before the end: the light turns to dusk
-const DAY_FAST := 10.0
+const DAY_FAST := 20.0
 const NIGHT_FAST := 4.0
 const CRUSH_HOLD := 1.2  # s
 
