@@ -330,3 +330,4 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - 2026-11-12 (Siddharth): the AMBER TINT over the room in passthrough STAYS.
 - 2026-11-13 (Siddharth, A3 built): the tray hourglass advances the day at 20x, twice its previous 10x rate. The night rate stays 4x.
 - 2026-11-13 (Siddharth): Meta Quest passthrough is ON for the final build; the Quest 3 export preset marks passthrough Required (`meta_xr_features/passthrough=2`, per the installed OpenXR Vendors 5.1.0 enum `Optional:1,Required:2`).
+- 2026-11-13 (Siddharth, A4 built): the player can hold one spell token in each hand at the same time; each spell keeps its existing cost and its own cooldown, with no other spell rule changed.

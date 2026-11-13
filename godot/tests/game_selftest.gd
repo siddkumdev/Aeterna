@@ -484,6 +484,46 @@ func _hand_reach() -> void:
 	g.queue_free()
 	await process_frame
 
+	# A4: each tracked hand can hold and cast a different physical spell card independently.
+	var rig_game: Game = load("res://scripts/game/game.gd").new()
+	rig_game.with_rig = true
+	root.add_child(rig_game)
+	for i in 3:
+		await process_frame
+	_night_start(rig_game)
+	var fire_card: Card3D = rig_game._tray.cards.filter(func(c): return c.data.get("id", "") == "fire_orb")[0]
+	var boulder_card: Card3D = rig_game._tray.cards.filter(func(c): return c.data.get("id", "") == "boulder")[0]
+	var spell_hand_a := GameHand.new()
+	var spell_hand_b := GameHand.new()
+	root.add_child(spell_hand_a)
+	root.add_child(spell_hand_b)
+	await process_frame
+	spell_hand_a.global_position = fire_card.global_position
+	rig_game.hand_pressed(spell_hand_a)
+	spell_hand_b.global_position = boulder_card.global_position
+	rig_game.hand_pressed(spell_hand_b)
+	check("one spell card can be held in each hand at the same time",
+		rig_game._held_spell_cards.size() == 2 and rig_game._held_spell_cards.get(spell_hand_a) == fire_card \
+		and rig_game._held_spell_cards.get(spell_hand_b) == boulder_card and fire_card.lifted and boulder_card.lifted)
+	var faith_before := rig_game.faith
+	spell_hand_a.global_position = rig_game.board.to_global(Vector3(-0.05, 0.15, 0.0))
+	spell_hand_b.global_position = rig_game.board.to_global(Vector3(0.05, 0.15, 0.0))
+	rig_game._update_held()
+	rig_game.hand_released(spell_hand_a)
+	check("releasing one spell casts only it and leaves the other hand holding",
+		is_equal_approx(rig_game.spells.cooldown["fire_orb"], GameConfig.SPELLS["fire_orb"]["cooldown"]) \
+		and rig_game.spells.is_ready("boulder") and not rig_game._held_spell_cards.has(spell_hand_a) \
+		and rig_game._held_spell_cards.get(spell_hand_b) == boulder_card and boulder_card.lifted)
+	rig_game.hand_released(spell_hand_b)
+	check("the second spell keeps its own existing cooldown and neither spell costs faith",
+		is_equal_approx(rig_game.spells.cooldown["fire_orb"], GameConfig.SPELLS["fire_orb"]["cooldown"]) \
+		and is_equal_approx(rig_game.spells.cooldown["boulder"], GameConfig.SPELLS["boulder"]["cooldown"]) \
+		and rig_game.faith == faith_before and rig_game._held_spell_cards.is_empty())
+	spell_hand_a.queue_free()
+	spell_hand_b.queue_free()
+	rig_game.queue_free()
+	await process_frame
+
 
 func _night_with(g: Game, kind: String, spawn_cell: Vector2i, seconds: float) -> Enemy:
 	## Starts a night with no planned waves and puts one enemy of `kind` at a spawn cell; plays `seconds`.

@@ -125,8 +125,9 @@ var _tray_off := Vector3.ZERO  # tray origin minus the hand's touch point when i
 var _tray_start := Transform3D.IDENTITY  # where the grab began (a lost hand snaps it back here)
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
-var _held_card: Card3D  # the card in a hand (or on the mouse hand)
+var _held_card: Card3D  # the tower card in a hand (or on the mouse hand)
 var _held_card_hand: GameHand
+var _held_spell_cards := {}  # GameHand -> Card3D; one independent spell card per hand
 var _lens: Node3D  # the Crystal Lens model (spec 13)
 var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
 var _lens_grip := Vector3.ZERO  # the grip anchor in the lens model's own space
@@ -767,24 +768,29 @@ func _faith_sparkle(at: Vector3) -> void:
 
 func _update_held() -> void:
 	if _held_card and _held_card_hand:
-		# the card rides in the hand, face toward the eyes; over the board a tower shows its ghost and range ring
-		# on the cell under the card, a spell its aim
+		# The tower card rides in the hand, face toward the eyes, and shows its ghost and range ring on the board.
 		var hp := _held_card_hand.touch_point()  # the drawn fingers, so the ghost sits under the pinch
 		_held_card.global_position = hp + Vector3(0, 0.05, 0.02)  # a little above the fingers, so the ghost under it stays visible
 		_held_card.face_toward(_eye())
 		var local := board.to_local(hp)
-		var inside := absf(local.x) <= HALF and absf(local.z) <= HALF
-		if _held_card.data.get("kind", "") == "tower":
-			_hover_cell = Vector2i(-1, -1)
-			if inside:
-				_hover_cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
-					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
-			_update_ghost()
-		elif inside:
+		_hover_cell = Vector2i(-1, -1)
+		if absf(local.x) <= HALF and absf(local.z) <= HALF:
+			_hover_cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
+				.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
+		_update_ghost()
+	if not _held_spell_cards.is_empty():
+		spells.hide_aim()  # clear a stale ring when both held spells move off the board
+	for hand: GameHand in _held_spell_cards:
+		var card: Card3D = _held_spell_cards[hand]
+		if not is_instance_valid(hand) or not is_instance_valid(card):
+			continue
+		var hp := hand.touch_point()
+		card.global_position = hp + Vector3(0, 0.05, 0.02)
+		card.face_toward(_eye())
+		var local := board.to_local(hp)
+		if absf(local.x) <= HALF and absf(local.z) <= HALF:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
-			spells.show_aim(_held_card.data["id"], local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
-		else:
-			spells.hide_aim()
+			spells.show_aim(card.data["id"], local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 	if _held_spell != "" and _held_spell_hand:
 		var local := board.to_local(_held_spell_hand.global_position)
 		var b: Dictionary = GameConfig.SPELLS["boulder"]
@@ -984,6 +990,10 @@ func _clear_night() -> void:
 		spells.clear_effects()
 	spell_sel = ""
 	_held_spell = ""
+	for cd: Card3D in _held_spell_cards.values():
+		if is_instance_valid(cd):
+			cd.release_to_home(0.0)
+	_held_spell_cards.clear()
 
 
 func standing_houses() -> Array[int]:
@@ -1783,7 +1793,7 @@ func _process(delta: float) -> void:
 		h.set_bubble_hot(not h.is_lost() and grabbable_near(h.global_position))
 		if h.bubble:
 			h.bubble.visible = not h.is_lost()
-	if _held_card:
+	if _held_card or not _held_spell_cards.is_empty():
 		pass  # a card in hand decides the cell (_update_held); the pointer must not overwrite it
 	elif _xr:
 		if _active_hand:
@@ -1963,7 +1973,7 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 		print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [up, d, eye.y - at.y, ledger.open])  # for the headset log
 	if found and (d < GameConfig.PALM_REACH.x or d > GameConfig.PALM_REACH.y or at.y > eye.y - GameConfig.PALM_BELOW_EYE):
 		up = -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
-	if asleep or (_held_card and _hands.size() > 0 and _held_card_hand == _hands[0]):
+	if asleep or (_hands.size() > 0 and ((_held_card and _held_card_hand == _hands[0]) or _held_spell_cards.has(_hands[0]))):
 		up = -1.0
 	if not ledger.open:
 		_palm_time = _palm_time + delta if up > GameConfig.PALM_UP_OPEN else 0.0
@@ -2188,7 +2198,7 @@ func hand_pressed(h: GameHand) -> void:
 		var cd := _tray.card_near(tp, card_reach())
 		# The tray's own wood (outside a card's face) takes the whole tray: a pinch within TRAY_GRAB_PAD of the base
 		# grabs it unless the point is on a card's face (within half a card's height of its centre), where the card keeps priority.
-		if h != _mouse_hand and _tray_hand == null and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) 				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) 				and not _on_tray_hourglass(tp):
+		if h != _mouse_hand and _tray_hand == null and _held_spell_cards.is_empty() and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) 				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) 				and not _on_tray_hourglass(tp):
 			_tray_grab(h)
 			return
 		if cd and _grab_card(cd, h):
@@ -2264,6 +2274,8 @@ func _grab_card(cd: Card3D, h: GameHand) -> bool:
 		"spell":
 			if phase != Phase.NIGHT:
 				return true
+			if _held_spell_cards.has(h):
+				return true  # this hand already holds its one spell
 			if not spells.is_ready(id):
 				snd("invalid")
 				last_message = "%s is still cooling down (%d s)." % [GameConfig.SPELLS[id]["name"], ceili(spells.cooldown[id])]
@@ -2274,8 +2286,11 @@ func _grab_card(cd: Card3D, h: GameHand) -> bool:
 			choose_card(_tray.cards.find(cd))
 			return true
 	snd("pinch")
-	_held_card = cd
-	_held_card_hand = h
+	if cd.data.get("kind", "") == "spell":
+		_held_spell_cards[h] = cd
+	else:
+		_held_card = cd
+		_held_card_hand = h
 	cd.lift(_eye())
 	return true
 
@@ -2377,6 +2392,24 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		return
 	if not _crush.is_empty() and (_crush["hand"] == h or (_crush["hand"] == null and h == _mouse_hand)):
 		crush_cancel()
+	if _held_spell_cards.has(h):
+		var cd: Card3D = _held_spell_cards[h]
+		var id: String = cd.data.get("id", "")
+		var local := board.to_local(h.touch_point())
+		_held_spell_cards.erase(h)
+		spells.hide_aim()
+		if cancelled:
+			cd.release_to_home()
+			_hand_log(h, "release card:%s cancelled" % id)
+			return
+		if absf(local.x) <= HALF and absf(local.z) <= HALF:
+			var b: Dictionary = GameConfig.SPELLS["boulder"]
+			var cast := cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
+			_hand_log(h, "release card:%s %s" % [id, "cast" if cast else "rejected"])
+		else:
+			_hand_log(h, "release card:%s off-board" % id)
+		cd.release_to_home()
+		return
 	if _held_card and _held_card_hand == h:
 		var cd := _held_card
 		var id: String = cd.data.get("id", "")
@@ -2779,6 +2812,7 @@ func _refresh_tray() -> void:
 				select("")
 		_held_card = null
 		_held_card_hand = null
+		_held_spell_cards.clear()
 		_tray.set_cards(list)
 		_place_tray_bits(list.size())
 	_refresh_card_availability()

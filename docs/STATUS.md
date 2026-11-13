@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-13, A3 hourglass day hurry changed from 10x to 20x (uncommitted).
+Last updated: 2026-11-13, A4 two-hand spell cards built and self-tested (uncommitted).
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -25,6 +25,7 @@ Last updated: 2026-11-13, A3 hourglass day hurry changed from 10x to 20x (uncomm
 ## Untested on the Quest
 - 2026-11-12: hands fixes 8daf5fe / 86911fe and the new card tray (starts at the board's front edge, low, tilted; grab the wood to move it; never follows the island; `Game._update_tray`, shot `godot/tools/tray_shot.gd`) are untested on the headset. Video review results: `_work/video_review/issues.md`.- Passthrough (may still need the blocked vendor plugin).
 - 2026-11-13: A3 hourglass day hurry is 20x (was 10x); regression-covered, not tested on the headset.
+- 2026-11-13: A4 allows one different physical spell card in each hand; releases and existing cooldowns stay independent. 475 checks pass; not tested on the headset.
 - God hands: the last build showed only the ember orb. Cause unknown, the log was never read.
 - UI rig floating in front of the player; mirror held upright facing the eyes.
 
