@@ -44,6 +44,8 @@ var _thread_mat: StandardMaterial3D
 var _xr_live := false
 var _pinching := false
 var _poking := {}  # node instance id -> true while the fingertip is still on it
+var _poke_nodes: Array[Node] = []
+var _poke_cache_dirty := true
 var _f_ready := false
 var _f_pos := Vector3.ZERO
 var _f_vel := Vector3.ZERO
@@ -56,6 +58,10 @@ var _orb: MeshInstance3D  # the controller-only stand-in
 func _ready() -> void:
 	var xr := XRServer.find_interface("OpenXR")
 	_xr_live = xr != null and xr.is_initialized()
+	# Pokable plaques change only when nodes enter or leave the scene. Reuse the group list between those changes
+	# instead of rebuilding it for both hands on every XR frame.
+	get_tree().node_added.connect(_invalidate_poke_cache)
+	get_tree().node_removed.connect(_invalidate_poke_cache)
 	button_pressed.connect(func(action: String):
 		if action in PRESS_ACTIONS:
 			# Hand tracking reports the same pinch through trigger_click and the joint distance below. Keep one logical
@@ -232,7 +238,7 @@ func _update_poke() -> void:
 		_poking.clear()
 		return
 	var tip := visual.index_tip_global()
-	for n in get_tree().get_nodes_in_group(POKE_GROUP):
+	for n in _poke_candidates():
 		var nd := n as Node3D
 		if nd == null or not nd.is_inside_tree():
 			continue
@@ -244,6 +250,17 @@ func _update_poke() -> void:
 			poked.emit(nd)
 		elif d > r * 1.6 and _poking.has(id):
 			_poking.erase(id)
+
+
+func _invalidate_poke_cache(_node: Node = null) -> void:
+	_poke_cache_dirty = true
+
+
+func _poke_candidates() -> Array[Node]:
+	if _poke_cache_dirty:
+		_poke_nodes.assign(get_tree().get_nodes_in_group(POKE_GROUP))
+		_poke_cache_dirty = false
+	return _poke_nodes
 
 
 func make_bubble(radius: float) -> void:

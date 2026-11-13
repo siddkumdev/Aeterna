@@ -367,6 +367,22 @@ func _hand_reach() -> void:
 	var hand := GameHand.new()
 	root.add_child(hand)
 	await process_frame
+	var poke_a := Node3D.new()
+	poke_a.add_to_group(GameHand.POKE_GROUP)
+	root.add_child(poke_a)
+	check("hand poke targets are cached after their first group lookup",
+		hand._poke_cache_dirty and hand._poke_candidates().has(poke_a) and not hand._poke_cache_dirty)
+	var poke_b := Node3D.new()
+	poke_b.add_to_group(GameHand.POKE_GROUP)
+	root.add_child(poke_b)
+	check("adding a pokable invalidates and refreshes the hand target cache",
+		hand._poke_cache_dirty and hand._poke_candidates().has(poke_a) and hand._poke_candidates().has(poke_b))
+	poke_a.queue_free()
+	await process_frame
+	check("removing a pokable invalidates and refreshes the hand target cache",
+		hand._poke_cache_dirty and hand._poke_candidates().all(func(n): return is_instance_valid(n))
+		and hand._poke_candidates().has(poke_b))
+	poke_b.queue_free()
 	hand.global_position = Vector3(0.1, 1.0, 0.2)
 	check("no tracked hand: touch point and ray origin are the node (controllers unchanged)", hand.touch_point() == hand.global_position 		and hand.ray_origin() == hand.global_position)
 	var v := GodHandVisual.new()
