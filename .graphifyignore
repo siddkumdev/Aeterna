@@ -1,0 +1,26 @@
+# Godot cache, third-party addons & Android/Quest build outputs
+godot/.godot/
+godot/addons/
+godot/android/
+godot/assets/
+godot/exports/
+*.import
+*.glb
+*.blend
+*.blend1
+*.png
+*.jpg
+*.wav
+*.apk
+
+# Local scratch, previews, reports & archives
+_work/
+reports/
+research_notes/
+watch/
+assets/previews/
+assets/blend/
+assets/audio_src/
+
+# Graph output
+graphify-out/

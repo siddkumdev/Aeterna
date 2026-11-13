@@ -5,6 +5,12 @@
       "command": "uvx",
       "args": ["mcp-for-blender"],
       "env": {}
+    },
+    "graphify": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/graphify_mcp.py", "graphify-out/graph.json"],
+      "env": {}
     }
   }
 }

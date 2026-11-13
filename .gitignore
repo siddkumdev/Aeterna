@@ -20,3 +20,5 @@ watch/local.properties
 # Local Codex-compatible copies of the Claude skills/agents/config; not shared.
 .agents/
 .codex/
+# Graphify generated knowledge graph (rebuilt via: graphify update .)
+graphify-out/
