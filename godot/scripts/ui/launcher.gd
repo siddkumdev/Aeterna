@@ -10,6 +10,7 @@ const AUTO_START := 6.0  # s of title before the story begins on its own
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
+const TUTORIAL_HINT_POS := Vector3(0, 0.20, -Game.HALF - 0.08)
 const TALE := "You are a very small god. Your whole world is this island: a meadow, twelve people, a well and a shrine.\n\nYour Veil, woven from their faith, keeps the Dark Wood out. But Skotos, a god the world forgot, has cursed it: every nightfall, it breaks.\n\nPlace towers. Cast your spells. Help your people. And if the worst happens... you are a god. You can try again."
 const HINTS := [
 	"Pick up a card from the tray.",
@@ -86,9 +87,9 @@ func _build_title() -> void:
 			pl.get_parent().remove_child(pl)
 			_xr_rig.add_child(pl)
 			pl.rotation_degrees = Vector3(-30, 0, 0)
-		(_plaques["wake"] as Node3D).position = Vector3(-0.07, 0, 0)
+		(_plaques["wake"] as Node3D).position = Vector3(-0.11, 0, 0)
 		(_plaques["wake"] as Node3D).scale = Vector3.ONE * 1.5
-		(_plaques["tale"] as Node3D).position = Vector3(0.20, -0.03, 0.02)
+		(_plaques["tale"] as Node3D).position = Vector3(0.24, -0.03, 0.02)
 		(_plaques["tale"] as Node3D).scale = Vector3.ONE * 0.85
 	_panel = StoryPanel.make(game.board, Vector3(0, 0.34, 0.15))
 	_title.add_child(_fireflies())
@@ -134,10 +135,12 @@ func _place_xr_rig() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _auto_at >= 0.0 and _state == "title":  # the whole story starts by itself; a press on Wake just starts it sooner
-		_auto_at -= delta
-		if _auto_at < 0.0:
-			_press_plaque("wake")
+	if _auto_at >= 0.0 and _state == "title":  # the whole story starts by itself; hovering The Tale pauses it
+		var tale_hot := _plaques.has("tale") and (_plaques["tale"] as Plaque).hot
+		if not tale_hot:
+			_auto_at -= delta
+			if _auto_at < 0.0:
+				_press_plaque("wake")
 	elif _state != "title":
 		_auto_at = -1.0
 	if _state != "playing":
@@ -186,6 +189,7 @@ func _on_press(world: Vector3, origin: Vector3, dir: Vector3) -> bool:
 		return true
 	if _state == "tale":
 		_state = "title"
+		_auto_at = AUTO_START
 		_close_panel()
 	return true  # nothing else can be pressed while the title is up
 
@@ -203,6 +207,7 @@ func _press_plaque(id: String) -> void:
 		"tale":
 			if _state == "tale":
 				_state = "title"
+				_auto_at = AUTO_START
 				_close_panel()
 			else:
 				_state = "tale"
@@ -279,7 +284,7 @@ func _hint(line: String) -> void:
 		_hint_root = Node3D.new()
 		_hint_root.name = "HintRoot"
 		game.board.add_child(_hint_root)
-	_hint_card = TitleCard.show_over(_hint_root, Vector3(0, 0.27, 0.15), line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 54)
+	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 54)
 
 
 func _end_hints() -> void:

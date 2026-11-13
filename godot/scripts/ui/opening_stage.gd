@@ -313,10 +313,11 @@ func _ready() -> void:
 	_head_root.position = Vector3(0, H / 2.0 + 0.075, 0.07)
 	add_child(_head_root)
 	_cap_root = Node3D.new()
-	_cap_root.position = Vector3(0, -H / 2.0 - 0.17, 0.07)
+	_cap_root.position = Vector3(0, -H / 2.0 - 0.14, 0.12)
 	add_child(_cap_root)
 	_hint_root = Node3D.new()
-	_hint_root.position = Vector3(0, -H / 2.0 - 0.34, 0.07)
+	_hint_root.position = Vector3(0, -H / 2.0 - 0.32, 0.12)
+	_hint_root.scale = Vector3.ONE * 0.72
 	add_child(_hint_root)
 	_fade = poly(self, rect(-W / 2.0 - 0.3, -H / 2.0 - 0.3, W / 2.0 + 0.3, H / 2.0 + 0.3), Color(0, 0, 0, 1), 0.09, false)
 	(_fade.material_override as StandardMaterial3D).transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -387,6 +388,7 @@ func _process(delta: float) -> void:
 	if not _started:
 		return
 	_t += delta
+	_follow_head(delta)
 	_step_skip(delta)
 	var lines: Array = CHAPTERS[clampi(_chapter, 0, CHAPTERS.size() - 1)]["lines"]
 	if _chapter >= 0 and _lines_shown < lines.size() and _t >= 1.0 + _lines_shown * 6.2:
@@ -410,6 +412,27 @@ func _step_skip(delta: float) -> void:
 	_skip_t = _skip_t + delta if held else 0.0
 	if _skip_t >= SKIP_HOLD:
 		_skipped = true
+
+
+func _follow_head(delta: float) -> void:
+	if not visible or game == null or not game._xr or game._xr_cam == null:
+		return
+	var cam: Camera3D = game._xr_cam
+	var f := -cam.global_transform.basis.z
+	f.y = 0.0
+	if f.length() < 0.05:
+		return
+	f = f.normalized()
+	var flat := Vector3(global_position.x - cam.global_position.x, 0.0, global_position.z - cam.global_position.z)
+	var dist := flat.length()
+	if dist < 0.05:
+		return
+	var d := flat / dist
+	if f.angle_to(d) > 0.38:
+		var yaw := lerp_angle(atan2(d.x, d.z), atan2(f.x, f.z), minf(1.0, delta * 2.5))
+		var dir := Vector3(sin(yaw), 0.0, cos(yaw))
+		global_position = Vector3(cam.global_position.x, cam.global_position.y - 0.04, cam.global_position.z) + dir * dist
+		rotation.y = atan2(-dir.x, -dir.z)
 
 
 # ------------------------------------------------------------------ the six chapters (each builds its puppets and sets a per-frame tick)

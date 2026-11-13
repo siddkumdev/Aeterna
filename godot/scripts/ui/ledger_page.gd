@@ -16,6 +16,7 @@ const OAK := Color("5B2920")
 const OAK_LIGHT := Color("9A6538")
 const EMBER := Color("E8452C")
 const GREEN := Color("5D8548")  # leaf_green
+const QUIT_RECT := Rect2(140, SIZE.y - 112, SIZE.x - 280, 46)
 const ROMAN: Array[String] = ["I", "II", "III", "IV", "V", "VI", "VII"]
 const TITLES: Array[String] = ["The God", "The Village", "Towers", "Spells", "Quests", "How to Play"]
 const HOW: Array[String] = [
@@ -156,12 +157,15 @@ func _page_quests() -> void:
 
 
 func _page_how() -> void:
-	var y := 130.0
+	var y := 122.0
 	for line in HOW:
 		draw_circle(Vector2(56, y + 14), 5, GOLD_DARK)
-		_wrap_left(line, Rect2(76, y, SIZE.x - 120, 90), 21, INK)
-		y += 90
-	_center("Watch over them.", Vector2(SIZE.x / 2.0, SIZE.y - 70), 26, EMBER)
+		_wrap_left(line, Rect2(76, y, SIZE.x - 120, 78), 20, INK)
+		y += 78
+	_center("Watch over them.", Vector2(SIZE.x / 2.0, SIZE.y - 134), 24, EMBER)
+	draw_rect(QUIT_RECT, EMBER)
+	draw_rect(QUIT_RECT.grow(-3), Color("E8C888"))
+	_center("Quit Game", Vector2(SIZE.x / 2.0, QUIT_RECT.position.y + 32), 22, INK)
 
 
 func _font() -> Font:

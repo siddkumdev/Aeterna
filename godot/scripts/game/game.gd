@@ -173,6 +173,11 @@ var _faith_label: Label3D
 var _toast: Label3D  # newest short message line above the tray
 var _toast_stack: Array[Label3D] = []  # older still-visible toasts stacked above _toast
 var _toast_last := ""
+const DAY_CLOCK_POS := Vector3(0, 0.42, -HALF - 0.08)
+const LEDGER_INWARD_SHIFT := 0.14
+const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
+var _sell_hint_shown := false
+var quit_requested := false
 var _hud_toast_serial := 0
 var _grass_pushers: Array = []  # pre-allocated per-frame grass pusher buffer
 var _crush := {}  # selling by hand: {"tower", "hand", "t", "at"} while a built tower is pinched and held
@@ -290,6 +295,8 @@ func new_run(rng_seed: int) -> void:
 		_hourglass.visible = false
 	_toast_last = ""
 	_hud_toast_serial = _msg_serial
+	_sell_hint_shown = false
+	quit_requested = false
 	if _toast:
 		_toast.text = ""
 		_toast.modulate.a = 0.0
@@ -1325,6 +1332,9 @@ func try_build(kind: String, cell: Vector2i) -> bool:
 		foresight.refresh()  # a new tower can change the routes the lens draws
 	_update_ghost()
 	_refresh_ui()
+	if not _sell_hint_shown:
+		_sell_hint_shown = true
+		_show_toast(SELL_TOWER_HINT)
 	return true
 
 
@@ -1534,6 +1544,7 @@ func tap_villager(v: Villager) -> String:
 		return ""
 	for r in requests:
 		if r.answer(v):  # the one who prays was heard
+			v.taps += 1
 			_pay_quest(r)
 			return StoryText.task("answer_prayer", "after")
 	var line := StoryText.thought(v.voice, loop, v.taps)
@@ -1635,6 +1646,9 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	if asleep:
 		return
 	if ledger and ledger.open:
+		if ledger.quit_hit_ray(origin, dir):
+			quit_game()
+			return
 		var side := ledger.page_hit_ray(origin, dir)
 		if side != 0:
 			ledger.turn(side)  # the right page turns forward, the left back; the press is used up either way
@@ -2005,6 +2019,14 @@ func _on_xr_tracker_removed(tracker_name: StringName, _type: int = 0) -> void:
 		_left_hand_tracker = null
 
 
+func quit_game() -> void:
+	## Triggered by the Quit Game seal on the final page of the Ledger.
+	quit_requested = true
+	last_message = "Closing Aeterna..."
+	if get_tree() and DisplayServer.get_name() != "headless":
+		get_tree().quit()
+
+
 func _get_left_hand_tracker() -> XRHandTracker:
 	if not _left_tracker_hooked:
 		_left_tracker_hooked = true
@@ -2053,7 +2075,13 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 		_palm_close_time = 0.0
 		_palm_time = _palm_time + delta if up > GameConfig.PALM_UP_OPEN else 0.0
 		if _palm_time >= GameConfig.PALM_UP_HOLD:
-			_face_ledger(at + Vector3(0, 0.17, 0), eye)  # it appears once, over the palm, and stays where it opened
+			var inward := Vector3.FORWARD
+			if is_instance_valid(board):
+				var flat := Vector3(board.global_position.x - at.x, 0.0, board.global_position.z - at.z)
+				if flat.length() > 0.001:
+					inward = flat.normalized()
+			var open_pos := at + Vector3(0, 0.17, 0) + inward * LEDGER_INWARD_SHIFT
+			_face_ledger(open_pos, eye)  # it appears once, over the palm and shifted inward toward the board
 			ledger.set_open(true)
 			print("[ledger] opened by the left palm, up=%.2f dist=%.2f" % [up, d])
 	elif busy or (found and in_reach and raw_up <= -0.5):
@@ -2154,7 +2182,7 @@ func _tick_clock() -> void:
 		_clock.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_clock.no_depth_test = true
 		_clock.render_priority = 12
-		_clock.position = Vector3(0, 0.30, 0)
+		_clock.position = DAY_CLOCK_POS
 		board.add_child(_clock)
 	_clock.visible = phase == Phase.DAY and not asleep
 	if _clock.visible:
@@ -2318,6 +2346,9 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	var tp := h.target_point()  # small targets follow the visible pinch; dragging still follows the preferred aim pose
 	if ledger and ledger.open:
+		if ledger.quit_hit_point(tp, 0.05):
+			quit_game()
+			return
 		var side := ledger.page_hit_point(tp, 0.05)
 		if side != 0:
 			ledger.turn(side)

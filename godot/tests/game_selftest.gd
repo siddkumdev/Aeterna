@@ -2319,7 +2319,58 @@ func _visual_rendering_fixes() -> void:
 		LensView.VIEW_SIZE == Vector2i(672, 960) and lv._vp.msaa_3d == Viewport.MSAA_2X and (lv._cam.cull_mask & HazeDome.RENDER_LAYER) == 0)
 	lv.queue_free()
 	dummy.queue_free()
-	var g := await _make_game()
+	var g: Game = load("res://scripts/game/game.gd").new()
+	g.with_rig = false
+	g.with_life = true
+	root.add_child(g)
+	await process_frame
 	check("resting Crystal Lens sits at 1.0x tabletop scale", g._lens.transform.basis.get_scale().is_equal_approx(Vector3.ONE))
+	check("audio bus levels raise music and ambience for Quest speakers",
+		AudioBank.BUS_DB["ambience"] == -10.0 and AudioBank.BUS_DB["music"] == -6.0)
+	g._tick_clock()
+	check("day clock and tutorial banner sit above the far north island edge without overlapping",
+		g._clock.position.z <= -Game.HALF and Launcher.TUTORIAL_HINT_POS.z <= -Game.HALF \
+		and g._clock.position.y - Launcher.TUTORIAL_HINT_POS.y >= 0.20)
+	g.force_quests(["prayer"])
+	var prayer_v: Villager = g.requests[0].asker()
+	g.tap_villager(prayer_v)
+	check("tapping a praying quest-giver villager counts toward Tap a villager",
+		prayer_v.taps == 1 and g.requests[0].done)
+	g.ledger = Ledger.new()
+	g.ledger.game = g
+	g.add_child(g.ledger)
+	await process_frame
+	var palm := Vector3(0.0, 1.0, 0.35)
+	var eye := Vector3(0.0, 1.3, 0.55)
+	g.ledger_from_palm(GameConfig.PALM_UP_HOLD + 0.05, true, palm, Vector3.UP, eye)
+	var expected_dir := Vector3(g.board.global_position.x - palm.x, 0.0, g.board.global_position.z - palm.z).normalized()
+	var actual_shift := Vector3(g.ledger.global_position.x - palm.x, 0.0, g.ledger.global_position.z - palm.z)
+	check("ledger opens shifted inward toward the board center away from palm OS reticle",
+		g.ledger.open and actual_shift.is_equal_approx(expected_dir * Game.LEDGER_INWARD_SHIFT))
+	g.ledger.set_page(LedgerPage.COUNT - 1)
+	g.ledger.scale = Vector3.ONE
+	var quit_world: Vector3 = g.ledger._book.global_transform * Vector3(Ledger.PW * 0.5, -Ledger.PH / 2.0 + 0.025, 0.0)
+	var hand := GameHand.new()
+	root.add_child(hand)
+	hand.global_position = quit_world
+	g.hand_pressed(hand)
+	check("tapping Quit Game on the last ledger spread requests exit", g.quit_requested)
+	hand.queue_free()
 	g.queue_free()
+	await process_frame
+	var g_rig: Game = load("res://scripts/game/game.gd").new()
+	g_rig.with_rig = true
+	g_rig.with_life = false
+	root.add_child(g_rig)
+	for i in 3:
+		await process_frame
+	g_rig.faith = 500
+	g_rig.try_build("fire", Vector2i(16, 11))
+	check("building the first tower shows the one-time sell-tower toast",
+		g_rig._sell_hint_shown and g_rig._toast.text == Game.SELL_TOWER_HINT)
+	g_rig._show_toast("Other toast")
+	g_rig.try_build("fire", Vector2i(16, 13))
+	check("building a second tower does not repeat the one-time sell-tower toast",
+		g_rig._toast.text != Game.SELL_TOWER_HINT)
+	g_rig.queue_free()
 	await process_frame

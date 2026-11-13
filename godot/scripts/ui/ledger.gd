@@ -246,3 +246,29 @@ func page_hit_point(world: Vector3, reach: float) -> int:
 	if absf(p.z) > reach / maxf(scale.x, 0.01):
 		return 0
 	return _side(p)
+
+
+func _on_quit_button(p: Vector3) -> bool:
+	return p.x >= 0.025 and p.x <= PW - 0.025 and p.y >= -PH / 2.0 + 0.012 and p.y <= -PH / 2.0 + 0.044
+
+
+func quit_hit_point(world: Vector3, reach: float) -> bool:
+	## True when touching the Quit Game seal at the bottom of the final page (spread == SPREADS - 1).
+	if not open or _turning or spread != SPREADS - 1:
+		return false
+	var p := _local(world)
+	return absf(p.z) <= reach / maxf(scale.x, 0.01) and _on_quit_button(p)
+
+
+func quit_hit_ray(origin: Vector3, dir: Vector3) -> bool:
+	## True when a pointer ray hits the Quit Game seal on the final page.
+	if not open or _turning or spread != SPREADS - 1:
+		return false
+	var o := _local(origin)
+	var d := _book.global_transform.affine_inverse().basis * dir
+	if absf(d.z) < 0.00001:
+		return false
+	var t := -o.z / d.z
+	if t < 0.0:
+		return false
+	return _on_quit_button(o + d * t)

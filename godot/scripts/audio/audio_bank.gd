@@ -13,7 +13,7 @@ extends Node
 
 const DIR := "res://assets/audio/"
 const MAX_VOICES := 28
-const BUS_DB := {"ui": -3.0, "sfx": -5.0, "ambience": -15.0, "music": -10.0}  # docs/AUDIO_DIRECTION.md
+const BUS_DB := {"ui": -3.0, "sfx": -5.0, "ambience": -10.0, "music": -6.0}  # docs/AUDIO_DIRECTION.md
 const DUCK_DB := -6.0  # a story beat (manifest "duck") lowers ambience and music this much while it plays
 const DUCKED := ["ambience", "music"]
 const COMBO_STEPS := [0, 2, 4, 7, 9]  # semitones: the major pentatonic of the game's key (C major, make_audio.py)
