@@ -797,6 +797,9 @@ func _faith_sparkle(at: Vector3) -> void:
 
 
 func _update_held() -> void:
+	for h in _hands:
+		if is_instance_valid(h) and h.visual:
+			h.visual.holding_card = (_held_card != null and _held_card_hand == h) or _held_spell_cards.has(h) or (_held_spell != "" and _held_spell_hand == h)
 	if _held_card and _held_card_hand:
 		# The tower card rides in the hand, face toward the eyes, and shows its ghost and range ring on the board.
 		var hp := _held_card_hand.touch_point()  # the drawn fingers, so the ghost sits under the pinch
@@ -2287,8 +2290,7 @@ func _build_lens() -> void:
 		return
 	_lens = res.instantiate()
 	board.add_child(_lens)
-	var s := Basis.from_scale(Vector3.ONE * GameConfig.LENS_SCALE)
-	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5) * s, Vector3(HALF - 0.1, 0.012, HALF + 0.09))
+	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5), Vector3(HALF - 0.1, 0.012, HALF + 0.09))
 	_lens.transform = _lens_rest
 	for n in ModelUtil.walk(_lens):
 		if n is Marker3D and str(n.name).ends_with("grip_anchor"):
@@ -2622,7 +2624,7 @@ func _update_lens() -> void:
 			set_lens(false)
 	elif not _xr:
 		var held := Input.is_key_pressed(KEY_L) and phase == Phase.DAY
-		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)) if held else _lens_rest
+		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)).scaled_local(Vector3.ONE * GameConfig.LENS_SCALE) if held else _lens_rest
 		set_lens(held)
 
 
@@ -3097,6 +3099,8 @@ func _build_rig() -> void:
 			toggle_ledger())
 	var cam := XRCamera3D.new()
 	cam.position = Vector3(0, 1.2, 0)  # seated eye height
+	cam.near = 0.06
+	cam.far = 30.0
 	cam.cull_mask = 0xFFFFF & ~LensView.OVERLAY_LAYER  # Foresight's drawings are for the lens window only
 	origin.add_child(cam)
 	_xr_cam = cam

@@ -10,6 +10,7 @@ extends MeshInstance3D
 
 const HONEY := Color("E8B83A")  # palette.json shell_gold
 const ROSE := Color("E58AA0")  # palette.json cloth_rose
+const RENDER_LAYER := 4  # dedicated layer bit excluded by LensView so the crystal glass never washes out flat tan
 const RADIUS := 6.0  # m: far behind the board and the player's reach, so game objects always cover it
 const FADE_IN := 2.0  # s for the haze to settle in when passthrough starts
 
@@ -48,6 +49,7 @@ func _ready() -> void:
 	_mat.set_shader_parameter("rose", ROSE)
 	_mat.set_shader_parameter("fade", 0.0)
 	material_override = _mat
+	layers = RENDER_LAYER
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	visible = false
 

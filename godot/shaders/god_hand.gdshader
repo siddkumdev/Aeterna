@@ -46,6 +46,6 @@ void fragment() {
 	// body gold -> deep ember red toward the silhouette, which also fades out: a hand of warm light, not a glove
 	vec3 col = mix(inner, edge_color.rgb, smoothstep(0.15, 0.95, fres)) * glow * (1.0 + pinch * 0.35);
 	col *= 0.8 + 0.3 * clamp(NORMAL.y * 0.5 + 0.5, 0.0, 1.0);  // a little top-light so the fingers read as round, not flat
-	ALBEDO = col;
+	ALBEDO = clamp(col, vec3(0.0), vec3(0.95));
 	ALPHA = clamp(mix(base_alpha, rim_alpha, smoothstep(0.6, 1.0, fres)) * (0.95 + n * 0.1), 0.0, 1.0);
 }

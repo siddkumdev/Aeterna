@@ -53,6 +53,7 @@ var _pinch_glow: MeshInstance3D  # where the two tips meet
 var _glow_mat: StandardMaterial3D
 var _orb: MeshInstance3D
 var _hot := false
+var holding_card := false
 var _manual := false  # set_pose_from was used: ignore the tracker
 var _hot_amount := 0.0
 var _lost := 0.0  # seconds without tracking data
@@ -389,14 +390,15 @@ func _update_glow() -> void:
 	if not tracked:
 		return
 	var heat := 0.6 + _hot_amount * 1.4
+	var tip_cap: float = 0.55 if holding_card else (heat + pinch_strength * 0.4)
 	for k in 2:
 		var g := _tip_glow[k]
 		g.position = _joints[TIPS[k]].origin
-		g.scale = Vector3.ONE * (heat + pinch_strength * 0.4)
+		g.scale = Vector3.ONE * minf(heat + pinch_strength * 0.4, tip_cap)
 	var mid := (_joints[THUMB_TIP].origin + _joints[INDEX_TIP].origin) * 0.5
 	_pinch_glow.position = mid
 	_pinch_glow.scale = Vector3.ONE * (0.2 + pinch_strength * 1.3)
-	_pinch_glow.visible = pinch_strength > 0.35
+	_pinch_glow.visible = pinch_strength > 0.35 and not holding_card
 
 
 # a plain open hand pointing along -Z at the origin, for the shot tool and tests; curl 0..1 closes the fingers,

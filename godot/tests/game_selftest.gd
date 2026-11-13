@@ -36,6 +36,7 @@ func _initialize() -> void:
 	await _rim()
 	await _tray_rules()
 	await _perf_fixes()
+	await _visual_rendering_fixes()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -2288,5 +2289,37 @@ func _perf_fixes() -> void:
 	check("CardTray shares one compiled face shader across cards",
 		tray._face_shader != null and tray.cards[0]._print_materials[0].shader == tray.cards[1]._print_materials[0].shader)
 	tray.queue_free()
+	g.queue_free()
+	await process_frame
+
+
+func _visual_rendering_fixes() -> void:
+	check("dusk and night bloom thresholds keep cream parchment below bloom",
+		Lighting.PRESETS["dusk"]["thr"] >= 0.95 and Lighting.PRESETS["night"]["thr"] >= 0.95)
+	var gv := GodHandVisual.new()
+	root.add_child(gv)
+	await process_frame
+	gv.tracked = true
+	gv.pinch_strength = 1.0
+	gv.holding_card = true
+	gv._update_glow()
+	check("holding a card suppresses the additive pinch glow quad", not gv._pinch_glow.visible)
+	gv.queue_free()
+	var hd := HazeDome.new()
+	root.add_child(hd)
+	await process_frame
+	check("HazeDome renders only on HazeDome.RENDER_LAYER", hd.layers == HazeDome.RENDER_LAYER)
+	hd.queue_free()
+	var lv := LensView.new()
+	var dummy := Node3D.new()
+	root.add_child(lv)
+	root.add_child(dummy)
+	lv.setup(dummy, Vector3.ZERO, Vector2(0.066, 0.098))
+	check("LensView uses 672x960 MSAA_2X and excludes HazeDome from its cull mask",
+		LensView.VIEW_SIZE == Vector2i(672, 960) and lv._vp.msaa_3d == Viewport.MSAA_2X and (lv._cam.cull_mask & HazeDome.RENDER_LAYER) == 0)
+	lv.queue_free()
+	dummy.queue_free()
+	var g := await _make_game()
+	check("resting Crystal Lens sits at 1.0x tabletop scale", g._lens.transform.basis.get_scale().is_equal_approx(Vector3.ONE))
 	g.queue_free()
 	await process_frame

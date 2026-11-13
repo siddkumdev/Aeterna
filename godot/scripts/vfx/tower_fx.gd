@@ -63,7 +63,7 @@ func _build_wizard(orb_anchor: Node3D) -> void:
 		for j in LICK_POINTS:
 			var k := float(j) / (LICK_POINTS - 1)
 			var a := TAU * i / LICKS + k * TAU * 1.25
-			var r := lerpf(0.066, 0.014, k)  # clears the hat's brim, then follows the cone in to the orb
+			var r := lerpf(0.066, 0.048, k / 0.65) if k <= 0.65 else lerpf(0.048, 0.014, (k - 0.65) / 0.35)  # stays outside the 0.0425 m hat brim before curving in to the orb
 			var centre := Vector3(orb_at.x, 0, orb_at.z) * k  # the orb sits off the tower's axis: the flames end in it
 			pts.append(centre + Vector3(cos(a) * r, 0.015 + k * top, sin(a) * r))
 		var lick := VfxKit.paint_ribbon(self, pts, 0.01, 1.0)

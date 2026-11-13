@@ -6,7 +6,7 @@ extends Node3D
 ## Cost: one extra small render, switched off whenever the lens is down.
 
 const OVERLAY_LAYER := 2  # render layer bit for Foresight drawings (VisualInstance3D.layers)
-const VIEW_SIZE := Vector2i(448, 640)  # the glass is about 7 x 10 cm: same shape
+const VIEW_SIZE := Vector2i(672, 960)  # the glass is about 7 x 10 cm: sharper crystal window without blowing budget
 
 var _vp: SubViewport
 var _cam: Camera3D
@@ -22,12 +22,12 @@ func setup(lens: Node3D, centre_local: Vector3, glass_size: Vector2) -> void:
 	_vp = SubViewport.new()
 	_vp.size = VIEW_SIZE
 	_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	_vp.msaa_3d = Viewport.MSAA_DISABLED
+	_vp.msaa_3d = Viewport.MSAA_2X
 	_vp.transparent_bg = false
 	add_child(_vp)
 	_cam = Camera3D.new()
 	_cam.fov = 38.0
-	_cam.cull_mask = 0xFFFFF  # everything, including the Foresight overlay
+	_cam.cull_mask = 0x3  # board + Foresight overlay (layers 1 and 2); excludes HazeDome layer 4
 	_vp.add_child(_cam)
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://shaders/lens_view.gdshader")
