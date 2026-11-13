@@ -38,6 +38,7 @@ const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "sto
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
+const XR_FOVEATION_LEVEL := 2
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
@@ -92,6 +93,8 @@ var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in t
 var _ledger_latched := false  # opened by a button or key: stays until closed the same way
 var _palm_time := 0.0  # how long the left palm has been turned up
 var _palm: XRController3D  # the left hand's grip pose: its +X is the palm's normal (fallback when no joints)
+var _left_hand_tracker: XRHandTracker
+var _left_tracker_hooked := false
 var _xr_origin: XROrigin3D
 var quest_plan: Array = []  # today's quests not posted yet: [{"kind", "house"}]
 var _quest_deck: Array = []  # the kinds still to come round before the deck is reshuffled
@@ -157,6 +160,7 @@ var _faith_seal: Node3D  # the wax seal at the tray's corner, with the faith on 
 var _faith_label: Label3D
 var _toast: Label3D  # the one short message line, fading
 var _toast_last := ""
+var _grass_pushers: Array = []  # pre-allocated per-frame grass pusher buffer
 var _crush := {}  # selling by hand: {"tower", "hand", "t", "at"} while a built tower is pinched and held
 var warden: Warden  # the boss's phases, while the Warden is alive (null otherwise)
 var _spawn_queue: Array = []  # [{"t": s, "cell": Vector2i, "kind": String}], sorted by time
@@ -641,6 +645,7 @@ func _pay_quest(r: HelpRequest) -> void:
 	if with_rig:
 		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
 	last_message = "%s: +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
+	_update_ghost()
 	_refresh_ui()
 
 
@@ -774,11 +779,13 @@ func _update_held() -> void:
 		_held_card.global_position = hp + Vector3(0, 0.05, 0.02)  # a little above the fingers, so the ghost under it stays visible
 		_held_card.face_toward(_eye())
 		var local := board.to_local(hp)
-		_hover_cell = Vector2i(-1, -1)
+		var next_cell := Vector2i(-1, -1)
 		if absf(local.x) <= HALF and absf(local.z) <= HALF:
-			_hover_cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
+			next_cell = NavGrid.local_to_cell(local - Vector3(GameConfig.CELL / 2.0, 0, GameConfig.CELL / 2.0)) \
 				.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
-		_update_ghost()
+		if next_cell != _hover_cell:
+			_hover_cell = next_cell
+			_update_ghost()
 	if not _held_spell_cards.is_empty():
 		spells.hide_aim()  # clear a stale ring when both held spells move off the board
 	for hand: GameHand in _held_spell_cards:
@@ -1454,8 +1461,12 @@ func _cell_at(origin: Vector3, dir: Vector3) -> Vector2i:
 
 func _hover(origin: Vector3, dir: Vector3) -> void:
 	var over := _button_at(origin, dir)
+	var btn_changed := false
 	for id in _buttons:
-		_buttons[id]["hover"] = id == over
+		var hovered: bool = (id == over)
+		if _buttons[id]["hover"] != hovered:
+			_buttons[id]["hover"] = hovered
+			btn_changed = true
 	var c := _cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
 	var bc := _board_cell_at(origin, dir) if over == "" else Vector2i(-1, -1)
 	if spell_sel != "":
@@ -1469,7 +1480,8 @@ func _hover(origin: Vector3, dir: Vector3) -> void:
 		_hover_cell = c
 		_hover_board_cell = bc
 		_update_ghost()
-	_refresh_buttons()
+	if btn_changed:
+		_refresh_buttons()
 
 
 func villager_at(origin: Vector3, dir: Vector3, reach_m := 0.025) -> Villager:
@@ -1751,21 +1763,32 @@ func _feed_grass() -> void:
 	## The grass bends away from ground enemies, Guards and the hands (all cosmetic).
 	if grass == null:
 		return
-	var pts: Array = []
+	_grass_pushers.clear()
 	for e in enemies:
+		if _grass_pushers.size() >= GrassField.MAX_PUSH:
+			break
 		if is_instance_valid(e) and e.alive and not e.flying and not e.underground:
-			pts.append(Vector4(e.global_position.x, e.global_position.y, e.global_position.z, 0.045))
+			_grass_pushers.append(Vector4(e.global_position.x, e.global_position.y, e.global_position.z, 0.045))
 	for t in towers:
+		if _grass_pushers.size() >= GrassField.MAX_PUSH:
+			break
 		for gd in t.guards:
+			if _grass_pushers.size() >= GrassField.MAX_PUSH:
+				break
 			if is_instance_valid(gd):
-				pts.append(Vector4(gd.global_position.x, gd.global_position.y, gd.global_position.z, 0.03))
-	var hands: Array = [_mouse_hand] if _mouse_hand != null else _hands
-	for h in hands:
-		if is_instance_valid(h) and not h.is_lost():
-			pts.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
-	if life:
-		pts.append_array(life.pushers())
-	grass.set_pushers(pts)
+				_grass_pushers.append(Vector4(gd.global_position.x, gd.global_position.y, gd.global_position.z, 0.03))
+	if _mouse_hand != null:
+		if _grass_pushers.size() < GrassField.MAX_PUSH and is_instance_valid(_mouse_hand) and not _mouse_hand.is_lost():
+			_grass_pushers.append(Vector4(_mouse_hand.global_position.x, _mouse_hand.global_position.y, _mouse_hand.global_position.z, 0.05))
+	else:
+		for h in _hands:
+			if _grass_pushers.size() >= GrassField.MAX_PUSH:
+				break
+			if is_instance_valid(h) and not h.is_lost():
+				_grass_pushers.append(Vector4(h.global_position.x, h.global_position.y, h.global_position.z, 0.05))
+	if life and _grass_pushers.size() < GrassField.MAX_PUSH:
+		life.append_pushers(_grass_pushers, GrassField.MAX_PUSH)
+	grass.set_pushers(_grass_pushers)
 
 
 func _process(delta: float) -> void:
@@ -1950,10 +1973,26 @@ func _face_ledger(at: Vector3, eye: Vector3) -> void:
 		ledger.global_basis = Basis.looking_at(at - eye, Vector3.UP).scaled(Vector3.ONE * ledger.scale.x)  # its face (+Z) toward the eye
 
 
+func _on_xr_tracker_removed(tracker_name: StringName, _type: int = 0) -> void:
+	if tracker_name == &"/user/hand_tracker/left":
+		_left_hand_tracker = null
+
+
+func _get_left_hand_tracker() -> XRHandTracker:
+	if not _left_tracker_hooked:
+		_left_tracker_hooked = true
+		var cb := Callable(self, "_on_xr_tracker_removed")
+		if not XRServer.tracker_removed.is_connected(cb):
+			XRServer.tracker_removed.connect(cb)
+	if _left_hand_tracker == null or not is_instance_valid(_left_hand_tracker):
+		_left_hand_tracker = XRServer.get_tracker(&"/user/hand_tracker/left") as XRHandTracker
+	return _left_hand_tracker
+
+
 func palm_pose() -> Array:
 	## [found, position, normal out of the palm] of the left hand, in world space.
 	if _xr_origin:
-		var tr := XRServer.get_tracker("/user/hand_tracker/left") as XRHandTracker
+		var tr := _get_left_hand_tracker()
 		if tr and tr.has_tracking_data:
 			# The palm's normal from where the fingers actually are, so it does not depend on a joint-axis convention:
 			# (wrist -> middle knuckle) x (index knuckle -> little knuckle) points out of the LEFT palm.
@@ -2800,22 +2839,26 @@ func _refresh_tray() -> void:
 	## Tower cards by day, spell cards at night, the ability offers after a loop. The tray is rebuilt only when what
 	## it shows changes; otherwise each card just lights or dims (can you use it now?).
 	var key := ""
-	var list: Array[Dictionary] = []
 	match phase:
 		Phase.DAY:
 			key = "day"
-			for id: String in GameConfig.TOWER_ORDER:
-				list.append(CardData.tower(id))
 		Phase.NIGHT:
 			key = "night"
-			for id: String in GameConfig.SPELL_ORDER:
-				list.append(CardData.spell(id))
 		Phase.CARDS:
 			key = "offers%d_%s" % [loop, str(offers)]
-			for o in offers:
-				list.append(CardData.ending(o["id"]) if ending_choice else CardData.ability(o["id"], o["rarity"]))
 	if key != _tray_key:
 		_tray_key = key
+		var list: Array[Dictionary] = []
+		match phase:
+			Phase.DAY:
+				for id: String in GameConfig.TOWER_ORDER:
+					list.append(CardData.tower(id))
+			Phase.NIGHT:
+				for id: String in GameConfig.SPELL_ORDER:
+					list.append(CardData.spell(id))
+			Phase.CARDS:
+				for o in offers:
+					list.append(CardData.ending(o["id"]) if ending_choice else CardData.ability(o["id"], o["rarity"]))
 		if _held_card:  # the phase changed under a held card: put it down cleanly
 			spells.hide_aim()
 			if phase != Phase.DAY:
@@ -2923,13 +2966,22 @@ func _update_mouse_hand() -> void:
 	_mouse_hand.set_bubble_hot(grabbable_near(_mouse_hand.global_position))
 
 
+static func configure_xr_viewport(vp: Viewport, xr: Object = null) -> void:
+	## Enable XR rendering and explicit OpenXR foveated VRS on the active viewport.
+	if vp:
+		vp.use_xr = true
+		vp.vrs_mode = Viewport.VRS_XR
+		if "vrs_update_mode" in vp:
+			vp.vrs_update_mode = Viewport.VRS_UPDATE_ONCE
+	if xr != null and "foveation_level" in xr:  # the Quest renders the edges of each eye cheaper (the user: it lags a lot)
+		xr.set("foveation_level", XR_FOVEATION_LEVEL)
+		xr.set("foveation_dynamic", true)
+
+
 func _init_xr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
 	if xr and xr.is_initialized():
-		get_viewport().use_xr = true
-		if "foveation_level" in xr:  # the Quest renders the edges of each eye cheaper (the user: it lags a lot)
-			xr.set("foveation_level", 2)
-			xr.set("foveation_dynamic", true)
+		configure_xr_viewport(get_viewport(), xr)
 		print("[game] OpenXR running: hand rays + pinch")
 		return true
 	print("[game] OpenXR not running: desktop mode (mouse + keys)")

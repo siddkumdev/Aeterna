@@ -59,14 +59,17 @@ var _lost := 0.0  # seconds without tracking data
 var _was_live := false
 var _still_t := 0.0  # seconds the tracker's joints have been bit-for-bit unchanged (a frozen last-known pose)
 var _spark_boost := false
+var _incoming: Array = []
 
 
 func _ready() -> void:
 	_joints.resize(J_COUNT)
 	_radii.resize(J_COUNT)
+	_incoming.resize(J_COUNT)
 	for i in J_COUNT:
 		_joints[i] = Transform3D.IDENTITY
 		_radii[i] = 0.007
+		_incoming[i] = Vector3.ZERO
 	_build_pairs()
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://shaders/god_hand.gdshader")
@@ -227,10 +230,11 @@ func _process(delta: float) -> void:
 	var flags := _tracker.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) if _tracker != null else 0
 	var live := _tracker != null and _tracker.has_tracking_data and (flags & XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED) != 0  # a frozen last-known pose is not live
 	if live:
-		var incoming: Array = []
+		if _incoming.size() != J_COUNT:
+			_incoming.resize(J_COUNT)
 		for i in J_COUNT:
-			incoming.append(_tracker.get_hand_joint_transform(i).origin)
-		_still_t = still_time(incoming, _still_t, delta)
+			_incoming[i] = _tracker.get_hand_joint_transform(i).origin
+		_still_t = still_time(_incoming, _still_t, delta)
 		if is_stale(_still_t, controller != null and is_instance_valid(controller) and not controller.get_has_tracking_data()):
 			live = false  # frozen past the blink grace AND the aim pose is gone: the hand left tracking, do not keep drawing it
 	else:

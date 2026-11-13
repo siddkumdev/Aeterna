@@ -19,8 +19,18 @@ var _cell: Array[Vector2i] = []
 var flowers: FlowerField  # the meadow flowers and clover that ride along (they hide and bend with the grass)
 var _hidden: Dictionary = {}  # cells whose tufts are currently scaled to nothing
 var _gusts: Array = [null, null, null, null]  # {"start": Vector2, "dir": Vector2, "len": float, "age": float}
+var _push_buf: PackedVector4Array = PackedVector4Array()
+var _gust_a: PackedVector4Array = PackedVector4Array()
+var _gust_s: PackedVector4Array = PackedVector4Array()
+var _gusts_dirty := true
 const GUST_LIFE_EXTRA := 0.3  # seconds a gust lingers after its pulse reached the target
 const GUST_SPEED := 1.4  # m/s, same as the shader
+
+
+func _init() -> void:
+	_push_buf.resize(MAX_PUSH)
+	_gust_a.resize(4)
+	_gust_s.resize(4)
 
 
 static func build(board: Node3D, nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: int) -> GrassField:
@@ -149,6 +159,7 @@ func gust(from_world: Vector3, to_world: Vector3) -> void:
 			oldest = _gusts[i]["age"]
 			slot = i
 	_gusts[slot] = {"start": Vector2(from_world.x, from_world.z), "dir": d.normalized(), "len": d.length(), "age": 0.0}
+	_gusts_dirty = true
 
 
 func gust_count() -> int:
@@ -156,24 +167,28 @@ func gust_count() -> int:
 
 
 func _process(delta: float) -> void:
-	if _mat == null:
+	if _mat == null or not _gusts_dirty:
 		return
-	var a := PackedVector4Array()
-	var s := PackedVector4Array()
-	a.resize(4)
-	s.resize(4)
+	var active := false
 	for i in 4:
 		var g = _gusts[i]
 		if g == null:
+			_gust_a[i] = Vector4.ZERO
+			_gust_s[i] = Vector4.ZERO
 			continue
 		g["age"] += delta
 		if g["age"] > g["len"] / GUST_SPEED + GUST_LIFE_EXTRA:
 			_gusts[i] = null
+			_gust_a[i] = Vector4.ZERO
+			_gust_s[i] = Vector4.ZERO
 			continue
-		a[i] = Vector4(g["start"].x, g["start"].y, g["dir"].x, g["dir"].y)
-		s[i] = Vector4(g["age"], g["len"], 1.0, 0.0)
-	_mat.set_shader_parameter("gusts", a)
-	_mat.set_shader_parameter("gust_state", s)
+		active = true
+		_gust_a[i] = Vector4(g["start"].x, g["start"].y, g["dir"].x, g["dir"].y)
+		_gust_s[i] = Vector4(g["age"], g["len"], 1.0, 0.0)
+	_mat.set_shader_parameter("gusts", _gust_a)
+	_mat.set_shader_parameter("gust_state", _gust_s)
+	if not active:
+		_gusts_dirty = false
 
 
 func refresh(nav: NavGrid) -> void:
@@ -195,10 +210,14 @@ func refresh(nav: NavGrid) -> void:
 func set_pushers(world_points: Array) -> void:
 	## world_points: Vector4(x, y, z, radius) in world metres; the first MAX_PUSH are used.
 	var n := mini(world_points.size(), MAX_PUSH)
-	var arr := PackedVector4Array()
-	arr.resize(MAX_PUSH)
+	if _push_buf.size() != MAX_PUSH:
+		_push_buf.resize(MAX_PUSH)
 	for i in n:
-		arr[i] = world_points[i]
-	_mat.set_shader_parameter("pushers", arr)
-	_mat.set_shader_parameter("push_count", n)
-	flowers.set_pushers(arr, n)
+		_push_buf[i] = world_points[i]
+	for i in range(n, MAX_PUSH):
+		_push_buf[i] = Vector4.ZERO
+	if _mat:
+		_mat.set_shader_parameter("pushers", _push_buf)
+		_mat.set_shader_parameter("push_count", n)
+	if flowers:
+		flowers.set_pushers(_push_buf, n)

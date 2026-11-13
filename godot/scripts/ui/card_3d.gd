@@ -36,10 +36,12 @@ var _tween: Tween
 var _body: MeshInstance3D
 var _availability_applied := false
 var _print_materials: Array[ShaderMaterial] = []
+var _shared_shader: Shader
 
 
-func setup(card: Dictionary) -> Card3D:
+func setup(card: Dictionary, shared_shader: Shader = null) -> Card3D:
 	data = card
+	_shared_shader = shared_shader
 	_build()
 	return self
 
@@ -80,9 +82,10 @@ func _add_quad(vp: SubViewport, z: float, flip: bool) -> void:
 	m.size = Vector2(W - 0.002, H - 0.002)
 	q.mesh = m
 	var mat := ShaderMaterial.new()
-	var shader := Shader.new()
-	shader.code = FACE_SHADER
-	mat.shader = shader
+	if _shared_shader == null:
+		_shared_shader = Shader.new()
+		_shared_shader.code = FACE_SHADER
+	mat.shader = _shared_shader
 	mat.set_shader_parameter("face_texture", vp.get_texture())
 	q.material_override = mat
 	_print_materials.append(mat)

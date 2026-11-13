@@ -64,12 +64,19 @@ func tick(delta: float) -> void:
 	_tick_lurkers(delta)
 
 
+func append_pushers(out: Array, limit: int = 64) -> void:
+	## Append active villagers' positions directly into `out` up to `limit` without allocating per frame.
+	for v in villagers:
+		if out.size() >= limit:
+			return
+		if v.visible:
+			out.append(Vector4(v.global_position.x, v.global_position.y, v.global_position.z, 0.03))
+
+
 func pushers() -> Array:
 	## The grass parts round everyone who is out, so it does not hide their legs.
 	var out: Array = []
-	for v in villagers:
-		if v.visible:
-			out.append(Vector4(v.global_position.x, v.global_position.y, v.global_position.z, 0.03))
+	append_pushers(out)
 	return out
 
 

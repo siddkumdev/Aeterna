@@ -35,6 +35,7 @@ func _initialize() -> void:
 	await _ledger()
 	await _rim()
 	await _tray_rules()
+	await _perf_fixes()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -2217,4 +2218,43 @@ func _tray_rules() -> void:
 	cam.queue_free()
 	g.queue_free()
 	hand.queue_free()
+	await process_frame
+
+
+func _perf_fixes() -> void:
+	var vp := SubViewport.new()
+	root.add_child(vp)
+	Game.configure_xr_viewport(vp)
+	check("XR viewport configures VRS_XR mode for foveation", vp.use_xr and vp.vrs_mode == Viewport.VRS_XR)
+	vp.queue_free()
+	var g := Game.new()
+	g.with_rig = false
+	g.with_life = true
+	root.add_child(g)
+	for i in 3:
+		await process_frame
+	var buf: Array = []
+	g.life.append_pushers(buf, 2)
+	check("VillageLife.append_pushers respects limit without extra allocation", buf.size() <= 2)
+	var prev_buf := g._grass_pushers
+	g._feed_grass()
+	g._feed_grass()
+	check("Game._feed_grass reuses its pre-allocated buffer and caps pushers at MAX_PUSH",
+		is_same(g._grass_pushers, prev_buf) and g._grass_pushers.size() <= GrassField.MAX_PUSH)
+	g.grass.set_pushers([Vector4(0.1, 0.0, 0.1, 0.05)])
+	check("GrassField.set_pushers fills pre-allocated buffer and zeroes unused slots",
+		g.grass._push_buf.size() == GrassField.MAX_PUSH and g.grass._push_buf[0].is_equal_approx(Vector4(0.1, 0.0, 0.1, 0.05)) and g.grass._push_buf[1] == Vector4.ZERO)
+	g._left_hand_tracker = XRHandTracker.new()
+	var _t_lookup := g._get_left_hand_tracker()
+	check("left tracker lookup returns cached instance while active", g._left_hand_tracker != null)
+	XRServer.tracker_removed.emit(&"/user/hand_tracker/left", XRServer.TRACKER_HAND)
+	check("XRServer.tracker_removed (2-arg signal) clears cached left hand tracker", g._left_hand_tracker == null)
+	var tray := CardTray.new()
+	root.add_child(tray)
+	var card_list: Array[Dictionary] = [CardData.tower(GameConfig.TOWER_ORDER[0]), CardData.tower(GameConfig.TOWER_ORDER[1])]
+	tray.set_cards(card_list)
+	check("CardTray shares one compiled face shader across cards",
+		tray._face_shader != null and tray.cards[0]._print_materials[0].shader == tray.cards[1]._print_materials[0].shader)
+	tray.queue_free()
+	g.queue_free()
 	await process_frame

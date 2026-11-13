@@ -13,6 +13,13 @@ const OAK_DARK := Color("5B2920")  # wood_dark
 
 var cards: Array[Card3D] = []
 var _base: MeshInstance3D
+var _face_shader: Shader
+
+
+static func make_face_shader() -> Shader:
+	var s := Shader.new()
+	s.code = Card3D.FACE_SHADER
+	return s
 
 
 func _ready() -> void:
@@ -46,10 +53,12 @@ func set_cards(list: Array[Dictionary]) -> void:
 	cards.clear()
 	var n := list.size()
 	_build_base(maxf(0.3, n * CARD_SPACING + ENDS * 2.0))
+	if _face_shader == null:
+		_face_shader = make_face_shader()
 	for i in n:
 		var card := Card3D.new()
 		add_child(card)  # in the tree first: the portrait render needs get_tree()
-		card.setup(list[i])
+		card.setup(list[i], _face_shader)
 		var off := float(i) - (n - 1) / 2.0
 		var t := Transform3D(Basis(Vector3.RIGHT, -0.9) * Basis(Vector3.UP, -off * FAN_ARC), Vector3(off * CARD_SPACING, 0.04, -abs(off) * 0.004))
 		card.home = t
