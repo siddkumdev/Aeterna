@@ -232,6 +232,7 @@ const CRUSH_HOLD := 1.2  # s
 const PALM_UP_OPEN := 0.8  # dot of the palm's normal with straight up, to open
 const PALM_UP_CLOSE := 0.3  # below this it folds shut
 const PALM_UP_HOLD := 1.0  # s the LEFT palm must be held up (the user, 2026-11-11: a proper rule)
+const PALM_CLOSE_HOLD := 0.35  # s a tracking blink or shallow palm dip must persist before the open ledger folds shut
 const PALM_REACH := Vector2(0.15, 0.65)  # m from the eye: the palm counts only held out in front of you ...
 const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 

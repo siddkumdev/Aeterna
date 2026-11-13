@@ -2085,6 +2085,17 @@ func _ledger() -> void:
 	check("a fingertip on the right page finds it, on the left page finds it", g.ledger.page_hit_point(right, 0.05) == 1 and g.ledger.page_hit_point(left, 0.05) == -1)
 	check("a ray at the left page finds it", g.ledger.page_hit_ray(left + away * 0.3, -away) == -1)
 	check("a point off the book finds nothing", g.ledger.page_hit_point(right + Vector3(1, 0, 0), 0.05) == 0 and g.ledger.page_hit_point(right + away * 0.3, 0.05) == 0)
+	var spine: Vector3 = g.ledger._book.global_transform * Vector3.ZERO
+	check("a tap inside the ledger spine deadzone does not turn either page and still counts as on the book",
+		g.ledger.page_hit_point(spine, 0.05) == 0 and g.ledger.near_open_book(spine, 0.05))
+	g.ledger_from_palm(0.05, false, palm, Vector3.UP, eye)
+	check("a brief tracking blink does not close the ledger", g.ledger.open)
+	g.ledger_from_palm(GameConfig.PALM_CLOSE_HOLD + 0.05, false, palm, Vector3.UP, eye)
+	check("sustained tracking loss closes the ledger after PALM_CLOSE_HOLD", not g.ledger.open)
+	g.ledger.set_open(true)
+	g.ledger.spread = 0
+	g.ledger._land()
+	check("page-turn cooldown blocks an immediate bounce turn right after a leaf lands", not g.ledger.turn(1) and g.ledger.spread == 0)
 	g.queue_free()
 	await process_frame
 

@@ -12,6 +12,8 @@ const H := PH
 const SPREADS := LedgerPage.COUNT / 2
 const REFRESH := 0.5  # s between redraws of the two visible pages
 const TURN_TIME := 0.5  # s a leaf takes to turn
+const SPINE_DEADZONE := 0.018  # m either side of the spine ignored so taps near the crease do not flip direction
+const TURN_COOLDOWN := 0.22  # s after a leaf lands before another turn is accepted
 
 var game  # Game
 var open := false
@@ -26,6 +28,7 @@ var _leaf: Node3D
 var _since := 0.0
 var _tween: Tween
 var _turning := false
+var _turn_cooldown := 0.0
 
 
 func _ready() -> void:
@@ -114,6 +117,7 @@ func set_open(on: bool) -> void:
 	if _tween:
 		_tween.kill()
 	_turning = false
+	_turn_cooldown = 0.0
 	_leaf.visible = false
 	if not is_inside_tree():
 		visible = on
@@ -130,9 +134,9 @@ func set_open(on: bool) -> void:
 
 
 func turn(by: int) -> bool:
-	## Turn one leaf forward (+1) or back (-1). False at the first or last spread, or while a leaf is still turning.
+	## Turn one leaf forward (+1) or back (-1). False at the first or last spread, or while a leaf is still turning / cooling down.
 	var to := spread + (1 if by > 0 else -1)
-	if _turning or to < 0 or to >= SPREADS:
+	if _turning or (open and is_inside_tree() and _turn_cooldown > 0.0) or to < 0 or to >= SPREADS:
 		return false
 	var old := spread
 	spread = to
@@ -173,6 +177,7 @@ func _place_leaf(x: float, _z: float) -> void:
 
 func _land() -> void:
 	_turning = false
+	_turn_cooldown = TURN_COOLDOWN
 	_leaf.visible = false
 	_leaf.position.z = 0.0
 	redraw()
@@ -193,6 +198,8 @@ func redraw() -> void:
 
 
 func _process(delta: float) -> void:
+	if _turn_cooldown > 0.0:
+		_turn_cooldown = maxf(0.0, _turn_cooldown - delta)
 	if not open or _turning:
 		return
 	_since += delta
@@ -205,9 +212,16 @@ func _local(world: Vector3) -> Vector3:
 
 
 func _side(p: Vector3) -> int:
-	if absf(p.x) > W / 2.0 + 0.01 or absf(p.y) > H / 2.0 + 0.01:
+	if absf(p.x) < SPINE_DEADZONE or absf(p.x) > W / 2.0 + 0.01 or absf(p.y) > H / 2.0 + 0.01:
 		return 0
 	return -1 if p.x < 0.0 else 1
+
+
+func near_open_book(world: Vector3, reach: float) -> bool:
+	if not open:
+		return false
+	var p := _local(world)
+	return absf(p.z) <= reach / maxf(scale.x, 0.01) and absf(p.x) <= W / 2.0 + 0.02 and absf(p.y) <= H / 2.0 + 0.02
 
 
 func page_hit_ray(origin: Vector3, dir: Vector3) -> int:

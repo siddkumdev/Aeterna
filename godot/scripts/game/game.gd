@@ -103,6 +103,7 @@ var _rim_yaw0 := 0.0  # one hand: its wrist yaw then
 var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in the headset, L on the desktop
 var _ledger_latched := false  # opened by a button or key: stays until closed the same way
 var _palm_time := 0.0  # how long the left palm has been turned up
+var _palm_close_time := 0.0  # how long a tracking blink / low palm angle has persisted while open
 var _palm: XRController3D  # the left hand's grip pose: its +X is the palm's normal (fallback when no joints)
 var _left_hand_tracker: XRHandTracker
 var _left_tracker_hooked := false
@@ -2031,28 +2032,39 @@ func palm_pose() -> Array:
 
 
 func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, eye: Vector3) -> void:
-	## Palm turned up for a moment: the ledger unfolds over it and follows it. Turned away: it folds shut.
+	## Palm turned up for a moment: the ledger unfolds over it and stays where it opened. Turned away: it folds shut after a brief debounce.
 	if ledger == null or _ledger_latched:
 		return
-	var up := normal.dot(Vector3.UP) if found else -1.0
+	var raw_up := normal.dot(Vector3.UP) if found else -1.0
 	var d := at.distance_to(eye)
 	_palm_log_t -= delta
 	if found and _palm_log_t <= 0.0:
 		_palm_log_t = 2.0
-		print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [up, d, eye.y - at.y, ledger.open])  # for the headset log
-	if found and (d < GameConfig.PALM_REACH.x or d > GameConfig.PALM_REACH.y or at.y > eye.y - GameConfig.PALM_BELOW_EYE):
-		up = -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
-	if asleep or (_hands.size() > 0 and ((_held_card and _held_card_hand == _hands[0]) or _held_spell_cards.has(_hands[0]))):
+		print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [raw_up, d, eye.y - at.y, ledger.open])  # for the headset log
+	var in_reach := found and d >= GameConfig.PALM_REACH.x and d <= GameConfig.PALM_REACH.y and at.y <= eye.y - GameConfig.PALM_BELOW_EYE
+	var up := raw_up if in_reach else -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
+	var busy := asleep or (_hands.size() > 0 and ((_held_card and _held_card_hand == _hands[0]) or _held_spell_cards.has(_hands[0])))
+	if busy:
 		up = -1.0
 	if not ledger.open:
+		_palm_close_time = 0.0
 		_palm_time = _palm_time + delta if up > GameConfig.PALM_UP_OPEN else 0.0
 		if _palm_time >= GameConfig.PALM_UP_HOLD:
 			_face_ledger(at + Vector3(0, 0.17, 0), eye)  # it appears once, over the palm, and stays where it opened
 			ledger.set_open(true)
 			print("[ledger] opened by the left palm, up=%.2f dist=%.2f" % [up, d])
-	elif up < GameConfig.PALM_UP_CLOSE:
+	elif busy or (found and in_reach and raw_up <= -0.5):
 		_palm_time = 0.0
+		_palm_close_time = 0.0
 		ledger.set_open(false)
+	elif up < GameConfig.PALM_UP_CLOSE:
+		_palm_close_time += delta
+		if _palm_close_time >= GameConfig.PALM_CLOSE_HOLD:
+			_palm_time = 0.0
+			_palm_close_time = 0.0
+			ledger.set_open(false)
+	else:
+		_palm_close_time = 0.0
 
 
 func _build_tray_bits() -> void:
@@ -2308,6 +2320,8 @@ func hand_pressed(h: GameHand) -> void:
 		if side != 0:
 			ledger.turn(side)
 			return
+		if ledger.near_open_book(tp, 0.08):
+			return  # a tap on the spine or during turn cooldown must not fall through to a ray press on the other page
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(tp, card_reach())
 		# The tray's own wood (outside a card's face) takes the whole tray: a pinch within TRAY_GRAB_PAD of the base
