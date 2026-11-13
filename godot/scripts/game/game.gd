@@ -33,6 +33,13 @@ enum Phase { DAY, NIGHT, CARDS, DONE }
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const TRAY_SUBTITLE_WIDTH := 620.0  # px: two short centred lines instead of a view-wide nightfall sentence
+const TOAST_POS := Vector3(0, 0.125, -0.015)  # above the tray cards, clear of the tray wood and inside the seated view
+const TOAST_LINE_STEP := 0.024  # m per wrapped line when anchored at bottom
+const TOAST_STACK_GAP := 0.018  # m extra clear space between stacked toasts
+const TOAST_STACK_STEP := TOAST_LINE_STEP + TOAST_STACK_GAP  # minimum vertical step between 1-line toasts
+const TOAST_CHARS_PER_LINE := 24.0
+const TOAST_STACK_MAX := 3
+const TOAST_HOLD := 3.2
 const BOARD_POS := Vector3(0, 0.75, -0.85)
 const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "storm": "storm_cloud", "rage": "rage_cast", "roots": "ward_cast"}
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
@@ -70,7 +77,11 @@ var phase := Phase.DAY
 var night_time := 0.0
 var selected := ""  # tower kind being placed, "" = none
 var speed := 1.0  # 1 or 2 for the player (2026-10-22, Siddharth); 5 and 10 are debug only
-var last_message := ""
+var last_message := "":
+	set(v):
+		last_message = v
+		_msg_serial += 1
+var _msg_serial := 0
 
 var foresight: Foresight
 var spells: Spells
@@ -158,8 +169,10 @@ var _fast_glass: Node3D  # the small hourglass on the tray: pinch = fast
 var _fast_label: Label3D
 var _faith_seal: Node3D  # the wax seal at the tray's corner, with the faith on it
 var _faith_label: Label3D
-var _toast: Label3D  # the one short message line, fading
+var _toast: Label3D  # newest short message line above the tray
+var _toast_stack: Array[Label3D] = []  # older still-visible toasts stacked above _toast
 var _toast_last := ""
+var _hud_toast_serial := 0
 var _grass_pushers: Array = []  # pre-allocated per-frame grass pusher buffer
 var _crush := {}  # selling by hand: {"tower", "hand", "t", "at"} while a built tower is pinched and held
 var warden: Warden  # the boss's phases, while the Warden is alive (null otherwise)
@@ -274,6 +287,16 @@ func new_run(rng_seed: int) -> void:
 		_rewind_tween.kill()  # no old hourglass animation in the new run
 	if _hourglass:
 		_hourglass.visible = false
+	_toast_last = ""
+	_hud_toast_serial = _msg_serial
+	if _toast:
+		_toast.text = ""
+		_toast.modulate.a = 0.0
+		_toast.set_meta("left", 0.0)
+	for l in _toast_stack:
+		l.text = ""
+		l.modulate.a = 0.0
+		l.set_meta("left", 0.0)
 	_start_loop("Day 1. Build before the sun sets.")
 
 
@@ -2088,22 +2111,11 @@ func _build_tray_bits() -> void:
 	hold.add_child(_fast_label)
 	var box := Vector3(0.045, 0.06, 0.045)
 	_buttons["fast"] = {"node": hold, "mat": StandardMaterial3D.new(), "label": _fast_label, "hover": false, "box": AABB(Vector3(-box.x / 2.0, 0, -box.z / 2.0), box)}
-	_toast = Label3D.new()
-	_toast.name = "Toast"
-	_toast.font_size = 44
-	_toast.pixel_size = 0.00036
-	_toast.width = TRAY_SUBTITLE_WIDTH
-	_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_toast.outline_size = 16
-	_toast.modulate = Color("F4E4B8")  # wall_cream
-	_toast.outline_modulate = Color("5B2920")
-	_toast.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_toast.no_depth_test = true
-	_toast.render_priority = 10
-	_toast.position = Vector3(0, -0.035, 0.105)  # below and in front of the front lip: no card, hourglass or island covers it from a seated view
-	_toast.modulate.a = 0.0
-	_tray.add_child(_toast)
+	_toast = _make_toast_label("Toast", TOAST_POS)
+	_toast_stack.clear()
+	for i in range(TOAST_STACK_MAX - 1):
+		var stacked := _make_toast_label("ToastStack%d" % (i + 1), TOAST_POS + Vector3(0, TOAST_STACK_STEP * (i + 1), 0))
+		_toast_stack.append(stacked)
 	_sun = MeshInstance3D.new()
 	_sun.name = "Sun"
 	var sm := SphereMesh.new()
@@ -2136,27 +2148,80 @@ func _tick_clock() -> void:
 		_clock.modulate = Color("E8452C") if left <= int(GameConfig.DAY_DUSK_WARN) else Color("FFD45A")
 
 
+func _make_toast_label(node_name: String, pos: Vector3) -> Label3D:
+	var l := Label3D.new()
+	l.name = node_name
+	l.font_size = 44
+	l.pixel_size = 0.00036
+	l.width = TRAY_SUBTITLE_WIDTH
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	l.outline_size = 16
+	l.modulate = Color("F4E4B8")  # wall_cream
+	l.outline_modulate = Color("5B2920")
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.render_priority = 10
+	l.position = pos
+	l.modulate.a = 0.0
+	_tray.add_child(l)
+	return l
+
+
+func _layout_toast_stack() -> void:
+	if _toast == null:
+		return
+	_toast.position = TOAST_POS
+	var y := TOAST_POS.y
+	var prev := _toast
+	for l in _toast_stack:
+		var lines := maxi(1, ceili(float(prev.text.length()) / TOAST_CHARS_PER_LINE))
+		y += TOAST_LINE_STEP * lines + TOAST_STACK_GAP
+		l.position = Vector3(TOAST_POS.x, y, TOAST_POS.z)
+		prev = l
+
+
+func _tick_toast_label(l: Label3D, delta: float) -> void:
+	if l and l.modulate.a > 0.0:
+		var left: float = maxf(0.0, l.get_meta("left", 0.0) - delta)
+		l.set_meta("left", left)
+		l.modulate.a = clampf(left / 0.6, 0.0, 1.0)
+		if left <= 0.0 and l == _toast:
+			_toast_last = ""
+
+
 func _tick_tray_bits(delta: float) -> void:
 	_tick_clock()
 	if _fast_glass:
 		var m := _fast_glass.get_node_or_null("Model")
 		if m:
 			m.rotation.z = fmod(m.rotation.z + delta * 5.0, TAU) if is_fast() else lerp_angle(m.rotation.z, 0.0, minf(1.0, delta * 6.0))
-	if _toast and _toast.modulate.a > 0.0:
-		var left: float = _toast.get_meta("left", 0.0) - delta
-		_toast.set_meta("left", left)
-		_toast.modulate.a = clampf(left / 0.6, 0.0, 1.0)
+	_tick_toast_label(_toast, delta)
+	for l in _toast_stack:
+		_tick_toast_label(l, delta)
 
 
 func _show_toast(line: String) -> void:
-	if _toast == null or line == _toast_last:
+	if _toast == null or line == "" or asleep or line == _toast_last:
 		return
 	_toast_last = line
-	if line == "" or asleep:
-		return
+	var cur_left: float = _toast.get_meta("left", 0.0)
+	if _toast.text != "" and cur_left > 0.05 and _toast.modulate.a > 0.05:
+		for i in range(_toast_stack.size() - 1, 0, -1):
+			var prev := _toast_stack[i - 1]
+			var dst := _toast_stack[i]
+			dst.text = prev.text
+			dst.set_meta("left", prev.get_meta("left", 0.0))
+			dst.modulate.a = prev.modulate.a
+		if not _toast_stack.is_empty():
+			_toast_stack[0].text = _toast.text
+			_toast_stack[0].set_meta("left", cur_left)
+			_toast_stack[0].modulate.a = _toast.modulate.a
 	_toast.text = line
 	_toast.modulate.a = 1.0
-	_toast.set_meta("left", 3.2)
+	_toast.set_meta("left", TOAST_HOLD)
+	_layout_toast_stack()
 
 
 func _build_spell_tokens(ui: Node3D, x0: float, w: float, gap: float) -> void:
@@ -2753,7 +2818,9 @@ func _refresh_hud() -> void:
 		_faith_label.text = str(faith)
 	if _fast_label:
 		_fast_label.text = "2x" if is_fast() else ""
-	_show_toast(last_message)
+	if _msg_serial != _hud_toast_serial and not asleep:
+		_hud_toast_serial = _msg_serial
+		_show_toast(last_message)
 	if _shrine_light:
 		_shrine_light.light_energy = 0.15 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.35
 

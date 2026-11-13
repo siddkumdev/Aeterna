@@ -2214,6 +2214,27 @@ func _tray_rules() -> void:
 	check("nightfall routes Skotos's long subtitle through the wrapped tray label",
 		g.phase == Game.Phase.NIGHT and g._toast.text == g.last_message \
 		and g._toast.text.begins_with("Skotos: ") and g._toast.text.length() > 50)
+	check("toasts sit clearly above the tray cards so the tray never covers them",
+		g._toast.position.y >= 0.12 and g._toast.vertical_alignment == VERTICAL_ALIGNMENT_BOTTOM)
+	g._show_toast("New quest: Bucket")
+	g._show_toast("Not enough faith.")
+	check("back-to-back toasts stack on separate non-overlapping vertical slots",
+		g._toast.text == "Not enough faith." and g._toast_stack.size() == Game.TOAST_STACK_MAX - 1 \
+		and g._toast_stack[0].text == "New quest: Bucket" and g._toast_stack[0].modulate.a > 0.9 \
+		and g._toast_stack[0].position.y - g._toast.position.y >= Game.TOAST_STACK_STEP - 0.001)
+	g._refresh_hud()
+	check("repeated HUD refresh with unchanged message does not duplicate the active toast",
+		g._toast.text == "Not enough faith." and g._toast_stack[0].text == "New quest: Bucket")
+	g.last_message = "Can't build there."
+	g._refresh_hud()
+	g._show_toast("Hold to hurry the day")
+	g.last_message = "Can't build there."
+	g._refresh_hud()
+	check("repeating an explicit message after another toast still shows it again",
+		g._toast.text == "Can't build there." and g._toast_stack[0].text == "Hold to hurry the day")
+	g._tick_tray_bits(Game.TOAST_HOLD + 0.1)
+	check("fading out clears _toast_last so the same toast can show later",
+		g._toast.modulate.a <= 0.01 and g._toast_last == "")
 	g2.queue_free()
 	cam.queue_free()
 	g.queue_free()
