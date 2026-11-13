@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-13, Steps 1-3 (performance, toasts, ledger) self-tested and pushed; Step 4 investigation complete.
+Last updated: 2026-11-13, Steps 1-3 plus visual/rendering (`0869f55`) and opening/audio/UX (`631e37d`) fixes self-tested (508 checks) and pushed; awaiting Quest test.
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -31,6 +31,8 @@ Last updated: 2026-11-13, Steps 1-3 (performance, toasts, ledger) self-tested an
 - 2026-11-13 (`3e31e10`): Step 1 (I16) removes per-frame allocations in `_feed_grass()`, `GrassField`, `VillageLife`, `GodHandVisual`, and `_refresh_tray()`, caches `/user/hand_tracker/left`, configures `Viewport.VRS_XR`, shares `CardTray`'s face shader, and skips redundant `_update_ghost()` / `_refresh_buttons()` work on unchanged hover. 487 checks pass; not tested on the headset.
 - 2026-11-13 (`9e7495a`): Step 2 moves tray toasts above the card tops (`TOAST_POS`), stacks up to 3 bottom-aligned messages vertically with line-aware spacing (`_toast_stack`), and uses `_msg_serial` + fadeout `_toast_last` reset so HUD refreshes never overwrite explicit toasts. 492 checks pass; not tested on the headset.
 - 2026-11-13 (`4baba6a`): Step 3 adds `PALM_CLOSE_HOLD` (`0.35 s`) debounce, `Ledger.SPINE_DEADZONE` (`0.018 m`), `Ledger.TURN_COOLDOWN` (`0.22 s`), and `near_open_book` press consumption. 496 checks pass; not tested on the headset.
+- 2026-11-13 (`0869f55`): Visual & rendering fixes (I18 dusk/night `thr=0.95`, hand shader `ALBEDO <= 0.95`, `holding_card` suppresses pinch glow; I14 `LensView` `672x960` MSAA 2x excluding `HazeDome.RENDER_LAYER=4`; I10 Wizard flame ribbon brim clearance + `XRCamera3D` `0.06..30.0` m; I08 Crystal Lens rests at `1.0x` scale). 501 checks pass; not tested on the headset.
+- 2026-11-13 (`631e37d`): Opening, audio & UX fixes approved by Siddharth (I03 wider XR plaque spacing, `AUTO_START` hover pause/reset on `The Tale`, theatre captions/hint at `z=0.12` + `_follow_head`, `AudioBank` `ambience=-10`/`music=-6` dB; A1 `DayClock` `y=0.42` + tutorial banner `y=0.20` at north edge `z=-HALF-0.08`; A2 praying quest-giver tap increments `v.taps`; A3 one-time sell-tower toast + `"Quit Game"` seal on last Ledger page; A4 open Ledger shifted `0.14 m` inward toward board center). 508 checks pass; not tested on the headset.
 - God hands: the last build showed only the ember orb. Cause unknown, the log was never read.
 - UI rig floating in front of the player; mirror held upright facing the eyes.
 
