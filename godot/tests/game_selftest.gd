@@ -1351,6 +1351,14 @@ func _review_fixes() -> void:
 	g._update_held()
 	g.hand_released(hand, true)
 	check("tracking lost holding a request prop: it goes back unfinished", held and not ch.done and not ch.held and g._held_req == null and ch.prop.position.is_equal_approx(ch._home))
+	# B1: both the legacy button path and the physical-card path use the correct indefinite article.
+	g.faith = 0
+	g._press_button("airship")
+	check("an Airship: unaffordable tower button uses the correct article", g.last_message == "Not enough faith for an Airship.")
+	var airship_card := Card3D.new().setup({"kind": "tower", "id": "airship"})
+	g.add_child(airship_card)
+	g._grab_card(airship_card, hand)
+	check("an Airship: unaffordable physical card uses the correct article", g.last_message == "Not enough faith for an Airship.")
 	_night_start(g)
 	g._refresh_buttons()
 	hand.global_position = g.spells.tokens["boulder"].global_position
@@ -1409,6 +1417,17 @@ func _review_fixes() -> void:
 		ok = ok and p.hit_point(Vector3(edge + pad - 0.001, 0, 0), pad) and not p.hit_point(Vector3(edge + pad + 0.001, 0, 0), pad)
 	check("the plaque pad is the same world distance at scale 1.0 and 1.7", ok)
 	p.queue_free()
+	# B1: the source string had every glyph; scene geometry was depth-testing through individual letters.
+	var bubble := Bubble.new()
+	root.add_child(bubble)
+	bubble.set_text("Biscuit's up there!")
+	var bubble_surfaces_clear := bubble.label.no_depth_test and bubble.label.render_priority == 2
+	for child in bubble.get_children():
+		if child is MeshInstance3D:
+			var material := child.material_override as StandardMaterial3D
+			bubble_surfaces_clear = bubble_surfaces_clear and material != null and material.no_depth_test
+	check("speech bubble text and parchment render above foreground geometry", bubble.text == "Biscuit's up there!" and bubble.label.text == bubble.text and bubble_surfaces_clear)
+	bubble.queue_free()
 	await process_frame
 
 

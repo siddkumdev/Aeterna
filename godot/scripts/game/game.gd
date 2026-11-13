@@ -1210,6 +1210,12 @@ func select(kind: String) -> void:
 	_refresh_ui()
 
 
+static func with_indefinite_article(noun: String) -> String:
+	## Tower names currently begin with ordinary vowel/consonant sounds (Airship, Guard, Longbow, Wizard).
+	var first := noun.strip_edges().left(1).to_lower()
+	return "%s %s" % ["an" if first in ["a", "e", "i", "o", "u"] else "a", noun]
+
+
 func tower_at(cell: Vector2i) -> Tower:
 	for t in towers:
 		if NavGrid.footprint(t.cell, GameConfig.TOWER_SIZE).has(cell):
@@ -1667,7 +1673,7 @@ func _press_button(id: String) -> void:
 					_refresh_ui()
 					return
 				if faith < GameConfig.TOWERS[id]["cost"]:
-					last_message = "Not enough faith for a %s." % GameConfig.TOWERS[id]["name"]
+					last_message = "Not enough faith for %s." % with_indefinite_article(GameConfig.TOWERS[id]["name"])
 					_refresh_ui()
 					return
 			select("" if selected == id else id)
@@ -2266,7 +2272,7 @@ func _grab_card(cd: Card3D, h: GameHand) -> bool:
 				return true
 			if faith < GameConfig.TOWERS[id]["cost"] or at_max(id):
 				snd("invalid")
-				last_message = "Not enough faith for a %s." % GameConfig.TOWERS[id]["name"] if faith < GameConfig.TOWERS[id]["cost"] \
+				last_message = "Not enough faith for %s." % with_indefinite_article(GameConfig.TOWERS[id]["name"]) if faith < GameConfig.TOWERS[id]["cost"] \
 					else "You already have the most %s towers the island holds." % GameConfig.TOWERS[id]["name"]
 				_refresh_ui()
 				return true

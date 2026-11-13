@@ -49,13 +49,13 @@ func set_text(line: String, colour := INK) -> void:
 	var eq := QuadMesh.new()
 	eq.size = Vector2(WIDTH + 0.008, h + 0.008)
 	edge.mesh = eq
-	edge.material_override = _mat(EDGE)
+	edge.material_override = _mat(EDGE, 0)
 	add_child(edge)
 	var paper := MeshInstance3D.new()
 	var pq := QuadMesh.new()
 	pq.size = Vector2(WIDTH, h)
 	paper.mesh = pq
-	paper.material_override = _mat(PARCHMENT)
+	paper.material_override = _mat(PARCHMENT, 1)
 	paper.position.z = 0.0003
 	add_child(paper)
 	label = Label3D.new()
@@ -67,7 +67,10 @@ func set_text(line: String, colour := INK) -> void:
 	label.modulate = colour
 	label.outline_size = 0
 	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	label.no_depth_test = false
+	# A quest mote, roof edge, or other tiny foreground mesh used to punch apparent "missing glyphs" out of the text.
+	# The parchment is world-space UI, so keep the whole bubble together and readable above scene geometry.
+	label.no_depth_test = true
+	label.render_priority = 2
 	label.position.z = 0.0007
 	add_child(label)
 
@@ -81,9 +84,11 @@ func _process(_delta: float) -> void:
 			look_at(global_position - to, Vector3.UP)  # the face is on +Z: aim -Z away from the viewer
 
 
-func _mat(c: Color) -> StandardMaterial3D:
+func _mat(c: Color, priority: int) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = c
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.no_depth_test = true
+	m.render_priority = priority
 	return m
