@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-13, B2 nightfall subtitle wrapping verified in-engine (uncommitted).
+Last updated: 2026-11-13, Steps 1-3 (performance, toasts, ledger) self-tested and pushed; Step 4 investigation complete.
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -28,6 +28,9 @@ Last updated: 2026-11-13, B2 nightfall subtitle wrapping verified in-engine (unc
 - 2026-11-13: A4 allows one different physical spell card in each hand; releases and existing cooldowns stay independent. 475 checks pass; not tested on the headset.
 - 2026-11-13: B1 uses "an Airship" in both unaffordable-tower paths. The reported missing letters in "there!" were intact in source; foreground scene geometry could depth-test through individual bubble glyphs, so the whole parchment bubble now renders together above scene geometry. 478 checks pass. Fresh in-engine frame: `_work/video_review/b1_bubble_player_critic_thought.png`. Not tested on the headset.
 - 2026-11-13: B2 constrains the tray's nightfall subtitle to a centred 620 px smart-wrapped box (0.223 m at its pixel scale), so Skotos's full line fits the seated view. 480 checks pass. Fresh XR-off in-engine frame: `_work/video_review/b2_nightfall_subtitle.png`. Not tested on the headset; width needs confirmation there.
+- 2026-11-13 (`3e31e10`): Step 1 (I16) removes per-frame allocations in `_feed_grass()`, `GrassField`, `VillageLife`, `GodHandVisual`, and `_refresh_tray()`, caches `/user/hand_tracker/left`, configures `Viewport.VRS_XR`, shares `CardTray`'s face shader, and skips redundant `_update_ghost()` / `_refresh_buttons()` work on unchanged hover. 487 checks pass; not tested on the headset.
+- 2026-11-13 (`9e7495a`): Step 2 moves tray toasts above the card tops (`TOAST_POS`), stacks up to 3 bottom-aligned messages vertically with line-aware spacing (`_toast_stack`), and uses `_msg_serial` + fadeout `_toast_last` reset so HUD refreshes never overwrite explicit toasts. 492 checks pass; not tested on the headset.
+- 2026-11-13 (`4baba6a`): Step 3 adds `PALM_CLOSE_HOLD` (`0.35 s`) debounce, `Ledger.SPINE_DEADZONE` (`0.018 m`), `Ledger.TURN_COOLDOWN` (`0.22 s`), and `near_open_book` press consumption. 496 checks pass; not tested on the headset.
 - God hands: the last build showed only the ember orb. Cause unknown, the log was never read.
 - UI rig floating in front of the player; mirror held upright facing the eyes.
 
