@@ -52,6 +52,7 @@ const MOODS := {
 const MOOD_KEYS_COL := ["sun_col", "zenith", "horizon", "cloud_lit", "cloud_shade", "fog"]
 const MOOD_KEYS_F := ["energy", "cover", "stars", "moon", "curse", "burn", "fog_d", "amb", "exposure"]
 
+const FOG_SCALE := 0.4
 var env: Environment
 var sky_mat: ShaderMaterial
 var surf: ShaderMaterial
@@ -197,7 +198,7 @@ func _apply_mood() -> void:
 	sun.light_color = m["sun_col"]
 	sun.light_energy = m["energy"]
 	env.fog_light_color = m["fog"]
-	env.fog_density = m["fog_d"]
+	env.fog_density = m["fog_d"] * FOG_SCALE  # cleaner air (the user, 2026-11-14: "I don't like the haze that much")
 	env.ambient_light_energy = m["amb"]
 
 
@@ -351,11 +352,11 @@ func _build_env() -> void:
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	env.fog_sun_scatter = 0.35
-	env.fog_aerial_perspective = 0.5
+	env.fog_sun_scatter = 0.12
+	env.fog_aerial_perspective = 0.2
 	env.fog_sky_affect = 0.0
 	env.fog_height = 1.5
-	env.fog_height_density = 0.04
+	env.fog_height_density = 0.012
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.06
 	env.adjustment_saturation = 1.04
@@ -431,7 +432,8 @@ func _build_village() -> void:
 		var yaw := atan2(VILLAGE.x - c.x, VILLAGE.z - c.z)  # the door faces the square
 		_game_house(c, yaw, i)
 	_prop("well_v02", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
-	_prop("statue_v01", STATUE_AT, 0.0, STATUE_SCALE, true)  # the game's statue, front (+Z) to the square, towering over it
+	_shrine(STATUE_AT)
+	_prop("statue_v01", STATUE_AT + Vector3(0, PLINTH_H, 0), 0.0, STATUE_SCALE, true)  # the game's statue, front (+Z) to the square, towering over it
 	_dress_square()
 	_campfire(st, FIRE_AT)
 	for k in 5:  # fences along the meadow
@@ -474,8 +476,8 @@ func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
 	_put(st, t.commit_to_arrays(), at(p, _rng.randf_range(0, TAU)) * Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO), K.ROCK, Color(0.5, 0.47, 0.42))
 
 
-const STATUE_AT := VILLAGE + Vector3(0, 0, -4.2)
-const STATUE_SCALE := 45.0  # about 7 m tall: the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
+const STATUE_AT := VILLAGE + Vector3(0, 0, -5.0)
+const STATUE_SCALE := 70.0  # about 11 m tall on its plinth: the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
 const HOUSE_SCALE := 50.0  # the game's 2 x 2-cell houses (0.1 m) at life size: about 5 m across
 const HOUSE_MODELS := ["cottage_v05", "townhouse_v05", "cabin_v05"]
 
@@ -511,6 +513,51 @@ func _game_house(c: Vector3, yaw: float, i: int) -> void:
 	houses.append({"at": c, "yaw": yaw, "door": base * Vector3(0, 0, 2.43 + 0.9), "chimney": chim, "roof": base * Vector3(0, 5.5, 0), "size": Vector3(4.85, 5.0, 4.85)})
 
 
+const PLINTH_H := 1.1
+
+
+func _shrine(c: Vector3) -> void:
+	## The shrine round the statue: a stepped stone plinth, a carved band, four pillars with brass braziers, candles and
+	## offerings on the steps, flowers at the foot, so it reads as the village's holy place up close.
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var g := height(c.x, c.z)
+	var b := Vector3(c.x, g, c.z)
+	var stone := Color(0.68, 0.65, 0.6)
+	cyl(st, 4.6, 4.8, 0.35, at(b + Vector3(0, 0.15, 0)), K.STONE, stone * 0.9, 24)  # bottom step
+	cyl(st, 3.9, 4.1, 0.35, at(b + Vector3(0, 0.5, 0)), K.STONE, stone, 24)
+	cyl(st, 3.2, 3.4, 0.4, at(b + Vector3(0, 0.88, 0)), K.STONE, stone * 1.05, 24)  # top, the statue stands on it
+	cyl(st, 3.3, 3.3, 0.08, at(b + Vector3(0, PLINTH_H - 0.02, 0)), K.BRASS, Color(0.75, 0.55, 0.25), 24)  # carved brass band
+	for k in 4:
+		var a := TAU * k / 4.0 + PI / 4.0
+		var q := b + Vector3(cos(a) * 4.3, 0, sin(a) * 4.3)
+		box(st, Vector3(0.7, 0.4, 0.7), at(q + Vector3(0, 0.2, 0)), K.STONE, stone * 0.85)
+		cyl(st, 0.24, 0.28, 2.6, at(q + Vector3(0, 1.7, 0)), K.STONE, stone, 10)
+		box(st, Vector3(0.6, 0.25, 0.6), at(q + Vector3(0, 3.1, 0)), K.STONE, stone * 0.85)
+		cyl(st, 0.42, 0.22, 0.4, at(q + Vector3(0, 3.42, 0)), K.BRASS, Color(0.7, 0.5, 0.22), 10)  # brazier bowl
+		cyl(st, 0.32, 0.3, 0.06, at(q + Vector3(0, 3.6, 0)), K.EMBER, Color(1.0, 0.45, 0.12), 10)  # coals
+		var f := OmniLight3D.new() if k % 2 == 0 else null  # two lights for four braziers keeps it cheap
+		if f:
+			f.light_color = Color(1.0, 0.6, 0.3)
+			f.light_energy = 1.6
+			f.omni_range = 7.0
+			f.position = q + Vector3(0, 3.9, 0)
+			add_child(f)
+	for k in 14:  # candles and small offerings along the steps at the front
+		var a := PI / 2.0 + (k - 6.5) * 0.13
+		var r := 3.65 + (k % 2) * 0.7
+		var q := b + Vector3(cos(a) * r, 0.68 - (k % 2) * 0.35, sin(a) * r)
+		if k % 3 == 2:
+			box(st, Vector3(0.22, 0.12, 0.16), at(q + Vector3(0, 0.06, 0), a), K.WOOD, Color(0.5, 0.33, 0.18))  # bread, a carved bowl
+		else:
+			cyl(st, 0.05, 0.05, 0.2 + 0.1 * (k % 3), at(q + Vector3(0, 0.12, 0)), K.CLOTH, Color(0.95, 0.9, 0.8), 6)
+			cyl(st, 0.0, 0.02, 0.07, at(q + Vector3(0, 0.27 + 0.1 * (k % 3), 0)), K.EMBER, Color(1.0, 0.7, 0.3), 5)
+	bake(st, surf, "Shrine")
+	for k in 6:
+		var a := PI / 2.0 + (k - 2.5) * 0.45
+		_prop("flower_pots_v02", c + Vector3(cos(a) * 5.3, 0, sin(a) * 5.3), -a, 35.0)
+
+
 func _dress_square() -> void:
 	## The market square as busy as the game's: stall, notice board, haystack, handcart, washing, lanterns.
 	var v := VILLAGE
@@ -521,12 +568,10 @@ func _dress_square() -> void:
 	_prop("clothesline_v02", v + Vector3(-6.4, 0, 3.6), 0.9, 45.0)
 	_prop("barrel_stack_v02", v + Vector3(6.4, 0, 1.2), 0.3, 35.0)
 	_prop("table_stool_v02", v + Vector3(-6.2, 0, -4.4), 0.2, 40.0)
-	_prop("flower_pots_v02", v + Vector3(3.3, 0, -1.4), 0.0, 35.0)
-	_prop("flower_pots_v02", v + Vector3(-3.3, 0, -1.4), PI, 35.0)
 	_prop("tools_leaning_v02", v + Vector3(-5.6, 0, -2.0), 1.6, 40.0)
 	for k in 6:
-		var a := TAU * k / 6.0 + 0.3
-		_prop("lantern_v01", v + Vector3(cos(a) * 6.8, 0, sin(a) * 6.8), -a, 55.0)
+		var a := PI / 2.0 + 0.9 + k * (TAU - 1.8) / 5.0  # round the square, leaving the side you look in from clear
+		_prop("lantern_v01", v + Vector3(cos(a) * 7.5, 0, sin(a) * 7.5), -a, 55.0)
 
 
 func _campfire(st: SurfaceTool, p: Vector3) -> void:
@@ -1085,13 +1130,13 @@ func _build_fx() -> void:
 	sp.emission_sphere_radius = 36.0
 	sp.gravity = Vector3(0, -3.5, 0)
 	sp.initial_velocity_min = 0.0
-	sp.initial_velocity_max = 2.0
+	sp.initial_velocity_max = 9.0  # burst out, then rain
 	sp.direction = Vector3.DOWN
 	sp.spread = 60.0
 	sp.scale_min = 0.5
 	sp.scale_max = 1.6
 	sp.color_ramp = ramp([Color(1.0, 0.8, 0.45), Color(1.0, 0.45, 0.2), Color(0.8, 0.2, 0.1, 0.0)])
-	shards = _particles("Shards", 900, 7.0, 0.55, flame_mat(2, 3.0), sp, VILLAGE)
+	shards = _particles("Shards", 2400, 7.0, 1.4, flame_mat(2, 4.5), sp, VILLAGE)
 	shards.one_shot = true
 	shards.explosiveness = 0.85
 	shards.emitting = false

@@ -79,6 +79,7 @@ var _cap_fade: Tween
 var _saved := {}
 var _stand := Vector3.ZERO
 var _aerial := false
+var _shake := 0.0  # desktop camera only; never shake the headset view
 var _pitch := 0.0  # desktop camera tilt (down while over the village)
 const AERIAL_TURN := 0.09  # rad/s: slow, so it stays comfortable in the headset
 const AERIAL_HIGH := 24.0
@@ -458,6 +459,9 @@ func _process(delta: float) -> void:
 		_cam.rotation.y = lerp_angle(_cam.rotation.y, want, minf(1.0, delta * 0.8))
 		var tilt := (_pitch * 0.85 if _aerial else -0.03) + sin(_t * 0.23) * 0.01
 		_cam.rotation.x = lerpf(_cam.rotation.x, tilt, minf(1.0, delta * 2.0))
+		if _shake > 0.0:
+			_shake = maxf(0.0, _shake - delta)
+			_cam.rotation += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1) * 0.5) * _shake * 0.03
 
 
 func _once(key: String, at_t: float) -> bool:
@@ -576,7 +580,18 @@ func _tick_4(t: float) -> void:
 		_sound("story_shatter", Vector3.INF, 0.0)
 		world.shards.restart()
 		world.shards.emitting = true
-		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 0.0, 1.2)
+		_sound("story_thunder", Vector3.INF, 0.0)
+		# more drama (the user, 2026-11-14): the cracks race over the dome, a blinding white-gold flash, the sky
+		# shudders, then the Veil goes out
+		var tw := create_tween()
+		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 1.0, 0.15)
+		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 2.5, 0.15)
+		tw.tween_interval(0.5)  # hold the blazing, cracked dome a beat before it falls
+		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 2.5, 0.0, 2.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+		var fl := create_tween()
+		fl.tween_property(world.env, "adjustment_brightness", 2.6, 0.08)
+		fl.tween_property(world.env, "adjustment_brightness", 1.0, 1.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+		_shake = 0.6
 	if _once("beasts", 4.0):
 		world.release_beasts()
 		for i in range(1, world.people.size()):  # they run for their doors
@@ -605,7 +620,7 @@ func _enter_5() -> void:
 	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the
 	# center of the village, near where the statue is"). The world moves, not you, so this works in the headset too;
 	# the chapter starts under black, so the jump is never seen.
-	var stand := StoryWorld.VILLAGE + Vector3(-0.4, 0, 7.4)  # back far enough to see the whole shrine
+	var stand := StoryWorld.VILLAGE + Vector3(-0.4, 0, 9.0)  # back far enough to see the whole shrine
 	world.position = -Vector3(stand.x, StoryWorld.height(stand.x, stand.z), stand.z)
 	_stand = stand
 	var statue := StoryWorld.STATUE_AT
