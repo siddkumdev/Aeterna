@@ -591,9 +591,9 @@ func _tick_4(t: float) -> void:
 		var tw := create_tween()
 		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 1.0, 0.15)
 		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("rift", v), 0.9, 1.2, 0.15)  # the rift tears it open
-		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 2.5, 0.15)
+		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 1.6, 0.15)
 		tw.tween_interval(0.5)  # hold the blazing, cracked dome a beat before it falls
-		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 2.5, 0.0, 2.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 1.6, 0.0, 2.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
 		var fl := create_tween()
 		fl.tween_property(world.env, "adjustment_brightness", 2.6, 0.08)
 		fl.tween_property(world.env, "adjustment_brightness", 1.0, 1.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)

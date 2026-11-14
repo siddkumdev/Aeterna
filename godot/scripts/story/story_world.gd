@@ -438,7 +438,7 @@ func _build_village() -> void:
 		_game_house(c, yaw, i)
 	_prop("well_v02", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
 	_shrine(STATUE_AT)
-	_prop("statue_v01", STATUE_AT + Vector3(0, PLINTH_H, 0), 0.0, STATUE_SCALE, true)  # the game's statue, front (+Z) to the square, towering over it
+	_story_statue(STATUE_AT + Vector3(0, PLINTH_H, 0))  # the game's statue's design (statue_v01), carved in full detail at life size
 	_dress_square()
 	_campfire(st, FIRE_AT)
 	for k in 5:  # fences along the meadow
@@ -998,23 +998,120 @@ func _build_people() -> void:
 		people[i]._wait = rr.randf_range(1.0, 6.0)
 
 
+func _story_statue(c: Vector3) -> void:
+	## The little god as the game's statue (ew_village_statue_v01: hooded pilgrim, long robe, drooping sleeves, cupped hands
+	## holding an ember bowl, a gold sun-disc behind the hood, a round mossy base), carved at life size with the detail the
+	## board model cannot carry: robe folds, a rope belt, a deep hood with a shadowed face, fingers, a rayed disc.
+	## About 6.6 m tall, front (+Z) to the square. The user, 2026-11-14: "make the statue way more detailed".
+	var st := new_st()
+	var stone := Color(0.5, 0.48, 0.44)
+	var dark := Color(0.3, 0.28, 0.25)
+	var gold := Color(0.85, 0.62, 0.25)
+	var shade := Color(0.05, 0.045, 0.04)
+	var o := Transform3D(Basis.IDENTITY, c)
+	cyl(st, 1.55, 1.65, 0.5, o * at(Vector3(0, 0.25, 0)), K.ROCK, stone * 0.9, 28)
+	cyl(st, 1.7, 1.7, 0.1, o * at(Vector3(0, 0.52, 0)), K.ROCK, stone * 0.95, 28)
+	lathe(st, PackedVector2Array([Vector2(1.42, 0.55), Vector2(1.38, 0.75), Vector2(1.22, 1.6), Vector2(1.02, 2.6), Vector2(0.86, 3.35), Vector2(0.8, 3.55),
+		Vector2(0.86, 3.85), Vector2(0.98, 4.5), Vector2(1.0, 4.8), Vector2(0.78, 5.1), Vector2(0.42, 5.2), Vector2(0.0, 5.22)]), o, K.ROCK, stone, 32, 0.05)
+	for i in 14:  # folds down the skirt, fanning to the hem
+		var a := TAU * (i + 0.5) / 14.0
+		seg(st, o * Vector3(cos(a + 0.05) * 1.38, 0.62, sin(a + 0.05) * 1.38), o * Vector3(cos(a) * 0.82, 3.4, sin(a) * 0.82), 0.17, 0.08, K.ROCK, stone * 0.97, 8)
+	for i in 10:  # softer folds over the chest
+		var a := TAU * (i + 0.25) / 10.0
+		seg(st, o * Vector3(cos(a) * 0.84, 3.7, sin(a) * 0.84), o * Vector3(cos(a) * 0.97, 4.6, sin(a) * 0.97), 0.05, 0.07, K.ROCK, stone, 6)
+	for i in 36:  # rope belt
+		var a := TAU * i / 36.0
+		ball(st, 0.075, o * at(Vector3(cos(a) * 0.83, 3.48 + 0.025 * sin(a * 9.0), sin(a) * 0.83)), K.ROCK, dark * 1.4, 6)
+	ball(st, 0.13, o * at(Vector3(0.35, 3.45, 0.78)), K.ROCK, dark * 1.4, 8)
+	seg(st, o * Vector3(0.35, 3.4, 0.8), o * Vector3(0.42, 2.4, 0.95), 0.06, 0.05, K.ROCK, dark * 1.4, 6)
+	seg(st, o * Vector3(0.3, 3.4, 0.8), o * Vector3(0.22, 2.6, 0.98), 0.06, 0.05, K.ROCK, dark * 1.4, 6)
+	ball(st, 0.08, o * at(Vector3(0.42, 2.38, 0.95)), K.ROCK, dark * 1.4, 6)
+	ball(st, 0.08, o * at(Vector3(0.22, 2.58, 0.98)), K.ROCK, dark * 1.4, 6)
+	# hood: a deep cowl, its peak tipped forward, a rolled brim and a dark face inside
+	lathe(st, PackedVector2Array([Vector2(0.78, 4.95), Vector2(0.84, 5.35), Vector2(0.8, 5.8), Vector2(0.64, 6.2), Vector2(0.36, 6.5), Vector2(0.12, 6.62), Vector2(0.0, 6.64)]),
+		o * at(Vector3(0, 0, -0.08)), K.ROCK, stone, 28, 0.04)
+	ball(st, 1.0, o * Transform3D(Basis.from_scale(Vector3(0.42, 0.52, 0.3)), Vector3(0, 5.62, 0.55)), K.ROCK, shade, 16)
+	for i in 26:
+		var a := TAU * i / 26.0
+		ball(st, 0.13, o * at(Vector3(cos(a) * 0.5, 5.62 + sin(a) * 0.6, 0.6 + 0.08 * (1.0 - absf(sin(a))))), K.ROCK, stone * 1.05, 8)
+	for i in 8:  # the cowl drapes over the shoulders
+		var a := PI * 0.15 + PI * 0.7 * i / 7.0
+		for sx in [-1.0, 1.0]:
+			seg(st, o * Vector3(sx * cos(a) * 0.7, 5.6, -sin(a) * 0.3 + 0.25), o * Vector3(sx * cos(a) * 0.98, 4.75, -sin(a) * 0.5 + 0.3), 0.07, 0.1, K.ROCK, stone, 6)
+	# sleeves down and in to the hands, with drooping cuffs
+	for sx in [-1.0, 1.0]:
+		var sh := Vector3(sx * 0.95, 4.7, 0.05)
+		var el := Vector3(sx * 0.9, 3.9, 0.55)
+		var wr := Vector3(sx * 0.32, 4.05, 1.0)
+		seg(st, o * sh, o * el, 0.34, 0.36, K.ROCK, stone, 14)
+		seg(st, o * el, o * wr, 0.36, 0.42, K.ROCK, stone, 14)
+		ball(st, 0.36, o * at(el), K.ROCK, stone, 12)
+		seg(st, o * (wr + Vector3(-sx * 0.05, -0.15, -0.1)), o * Vector3(sx * 0.62, 2.85, 0.95), 0.36, 0.12, K.ROCK, stone * 0.96, 12)
+		ball(st, 0.32, o * at(wr), K.ROCK, shade, 10)
+	# cupped hands with curled fingers
+	for sx in [-1.0, 1.0]:
+		ball(st, 1.0, o * Transform3D(Basis.from_scale(Vector3(0.24, 0.13, 0.28)), Vector3(sx * 0.16, 4.02, 1.12)), K.ROCK, stone * 1.08, 12)
+		for f in 4:
+			var fz := 0.98 + f * 0.09
+			seg(st, o * Vector3(sx * 0.3, 4.0, fz), o * Vector3(sx * 0.4, 4.22, fz + 0.02), 0.045, 0.035, K.ROCK, stone * 1.08, 5)
+		seg(st, o * Vector3(sx * 0.2, 4.05, 0.98), o * Vector3(sx * 0.3, 4.25, 0.92), 0.05, 0.04, K.ROCK, stone * 1.08, 5)
+	# the ember bowl and its live coal
+	lathe(st, PackedVector2Array([Vector2(0.08, 0.0), Vector2(0.3, 0.06), Vector2(0.4, 0.2), Vector2(0.43, 0.32), Vector2(0.38, 0.33), Vector2(0.0, 0.26)]),
+		o * at(Vector3(0, 4.1, 1.14)), K.BRASS, gold, 20)
+	ball(st, 1.0, o * Transform3D(Basis.from_scale(Vector3(0.3, 0.16, 0.3)), Vector3(0, 4.42, 1.14)), K.EMBER, Color(1.0, 0.45, 0.12), 12)
+	var glow := OmniLight3D.new()
+	glow.light_color = Color(1.0, 0.55, 0.22)
+	glow.light_energy = 2.0
+	glow.omni_range = 5.0
+	glow.position = c + Vector3(0, 4.8, 1.5)
+	add_child(glow)
+	# the sun-disc behind the hood: a dished face, a ring, straight and short rays
+	var dz := Basis(Vector3.RIGHT, PI / 2.0)
+	var dc := Vector3(0, 6.0, -0.75)
+	cyl(st, 1.05, 1.05, 0.12, o * Transform3D(dz, dc), K.BRASS, gold, 36)
+	cyl(st, 1.22, 1.22, 0.08, o * Transform3D(dz, dc + Vector3(0, 0, -0.03)), K.BRASS, gold * 0.8, 36)
+	for i in 24:
+		var a := TAU * i / 24.0
+		var r2 := 1.25 + (0.75 if i % 2 == 0 else 0.45)
+		seg(st, o * (dc + Vector3(cos(a) * 1.25, sin(a) * 1.25, -0.04)), o * (dc + Vector3(cos(a) * r2, sin(a) * r2, -0.04)), 0.07, 0.02, K.BRASS, gold * (1.0 if i % 2 == 0 else 0.85), 5)
+	bake(st, surf, "Statue")
+
+
 func _build_flock() -> void:
 	## Sheep grazing in the meadow: woolly turned bodies, dark faces and legs. They drift, crop the grass, and bolt
 	## when the beasts come.
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var wool := Color(0.86, 0.82, 0.72)
-	var face := Color(0.12, 0.1, 0.09)
-	var body := PackedVector2Array([Vector2(0.05, -0.55), Vector2(0.3, -0.45), Vector2(0.4, -0.2), Vector2(0.42, 0.1), Vector2(0.36, 0.38), Vector2(0.18, 0.52), Vector2(0.03, 0.56)])
-	lathe(st, body, at(Vector3(0, 0.78, 0), 0.0, Vector3(PI / 2.0, 0, 0)), K.CLOTH, wool, 12, 0.18)
-	var head := PackedVector2Array([Vector2(0.02, 0.0), Vector2(0.12, 0.05), Vector2(0.14, 0.18), Vector2(0.1, 0.32), Vector2(0.03, 0.38)])
-	lathe(st, head, at(Vector3(0, 0.95, 0.5), 0.0, Vector3(1.1, 0, 0)), K.SKIN, face, 8)
-	lathe(st, PackedVector2Array([Vector2(0.01, 0), Vector2(0.09, 0.03), Vector2(0.03, 0.12)]), at(Vector3(0.13, 1.08, 0.58), 0.0, Vector3(0, 0, -1.4)), K.SKIN, face, 5)  # ears
-	lathe(st, PackedVector2Array([Vector2(0.01, 0), Vector2(0.09, 0.03), Vector2(0.03, 0.12)]), at(Vector3(-0.13, 1.08, 0.58), 0.0, Vector3(0, 0, 1.4)), K.SKIN, face, 5)
-	lathe(st, PackedVector2Array([Vector2(0.03, 0.0), Vector2(0.17, 0.08), Vector2(0.15, 0.2), Vector2(0.03, 0.26)]), at(Vector3(0, 1.05, 0.46)), K.CLOTH, wool, 8)  # woolly cap
-	for lx in [-0.2, 0.2]:
-		for lz in [-0.32, 0.32]:
-			cyl(st, 0.045, 0.04, 0.55, at(Vector3(lx, 0.0, lz)), K.SKIN, face, 6)
+	var wool := Color(0.7, 0.66, 0.57)
+	var face := Color(0.14, 0.11, 0.1)
+	var hoof := Color(0.06, 0.05, 0.05)
+	var wr := RandomNumberGenerator.new()
+	wr.seed = 31
+	# the fleece: a core of wool under lumpy curls
+	ball(st, 1.0, Transform3D(Basis.from_scale(Vector3(0.4, 0.36, 0.55)), Vector3(0, 0.8, 0)), K.CLOTH, wool * 0.92, 14)
+	for i in 140:
+		var u := wr.randf_range(0, TAU)
+		var v := wr.randf_range(-0.35, 1.0)
+		var n := Vector3(cos(u) * sqrt(1.0 - v * v), v, sin(u) * sqrt(1.0 - v * v))
+		ball(st, wr.randf_range(0.07, 0.1), at(Vector3(n.x * 0.37, 0.8 + n.y * 0.33, n.z * 0.52)), K.CLOTH, wool * wr.randf_range(0.88, 1.04), 7)
+	ball(st, 0.1, at(Vector3(0, 0.88, -0.6)), K.CLOTH, wool, 7)  # tail
+	# neck and head: a long dark face, a muzzle, eyes, drooping ears, a woolly topknot
+	seg(st, Vector3(0, 0.95, 0.42), Vector3(0, 1.02, 0.62), 0.17, 0.12, K.CLOTH, wool * 0.95, 9)
+	var hx := Transform3D(Basis(Vector3.RIGHT, 1.05), Vector3(0, 1.02, 0.68))
+	ball(st, 1.0, hx * Transform3D(Basis.from_scale(Vector3(0.12, 0.2, 0.13)), Vector3(0, 0.06, 0)), K.SKIN, face, 12)
+	ball(st, 1.0, hx * Transform3D(Basis.from_scale(Vector3(0.09, 0.08, 0.1)), Vector3(0, 0.22, 0.02)), K.SKIN, face * 1.3, 10)
+	for sx in [-1.0, 1.0]:
+		ball(st, 0.028, hx * at(Vector3(sx * 0.1, 0.02, 0.07)), K.IRON, Color(0.02, 0.02, 0.02), 6)
+		ball(st, 1.0, Transform3D(Basis(Vector3.FORWARD, sx * 0.5) * Basis.from_scale(Vector3(0.12, 0.035, 0.06)), Vector3(sx * 0.17, 1.03, 0.62)), K.SKIN, face, 8)
+	for i in 6:
+		ball(st, 0.07, at(Vector3(wr.randf_range(-0.06, 0.06), 1.12 + wr.randf_range(-0.02, 0.03), 0.6 + wr.randf_range(-0.05, 0.05))), K.CLOTH, wool, 6)
+	# legs: thin and dark, a knee, a hoof
+	for lx in [-0.18, 0.18]:
+		for lz in [-0.3, 0.3]:
+			seg(st, Vector3(lx, 0.6, lz), Vector3(lx, 0.3, lz + 0.02), 0.05, 0.04, K.SKIN, face, 6)
+			ball(st, 0.045, at(Vector3(lx, 0.3, lz + 0.02)), K.SKIN, face, 6)
+			seg(st, Vector3(lx, 0.3, lz + 0.02), Vector3(lx, 0.05, lz), 0.036, 0.04, K.SKIN, face, 6)
+			cyl(st, 0.045, 0.05, 0.06, at(Vector3(lx, 0.03, lz)), K.IRON, hoof, 6)
 	st.index()
 	var mesh := st.commit()
 	var rr := RandomNumberGenerator.new()
@@ -1329,6 +1426,47 @@ func _build_skotos() -> void:
 	for sx in [-1, 1]:  # arms
 		lathe(st, PackedVector2Array([Vector2(1.6, 0), Vector2(1.3, 6.0), Vector2(0.9, 12.0), Vector2(1.3, 13.0), Vector2(0.4, 15.0), Vector2(0.0, 15.5)]),
 			Transform3D(Basis(Vector3.FORWARD, sx * -1.25) * Basis(Vector3.RIGHT, 0.35), Vector3(sx * 5.0, 22.0, 1.0)), K.CLOTH, Color(1, 1, 1), 10, 0.2)
+	# a shape, not a blob (the user, 2026-11-14: "he looks like a blob"): a peaked hood thrown forward over a void, a
+	# mantle of drapes on the shoulders, a tattered hem that trails into the smoke
+	lathe(st, PackedVector2Array([Vector2(4.6, 27.0), Vector2(5.0, 29.5), Vector2(4.4, 32.5), Vector2(3.0, 35.0), Vector2(1.4, 37.0), Vector2(0.3, 38.6), Vector2(0.0, 39.0)]),
+		Transform3D(Basis(Vector3.RIGHT, 0.22), Vector3(0, -1.5, 0.8)), K.CLOTH, Color(1, 1, 1), 20, 0.12)
+	for i in 11:  # the mantle: ragged lengths of shroud hanging off the shoulders down the body
+		var a := TAU * i / 11.0 + 0.2 * sin(i * 2.3)
+		var drop := 9.0 + 5.0 * absf(sin(i * 1.9))
+		seg(st, Vector3(cos(a) * 4.2, 27.5, sin(a) * 3.4), Vector3(cos(a) * 7.0, 27.5 - drop, sin(a) * 5.6), 1.8, 0.3, K.CLOTH, Color(1, 1, 1), 7)
+	for i in 28:  # tatters
+		var a := TAU * i / 28.0 + 0.1 * sin(i * 7.0)
+		var r := 10.0 + 1.5 * sin(i * 3.1)
+		seg(st, Vector3(cos(a) * r * 0.85, 4.0, sin(a) * r * 0.85), Vector3(cos(a) * (r + 2.5), -2.0 - 2.0 * absf(sin(i * 1.7)), sin(a) * (r + 2.5)), 1.1, 0.15, K.CLOTH, Color(1, 1, 1), 5)
+	var hard := new_st()  # the hard parts: a void face, a crown of black thorns, long clawed hands
+	ball(hard, 1.0, Transform3D(Basis.from_scale(Vector3(2.3, 2.9, 1.2)), Vector3(0, 31.0, 2.6)), K.INK, Color(0.015, 0.01, 0.02), 14)
+	for i in 9:
+		var a := lerpf(-1.25, 1.25, i / 8.0)
+		var base := Vector3(sin(a) * 3.2, 34.5 - absf(a) * 1.2, cos(a) * 1.8 + 0.6)
+		var tip := base + Vector3(sin(a) * 2.0, 4.5 - absf(a) * 1.6 + (1.2 if i % 2 == 0 else 0.0), -0.8)
+		seg(hard, base, tip, 0.55, 0.02, K.INK, Color(0.05, 0.03, 0.06), 6)
+	for sx in [-1, 1]:
+		var axf := Transform3D(Basis(Vector3.FORWARD, sx * -1.25) * Basis(Vector3.RIGHT, 0.35), Vector3(sx * 5.0, 22.0, 1.0))
+		var palm := axf * Vector3(0, 14.6, 0)
+		var up := (axf.basis * Vector3.UP).normalized()
+		var side := (axf.basis * Vector3.RIGHT).normalized()
+		var fwd := (axf.basis * Vector3.BACK).normalized()
+		ball(hard, 1.0, Transform3D(Basis.from_scale(Vector3(1.2, 1.4, 0.7)), palm), K.INK, Color(0.04, 0.025, 0.05), 10)
+		for f in 5:
+			var spread := lerpf(-0.9, 0.9, f / 4.0)
+			var knuckle := palm + side * spread * 1.0 + up * 0.8
+			var mid := knuckle + (up * 2.4 + side * spread * 1.4 + fwd * 0.9)
+			var tip := mid + (up * 1.4 + side * spread * 0.5 + fwd * 2.4)
+			if f == 0:
+				mid = palm + side * -1.3 * sx + fwd * 1.5
+				tip = mid + fwd * 2.0 + up * 0.8
+			seg(hard, knuckle, mid, 0.32, 0.24, K.INK, Color(0.04, 0.025, 0.05), 6)
+			seg(hard, mid, tip, 0.24, 0.02, K.BONE, Color(0.35, 0.3, 0.33), 6)  # the claw
+	var hm := MeshInstance3D.new()
+	hm.mesh = hard.commit()
+	hm.material_override = surf
+	hm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	skotos.add_child(hm)
 	var body := MeshInstance3D.new()
 	body.mesh = st.commit()
 	body.material_override = skotos_mat
@@ -1336,7 +1474,7 @@ func _build_skotos() -> void:
 	skotos.add_child(body)
 	var eyes := new_st()
 	for sx in [-1, 1]:
-		ball(eyes, 0.42, Transform3D(Basis.from_scale(Vector3(1.3, 0.55, 0.5)), Vector3(sx * 0.9, 30.8, 2.7)), K.EMBER, Color(0.75, 0.45, 1.0), 10)
+		ball(eyes, 0.42, Transform3D(Basis.from_scale(Vector3(1.3, 0.55, 0.5)), Vector3(sx * 0.9, 30.8, 3.85)), K.EMBER, Color(0.75, 0.45, 1.0), 10)
 	var em := MeshInstance3D.new()
 	em.mesh = eyes.commit()
 	em.material_override = surf
@@ -1458,15 +1596,15 @@ func _build_beasts() -> void:
 			leg.add_child(lm)
 			b.add_child(leg)
 			legs.append(leg)
-		b.scale = Vector3.ONE * _rng.randf_range(0.85, 1.15)
+		b.scale = Vector3.ONE * _rng.randf_range(1.2, 1.5)
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var a := side * (1.35 + (i / 2) * 0.16 + _rng.randf_range(-0.05, 0.05))  # out of the wood on both flanks of the village
 		var dir := Vector3(sin(a), 0, -cos(a))
 		var from := VILLAGE + dir * 30.0
-		var to := VILLAGE + dir * _rng.randf_range(9.0, 12.0)  # they creep to the village's edge, between it and you
+		var to := VILLAGE + Vector3(side * _rng.randf_range(2.5, 9.0), 0, _rng.randf_range(12.0, 17.0))  # out of the wood and into the meadow in front of the village, in plain sight (the user, 2026-11-14: could not see them)
 		b.visible = false
 		add_child(b)
-		beasts.append({"node": b, "legs": legs, "from": from, "to": to, "t": -_rng.randf_range(0.0, 3.0), "speed": _rng.randf_range(0.06, 0.09), "back": false})
+		beasts.append({"node": b, "legs": legs, "from": from, "to": to, "t": -_rng.randf_range(0.0, 0.3), "speed": _rng.randf_range(0.13, 0.19), "back": false})
 
 
 func release_beasts() -> void:

@@ -38,8 +38,15 @@ void fragment() {
 	if (crack > 0.0) {
 		float d = acos(clamp(dot(lp, normalize(crack_at)), -1.0, 1.0));
 		vec3 v = voronoi2(vec2(lon, lat) * 7.0 + warp);
-		float line = smoothstep(0.025, 0.0, v.y) * smoothstep(crack * 3.2, crack * 3.2 - 0.4, d);
-		c += mix(red, purple, 0.6) * line * 1.6 * strength;  // the cracks are Skotos's too
+		// The Veil is woven light, not glass: it frays rather than cracks. Soft, broken seams of light that flicker and
+		// drift, with gaps along them, and the weave thins to nothing around each tear.
+		float reach = smoothstep(crack * 3.2, crack * 3.2 - 0.4, d);
+		float fray = smoothstep(0.4, 0.75, fbm2(vec2(lon, lat) * 14.0 + vec2(clock * 0.4, -clock * 0.25), 3));
+		float flick = 0.6 + 0.4 * sin(clock * 7.0 + v.z * 40.0);
+		float seam = smoothstep(0.05, 0.0, v.y) * reach * fray;
+		float hole = smoothstep(0.12, 0.0, v.y) * reach;
+		c *= 1.0 - hole * 0.7;  // the weave comes apart around the tear
+		c += mix(red, purple, 0.6) * seam * 0.9 * flick * strength;  // the fraying is Skotos's too
 		c = mix(c, c * vec3(1.0, 0.5, 0.4), crack * 0.5);
 	}
 	if (rift > 0.0) {
@@ -49,10 +56,11 @@ void fragment() {
 		float off = abs(asin(clamp(dot(lp, side), -1.0, 1.0)) - jag);
 		float reached = smoothstep(rift * 1.7 + 0.02, rift * 1.7 - 0.12, abs(along));  // creeps down both ways from the top
 		float throb = 0.75 + 0.25 * sin(clock * 3.0 - abs(along) * 6.0);
-		float core = smoothstep(0.012, 0.0, off) * reached;
+		float core = smoothstep(0.02, 0.0, off) * reached * (0.55 + 0.45 * smoothstep(0.3, 0.6, fbm2(vec2(along * 20.0, clock * 0.8), 2)));  // a smouldering seam, broken in places
 		float halo = smoothstep(0.14, 0.0, off) * reached;
 		vec3 vv = voronoi2(vec2(lon, lat) * 9.0 + 3.0);
-		float vein = smoothstep(0.02, 0.0, vv.y) * smoothstep(0.35, 0.0, off) * reached * rift;
+		float wisp = smoothstep(0.35, 0.7, fbm2(vec2(lon, lat) * 12.0 - vec2(0.0, clock * 0.5), 3));
+		float vein = smoothstep(0.04, 0.0, vv.y) * smoothstep(0.35, 0.0, off) * reached * rift * wisp;  // tendrils, not a net
 		c *= 1.0 - halo * 0.6;  // the gold dims around the wound
 		c += purple * (core * 3.0 + halo * 0.6 * throb + vein * 1.2 * throb) * max(strength, 0.6);
 	}
