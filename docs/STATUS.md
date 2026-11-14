@@ -23,6 +23,7 @@ Last updated: 2026-11-14 (sykeriin: story/ledger/fonts/trees/characters/perf, se
 - Wizard sounds (Siddharth).
 
 ## Untested on the Quest
+- 2026-11-14 (later): story perf cut (about 6.8M -> 1.0M primitives; this laptop's GPU timings swing too much to quote an fps), chapter V in the village square, rewritten lines, caption outline fade. Measure with `godot/tools/story_perf.gd`.
 - 2026-11-12: hands fixes 8daf5fe / 86911fe and the new card tray (starts at the board's front edge, low, tilted; grab the wood to move it; never follows the island; `Game._update_tray`, shot `godot/tools/tray_shot.gd`) are untested on the headset. Video review results: `_work/video_review/issues.md`.- Passthrough (may still need the blocked vendor plugin).
 - 2026-11-13: A3 hourglass day hurry is 20x (was 10x); regression-covered, not tested on the headset.
 - 2026-11-13: A4 allows one different physical spell card in each hand; releases and existing cooldowns stay independent. 475 checks pass; not tested on the headset.

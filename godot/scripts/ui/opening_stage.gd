@@ -15,34 +15,35 @@ const EYE := 1.62  # m, the desktop camera's eye height
 const CAPTION_DIST := 1.5
 const WORD_GAP := 0.24  # s between typed words
 const VOICE := {"narrator": "voice_narrator", "skotos": "voice_skotos", "maren": "voice_maren"}
-const NAME := {"narrator": "", "skotos": "SKOTOS", "maren": "MAREN, THE PRIESTESS"}
+const NAME := {"narrator": "", "skotos": "SKOTOS", "maren": "OLD MAREN"}
 const NAME_COL := {"narrator": Color(1.0, 0.85, 0.55), "skotos": Color(0.78, 0.55, 1.0), "maren": Color(1.0, 0.7, 0.45)}
 
 ## Each chapter: a name, a mood, where to look (yaw in degrees, 0 = toward the village, 180 = behind you), the
 ## ambience loops, its length, and its lines [at s, speaker, text]. The cues (_cue_N) run alongside.
 const CHAPTERS := [
 	{"name": "I.  THE ISLAND", "mood": "predawn", "look": 0.0, "loops": ["story_meadow"], "len": 34.0, "lines": [
-		[3.0, "narrator", "Beyond the edge of the map, a very small island floats on a sea of cloud."],
-		[11.0, "narrator", "Twelve people live on it, and one small god who watches over them."],
-		[19.0, "narrator", "Every morning they light the fire, draw water, and say a prayer to the little stone god in the square."],
-		[27.0, "narrator", "Their faith weaves the Veil: a warm dome of light that keeps the dark away."]]},
+		[3.0, "narrator", "Past the edge of every map, a small island drifts on a sea of cloud."],
+		[11.0, "narrator", "Twelve people live here. And one small god, who has watched over them for longer than anyone remembers. That god is you."],
+		[19.0, "maren", "Morning, little one. Pip let the goats into the bakery again. Keep him alive till supper, would you?"],
+		[27.0, "narrator", "Every prayer is a thread of light. Together, they weave the Veil."]]},
 	{"name": "II.  THE FORGOTTEN", "mood": "dusk", "look": 180.0, "loops": ["story_dusk"], "len": 28.0, "lines": [
-		[2.5, "narrator", "Turn around. Behind you, in the Dark Wood, another god once ruled."],
-		[10.0, "narrator", "His name was Skotos. His temples rotted. His people forgot him."],
-		[18.5, "narrator", "And a god who is forgotten goes hungry."]]},
+		[2.5, "narrator", "Now turn around. The wood behind you had a god of its own, once."],
+		[10.0, "narrator", "Skotos. Their people stopped praying, one by one. Their temple sank into the roots, and their name was forgotten."],
+		[18.5, "narrator", "A forgotten god does not die. They starve. And they watch the warm little lights of those still loved."]]},
 	{"name": "III.  THE CURSE", "mood": "curse", "look": 180.0, "loops": ["story_dread"], "len": 34.0, "lines": [
-		[3.0, "narrator", "So Skotos rose out of the wood, and laid a curse upon your island."],
-		[12.0, "skotos", "At every nightfall, your Veil will fail."],
-		[20.0, "skotos", "Let us see how long they believe in a god who cannot keep the dark out."]]},
+		[3.0, "narrator", "Tonight, the hunger turned to spite."],
+		[12.0, "skotos", "Little god. They love you. I remember how that felt."],
+		[20.0, "skotos", "Every nightfall, your Veil will fail. Let us see how long they believe in a god who cannot keep the dark out."]]},
 	{"name": "IV.  THE DARK COMES", "mood": "curse", "look": 0.0, "loops": ["story_dread"], "len": 30.0, "lines": [
-		[2.0, "narrator", "That night, the Veil broke."],
-		[9.0, "narrator", "And out of the Dark Wood came his shades, hungry, toward the village."],
-		[18.0, "narrator", "They come every night now. Each night, the dark grows stronger."]]},
-	{"name": "V.  YOUR TURN", "mood": "dawn", "look": 0.0, "loops": ["story_meadow"], "len": 40.0, "lines": [
-		[3.0, "maren", "Little god... if you are listening, keep us safe tonight."],
-		[11.5, "narrator", "Each day, build before the sun sets. Help your people: their faith is your light."],
-		[20.0, "narrator", "And keep the cracked mirror close. Hold it up by day and look toward the Dark Wood: it shows where the shades will come from tonight."],
-		[31.0, "narrator", "Watch over them."]]},
+		[2.0, "narrator", "The Veil cracked like ice, and broke."],
+		[9.0, "narrator", "And out of the Dark Wood came the shades: ink and hunger, with eyes like coals."],
+		[18.0, "narrator", "The people barred their doors and held their breath till dawn. The shades came back the next night. And the next."]]},
+	{"name": "V.  YOUR TURN", "mood": "dawn", "look": 0.0, "loops": ["story_meadow"], "len": 44.0, "lines": [
+		[3.0, "maren", "Little god... I don't know if you can hear an old woman. The children are frightened. So am I."],
+		[10.0, "maren", "You've never once left us. Stay with us tonight. Please."],
+		[17.0, "narrator", "She is praying to you. By day, build and help them. Their faith is your light, and your strength."],
+		[27.0, "narrator", "Keep the cracked mirror close. Hold it up by day, look toward the Dark Wood, and it shows where the shades will come from tonight."],
+		[38.0, "narrator", "Watch over them."]]},
 ]
 
 var game
@@ -74,6 +75,7 @@ var _lines_done := 0
 var _loops := {}  # id -> AudioStreamPlayer
 var _cued := {}
 var _rng := RandomNumberGenerator.new()
+var _cap_fade: Tween
 var _saved := {}
 
 
@@ -281,6 +283,8 @@ func _place_caption(delta: float, snap := false) -> void:
 
 
 func _say(speaker: String, text: String) -> void:
+	if _cap_fade and _cap_fade.is_valid():
+		_cap_fade.kill()  # a fade of the last line must not blank this one
 	_speaker = speaker
 	_words = text.split(" ", false)
 	_word_i = 0
@@ -288,6 +292,8 @@ func _say(speaker: String, text: String) -> void:
 	_cap_name.text = NAME[speaker]
 	_cap_name.modulate = NAME_COL[speaker]
 	_cap_text.text = ""
+	_cap_text.outline_modulate.a = 0.85
+	_cap_name.outline_modulate.a = 0.85
 	_cap_text.modulate = Color(1.0, 0.95, 0.86) if speaker == "narrator" else NAME_COL[speaker].lerp(Color.WHITE, 0.55)
 	_cap_hold = 0.0
 	create_tween().tween_method(func(a): _cap_mat.set_shader_parameter("alpha", a), float(_cap_mat.get_shader_parameter("alpha")), 0.82, 0.4)
@@ -308,9 +314,13 @@ func _step_caption(delta: float) -> void:
 		if _cap_hold > 3.2:
 			_words = []
 			var tw := create_tween()
+			_cap_fade = tw
 			tw.tween_method(func(a): _cap_mat.set_shader_parameter("alpha", a), 0.82, 0.0, 0.6)
 			tw.parallel().tween_property(_cap_text, "modulate:a", 0.0, 0.6)
 			tw.parallel().tween_property(_cap_name, "modulate:a", 0.0, 0.6)
+			# the outline fades too: fading only the fill left the words' black outlines behind ("the text turns black")
+			tw.parallel().tween_property(_cap_text, "outline_modulate:a", 0.0, 0.45)
+			tw.parallel().tween_property(_cap_name, "outline_modulate:a", 0.0, 0.45)
 
 
 # ------------------------------------------------------------------ sound
@@ -583,15 +593,29 @@ func _enter_5() -> void:
 	world.veil_mat.set_shader_parameter("crack", 0.9)
 	world.veil_mat.set_shader_parameter("strength", 0.0)
 	world.wind = 0.8
+	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the
+	# center of the village, near where the statue is"). The world moves, not you, so this works in the headset too;
+	# the chapter starts under black, so the jump is never seen.
+	var stand := StoryWorld.VILLAGE + Vector3(-0.6, 0, 3.6)
+	world.position = -Vector3(stand.x, StoryWorld.height(stand.x, stand.z), stand.z)
+	var statue := StoryWorld.VILLAGE + Vector3(0, 0, -1.5)
 	for i in world.people.size():
 		var p: StoryPerson = world.people[i]
-		if i == 0:
-			p.place(Vector3(0.3, StoryWorld.height(0.3, -3.2), -3.2), 0.0)  # Maren on the path, near you, facing you
+		if i == 0:  # Maren kneels at the statue's feet, her back to you, praying to it and so to you
+			var m := StoryWorld.VILLAGE + Vector3(0.1, 0, 0.1)
+			p.place(Vector3(m.x, StoryWorld.height(m.x, m.z), m.z), 0.0)
+			p.face(statue)
+			continue
+		if i in [1, 2, 5]:  # a few have come out to the square and stand with her (standing: the kneel reads badly side-on)
+			var g := StoryWorld.VILLAGE + Vector3([-1.4, 1.5, 2.0][[1, 2, 5].find(i)], 0, [0.2, 1.0, 1.4][[1, 2, 5].find(i)])
+			p.place(Vector3(g.x, StoryWorld.height(g.x, g.z), g.z), 0.0)
+			p.face(statue)
+			p.set_pose("idle")
 			continue
 		p.set_pose("idle")  # awake, watching from their doors
 		var h: Dictionary = world.houses[i % world.houses.size()]
-		var d: Vector3 = -(h["door"] as Vector3)  # face out toward you
-		p.place(h["door"], atan2(d.x, d.z))
+		p.place(h["door"], 0.0)
+		p.face(statue)  # toward the square
 
 
 func _tick_5(t: float) -> void:

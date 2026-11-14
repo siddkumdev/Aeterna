@@ -569,23 +569,22 @@ func _campfire(st: SurfaceTool, p: Vector3) -> void:
 
 
 # ------------------------------------------------------------------ the meadow
-func _grass() -> ArrayMesh:
-	## One clump: 7 curved, tapering blades. UV.y = height (0 root, 1 tip).
+func _grass(blades := 12, segs := 3) -> ArrayMesh:
+	## One clump of curved, tapering blades. UV.y = height (0 root, 1 tip). Far clumps use fewer, simpler blades.
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var r := RandomNumberGenerator.new()
 	r.seed = 5
-	for b in 12:
+	for b in blades:
 		var a := r.randf_range(0, TAU)
 		var root := Vector3(cos(a), 0, sin(a)) * r.randf_range(0.0, 0.2)
 		var face := r.randf_range(0, TAU)
 		var side := Vector3(cos(face), 0, sin(face))
 		var lean := Vector3(-sin(face), 0, cos(face)) * r.randf_range(0.05, 0.22)
 		var h := r.randf_range(0.28, 0.62)
-		var w := r.randf_range(0.012, 0.022)
+		var w := r.randf_range(0.012, 0.022) * (1.4 if segs < 3 else 1.0)
 		var prev_l := root - side * w
 		var prev_r := root + side * w
-		var segs := 3
 		for s in range(1, segs + 1):
 			var t := float(s) / segs
 			var c := root + Vector3(0, h * t, 0) + lean * t * t * h
@@ -600,6 +599,7 @@ func _grass() -> ArrayMesh:
 				st.add_vertex(q[0])
 			prev_l = l
 			prev_r = rr
+	st.index()  # shared vertices: the vertex shader runs once per corner, not per triangle
 	return st.commit()
 
 
@@ -613,7 +613,7 @@ func _build_grass() -> void:
 	mm.mesh = _grass()
 	var xfs: Array = []
 	var tries := 0
-	var want: int = {PerfTier.DESKTOP: 15000, PerfTier.HIGH: 9000, PerfTier.LOW: 5500}[PerfTier.detect()]
+	var want: int = {PerfTier.DESKTOP: 8000, PerfTier.HIGH: 6000, PerfTier.LOW: 4000}[PerfTier.detect()]
 	while xfs.size() < want and tries < want * 5:
 		tries += 1
 		var r := 24.0 * _rng.randf() + 0.5  # uniform in radius = densest round your feet, where you look closest
@@ -633,16 +633,37 @@ func _build_grass() -> void:
 		var s := _rng.randf_range(0.8, 1.4) * (1.0 + smoothstep(6.0, 22.0, r) * 0.9)  # far clumps grow to keep the meadow closed
 		xfs.append([Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3.ONE * s), Vector3(x, height(x, z) - 0.02, z)),
 			Color(_rng.randf(), _rng.randf() * _rng.randf(), _rng.randf(), 0)])
-	mm.instance_count = xfs.size()
-	for i in xfs.size():
-		mm.set_instance_transform(i, xfs[i][0])
-		mm.set_instance_custom_data(i, xfs[i][1])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.name = "Grass"
-	mmi.multimesh = mm
-	mmi.material_override = grass_mat
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mmi)
+	# one MultiMesh per wedge of the meadow, so the grass behind you and beside you is culled (perf, 2026-11-14:
+	# a single meadow-wide MultiMesh was always drawn whole and cost half the frame)
+	# Clumps beyond 9 m (scaled up there anyway) get 7 two-segment blades instead of 12 three-segment ones.
+	var wedges := 12
+	var groups: Array = []
+	for k in wedges * 2:
+		groups.append([])
+	var near_mesh := mm.mesh
+	var far_mesh := _grass(7, 2)
+	for e in xfs:
+		var o: Vector3 = e[0].origin
+		var far := 1 if Vector2(o.x, o.z).length() > 9.0 else 0
+		groups[far * wedges + int(wrapf(atan2(o.z, o.x), 0.0, TAU) / TAU * wedges) % wedges].append(e)
+	for k in wedges * 2:
+		var g: Array = groups[k]
+		if g.is_empty():
+			continue
+		var wm := MultiMesh.new()
+		wm.transform_format = MultiMesh.TRANSFORM_3D
+		wm.use_custom_data = true
+		wm.mesh = far_mesh if k >= wedges else near_mesh
+		wm.instance_count = g.size()
+		for i in g.size():
+			wm.set_instance_transform(i, g[i][0])
+			wm.set_instance_custom_data(i, g[i][1])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Grass%d" % k
+		mmi.multimesh = wm
+		mmi.material_override = grass_mat
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mmi)
 	# wild flowers among it
 	var st := new_st()
 	cyl(st, 0.004, 0.004, 0.35, at(Vector3(0, 0.17, 0)), K.LEAVES, Color(0.25, 0.4, 0.12), 3)
@@ -651,8 +672,8 @@ func _build_grass() -> void:
 	var fm := MultiMesh.new()
 	fm.transform_format = MultiMesh.TRANSFORM_3D
 	fm.mesh = st.commit()
-	fm.instance_count = 700
-	for i in 700:
+	fm.instance_count = 400
+	for i in 400:
 		var r := _rng.randf_range(1.5, 20.0)
 		var a := _rng.randf_range(0, TAU)
 		var x := cos(a) * r
@@ -736,11 +757,11 @@ func _pine(seed_: int) -> ArrayMesh:
 			seg(st, trunk_at, mid, lerpf(0.07, 0.025, t), 0.03, K.WOOD, bark * 1.1, 5)
 			seg(st, mid, tip, 0.03, 0.008, K.WOOD, bark * 1.1, 4)
 			# sprays along the limb, hanging off both sides and lying on top, shorter toward the tip
-			var sprays := 4 if L > 1.5 else 2
+			var sprays := 2 if L > 1.5 else 1  # few, larger sprays: the near wood was 1.8M triangles
 			for k in sprays:
 				var u := (k + 0.5) / sprays
 				var at_: Vector3 = trunk_at.lerp(mid, minf(u * 1.8, 1.0)) if u < 0.55 else mid.lerp(tip, (u - 0.55) / 0.45)
-				var sl := L * lerpf(0.55, 0.35, u) * r.randf_range(0.85, 1.1)
+				var sl := L * lerpf(0.75, 0.5, u) * r.randf_range(0.85, 1.1)
 				var g2 := green * r.randf_range(0.85, 1.12)
 				for sd in [-1.0, 1.0]:
 					var d: Vector3 = (out * 0.6 + side * sd * 0.8 + Vector3(0, -0.25, 0)).normalized()
@@ -861,7 +882,7 @@ func _build_wood() -> void:
 			continue
 		var s := _rng.randf_range(0.8, 1.45)
 		var xf := Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z))
-		var near_r := 70.0 if tier == PerfTier.DESKTOP else (52.0 if tier == PerfTier.HIGH else 40.0)
+		var near_r := 44.0 if tier == PerfTier.DESKTOP else (38.0 if tier == PerfTier.HIGH else 32.0)  # detailed spruces only close by; fog hides the rest
 		if r < near_r:
 			sets[i % 3].append(xf)
 		else:
@@ -869,7 +890,7 @@ func _build_wood() -> void:
 		continue
 		sets[i % 3].append(Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z)))
 	for k in 3:
-		_scatter(_pine(11 + k * 7), sets[k], "Pines%d" % k, tier != PerfTier.LOW)
+		_scatter(_pine(11 + k * 7), sets[k], "Pines%d" % k, false)  # the wood starts 22 m out: its shadows cost a fifth of the frame for little
 	for k in 2:
 		_scatter(_pine_far(40 + k), far_sets[k], "FarPines%d" % k, false)
 	var oaks: Array = []
