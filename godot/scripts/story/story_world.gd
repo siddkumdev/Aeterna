@@ -431,7 +431,7 @@ func _build_village() -> void:
 		var yaw := atan2(VILLAGE.x - c.x, VILLAGE.z - c.z)  # the door faces the square
 		_game_house(c, yaw, i)
 	_prop("well_v02", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
-	_prop("statue_v01", VILLAGE + Vector3(0, 0, -1.5), 0.0, 20.0, true)  # the game's statue, front (+Z) to the square
+	_prop("statue_v01", STATUE_AT, 0.0, STATUE_SCALE, true)  # the game's statue, front (+Z) to the square, towering over it
 	_dress_square()
 	_campfire(st, FIRE_AT)
 	for k in 5:  # fences along the meadow
@@ -474,6 +474,8 @@ func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
 	_put(st, t.commit_to_arrays(), at(p, _rng.randf_range(0, TAU)) * Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO), K.ROCK, Color(0.5, 0.47, 0.42))
 
 
+const STATUE_AT := VILLAGE + Vector3(0, 0, -4.2)
+const STATUE_SCALE := 45.0  # about 7 m tall: the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
 const HOUSE_SCALE := 50.0  # the game's 2 x 2-cell houses (0.1 m) at life size: about 5 m across
 const HOUSE_MODELS := ["cottage_v05", "townhouse_v05", "cabin_v05"]
 
@@ -515,12 +517,12 @@ func _dress_square() -> void:
 	_prop("market_stall_v02", v + Vector3(5.6, 0, -1.8), -1.6, 50.0, true)
 	_prop("notice_board_v02", v + Vector3(-4.6, 0, -0.6), 1.2, 50.0)
 	_prop("haystack_v03", v + Vector3(6.6, 0, -5.4), 0.4, 45.0)
-	_prop("handcart_v01", v + Vector3(3.6, 0, 3.8), 2.6, 45.0)
+	_prop("handcart_v01", v + Vector3(-7.4, 0, 0.6), 2.6, 45.0)
 	_prop("clothesline_v02", v + Vector3(-6.4, 0, 3.6), 0.9, 45.0)
 	_prop("barrel_stack_v02", v + Vector3(6.4, 0, 1.2), 0.3, 35.0)
 	_prop("table_stool_v02", v + Vector3(-6.2, 0, -4.4), 0.2, 40.0)
-	_prop("flower_pots_v02", v + Vector3(1.4, 0, -2.6), 0.0, 35.0)
-	_prop("flower_pots_v02", v + Vector3(-1.4, 0, -2.6), PI, 35.0)
+	_prop("flower_pots_v02", v + Vector3(3.3, 0, -1.4), 0.0, 35.0)
+	_prop("flower_pots_v02", v + Vector3(-3.3, 0, -1.4), PI, 35.0)
 	_prop("tools_leaning_v02", v + Vector3(-5.6, 0, -2.0), 1.6, 40.0)
 	for k in 6:
 		var a := TAU * k / 6.0 + 0.3
@@ -903,14 +905,12 @@ func _build_ruin() -> void:
 
 
 # ------------------------------------------------------------------ people
-const CAST := [["elder_ram", "idle"], ["baker_mouse", "roll"], ["farmer_horse", "fork"], ["clerk_owl", "read"],
-	["builder_ant", "hammer"], ["tailor_spider", "sew"], ["dancer_butterfly", "dance"], ["cat_girl", "sweep"],
-	["kid_bunny", "wave"], ["bee_kid", "water"]]
+const CAST := [["elder_ram","idle"],["baker_mouse","roll"],["cat_girl","sweep"],["farmer_horse","fork"],["kid_bunny","wave"],["builder_ant","hammer"]]  # six out at a time; the rest are at home
 func _build_people() -> void:
 	var skin := [Color(0.86, 0.66, 0.53), Color(0.62, 0.44, 0.32), Color(0.9, 0.72, 0.6), Color(0.45, 0.31, 0.22), Color(0.78, 0.58, 0.45)]
 	var cloth := [Color(0.42, 0.18, 0.12), Color(0.3, 0.32, 0.22), Color(0.55, 0.45, 0.3), Color(0.25, 0.22, 0.28), Color(0.6, 0.35, 0.18), Color(0.35, 0.28, 0.2)]
 	var hair := [Color(0.12, 0.08, 0.05), Color(0.35, 0.22, 0.12), Color(0.55, 0.53, 0.5), Color(0.06, 0.05, 0.05), Color(0.5, 0.32, 0.15)]
-	for i in 10:
+	for i in CAST.size():
 		var p := StoryPerson.new()
 		p.world = self
 		p.female = i % 2 == 0
@@ -930,8 +930,7 @@ func _build_people() -> void:
 		people.append(p)
 	# where they are at the start: round the fire, at the well, on the path
 	var spots := [VILLAGE + Vector3(0, 0, 0.6), FIRE_AT + Vector3(1.6, 0, 1.0), FIRE_AT + Vector3(-1.4, 0, 1.5), VILLAGE + Vector3(-3.6, 0, 2.5),
-		VILLAGE + Vector3(4.5, 0, -3.0), VILLAGE + Vector3(-5, 0, -2), FIRE_AT + Vector3(0.6, 0, -1.9), VILLAGE + Vector3(2.0, 0, 4.0),
-		VILLAGE + Vector3(-1.5, 0, 5.2), VILLAGE + Vector3(6.0, 0, 1.0)]
+		VILLAGE + Vector3(4.5, 0, -3.0), VILLAGE + Vector3(-5, 0, -2)]
 	for i in people.size():
 		var s: Vector3 = spots[i]
 		people[i].place(Vector3(s.x, height(s.x, s.z), s.z), _rng.randf_range(0, TAU))

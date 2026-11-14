@@ -77,6 +77,14 @@ var _cued := {}
 var _rng := RandomNumberGenerator.new()
 var _cap_fade: Tween
 var _saved := {}
+var _stand := Vector3.ZERO
+var _aerial := false
+var _pitch := 0.0  # desktop camera tilt (down while over the village)
+const AERIAL_TURN := 0.09  # rad/s: slow, so it stays comfortable in the headset
+const AERIAL_HIGH := 24.0
+const AERIAL_LOW := 13.0
+const AERIAL_FAR := 24.0
+const AERIAL_NEAR := 20.0
 
 
 # ------------------------------------------------------------------ set up and tear down
@@ -448,7 +456,8 @@ func _process(delta: float) -> void:
 	if _cam:  # the desktop camera drifts slowly toward the chapter's view, with a breath of sway
 		var want := deg_to_rad(_look_yaw) + sin(_t * 0.17) * 0.05
 		_cam.rotation.y = lerp_angle(_cam.rotation.y, want, minf(1.0, delta * 0.8))
-		_cam.rotation.x = -0.03 + sin(_t * 0.23) * 0.01
+		var tilt := (_pitch * 0.85 if _aerial else -0.03) + sin(_t * 0.23) * 0.01
+		_cam.rotation.x = lerpf(_cam.rotation.x, tilt, minf(1.0, delta * 2.0))
 
 
 func _once(key: String, at_t: float) -> bool:
@@ -495,11 +504,11 @@ func _tick_1(t: float) -> void:
 		world.set_mood("morning", 16.0)
 	if _once("walk", 9.0):  # people go about the morning: water from the well, wood to the fire
 		world.people[3].go(StoryWorld.VILLAGE + Vector3(-2.5, 0, 2.7))
-		world.people[7].go(StoryWorld.FIRE_AT + Vector3(1.0, 0, 2.2))
-		world.people[9].go(StoryWorld.VILLAGE + Vector3(2.0, 0, -6.5))
+		world.people[4].go(StoryWorld.FIRE_AT + Vector3(1.0, 0, 2.2))
+		world.people[5].go(StoryWorld.VILLAGE + Vector3(2.0, 0, -6.5))
 	if _once("pray", 19.5):
-		for i in [0, 1, 2, 5, 8]:
-			world.people[i].face(StoryWorld.VILLAGE + Vector3(0, 0, -1.5))
+		for i in [0, 1, 2]:
+			world.people[i].face(StoryWorld.STATUE_AT)
 			world.people[i].set_pose("pray")
 	if _once("faith", 26.0):
 		world.motes.emitting = true
@@ -596,9 +605,10 @@ func _enter_5() -> void:
 	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the
 	# center of the village, near where the statue is"). The world moves, not you, so this works in the headset too;
 	# the chapter starts under black, so the jump is never seen.
-	var stand := StoryWorld.VILLAGE + Vector3(-0.4, 0, 5.4)
+	var stand := StoryWorld.VILLAGE + Vector3(-0.4, 0, 7.4)  # back far enough to see the whole shrine
 	world.position = -Vector3(stand.x, StoryWorld.height(stand.x, stand.z), stand.z)
-	var statue := StoryWorld.VILLAGE + Vector3(0, 0, -1.5)
+	_stand = stand
+	var statue := StoryWorld.STATUE_AT
 	for i in world.people.size():
 		var p: StoryPerson = world.people[i]
 		if i == 0:  # Maren kneels at the statue's feet, her back to you, praying to it and so to you
@@ -612,10 +622,13 @@ func _enter_5() -> void:
 			p.face(statue)
 			p.set_pose("idle")
 			continue
-		p.set_pose("idle")  # awake, watching from their doors
-		var h: Dictionary = world.houses[i % world.houses.size()]
-		p.place(h["door"], 0.0)
-		p.face(statue)  # toward the square
+		if i == 3:  # one watches from a doorway; the rest are still indoors
+			p.set_pose("idle")
+			var h: Dictionary = world.houses[2]
+			p.place(h["door"], 0.0)
+			p.face(statue)
+		else:
+			p.visible = false
 
 
 func _tick_5(t: float) -> void:
@@ -630,3 +643,27 @@ func _tick_5(t: float) -> void:
 		_sound("story_rise", Vector3.INF, -8.0)
 	if _once("morning", 16.0):
 		world.set_mood("morning", 12.0)
+	# While the narrator explains your job, rise above the village and circle it slowly, then sink back to the square
+	# (the user, 2026-11-14). The world turns under you, so the headset works too; black hides both jumps.
+	if _once("up_fade", 16.4):
+		_fade_to(1.0, 0.6)
+	if _once("up", 17.0):
+		_aerial = true
+		_fade_to(0.0, 1.2)
+	if _once("down_fade", 35.6):
+		_fade_to(1.0, 0.6)
+	if _once("down", 36.2):
+		_aerial = false
+		world.rotation.y = 0.0
+		world.position = -Vector3(_stand.x, StoryWorld.height(_stand.x, _stand.z), _stand.z)
+		_fade_to(0.0, 1.2)
+	if _aerial:
+		var k := clampf((t - 17.0) / 19.0, 0.0, 1.0)
+		var a := (t - 17.0) * AERIAL_TURN
+		var h := lerpf(AERIAL_HIGH, AERIAL_LOW, smoothstep(0.0, 1.0, k))  # from high above, down among the roofs
+		var r := lerpf(AERIAL_FAR, AERIAL_NEAR, smoothstep(0.0, 1.0, k))
+		var c := StoryWorld.VILLAGE
+		c.y = StoryWorld.height(c.x, c.z)
+		world.rotation.y = a
+		world.position = Vector3(0, -h, -r) - world.basis * c
+		_pitch = -atan2(h, r)
