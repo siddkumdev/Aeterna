@@ -528,7 +528,7 @@ func _enter_2() -> void:
 	world.wind = 1.3
 	for p in world.people:
 		p.set_pose("idle")
-	world.surf.set_shader_parameter("window_glow", 1.4)
+	world.set_house_lights(1.0)
 
 
 func _tick_2(t: float) -> void:
@@ -606,8 +606,10 @@ func _tick_4(t: float) -> void:
 			world.people[i].go(h["door"], "flee", 3.2)
 		world.people[0].go(world.houses[0]["door"], "flee", 1.8)  # Maren too: every door barred, nobody left out
 	if _once("doors", 9.5):
-		world.surf.set_shader_parameter("window_glow", 0.35)  # shutters closing
+		world.set_house_lights(0.35)  # shutters closing
 		_sound("story_thunder", Vector3.INF, -6.0)
+	if _once("lights_out", 18.5):  # "barred their doors and held their breath": every lamp in the village goes out
+		create_tween().tween_method(world.set_house_lights, 0.35, 0.0, 3.0)
 	if _once("camp_out", 12.0):
 		for g in world.camp:
 			g.emitting = false
@@ -623,6 +625,7 @@ func _enter_5() -> void:
 	world.clock_rate = 1.0
 	world.veil_mat.set_shader_parameter("crack", 0.9)
 	world.veil_mat.set_shader_parameter("rift", 0.0)  # mended at dawn
+	world.set_house_lights(1.0)
 	world.veil_mat.set_shader_parameter("strength", 0.0)
 	world.wind = 0.8
 	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the

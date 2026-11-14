@@ -75,6 +75,8 @@ var sand_top: Node3D
 var sand_bottom: Node3D
 var houses: Array = []  # [{at, door, chimney}]
 var people: Array[StoryPerson] = []
+var prop_glow: Array = []  # [material copy, its normal colour]
+var _glow_copies := {}
 const FLOCK_AT := Vector3(-7.5, 0, -10.0)  # the sheep's meadow, between you and the village
 var flock: Array = []  # [{node, target, wait, speed}]
 var flock_fled := false
@@ -501,7 +503,21 @@ func _prop(key: String, p: Vector3, yaw: float, s: float, shadow := false) -> No
 			var m := mi.get_active_material(k)
 			if m != null and not m.resource_name.contains("glow"):
 				mi.set_surface_override_material(k, palette_mat)
+			elif m is BaseMaterial3D:  # lit windows and lanterns: a shared copy the story can dim
+				if not _glow_copies.has(m):
+					var g: BaseMaterial3D = m.duplicate()
+					_glow_copies[m] = g
+					prop_glow.append([g, g.albedo_color])
+				mi.set_surface_override_material(k, _glow_copies[m])
 	return n
+
+
+func set_house_lights(k: float) -> void:
+	## 1 = every window and lantern lit as normal, 0 = all put out (the villagers blow out their lamps).
+	surf.set_shader_parameter("window_glow", 1.4 * k)
+	for e in prop_glow:
+		var c0: Color = e[1]
+		(e[0] as BaseMaterial3D).albedo_color = Color(c0.r, c0.g, c0.b) * lerpf(0.06, 1.0, k)  # the game's glow is unshaded: dim its colour to dark glass
 
 
 func _game_house(c: Vector3, yaw: float, i: int) -> void:
