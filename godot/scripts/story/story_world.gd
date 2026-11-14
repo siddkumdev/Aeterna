@@ -75,6 +75,9 @@ var sand_top: Node3D
 var sand_bottom: Node3D
 var houses: Array = []  # [{at, door, chimney}]
 var people: Array[StoryPerson] = []
+const FLOCK_AT := Vector3(-7.5, 0, -10.0)  # the sheep's meadow, between you and the village
+var flock: Array = []  # [{node, target, wait, speed}]
+var flock_fled := false
 var beasts: Array = []  # [{node, legs, from, to}]
 var fires: Array[GPUParticles3D] = []  # roof fires, off until the fall
 var smoke_cols: Array[GPUParticles3D] = []
@@ -128,6 +131,7 @@ func _ready() -> void:
 	_build_wood()
 	_build_ruin()
 	_build_people()
+	_build_flock()
 	_build_fx()
 	_build_veil()
 	_build_skotos()
@@ -164,6 +168,7 @@ func _process(delta: float) -> void:
 	for p in people:
 		p.tick(delta)
 	_tick_beasts(delta)
+	_tick_flock(delta)
 
 
 func set_mood(name: String, seconds := 4.0) -> void:
@@ -979,6 +984,95 @@ func _build_people() -> void:
 	for i in people.size():
 		var s: Vector3 = spots[i]
 		people[i].place(Vector3(s.x, height(s.x, s.z), s.z), _rng.randf_range(0, TAU))
+	# daily life: each strolls a small round of their own (home, work, a neighbour), pausing to work at each stop
+	var rr := RandomNumberGenerator.new()
+	rr.seed = 404
+	for i in range(1, people.size()):
+		var round_: Array = [people[i].position]
+		for k in 2:
+			var h: Dictionary = houses[(i * 2 + k * 5) % houses.size()]
+			var d: Vector3 = h["door"]
+			var q: Vector3 = d + (VILLAGE - d).normalized() * rr.randf_range(1.2, 2.5) + Vector3(rr.randf_range(-1, 1), 0, rr.randf_range(-1, 1))
+			round_.append(Vector3(q.x, height(q.x, q.z), q.z))
+		people[i].routine = round_
+		people[i]._wait = rr.randf_range(1.0, 6.0)
+
+
+func _build_flock() -> void:
+	## Sheep grazing in the meadow: woolly turned bodies, dark faces and legs. They drift, crop the grass, and bolt
+	## when the beasts come.
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var wool := Color(0.86, 0.82, 0.72)
+	var face := Color(0.12, 0.1, 0.09)
+	var body := PackedVector2Array([Vector2(0.05, -0.55), Vector2(0.3, -0.45), Vector2(0.4, -0.2), Vector2(0.42, 0.1), Vector2(0.36, 0.38), Vector2(0.18, 0.52), Vector2(0.03, 0.56)])
+	lathe(st, body, at(Vector3(0, 0.78, 0), 0.0, Vector3(PI / 2.0, 0, 0)), K.CLOTH, wool, 12, 0.18)
+	var head := PackedVector2Array([Vector2(0.02, 0.0), Vector2(0.12, 0.05), Vector2(0.14, 0.18), Vector2(0.1, 0.32), Vector2(0.03, 0.38)])
+	lathe(st, head, at(Vector3(0, 0.95, 0.5), 0.0, Vector3(1.1, 0, 0)), K.SKIN, face, 8)
+	lathe(st, PackedVector2Array([Vector2(0.01, 0), Vector2(0.09, 0.03), Vector2(0.03, 0.12)]), at(Vector3(0.13, 1.08, 0.58), 0.0, Vector3(0, 0, -1.4)), K.SKIN, face, 5)  # ears
+	lathe(st, PackedVector2Array([Vector2(0.01, 0), Vector2(0.09, 0.03), Vector2(0.03, 0.12)]), at(Vector3(-0.13, 1.08, 0.58), 0.0, Vector3(0, 0, 1.4)), K.SKIN, face, 5)
+	lathe(st, PackedVector2Array([Vector2(0.03, 0.0), Vector2(0.17, 0.08), Vector2(0.15, 0.2), Vector2(0.03, 0.26)]), at(Vector3(0, 1.05, 0.46)), K.CLOTH, wool, 8)  # woolly cap
+	for lx in [-0.2, 0.2]:
+		for lz in [-0.32, 0.32]:
+			cyl(st, 0.045, 0.04, 0.55, at(Vector3(lx, 0.0, lz)), K.SKIN, face, 6)
+	st.index()
+	var mesh := st.commit()
+	var rr := RandomNumberGenerator.new()
+	rr.seed = 2024
+	for i in 9:
+		var mi := MeshInstance3D.new()
+		mi.name = "Sheep%d" % i
+		mi.mesh = mesh
+		mi.material_override = surf
+		var p := FLOCK_AT + Vector3(rr.randf_range(-3.5, 3.5), 0, rr.randf_range(-3, 3))
+		p.y = height(p.x, p.z)
+		mi.position = p
+		mi.rotation.y = rr.randf_range(0, TAU)
+		var sc := rr.randf_range(0.85, 1.1) * (0.6 if i == 7 or i == 8 else 1.0)  # two lambs
+		mi.scale = Vector3.ONE * sc
+		add_child(mi)
+		flock.append({"node": mi, "target": p, "wait": rr.randf_range(0.0, 6.0), "speed": 0.5, "ph": rr.randf_range(0, TAU)})
+
+
+func _tick_flock(delta: float) -> void:
+	for f in flock:
+		var n: MeshInstance3D = f["node"]
+		if not n.visible:
+			continue
+		var d: Vector3 = f["target"] - n.position
+		d.y = 0.0
+		if d.length() > 0.2:
+			n.position += d.normalized() * minf(d.length(), f["speed"] * delta)
+			n.position.y = height(n.position.x, n.position.z) + absf(sin(clock * f["speed"] * 6.0 + f["ph"])) * 0.04 * f["speed"]
+			n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), minf(1.0, delta * 3.0))
+			n.rotation.x = 0.0
+		elif flock_fled:
+			n.visible = false  # gone over the rise, into the fold
+		else:
+			n.rotation.x = lerpf(n.rotation.x, 0.12 + 0.05 * sin(clock * 2.0 + f["ph"]), delta * 2.0)  # head down, grazing
+			f["wait"] -= delta
+			if f["wait"] <= 0.0:
+				f["wait"] = randf_range(4.0, 12.0)
+				f["speed"] = randf_range(0.3, 0.6)
+				var t := FLOCK_AT + Vector3(randf_range(-4, 4), 0, randf_range(-3, 3))
+				f["target"] = Vector3(t.x, 0, t.z)
+
+
+func scatter_flock() -> void:
+	## The beasts are coming: the sheep bolt away from the village and over the rise.
+	flock_fled = true
+	for f in flock:
+		var n: MeshInstance3D = f["node"]
+		var away: Vector3 = (n.position - VILLAGE).normalized()
+		away.y = 0.0
+		f["target"] = n.position + away * 14.0 + Vector3(-6, 0, 0)
+		f["speed"] = randf_range(3.0, 4.2)
+
+
+func reset_flock() -> void:
+	flock_fled = false
+	for f in flock:
+		(f["node"] as MeshInstance3D).visible = true
 
 
 # ------------------------------------------------------------------ fire, smoke, motes, shards
@@ -1164,7 +1258,7 @@ func _build_fx() -> void:
 	sp.angular_velocity_max = 220.0
 	sp.angle_min = 0.0
 	sp.angle_max = 360.0
-	sp.color_ramp = ramp([Color(1.0, 0.6, 0.25), Color(1.0, 0.32, 0.1), Color(0.7, 0.1, 0.04, 0.0)])
+	sp.color_ramp = ramp([Color(1.0, 0.85, 0.5), Color(1.0, 0.55, 0.2), Color(0.9, 0.25, 0.08, 0.0)])
 	shards = _particles("Shards", 1400, 7.0, 1.0, flame_mat(2, 4.5), sp, VILLAGE)
 	shards.draw_pass_1 = _shard_mesh(1.6)
 	shards.one_shot = true
@@ -1198,6 +1292,7 @@ func _build_veil() -> void:
 	veil_mat = ShaderMaterial.new()
 	veil_mat.shader = VEIL
 	veil_mat.set_shader_parameter("strength", 0.0)
+	veil_mat.set_shader_parameter("rift_dir", Vector3(SKOTOS_AT.x - VILLAGE.x, 0, SKOTOS_AT.z - VILLAGE.z).normalized())
 	var s := SphereMesh.new()
 	s.radius = 36.0
 	s.height = 72.0

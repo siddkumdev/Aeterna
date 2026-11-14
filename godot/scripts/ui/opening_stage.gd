@@ -554,6 +554,10 @@ func _tick_3(t: float) -> void:
 		tw.parallel().tween_property(world.skotos_eyes, "light_energy", 4.0, 9.0)
 	if _once("thunder1", 6.0):
 		_sound("story_thunder", Vector3.INF, -4.0)
+	if _once("rift", 11.0):  # as Skotos speaks, his rift creeps down the Veil from the top
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("rift", v), 0.0, 0.55, 12.0)
+	if _once("rift2", 23.0):
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("rift", v), 0.55, 0.9, 6.0)
 	if _once("crack1", 15.0):
 		_sound("story_crack", StoryWorld.VILLAGE + Vector3(0, 12, 0), 0.0, 80.0)
 		world.veil_mat.set_shader_parameter("crack_at", Vector3(0.3, 0.8, 0.5).normalized())
@@ -571,6 +575,7 @@ func _enter_4() -> void:
 	world.skotos.visible = true
 	world.skotos_eyes.light_energy = 4.0
 	world.veil_mat.set_shader_parameter("crack", 0.9)
+	world.veil_mat.set_shader_parameter("rift", 0.9)
 	world.veil_mat.set_shader_parameter("strength", 0.8)
 	world.wind = 2.4
 
@@ -585,6 +590,7 @@ func _tick_4(t: float) -> void:
 		# shudders, then the Veil goes out
 		var tw := create_tween()
 		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 1.0, 0.15)
+		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("rift", v), 0.9, 1.2, 0.15)  # the rift tears it open
 		tw.parallel().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 2.5, 0.15)
 		tw.tween_interval(0.5)  # hold the blazing, cracked dome a beat before it falls
 		tw.tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 2.5, 0.0, 2.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
@@ -594,10 +600,11 @@ func _tick_4(t: float) -> void:
 		_shake = 0.6
 	if _once("beasts", 4.0):
 		world.release_beasts()
+		world.scatter_flock()
 		for i in range(1, world.people.size()):  # they run for their doors
 			var h: Dictionary = world.houses[i % world.houses.size()]
 			world.people[i].go(h["door"], "flee", 3.2)
-		world.people[0].go(StoryWorld.VILLAGE + Vector3(0, 0, 0.8), "walk", 1.0)
+		world.people[0].go(world.houses[0]["door"], "flee", 1.8)  # Maren too: every door barred, nobody left out
 	if _once("doors", 9.5):
 		world.surf.set_shader_parameter("window_glow", 0.35)  # shutters closing
 		_sound("story_thunder", Vector3.INF, -6.0)
@@ -615,6 +622,7 @@ func _enter_5() -> void:
 	world.scorch = 0.0
 	world.clock_rate = 1.0
 	world.veil_mat.set_shader_parameter("crack", 0.9)
+	world.veil_mat.set_shader_parameter("rift", 0.0)  # mended at dawn
 	world.veil_mat.set_shader_parameter("strength", 0.0)
 	world.wind = 0.8
 	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the

@@ -28,6 +28,10 @@ var _target := Vector3.ZERO
 var _speed := 1.3
 var _ph := 0.0
 var _k := 0.0  # 0..1 blend into the current pose (kneel, lie)
+var routine: Array = []  # daily life: spots this villager strolls between, doing their job at each
+var _ri := 0
+var _wait := 0.0
+var hide_on_arrival := false  # fled to a door: goes inside (vanishes) on arriving
 
 
 func _ready() -> void:
@@ -155,17 +159,24 @@ func place(p: Vector3, yaw: float) -> void:
 	position = p
 	rotation.y = yaw
 	_target = p
+	visible = true
+	hide_on_arrival = false
 
 
 func go(to: Vector3, mode := "walk", speed := 1.3) -> void:
 	_target = Vector3(to.x, StoryWorld.height(to.x, to.z), to.z)
 	pose = mode
 	_speed = speed
+	if mode == "flee":
+		routine = []
+		hide_on_arrival = true
 
 
 func set_pose(p: String) -> void:
 	pose = p
 	_k = 0.0 if p in ["pray", "sleep"] else _k
+	if p in ["pray", "sleep"]:
+		routine = []
 
 
 func face(p: Vector3) -> void:
@@ -236,7 +247,15 @@ func _tick_rig(delta: float) -> void:
 			rotation.y = lerp_angle(rotation.y, atan2(d.x, d.z), minf(1.0, delta * 6.0))
 			moving = true
 		else:
+			if hide_on_arrival and pose == "flee":
+				visible = false  # through the door; it bars behind them
 			pose = "idle"
+			_wait = randf_range(4.0, 9.0)
+	if pose == "idle" and not routine.is_empty():
+		_wait -= delta
+		if _wait <= 0.0:
+			_ri = (_ri + 1) % routine.size()
+			go(routine[_ri], "walk", randf_range(0.9, 1.5))
 	rig.gait = clampf(_speed / 3.2, 0.3, 1.0) * CharacterRig.RUN_SPEED if moving else 0.0
 	match pose:
 		"pray":
