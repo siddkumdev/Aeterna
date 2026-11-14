@@ -19,6 +19,7 @@ const SMOKE := preload("res://shaders/story/story_smoke.gdshader")
 const VEIL := preload("res://shaders/story/story_veil.gdshader")
 const GLASS := preload("res://shaders/story/story_glass.gdshader")
 const FOLIAGE := preload("res://shaders/story/story_foliage.gdshader")
+const PALETTE := preload("res://shaders/story/story_palette.gdshader")
 
 ## Material kinds of story_surface.gdshader
 enum K { PLASTER, STONE, WOOD, THATCH, CLOTH, SKIN, HAIR, BRASS, NEEDLES, LEAVES, EMBER, WINDOW, ROCK, IRON, BONE, INK }
@@ -61,6 +62,7 @@ var skotos_mat: ShaderMaterial
 var beast_mat: ShaderMaterial
 var glass_mat: ShaderMaterial
 var foliage_mat: ShaderMaterial
+var palette_mat: ShaderMaterial  # the game's village models, lit realistically
 var sun: DirectionalLight3D
 var fire_light: OmniLight3D
 var burn_lights: Array[OmniLight3D] = []
@@ -153,7 +155,7 @@ func _process(delta: float) -> void:
 	for m in [grass_mat, surf, foliage_mat]:
 		m.set_shader_parameter("wind", wind)
 	foliage_mat.set_shader_parameter("clock", clock)
-	for m in [ground_mat, grass_mat, surf, foliage_mat]:
+	for m in [ground_mat, grass_mat, surf, foliage_mat, palette_mat]:
 		m.set_shader_parameter("scorch", scorch)
 	for m in _fx_mats:
 		m.set_shader_parameter("clock", clock)
@@ -412,7 +414,11 @@ func _build_village() -> void:
 	surf = ShaderMaterial.new()
 	surf.shader = SURFACE
 	var st := new_st()
-	var plaster := [Color(0.74, 0.68, 0.57), Color(0.68, 0.62, 0.51), Color(0.76, 0.71, 0.61), Color(0.66, 0.57, 0.45)]
+	# limewash tinted like the game's houses (the user, 2026-11-14: keep it realistic, but as colourful as the game):
+	# ochre, rose, sage, cream, terracotta, butter, dusty teal, pale clay
+	palette_mat = ShaderMaterial.new()
+	palette_mat.shader = PALETTE
+	palette_mat.set_shader_parameter("atlas", load("res://assets/palette/palette_atlas.png"))
 	var n := 8
 	for i in n:
 		var ang := -PI * 0.92 + TAU * (i + 0.5) / n + _rng.randf_range(-0.12, 0.12)
@@ -423,18 +429,11 @@ func _build_village() -> void:
 		var c := VILLAGE + Vector3(cos(ang) * r, 0, sin(ang) * r)
 		c.y = height(c.x, c.z)
 		var yaw := atan2(VILLAGE.x - c.x, VILLAGE.z - c.z)  # the door faces the square
-		_house(st, c, yaw, Vector3(_rng.randf_range(4.2, 6.0), _rng.randf_range(2.5, 3.1), _rng.randf_range(3.6, 4.6)), plaster[i % 4])
-	_well(st, VILLAGE + Vector3(-2.5, 0, 1.5))
-	_statue(st, VILLAGE + Vector3(0, 0, -1.5))
+		_game_house(c, yaw, i)
+	_prop("well_v02", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
+	_prop("statue_v01", VILLAGE + Vector3(0, 0, -1.5), 0.0, 20.0, true)  # the game's statue, front (+Z) to the square
+	_dress_square()
 	_campfire(st, FIRE_AT)
-	for k in 6:  # lantern posts round the square
-		var a := TAU * k / 6.0 + 0.3
-		var p := VILLAGE + Vector3(cos(a) * 6.8, 0, sin(a) * 6.8)
-		p.y = height(p.x, p.z)
-		cyl(st, 0.05, 0.07, 2.4, at(p + Vector3(0, 1.2, 0)), K.WOOD, Color(0.33, 0.22, 0.14), 6)
-		box(st, Vector3(0.5, 0.06, 0.06), at(p + Vector3(0.2, 2.35, 0)), K.WOOD, Color(0.33, 0.22, 0.14))
-		box(st, Vector3(0.2, 0.26, 0.2), at(p + Vector3(0.42, 2.12, 0)), K.IRON, Color(0.15, 0.14, 0.13))
-		ball(st, 0.07, at(p + Vector3(0.42, 2.1, 0)), K.EMBER, Color(1.0, 0.62, 0.25), 8)
 	for k in 5:  # fences along the meadow
 		var a := -1.2 + k * 0.55
 		var p0 := VILLAGE + Vector3(cos(a) * 15.0, 0, sin(a) * 15.0 + 2.0)
@@ -475,82 +474,57 @@ func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
 	_put(st, t.commit_to_arrays(), at(p, _rng.randf_range(0, TAU)) * Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3.ZERO), K.ROCK, Color(0.5, 0.47, 0.42))
 
 
-func _house(st: SurfaceTool, c: Vector3, yaw: float, size: Vector3, wall_col: Color) -> void:
-	## A timber-framed cottage: stone plinth, limewashed walls, oak frame, a deep thatch, a stone chimney, lit windows.
-	## Local +Z is the front (the door).
-	var w := size.x
-	var hgt := size.y
-	var d := size.z
+const HOUSE_SCALE := 50.0  # the game's 2 x 2-cell houses (0.1 m) at life size: about 5 m across
+const HOUSE_MODELS := ["cottage_v05", "townhouse_v05", "cabin_v05"]
+
+
+func _prop(key: String, p: Vector3, yaw: float, s: float, shadow := false) -> Node3D:
+	## One of the game's own village models, on the ground at life scale, in the realistic palette material (the
+	## board's toon one looked flat here). Lit windows keep the game's glow material.
+	var n: Node3D = load("res://assets/village/ew_village_%s.glb" % key).instantiate()
+	add_child(n)
+	n.position = Vector3(p.x, height(p.x, p.z), p.z)
+	n.rotation.y = yaw
+	n.scale = Vector3.ONE * s
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for k in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(k)
+			if m != null and not m.resource_name.contains("glow"):
+				mi.set_surface_override_material(k, palette_mat)
+	return n
+
+
+func _game_house(c: Vector3, yaw: float, i: int) -> void:
+	## The game's cottage / townhouse / cabin, door (+Z) to the square, with the game's props at its sides.
+	var n := _prop(HOUSE_MODELS[i % HOUSE_MODELS.size()], c, yaw, HOUSE_SCALE, true)
 	var base := at(c, yaw)
-	var oak := Color(0.26, 0.17, 0.11)
-	box(st, Vector3(w + 0.2, 0.6, d + 0.2), base * at(Vector3(0, 0.0, 0)), K.STONE, Color(0.55, 0.52, 0.47))
-	box(st, Vector3(w, hgt, d), base * at(Vector3(0, 0.3 + hgt / 2.0, 0)), K.PLASTER, wall_col)
-	var top := 0.3 + hgt
-	for sx in [-1, 1]:  # corner posts and the wall plates
-		for sz in [-1, 1]:
-			box(st, Vector3(0.2, hgt, 0.2), base * at(Vector3(sx * w / 2.0, 0.3 + hgt / 2.0, sz * d / 2.0)), K.WOOD, oak)
-	for sz in [-1, 1]:
-		box(st, Vector3(w + 0.1, 0.18, 0.2), base * at(Vector3(0, top, sz * d / 2.0)), K.WOOD, oak)
-		box(st, Vector3(w + 0.1, 0.14, 0.18), base * at(Vector3(0, 0.3 + hgt * 0.48, sz * (d / 2.0 + 0.01))), K.WOOD, oak)
-		for k in [-1, 1]:  # braces and studs on the long walls
-			var bx: float = k * w * 0.3
-			box(st, Vector3(0.14, hgt * 0.95, 0.16), base * at(Vector3(bx, 0.3 + hgt / 2.0, sz * (d / 2.0 + 0.01)), 0, Vector3(0, 0, k * 0.5)), K.WOOD, oak)
-	for sx in [-1, 1]:
-		box(st, Vector3(0.2, 0.18, d + 0.1), base * at(Vector3(sx * w / 2.0, top, 0)), K.WOOD, oak)
-	# the thatch: a deep, overhanging roof, ridge along the length
-	var rh := d * 0.62
-	prism(st, Vector3(d + 1.1, rh, w + 0.9), base * Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(0, top + rh / 2.0 - 0.05, 0)), K.THATCH, Color(0.62, 0.5, 0.32))
-	box(st, Vector3(w + 0.95, 0.22, 0.3), base * at(Vector3(0, top + rh - 0.04, 0)), K.THATCH, Color(0.5, 0.42, 0.28))
-	# gable ends: plaster triangles under the thatch
-	for sx in [-1, 1]:
-		prism(st, Vector3(d, rh * 0.95, 0.1), base * Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(sx * (w / 2.0 - 0.02), top + rh * 0.47, 0)), K.PLASTER, wall_col * 0.95)
-	# the chimney, at one gable
-	var ch := Vector3(-w / 2.0 + 0.5, 0, -d * 0.15)
-	box(st, Vector3(0.7, top + rh + 0.9, 0.7), base * at(ch + Vector3(0, (top + rh + 0.9) / 2.0, 0)), K.STONE, Color(0.5, 0.47, 0.43))
-	box(st, Vector3(0.82, 0.12, 0.82), base * at(ch + Vector3(0, top + rh + 0.9, 0)), K.STONE, Color(0.45, 0.42, 0.38))
-	# the door and its frame
-	box(st, Vector3(1.0, 1.95, 0.08), base * at(Vector3(w * 0.12, 0.3 + 0.98, d / 2.0 + 0.04)), K.WOOD, Color(0.36, 0.24, 0.15))
-	box(st, Vector3(1.22, 0.16, 0.16), base * at(Vector3(w * 0.12, 0.3 + 2.0, d / 2.0 + 0.05)), K.WOOD, oak)
-	ball(st, 0.05, base * at(Vector3(w * 0.12 + 0.35, 1.25, d / 2.0 + 0.1)), K.IRON, Color(0.12, 0.11, 0.1), 6)
-	box(st, Vector3(1.2, 0.18, 0.5), base * at(Vector3(w * 0.12, 0.1, d / 2.0 + 0.3)), K.STONE, Color(0.5, 0.48, 0.44))
-	# windows front and back, each with a sill and a frame
-	for side in [1, -1]:
-		for wx in ([-w * 0.28] if side == 1 else [-w * 0.22, w * 0.22]):
-			var wz: float = side * (d / 2.0 + 0.03)
-			var wy := 0.3 + hgt * 0.58
-			quad(st, Vector2(0.75, 0.85), base * at(Vector3(wx, wy, wz), 0.0 if side == 1 else PI), K.WINDOW, Color(1.0, 0.62, 0.28))
-			box(st, Vector3(0.95, 0.1, 0.22), base * at(Vector3(wx, wy - 0.48, wz)), K.WOOD, oak)
-			box(st, Vector3(0.95, 0.1, 0.12), base * at(Vector3(wx, wy + 0.48, wz)), K.WOOD, oak)
-	# a firewood stack against one wall, a barrel at the other
-	var pile := Vector3(w / 2.0 + 0.45, 0, 0.4)
-	for row in 3:
-		for k in 4 - row:
-			cyl(st, 0.09, 0.09, 1.0, base * Transform3D(Basis(Vector3.RIGHT, PI / 2.0), pile + Vector3(0, 0.1 + row * 0.17, -0.3 + k * 0.19 + row * 0.09)), K.WOOD, Color(0.45, 0.33, 0.22), 7)
-	var barrel := Vector3(-w / 2.0 - 0.45, 0.45, d * 0.3)
-	lathe(st, PackedVector2Array([Vector2(0.28, 0), Vector2(0.34, 0.3), Vector2(0.35, 0.45), Vector2(0.34, 0.6), Vector2(0.28, 0.9), Vector2(0.0, 0.9)]), base * at(barrel - Vector3(0, 0.45, 0)), K.WOOD, Color(0.4, 0.28, 0.17), 12)
-	var chim_world := base * (ch + Vector3(0, top + rh + 1.0, 0))
-	houses.append({"at": c, "yaw": yaw, "door": base * Vector3(w * 0.12, 0, d / 2.0 + 0.8), "chimney": chim_world, "roof": base * Vector3(0, top + rh * 0.5, 0), "size": size})
+	var chim := base * Vector3(-1.2, 7.5, -0.8)
+	for m in n.find_children("*", "Marker3D", true, false):
+		if str(m.name).ends_with("smoke_anchor"):
+			chim = (m as Marker3D).global_transform.origin
+	var side: Array = ["barrel_v02", "crate_stack_v02", "sacks_v02", "clay_pots_v02", "pumpkins_v02", "bench_v02", "flower_pots_v02", "basket_v02"]
+	for k in 2:
+		_prop(side[(i * 3 + k * 5) % side.size()], base * Vector3((3.1 if k == 0 else -3.1), 0, 1.2 - k * 1.8), yaw + _rng.randf_range(-0.4, 0.4), 35.0)
+	houses.append({"at": c, "yaw": yaw, "door": base * Vector3(0, 0, 2.43 + 0.9), "chimney": chim, "roof": base * Vector3(0, 5.5, 0), "size": Vector3(4.85, 5.0, 4.85)})
 
 
-func _well(st: SurfaceTool, p: Vector3) -> void:
-	p.y = height(p.x, p.z)
-	lathe(st, PackedVector2Array([Vector2(0.95, 0), Vector2(0.95, 0.8), Vector2(0.75, 0.8), Vector2(0.75, 0.2)]), at(p), K.STONE, Color(0.55, 0.52, 0.48), 16)
-	for sx in [-1, 1]:
-		box(st, Vector3(0.14, 2.0, 0.14), at(p + Vector3(sx * 0.85, 1.0, 0)), K.WOOD, Color(0.3, 0.2, 0.13))
-	box(st, Vector3(1.9, 0.1, 0.1), at(p + Vector3(0, 1.75, 0)), K.WOOD, Color(0.3, 0.2, 0.13))
-	prism(st, Vector3(2.2, 0.7, 1.5), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis(Vector3.UP, PI / 2.0), p + Vector3(0, 2.3, 0)), K.THATCH, Color(0.55, 0.45, 0.3))
-	cyl(st, 0.012, 0.012, 1.1, at(p + Vector3(0, 1.2, 0)), K.CLOTH, Color(0.55, 0.48, 0.35), 4)
-	lathe(st, PackedVector2Array([Vector2(0.14, 0), Vector2(0.17, 0.25), Vector2(0.0, 0.25)]), at(p + Vector3(0, 0.55, 0)), K.WOOD, Color(0.35, 0.25, 0.16), 8)
-
-
-func _statue(st: SurfaceTool, p: Vector3) -> void:
-	## The hooded little god of the village square, in weathered stone (the game's statue, at life size).
-	p.y = height(p.x, p.z)
-	box(st, Vector3(1.6, 0.5, 1.6), at(p + Vector3(0, 0.25, 0)), K.STONE, Color(0.52, 0.5, 0.46))
-	box(st, Vector3(1.1, 0.5, 1.1), at(p + Vector3(0, 0.7, 0)), K.STONE, Color(0.55, 0.53, 0.49))
-	lathe(st, PackedVector2Array([Vector2(0.5, 0), Vector2(0.45, 0.6), Vector2(0.32, 1.2), Vector2(0.28, 1.45), Vector2(0.3, 1.6), Vector2(0.26, 1.85), Vector2(0.12, 2.0), Vector2(0.0, 2.04)]),
-		at(p + Vector3(0, 0.95, 0)), K.ROCK, Color(0.62, 0.6, 0.55), 16, 0.06)
-	ball(st, 0.12, at(p + Vector3(0, 2.2, 0.22)), K.EMBER, Color(1.0, 0.6, 0.22), 8)  # the small flame it holds
+func _dress_square() -> void:
+	## The market square as busy as the game's: stall, notice board, haystack, handcart, washing, lanterns.
+	var v := VILLAGE
+	_prop("market_stall_v02", v + Vector3(5.6, 0, -1.8), -1.6, 50.0, true)
+	_prop("notice_board_v02", v + Vector3(-4.6, 0, -0.6), 1.2, 50.0)
+	_prop("haystack_v03", v + Vector3(6.6, 0, -5.4), 0.4, 45.0)
+	_prop("handcart_v01", v + Vector3(3.6, 0, 3.8), 2.6, 45.0)
+	_prop("clothesline_v02", v + Vector3(-6.4, 0, 3.6), 0.9, 45.0)
+	_prop("barrel_stack_v02", v + Vector3(6.4, 0, 1.2), 0.3, 35.0)
+	_prop("table_stool_v02", v + Vector3(-6.2, 0, -4.4), 0.2, 40.0)
+	_prop("flower_pots_v02", v + Vector3(1.4, 0, -2.6), 0.0, 35.0)
+	_prop("flower_pots_v02", v + Vector3(-1.4, 0, -2.6), PI, 35.0)
+	_prop("tools_leaning_v02", v + Vector3(-5.6, 0, -2.0), 1.6, 40.0)
+	for k in 6:
+		var a := TAU * k / 6.0 + 0.3
+		_prop("lantern_v01", v + Vector3(cos(a) * 6.8, 0, sin(a) * 6.8), -a, 55.0)
 
 
 func _campfire(st: SurfaceTool, p: Vector3) -> void:
@@ -733,8 +707,8 @@ func _pine(seed_: int) -> ArrayMesh:
 	var bark := Color(0.25, 0.19, 0.15)
 	var lean := Vector3(r.randf_range(-0.04, 0.04), 0, r.randf_range(-0.04, 0.04))
 	lathe(st, PackedVector2Array([Vector2(0.5, 0), Vector2(0.3, 0.4), Vector2(0.24, 1.5), Vector2(0.15, 7.5), Vector2(0.03, 13.4)]), Transform3D(Basis(Vector3(lean.z, 0, -lean.x).normalized(), lean.length()) if lean.length() > 0.001 else Basis.IDENTITY, Vector3.ZERO), K.WOOD, bark, 9, 0.12)
-	# a dark, ragged core so you cannot see sky through the middle of the crown
-	lathe(st, PackedVector2Array([Vector2(0.25, 2.6), Vector2(1.1, 3.3), Vector2(0.9, 6.5), Vector2(0.4, 10.0), Vector2(0.0, 12.2)]), Transform3D.IDENTITY, K.NEEDLES, Color(0.035, 0.055, 0.035), 9, 0.45)
+	# no solid core: a dark cone inside the crown read as a second tree standing in front of the first (the user,
+	# 2026-11-14). Each limb gets an inner spray by the trunk instead, shaded as deep in the crown.
 	var y := 1.9
 	while y < 12.6:
 		var t := (y - 1.9) / 10.7
@@ -756,6 +730,7 @@ func _pine(seed_: int) -> ArrayMesh:
 			var tip := trunk_at + out * L + Vector3(0, -sag * 0.6, 0)
 			seg(st, trunk_at, mid, lerpf(0.07, 0.025, t), 0.03, K.WOOD, bark * 1.1, 5)
 			seg(st, mid, tip, 0.03, 0.008, K.WOOD, bark * 1.1, 4)
+			card(cs, trunk_at + out * 0.15, (out + Vector3(0, -0.1, 0)).normalized(), side, L * 0.6, L * 0.55, 0.0, 0, green * 0.8, 0.7)
 			# sprays along the limb, hanging off both sides and lying on top, shorter toward the tip
 			var sprays := 2 if L > 1.5 else 1  # few, larger sprays: the near wood was 1.8M triangles
 			for k in sprays:
@@ -928,6 +903,9 @@ func _build_ruin() -> void:
 
 
 # ------------------------------------------------------------------ people
+const CAST := [["elder_ram", "idle"], ["baker_mouse", "roll"], ["farmer_horse", "fork"], ["clerk_owl", "read"],
+	["builder_ant", "hammer"], ["tailor_spider", "sew"], ["dancer_butterfly", "dance"], ["cat_girl", "sweep"],
+	["kid_bunny", "wave"], ["bee_kid", "water"]]
 func _build_people() -> void:
 	var skin := [Color(0.86, 0.66, 0.53), Color(0.62, 0.44, 0.32), Color(0.9, 0.72, 0.6), Color(0.45, 0.31, 0.22), Color(0.78, 0.58, 0.45)]
 	var cloth := [Color(0.42, 0.18, 0.12), Color(0.3, 0.32, 0.22), Color(0.55, 0.45, 0.3), Color(0.25, 0.22, 0.28), Color(0.6, 0.35, 0.18), Color(0.35, 0.28, 0.2)]
@@ -944,6 +922,9 @@ func _build_people() -> void:
 		p.hooded = i == 0  # Maren, the old priestess, wears a hood
 		if i == 0:
 			p.hair = hair[2]
+		var cast: Array = CAST[i]  # the game's villagers and their quirks (village_life.gd); Maren is the old ram
+		p.rig_key = cast[0]
+		p.job_anim = cast[1]
 		p.name = "Person%d" % i
 		add_child(p)
 		people.append(p)

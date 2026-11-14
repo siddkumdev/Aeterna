@@ -13,6 +13,12 @@ var cloth2 := Color(0.3, 0.3, 0.2)
 var hair := Color(0.1, 0.07, 0.05)
 var tall := 1.0
 var pose := "idle"
+## The game's own villager (CharacterRig key, e.g. "elder_ram") and its job quirk while idle. Empty = the old
+## procedural person.
+var rig_key := ""
+var job_anim := "idle"
+const RIG_SCALE := 30.0  # the game's villagers (0.7 on the board, houses 1.0) at the story's life-size houses (x50)
+var rig: CharacterRig
 
 var _body: Node3D
 var _head: Node3D
@@ -27,6 +33,15 @@ var _k := 0.0  # 0..1 blend into the current pose (kneel, lie)
 func _ready() -> void:
 	scale = Vector3.ONE * tall
 	_ph = randf() * TAU
+	if rig_key != "":
+		rig = CharacterRig.new()
+		rig.name = "Rig"
+		add_child(rig)
+		rig.setup(rig_key)
+		rig.scale = Vector3.ONE * RIG_SCALE
+		rig.anim = job_anim
+		_body = rig
+		return
 	var W := world
 	_body = Node3D.new()
 	_body.position = Vector3(0, 0.95, 0)
@@ -160,6 +175,9 @@ func face(p: Vector3) -> void:
 func tick(delta: float) -> void:
 	if _body == null:
 		return
+	if rig != null:
+		_tick_rig(delta)
+		return
 	_ph += delta
 	var moving := false
 	if pose in ["walk", "flee"]:
@@ -204,3 +222,30 @@ func tick(delta: float) -> void:
 		rotation.x = lerpf(rotation.x, 0.0, minf(1.0, delta * 2.0))
 		for leg in _legs:
 			leg.position.y = 0.95
+
+
+func _tick_rig(delta: float) -> void:
+	## The game's villager: walks and runs with its own gait, prays with "channel", otherwise does its job quirk.
+	var moving := false
+	if pose in ["walk", "flee"]:
+		var d := _target - position
+		d.y = 0.0
+		if d.length() > 0.15:
+			position += d.normalized() * minf(d.length(), _speed * delta)
+			position.y = StoryWorld.height(position.x, position.z)
+			rotation.y = lerp_angle(rotation.y, atan2(d.x, d.z), minf(1.0, delta * 6.0))
+			moving = true
+		else:
+			pose = "idle"
+	rig.gait = clampf(_speed / 3.2, 0.3, 1.0) * CharacterRig.RUN_SPEED if moving else 0.0
+	match pose:
+		"pray":
+			rig.anim = "channel"
+		"sleep":
+			rig.anim = "idle"
+		_:
+			rig.anim = job_anim
+	_k = move_toward(_k, 1.0 if pose == "sleep" else 0.0, delta * 0.7)
+	rotation.x = lerpf(0.0, -PI / 2.0 + 0.05, _k)
+	if pose != "walk" and pose != "flee":  # snap to the ground (and lift while lying down)
+		position.y = StoryWorld.height(position.x, position.z) + 0.25 * _k

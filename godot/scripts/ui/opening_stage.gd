@@ -596,7 +596,7 @@ func _enter_5() -> void:
 	# You stand in the village square, a few steps in front of your own statue (the user, 2026-11-14: "take us to the
 	# center of the village, near where the statue is"). The world moves, not you, so this works in the headset too;
 	# the chapter starts under black, so the jump is never seen.
-	var stand := StoryWorld.VILLAGE + Vector3(-0.6, 0, 3.6)
+	var stand := StoryWorld.VILLAGE + Vector3(-0.4, 0, 5.4)
 	world.position = -Vector3(stand.x, StoryWorld.height(stand.x, stand.z), stand.z)
 	var statue := StoryWorld.VILLAGE + Vector3(0, 0, -1.5)
 	for i in world.people.size():
@@ -607,7 +607,7 @@ func _enter_5() -> void:
 			p.face(statue)
 			continue
 		if i in [1, 2, 5]:  # a few have come out to the square and stand with her (standing: the kneel reads badly side-on)
-			var g := StoryWorld.VILLAGE + Vector3([-1.4, 1.5, 2.0][[1, 2, 5].find(i)], 0, [0.2, 1.0, 1.4][[1, 2, 5].find(i)])
+			var g := StoryWorld.VILLAGE + Vector3([-2.4, 2.3, 3.3][[1, 2, 5].find(i)], 0, [0.9, 1.2, 0.0][[1, 2, 5].find(i)])  # beside her, not in your view
 			p.place(Vector3(g.x, StoryWorld.height(g.x, g.z), g.z), 0.0)
 			p.face(statue)
 			p.set_pose("idle")
