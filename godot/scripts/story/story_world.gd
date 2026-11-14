@@ -420,13 +420,13 @@ func _build_village() -> void:
 	palette_mat = ShaderMaterial.new()
 	palette_mat.shader = PALETTE
 	palette_mat.set_shader_parameter("atlas", load("res://assets/palette/palette_atlas.png"))
-	var n := 8
+	var n := 12  # one house per villager: twelve people live here (the user, 2026-11-14)
 	for i in n:
-		var ang := -PI * 0.92 + TAU * (i + 0.5) / n + _rng.randf_range(-0.12, 0.12)
+		var ang := -PI * 0.92 + TAU * (i + 0.5) / n + _rng.randf_range(-0.06, 0.06)
 		var off := wrapf(ang - PI / 2.0, -PI, PI)
 		if absf(off) < 0.8:
 			ang = PI / 2.0 + signf(off if off != 0.0 else 1.0) * 0.8  # keep the gap on the side the path comes in (toward you)
-		var r := _rng.randf_range(9.5, 12.5)
+		var r := (11.0 if i % 2 == 0 else 16.0) + _rng.randf_range(-0.5, 0.5)  # two staggered rings so twelve fit
 		var c := VILLAGE + Vector3(cos(ang) * r, 0, sin(ang) * r)
 		c.y = height(c.x, c.z)
 		var yaw := atan2(VILLAGE.x - c.x, VILLAGE.z - c.z)  # the door faces the square
@@ -477,7 +477,7 @@ func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
 
 
 const STATUE_AT := VILLAGE + Vector3(0, 0, -5.0)
-const STATUE_SCALE := 70.0  # about 11 m tall on its plinth: the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
+const STATUE_SCALE := 48.0  # about 7.5 m tall on its plinth (the user, 2026-11-14: 70x was too big): the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
 const HOUSE_SCALE := 50.0  # the game's 2 x 2-cell houses (0.1 m) at life size: about 5 m across
 const HOUSE_MODELS := ["cottage_v05", "townhouse_v05", "cabin_v05"]
 
@@ -508,7 +508,7 @@ func _game_house(c: Vector3, yaw: float, i: int) -> void:
 		if str(m.name).ends_with("smoke_anchor"):
 			chim = (m as Marker3D).global_transform.origin
 	var side: Array = ["barrel_v02", "crate_stack_v02", "sacks_v02", "clay_pots_v02", "pumpkins_v02", "bench_v02", "flower_pots_v02", "basket_v02"]
-	for k in 2:
+	for k in 1:
 		_prop(side[(i * 3 + k * 5) % side.size()], base * Vector3((3.1 if k == 0 else -3.1), 0, 1.2 - k * 1.8), yaw + _rng.randf_range(-0.4, 0.4), 35.0)
 	houses.append({"at": c, "yaw": yaw, "door": base * Vector3(0, 0, 2.43 + 0.9), "chimney": chim, "roof": base * Vector3(0, 5.5, 0), "size": Vector3(4.85, 5.0, 4.85)})
 
