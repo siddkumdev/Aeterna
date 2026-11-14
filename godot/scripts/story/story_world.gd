@@ -999,6 +999,29 @@ func _particles(name_: String, amount: int, life: float, mesh_size: float, mat: 
 	return g
 
 
+const SHARD := preload("res://shaders/story/story_shard.gdshader")
+
+
+static func _shard_mesh(sz: float) -> ArrayMesh:
+	## One jagged sliver of curved glass (two thin faces at an angle, so it glints from many sides as it tumbles).
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var p := [Vector3(0, 0.62, 0), Vector3(0.22, 0.05, 0.08), Vector3(0.1, -0.45, 0.02), Vector3(-0.08, -0.2, -0.04), Vector3(-0.28, 0.12, 0.06)]
+	for tri in [[0, 1, 3], [1, 2, 3], [0, 3, 4]]:
+		var a: Vector3 = p[tri[0]] * sz
+		var b: Vector3 = p[tri[1]] * sz
+		var c: Vector3 = p[tri[2]] * sz
+		var n := (b - a).cross(c - a).normalized()
+		for v in [a, b, c]:
+			st.set_normal(n)
+			st.add_vertex(v)
+	var m := st.commit()
+	var mat := ShaderMaterial.new()
+	mat.shader = SHARD
+	m.surface_set_material(0, mat)
+	return m
+
+
 static func ramp(cols: Array) -> GradientTexture1D:
 	var g := Gradient.new()
 	g.offsets = PackedFloat32Array(range(cols.size()).map(func(i): return float(i) / (cols.size() - 1)))
@@ -1136,7 +1159,14 @@ func _build_fx() -> void:
 	sp.scale_min = 0.5
 	sp.scale_max = 1.6
 	sp.color_ramp = ramp([Color(1.0, 0.8, 0.45), Color(1.0, 0.45, 0.2), Color(0.8, 0.2, 0.1, 0.0)])
-	shards = _particles("Shards", 2400, 7.0, 1.4, flame_mat(2, 4.5), sp, VILLAGE)
+	sp.particle_flag_rotate_y = true  # tumble, so each piece flashes as it turns to the sun
+	sp.angular_velocity_min = -220.0
+	sp.angular_velocity_max = 220.0
+	sp.angle_min = 0.0
+	sp.angle_max = 360.0
+	sp.color_ramp = ramp([Color(1.0, 0.6, 0.25), Color(1.0, 0.32, 0.1), Color(0.7, 0.1, 0.04, 0.0)])
+	shards = _particles("Shards", 1400, 7.0, 1.0, flame_mat(2, 4.5), sp, VILLAGE)
+	shards.draw_pass_1 = _shard_mesh(1.6)
 	shards.one_shot = true
 	shards.explosiveness = 0.85
 	shards.emitting = false
