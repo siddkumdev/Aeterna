@@ -209,6 +209,7 @@ var audio: AudioBank  # sounds; only made with the rig (headless tests stay sile
 
 
 func _ready() -> void:
+	UiFonts.install()
 	if with_rig:
 		_xr = _init_xr()
 		easy_reach = not _xr or OS.get_environment("AETERNA_EASY_REACH") == "1"
@@ -261,6 +262,8 @@ func _ready() -> void:
 		haze.name = "Haze"
 		add_child(haze)
 		haze.set_active(lighting.enable_passthrough())  # false on the desktop and in the simulator: nothing changes there
+		if _xr:
+			PerfTier.apply(get_viewport(), lighting.env, lighting.sun, XRServer.find_interface("OpenXR"))
 		veil = VeilDome.new()
 		veil.name = "Veil"
 		board.add_child(veil)
@@ -957,6 +960,11 @@ func _finish_story(id: String) -> bool:
 	return true
 
 
+## Spoken over the island the first time time runs back (moved here from the opening, the user 2026-11-14).
+const FIRST_REWIND_LINES := [[0.2, "But you are a god."], [3.6, "You turn the hourglass, and time runs back."],
+	[7.2, "The Veil knits itself together. The village wakes again. Only you remember."]]
+
+
 func _rewind() -> void:
 	loop += 1
 	_play_hourglass()
@@ -965,7 +973,13 @@ func _rewind() -> void:
 	if with_rig and is_inside_tree():
 		_toast_last = last_message  # the gilded words say it; no small line as well
 		var serial := _rewind_serial
-		get_tree().create_timer(3.4).timeout.connect(func():  # once the hourglass has turned
+		var first := loop == 1  # the first time back is the reveal (the user, 2026-11-14): the opening never shows the loop
+		if first:
+			for beat in FIRST_REWIND_LINES:
+				get_tree().create_timer(beat[0]).timeout.connect(func():
+					if serial == _rewind_serial:
+						say_at_shrine(beat[1], Bubble.INK))
+		get_tree().create_timer(11.0 if first else 3.4).timeout.connect(func():  # once the hourglass has turned
 			if serial == _rewind_serial:  # not if a new run started meanwhile
 				show_rewind_words())
 
@@ -1843,10 +1857,12 @@ func _process(delta: float) -> void:
 	_tick_day(delta)
 	_tick_quests(delta)
 	_tick_rim(delta)
+	if _xr:
+		PerfTier.govern(delta, get_viewport(), lighting.sun, XRServer.find_interface("OpenXR"))
 	_perf_log_t -= delta
 	if _xr and _perf_log_t <= 0.0:
 		_perf_log_t = 5.0
-		print("[perf] fps=%d" % Engine.get_frames_per_second())
+		print("[perf] fps=%d tier=%s step=%d" % [Engine.get_frames_per_second(), PerfTier.name_of(PerfTier.tier), PerfTier.step])
 	if _xr and ledger:
 		var palm := palm_pose()
 		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())

@@ -18,9 +18,10 @@ const FLAME := preload("res://shaders/story/story_flame.gdshader")
 const SMOKE := preload("res://shaders/story/story_smoke.gdshader")
 const VEIL := preload("res://shaders/story/story_veil.gdshader")
 const GLASS := preload("res://shaders/story/story_glass.gdshader")
+const FOLIAGE := preload("res://shaders/story/story_foliage.gdshader")
 
 ## Material kinds of story_surface.gdshader
-enum K { PLASTER, STONE, WOOD, THATCH, CLOTH, SKIN, HAIR, BRASS, NEEDLES, LEAVES, EMBER, WINDOW, ROCK, IRON }
+enum K { PLASTER, STONE, WOOD, THATCH, CLOTH, SKIN, HAIR, BRASS, NEEDLES, LEAVES, EMBER, WINDOW, ROCK, IRON, BONE, INK }
 
 ## Each mood is a full lighting state; set_mood() blends to it. light = [elevation, azimuth] in degrees (azimuth 0 =
 ## ahead, -Z, toward the village; 180 = behind you, over the Dark Wood).
@@ -59,6 +60,7 @@ var veil_mat: ShaderMaterial
 var skotos_mat: ShaderMaterial
 var beast_mat: ShaderMaterial
 var glass_mat: ShaderMaterial
+var foliage_mat: ShaderMaterial
 var sun: DirectionalLight3D
 var fire_light: OmniLight3D
 var burn_lights: Array[OmniLight3D] = []
@@ -148,9 +150,10 @@ func _process(delta: float) -> void:
 		_apply_mood()
 	for m in [sky_mat, surf, grass_mat, veil_mat, skotos_mat, beast_mat, ground_mat]:
 		m.set_shader_parameter("clock", clock)
-	for m in [grass_mat, surf]:
+	for m in [grass_mat, surf, foliage_mat]:
 		m.set_shader_parameter("wind", wind)
-	for m in [ground_mat, grass_mat, surf]:
+	foliage_mat.set_shader_parameter("clock", clock)
+	for m in [ground_mat, grass_mat, surf, foliage_mat]:
 		m.set_shader_parameter("scorch", scorch)
 	for m in _fx_mats:
 		m.set_shader_parameter("clock", clock)
@@ -243,6 +246,15 @@ func ball(st: SurfaceTool, r: float, xf: Transform3D, kind: int, col: Color, seg
 	_put(st, _prim("ball%d" % seg, s), xf * Transform3D(Basis.from_scale(Vector3.ONE * r), Vector3.ZERO), kind, col)
 
 
+func seg(st: SurfaceTool, a: Vector3, b: Vector3, r_a: float, r_b: float, kind: int, col: Color, sides := 7) -> void:
+	## A tapered rod from a (radius r_a) to b (radius r_b): limbs, bones, fingers.
+	var d := b - a
+	var up := d.normalized()
+	var axis := Vector3.UP.cross(up)
+	var basis := Basis(axis.normalized(), Vector3.UP.angle_to(up)) if axis.length() > 0.0001 else (Basis.IDENTITY if up.y > 0.0 else Basis(Vector3.RIGHT, PI))
+	cyl(st, r_b, r_a, d.length(), Transform3D(basis, (a + b) * 0.5), kind, col, sides)
+
+
 func quad(st: SurfaceTool, size: Vector2, xf: Transform3D, kind: int, col: Color) -> void:
 	var q := QuadMesh.new()
 	q.size = Vector2.ONE
@@ -274,10 +286,10 @@ func lathe(st: SurfaceTool, profile: PackedVector2Array, xf: Transform3D, kind: 
 			var b: Vector3 = rings[j][i + 1]
 			var c: Vector3 = rings[j + 1][i + 1]
 			var d: Vector3 = rings[j + 1][i]
-			for p in [a, c, b, a, d, c]:
-				tmp.set_uv(Vector2(float(i) / sides, float(j) / profile.size()))
-				tmp.add_vertex(p)
-	tmp.generate_normals()
+			for q in [[a, j, i], [c, j + 1, i + 1], [b, j, i + 1], [a, j, i], [d, j + 1, i], [c, j + 1, i + 1]]:
+				tmp.set_uv(Vector2(float(q[2]) / sides, float(j) / profile.size()))
+				tmp.set_normal(_lathe_normal(profile, q[1], TAU * float(q[2] % sides) / sides))
+				tmp.add_vertex(q[0])
 	var arr := tmp.commit_to_arrays()
 	_put(st, arr, xf, kind, col)
 
@@ -290,6 +302,17 @@ func bake(st: SurfaceTool, mat: Material, name_: String, shadows := true) -> Mes
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	return mi
+
+
+static func _lathe_normal(profile: PackedVector2Array, j: int, a: float) -> Vector3:
+	## A smooth normal for ring j of a turned shape: perpendicular to the profile there, so it shades round, not faceted.
+	var p0 := profile[maxi(j - 1, 0)]
+	var p1 := profile[mini(j + 1, profile.size() - 1)]
+	var t := p1 - p0
+	var n2 := Vector2(t.y, -t.x).normalized()
+	if n2 == Vector2.ZERO:
+		n2 = Vector2(1, 0)
+	return -Vector3(cos(a) * n2.x, n2.y, sin(a) * n2.x).normalized()
 
 
 static func new_st() -> SurfaceTool:
@@ -552,9 +575,9 @@ func _grass() -> ArrayMesh:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var r := RandomNumberGenerator.new()
 	r.seed = 5
-	for b in 7:
+	for b in 12:
 		var a := r.randf_range(0, TAU)
-		var root := Vector3(cos(a), 0, sin(a)) * r.randf_range(0.0, 0.14)
+		var root := Vector3(cos(a), 0, sin(a)) * r.randf_range(0.0, 0.2)
 		var face := r.randf_range(0, TAU)
 		var side := Vector3(cos(face), 0, sin(face))
 		var lean := Vector3(-sin(face), 0, cos(face)) * r.randf_range(0.05, 0.22)
@@ -590,9 +613,10 @@ func _build_grass() -> void:
 	mm.mesh = _grass()
 	var xfs: Array = []
 	var tries := 0
-	while xfs.size() < 4200 and tries < 20000:
+	var want: int = {PerfTier.DESKTOP: 15000, PerfTier.HIGH: 9000, PerfTier.LOW: 5500}[PerfTier.detect()]
+	while xfs.size() < want and tries < want * 5:
 		tries += 1
-		var r := 22.0 * pow(_rng.randf(), 0.7) + 0.6
+		var r := 24.0 * _rng.randf() + 0.5  # uniform in radius = densest round your feet, where you look closest
 		var a := _rng.randf_range(0, TAU)
 		var x := cos(a) * r
 		var z := sin(a) * r
@@ -606,7 +630,7 @@ func _build_grass() -> void:
 				break
 		if near_house:
 			continue
-		var s := _rng.randf_range(0.8, 1.5) * (1.0 + smoothstep(8.0, 22.0, r) * 0.4)
+		var s := _rng.randf_range(0.8, 1.4) * (1.0 + smoothstep(6.0, 22.0, r) * 0.9)  # far clumps grow to keep the meadow closed
 		xfs.append([Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3.ONE * s), Vector3(x, height(x, z) - 0.02, z)),
 			Color(_rng.randf(), _rng.randf() * _rng.randf(), _rng.randf(), 0)])
 	mm.instance_count = xfs.size()
@@ -643,45 +667,164 @@ func _build_grass() -> void:
 
 
 # ------------------------------------------------------------------ the Dark Wood
+func card(st: SurfaceTool, root: Vector3, dir: Vector3, side: Vector3, length: float, width: float, droop: float, kind: int, col: Color, depth: float) -> void:
+	## A bent foliage card from `root` along `dir` (unit), `width` wide along `side` (unit), sagging `droop` m at the
+	## tip. The shader cuts the needles or leaves out of it (story_foliage.gdshader).
+	var secs: Array = []
+	for j in 4:
+		var u := j / 3.0
+		var c := root + dir * length * u + Vector3(0, -droop * u * u, 0)
+		var w := width * (0.35 + 0.65 * sin(minf(u * 1.4, 1.0) * PI / 2.0))
+		secs.append([c - side * w * 0.5, c + side * w * 0.5, u])
+	var nrm := dir.cross(side).normalized()
+	if nrm.y < 0.0:
+		nrm = -nrm
+	nrm = (nrm + dir * 0.3).normalized()  # leaning outward lights a crown like a volume, not a stack of planes
+	var c2 := Color(col.r, col.g, col.b, depth)
+	var k2 := Vector2(kind, 0)
+	for j in 3:
+		var a: Array = secs[j]
+		var b: Array = secs[j + 1]
+		for q in [[a[0], a[2], 0.0], [b[0], b[2], 0.0], [b[1], b[2], 1.0], [a[0], a[2], 0.0], [b[1], b[2], 1.0], [a[1], a[2], 1.0]]:
+			st.set_color(c2)
+			st.set_uv(Vector2(q[1], q[2]))
+			st.set_uv2(k2)
+			st.set_normal(nrm)
+			st.add_vertex(q[0])
+
+
+func _tree_mesh(trunk: SurfaceTool, cards: SurfaceTool) -> ArrayMesh:
+	var m := trunk.commit()
+	cards.commit(m)
+	m.surface_set_material(0, surf)
+	m.surface_set_material(1, foliage_mat)
+	return m
+
+
 func _pine(seed_: int) -> ArrayMesh:
-	## A conifer about 1 unit tall per metre of `scale`: a tapering trunk and drooping, ragged tiers of boughs.
+	## A spruce about 13 m tall at scale 1 (the user, 2026-11-14: trees must look realistic). A tapering, slightly
+	## leaning trunk with a root flare; irregular whorls of real limbs that sag and then lift at the tip, each limb
+	## carrying a row of needle sprays along it; gaps where a limb died; a narrow leader at the top, not a star.
 	var st := new_st()
+	var cs := new_st()
 	var r := RandomNumberGenerator.new()
 	r.seed = seed_
-	var tiers := 7
-	lathe(st, PackedVector2Array([Vector2(0.32, 0), Vector2(0.22, 1.5), Vector2(0.14, 8.0), Vector2(0.02, 13.0)]), Transform3D.IDENTITY, K.WOOD, Color(0.3, 0.22, 0.17), 8, 0.1)
-	for t in tiers:
-		var k := float(t) / tiers
-		var y0 := 2.2 + k * 9.0
-		var rad := lerpf(3.4, 0.9, k) * r.randf_range(0.85, 1.1)
-		var hh := lerpf(3.2, 2.2, k)
-		var shade := lerpf(0.55, 1.0, k)
-		var prof := PackedVector2Array([Vector2(0.15, y0 + 0.5), Vector2(rad, y0 - 0.25), Vector2(rad * 0.7, y0 + hh * 0.35), Vector2(rad * 0.3, y0 + hh * 0.75), Vector2(0.0, y0 + hh)])
-		lathe(st, prof, at(Vector3.ZERO, r.randf_range(0, TAU)), K.NEEDLES, Color(0.13, 0.2, 0.12) * shade, 11, 0.32)
-	return st.commit()
+	var bark := Color(0.25, 0.19, 0.15)
+	var lean := Vector3(r.randf_range(-0.04, 0.04), 0, r.randf_range(-0.04, 0.04))
+	lathe(st, PackedVector2Array([Vector2(0.5, 0), Vector2(0.3, 0.4), Vector2(0.24, 1.5), Vector2(0.15, 7.5), Vector2(0.03, 13.4)]), Transform3D(Basis(Vector3(lean.z, 0, -lean.x).normalized(), lean.length()) if lean.length() > 0.001 else Basis.IDENTITY, Vector3.ZERO), K.WOOD, bark, 9, 0.12)
+	# a dark, ragged core so you cannot see sky through the middle of the crown
+	lathe(st, PackedVector2Array([Vector2(0.25, 2.6), Vector2(1.1, 3.3), Vector2(0.9, 6.5), Vector2(0.4, 10.0), Vector2(0.0, 12.2)]), Transform3D.IDENTITY, K.NEEDLES, Color(0.035, 0.055, 0.035), 9, 0.45)
+	var y := 1.9
+	while y < 12.6:
+		var t := (y - 1.9) / 10.7
+		var reach := lerpf(3.6, 0.45, pow(t, 0.85)) * r.randf_range(0.8, 1.15)
+		var n := r.randi_range(5, 7) if t < 0.6 else r.randi_range(3, 5)
+		var a0 := r.randf_range(0, TAU)
+		var green := Color(0.1, 0.16, 0.09).lerp(Color(0.15, 0.22, 0.11), t) * r.randf_range(0.8, 1.12)
+		for b in n:
+			if t < 0.35 and r.randf() < 0.18:
+				continue  # a dead gap low in the crown
+			var a := a0 + TAU * b / n + r.randf_range(-0.35, 0.35)
+			var out := Vector3(cos(a), 0, sin(a))
+			var side := out.cross(Vector3.UP).normalized()
+			var L := reach * r.randf_range(0.75, 1.1)
+			var trunk_at := lean * y + Vector3(0, y, 0)
+			# the limb: out and down, then turning up at the tip (spruce habit)
+			var sag := L * lerpf(0.32, 0.08, t)
+			var mid := trunk_at + out * L * 0.55 + Vector3(0, -sag, 0)
+			var tip := trunk_at + out * L + Vector3(0, -sag * 0.6, 0)
+			seg(st, trunk_at, mid, lerpf(0.07, 0.025, t), 0.03, K.WOOD, bark * 1.1, 5)
+			seg(st, mid, tip, 0.03, 0.008, K.WOOD, bark * 1.1, 4)
+			# sprays along the limb, hanging off both sides and lying on top, shorter toward the tip
+			var sprays := 4 if L > 1.5 else 2
+			for k in sprays:
+				var u := (k + 0.5) / sprays
+				var at_: Vector3 = trunk_at.lerp(mid, minf(u * 1.8, 1.0)) if u < 0.55 else mid.lerp(tip, (u - 0.55) / 0.45)
+				var sl := L * lerpf(0.55, 0.35, u) * r.randf_range(0.85, 1.1)
+				var g2 := green * r.randf_range(0.85, 1.12)
+				for sd in [-1.0, 1.0]:
+					var d: Vector3 = (out * 0.6 + side * sd * 0.8 + Vector3(0, -0.25, 0)).normalized()
+					card(cs, at_, d, out, sl * 0.95, sl * 0.8, sl * 0.35, 0, g2 * 0.9, 0.15)
+				card(cs, at_ + Vector3(0, 0.04, 0), (out + Vector3(0, 0.12, 0)).normalized(), side, sl * 1.15, sl * 0.9, sl * 0.25, 0, g2, 0.0)
+		y += r.randf_range(0.6, 0.95) * lerpf(1.0, 0.7, t)
+	# the leader: a thin upright shoot with a few short side shoots
+	var top := lean * 12.6 + Vector3(0, 12.6, 0)
+	seg(st, top, top + Vector3(0, 1.0, 0), 0.03, 0.006, K.WOOD, bark, 4)
+	for b in 3:
+		var a := TAU * b / 3.0 + 0.3
+		var dir := Vector3(cos(a) * 0.5, 0.85, sin(a) * 0.5).normalized()
+		card(cs, top + Vector3(0, 0.3, 0), dir, Vector3(-sin(a), 0, cos(a)), 0.55, 0.3, 0.02, 0, Color(0.15, 0.23, 0.11), 0.0)
+	card(cs, top + Vector3(0, 0.5, 0), Vector3.UP, Vector3.RIGHT, 0.6, 0.18, 0.0, 0, Color(0.16, 0.24, 0.12), 0.0)
+	return _tree_mesh(st, cs)
 
 
 func _oak(seed_: int) -> ArrayMesh:
+	## A broadleaf: a flared trunk splitting into limbs, a dark inner crown, and clumps of leaf cards on the limbs.
 	var st := new_st()
+	var cs := new_st()
 	var r := RandomNumberGenerator.new()
 	r.seed = seed_
-	lathe(st, PackedVector2Array([Vector2(0.6, 0), Vector2(0.42, 0.8), Vector2(0.36, 3.5), Vector2(0.15, 6.0)]), Transform3D.IDENTITY, K.WOOD, Color(0.33, 0.27, 0.21), 10, 0.15)
-	for b in 3:
-		var a := TAU * b / 3.0 + 0.4
-		cyl(st, 0.08, 0.2, 3.0, Transform3D(Basis(Vector3(cos(a), 0, sin(a)).cross(Vector3.UP).normalized(), 0.8), Vector3(cos(a) * 0.9, 4.2, sin(a) * 0.9)), K.WOOD, Color(0.33, 0.27, 0.21), 7)
-	for b in 9:
-		var a := r.randf_range(0, TAU)
-		var rr := r.randf_range(0.5, 2.6)
-		var p := Vector3(cos(a) * rr, r.randf_range(5.0, 8.0), sin(a) * rr)
-		ball(st, r.randf_range(1.6, 2.5), Transform3D(Basis.from_scale(Vector3(1.0, 0.8, 1.0)), p), K.LEAVES, Color(0.2, 0.3, 0.1) * r.randf_range(0.8, 1.15), 12)
-	return st.commit()
+	var bark := Color(0.31, 0.26, 0.2)
+	lathe(st, PackedVector2Array([Vector2(0.75, 0), Vector2(0.45, 0.7), Vector2(0.38, 3.2), Vector2(0.18, 5.6)]), Transform3D.IDENTITY, K.WOOD, bark, 10, 0.18)
+	var tips: Array = []
+	for b in 5:
+		var a := TAU * b / 5.0 + r.randf_range(-0.3, 0.3)
+		var out := Vector3(cos(a), 0, sin(a))
+		var len := r.randf_range(2.6, 3.6)
+		var tilt := r.randf_range(0.6, 0.95)
+		var root := Vector3(0, r.randf_range(3.2, 4.4), 0)
+		var dir := (out * sin(tilt) + Vector3.UP * cos(tilt)).normalized()
+		var basis := Basis(Vector3.UP.cross(dir).normalized(), Vector3.UP.angle_to(dir)) if dir.cross(Vector3.UP).length() > 0.01 else Basis.IDENTITY
+		cyl(st, 0.07, 0.2, len, Transform3D(basis, root + dir * len * 0.5), K.WOOD, bark, 7)
+		var end := root + dir * len
+		for k in 3:  # each limb forks into crooked twigs; the leaves hang at their ends
+			var tw := (dir + Vector3(r.randf_range(-0.8, 0.8), r.randf_range(-0.3, 0.4), r.randf_range(-0.8, 0.8))).normalized()
+			var tl := r.randf_range(0.9, 1.6)
+			var bend := end + tw * tl * 0.5 + Vector3(0, r.randf_range(-0.15, 0.15), 0)
+			seg(st, end - dir * 0.3 * k, bend, 0.06, 0.035, K.WOOD, bark, 5)
+			seg(st, bend, bend + (tw + Vector3(0, -0.2, 0)).normalized() * tl * 0.5, 0.035, 0.012, K.WOOD, bark, 4)
+			tips.append(bend + tw * tl * 0.4)
+		tips.append(end)
+	lathe(st, PackedVector2Array([Vector2(0.4, 4.4), Vector2(2.0, 5.6), Vector2(1.9, 7.2), Vector2(0.9, 8.3), Vector2(0.0, 8.6)]), Transform3D.IDENTITY, K.LEAVES, Color(0.03, 0.05, 0.02), 9, 0.55)
+	for i in 34:  # many smaller clumps with sky gaps between them, lighter on top and darker underneath
+		var c: Vector3 = tips[i % tips.size()] + Vector3(r.randf_range(-0.8, 0.8), r.randf_range(-0.3, 0.9), r.randf_range(-0.8, 0.8))
+		var green := Color(0.16, 0.26, 0.08).lerp(Color(0.22, 0.3, 0.1), r.randf()) * r.randf_range(0.8, 1.15)
+		for j in 7:
+			var dir := Vector3(r.randf_range(-1, 1), r.randf_range(-0.5, 0.7), r.randf_range(-1, 1)).normalized()
+			var side := dir.cross(Vector3(r.randf_range(-1, 1), 1, r.randf_range(-1, 1))).normalized()
+			var shade := 0.35 if dir.y < -0.1 else 0.05
+			card(cs, c - dir * 0.25, dir, side, 1.1, 1.0, 0.18, 1, green, clampf(shade + 0.3 - c.y * 0.02, 0.0, 0.5))
+	return _tree_mesh(st, cs)
 
 
 func _bush() -> ArrayMesh:
 	var st := new_st()
-	for b in 4:
-		var a := TAU * b / 4.0
-		ball(st, 0.55, Transform3D(Basis.from_scale(Vector3(1, 0.75, 1)), Vector3(cos(a) * 0.4, 0.4, sin(a) * 0.4)), K.LEAVES, Color(0.17, 0.26, 0.09), 9)
+	var cs := new_st()
+	var r := RandomNumberGenerator.new()
+	r.seed = 9
+	ball(st, 0.55, Transform3D(Basis.from_scale(Vector3(1.2, 0.7, 1.2)), Vector3(0, 0.35, 0)), K.LEAVES, Color(0.05, 0.08, 0.03), 8)
+	for j in 22:
+		var dir := Vector3(r.randf_range(-1, 1), r.randf_range(0.0, 1.0), r.randf_range(-1, 1)).normalized()
+		var side := dir.cross(Vector3(r.randf_range(-1, 1), 1, r.randf_range(-1, 1))).normalized()
+		card(cs, Vector3(0, 0.35, 0) + dir * 0.1, dir, side, 0.9, 0.8, 0.1, 1, Color(0.16, 0.25, 0.08) * r.randf_range(0.8, 1.2), 0.1)
+	return _tree_mesh(st, cs)
+
+
+func _pine_far(seed_: int) -> ArrayMesh:
+	## The same spruce for the far wood, where fog hides the needles: many thin, drooping, ragged skirts so the outline
+	## is a broken spire, not a stack of cones. A few hundred triangles.
+	var st := new_st()
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_
+	lathe(st, PackedVector2Array([Vector2(0.3, 0), Vector2(0.14, 8.0), Vector2(0.02, 13.4)]), Transform3D.IDENTITY, K.WOOD, Color(0.25, 0.19, 0.15), 6, 0.1)
+	var tiers := 10
+	for t in tiers:
+		var k := float(t) / tiers
+		var y0 := 2.0 + k * 10.5
+		var rad := lerpf(3.4, 0.5, pow(k, 0.85)) * r.randf_range(0.8, 1.15)
+		var hh := lerpf(1.9, 1.1, k)
+		lathe(st, PackedVector2Array([Vector2(rad * 0.8, y0 - 0.45), Vector2(rad, y0 - 0.15), Vector2(rad * 0.45, y0 + hh * 0.55), Vector2(0.1, y0 + hh)]),
+			at(Vector3.ZERO, r.randf_range(0, TAU)), K.NEEDLES, Color(0.09, 0.14, 0.085) * lerpf(0.7, 1.0, k), 11, 0.55)
 	return st.commit()
 
 
@@ -695,13 +838,18 @@ func _scatter(mesh: Mesh, xfs: Array, name_: String, shadows := true) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.name = name_
 	mmi.multimesh = mm
-	mmi.material_override = surf
+	if mesh.get_surface_count() == 1:
+		mmi.material_override = surf
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
 
 
 func _build_wood() -> void:
+	foliage_mat = ShaderMaterial.new()
+	foliage_mat.shader = FOLIAGE
 	var sets: Array = [[], [], []]
+	var tier := PerfTier.detect()
+	var far_sets: Array = [[], []]
 	for i in 420:
 		var a := _rng.randf_range(0, TAU)
 		var behind := cos(a - PI / 2.0)  # +1 behind you (+Z)
@@ -712,9 +860,18 @@ func _build_wood() -> void:
 		if Vector2(x - VILLAGE.x, z - VILLAGE.z).length() < 24.0 or Vector2(x - SKOTOS_AT.x, z - SKOTOS_AT.z).length() < 9.0:
 			continue
 		var s := _rng.randf_range(0.8, 1.45)
+		var xf := Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z))
+		var near_r := 70.0 if tier == PerfTier.DESKTOP else (52.0 if tier == PerfTier.HIGH else 40.0)
+		if r < near_r:
+			sets[i % 3].append(xf)
+		else:
+			far_sets[i % 2].append(xf)
+		continue
 		sets[i % 3].append(Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z)))
 	for k in 3:
-		_scatter(_pine(11 + k * 7), sets[k], "Pines%d" % k, true)
+		_scatter(_pine(11 + k * 7), sets[k], "Pines%d" % k, tier != PerfTier.LOW)
+	for k in 2:
+		_scatter(_pine_far(40 + k), far_sets[k], "FarPines%d" % k, false)
 	var oaks: Array = []
 	for p in [Vector3(-14, 0, -9), Vector3(13, 0, -27), Vector3(-9, 0, -31), Vector3(16, 0, -6)]:
 		oaks.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.9, 1.2)), Vector3(p.x, height(p.x, p.z) - 0.1, p.z)))
@@ -1050,49 +1207,95 @@ func _build_skotos() -> void:
 
 # ------------------------------------------------------------------ the dark that comes out of the wood
 func _build_beasts() -> void:
-	beast_mat = ShaderMaterial.new()
+	## The dark's creatures, as in the game (art bible 7: ink bodies, bone, a bright core): a lean, hunched hound of
+	## ink with a bone skull and spine, ribs over an ember heart, jointed legs. Shades of smoke trail off them.
+	beast_mat = ShaderMaterial.new()  # kept for the clock loop; the wisps use it
 	beast_mat.shader = SMOKE
-	beast_mat.set_shader_parameter("billboard", false)
-	beast_mat.set_shader_parameter("smoke_col", Color(0.03, 0.02, 0.03))
-	beast_mat.set_shader_parameter("density", 1.0)
-	beast_mat.set_shader_parameter("rim", 0.6)
-	beast_mat.set_shader_parameter("rim_col", Color(0.9, 0.3, 0.15))
+	beast_mat.set_shader_parameter("billboard", true)
+	beast_mat.set_shader_parameter("smoke_col", Color(0.03, 0.02, 0.02))
+	beast_mat.set_shader_parameter("density", 0.55)
+	beast_mat.set_shader_parameter("rim", 0.0)
+	var ink := Color(0.035, 0.03, 0.035)
+	var bone := Color(0.86, 0.8, 0.66)
+	var body_st := new_st()
+	# torso: deep chest, tucked waist, hunched shoulders
+	lathe(body_st, PackedVector2Array([Vector2(0.0, -0.75), Vector2(0.17, -0.62), Vector2(0.2, -0.2), Vector2(0.3, 0.2), Vector2(0.33, 0.5), Vector2(0.24, 0.72), Vector2(0.0, 0.8)]),
+		Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 1.0, 0.0)), K.INK, ink, 12, 0.12)
+	lathe(body_st, PackedVector2Array([Vector2(0.0, 0.0), Vector2(0.14, 0.1), Vector2(0.11, 0.45), Vector2(0.0, 0.55)]),
+		Transform3D(Basis(Vector3.RIGHT, 0.9), Vector3(0, 1.12, 0.62)), K.INK, ink, 9, 0.1)  # neck
+	# the ember heart, seen between the ribs
+	ball(body_st, 0.1, at(Vector3(0, 0.98, 0.32)), K.EMBER, Color(0.95, 0.22, 0.05), 8)
+	# spine plates and ribs
+	for k in 9:
+		var z := lerpf(-0.65, 0.6, k / 8.0)
+		var y := 1.2 + 0.08 * sin(k / 8.0 * PI) + (0.06 if z > 0.2 else 0.0)
+		prism(body_st, Vector3(0.06, 0.12 - absf(z) * 0.05, 0.1), at(Vector3(0, y + 0.05, z)), K.BONE, bone * 0.9)
+	for k in 5:
+		var z := 0.05 + k * 0.13
+		for sx in [-1.0, 1.0]:
+			var p0 := Vector3(0, 1.22, z)
+			var p1 := Vector3(sx * 0.3, 1.08, z + 0.03)
+			var p2 := Vector3(sx * 0.31, 0.85, z + 0.05)
+			var p3 := Vector3(sx * 0.12, 0.7, z + 0.08)
+			seg(body_st, p0, p1, 0.022, 0.02, K.BONE, bone, 5)
+			seg(body_st, p1, p2, 0.02, 0.018, K.BONE, bone, 5)
+			seg(body_st, p2, p3, 0.018, 0.012, K.BONE, bone * 0.85, 5)
+	# skull: a long snout, brow ridges, a hanging jaw with teeth, sockets with ember eyes
+	var hx := Transform3D(Basis(Vector3.RIGHT, 0.25), Vector3(0, 1.38, 1.05))
+	ball(body_st, 0.14, hx * Transform3D(Basis.from_scale(Vector3(0.9, 0.78, 1.05)), Vector3.ZERO), K.BONE, bone, 12)
+	lathe(body_st, PackedVector2Array([Vector2(0.11, 0.0), Vector2(0.085, 0.15), Vector2(0.05, 0.3), Vector2(0.0, 0.33)]), hx * Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, -0.03, 0.08)), K.BONE, bone * 0.95, 9)
+	lathe(body_st, PackedVector2Array([Vector2(0.08, 0.0), Vector2(0.06, 0.15), Vector2(0.03, 0.28), Vector2(0.0, 0.3)]), hx * Transform3D(Basis(Vector3.RIGHT, PI / 2.0 + 0.35), Vector3(0, -0.11, 0.05)), K.BONE, bone * 0.8, 8)
+	for sx in [-1.0, 1.0]:
+		ball(body_st, 0.05, hx * at(Vector3(sx * 0.075, 0.05, 0.12)), K.INK, ink, 6)  # socket
+		ball(body_st, 0.026, hx * at(Vector3(sx * 0.075, 0.05, 0.145)), K.EMBER, Color(1.0, 0.45, 0.12), 6)
+		prism(body_st, Vector3(0.05, 0.03, 0.09), hx * at(Vector3(sx * 0.08, 0.11, 0.1), 0.0, Vector3(0, 0, sx * 0.3)), K.BONE, bone)  # brow
+		for t in 3:
+			prism(body_st, Vector3(0.015, 0.04, 0.015), hx * Transform3D(Basis(Vector3.RIGHT, PI), Vector3(sx * (0.035 + t * 0.012), -0.08, 0.3 - t * 0.06)), K.BONE, Color(0.95, 0.92, 0.82))
+		seg(body_st, hx * Vector3(sx * 0.1, 0.12, -0.05), hx * Vector3(sx * 0.18, 0.28, -0.22), 0.03, 0.006, K.BONE, bone * 0.8, 5)  # swept horns
+	# tail
+	var tp := Vector3(0, 1.1, -0.72)
+	for k in 5:
+		var nx := tp + Vector3(0.0, -0.1 + k * 0.02, -0.18)
+		seg(body_st, tp, nx, 0.05 - k * 0.008, 0.042 - k * 0.008, K.INK, ink, 6)
+		tp = nx
+	var body_mesh := body_st.commit()
+	var leg_meshes: Array = []
+	for front in [true, false]:
+		var ls := new_st()
+		var knee := Vector3(0, -0.42, 0.12 if front else -0.16)
+		var foot := Vector3(0, -0.88, 0.02)
+		seg(ls, Vector3.ZERO, knee, 0.085, 0.05, K.INK, ink, 7)
+		seg(ls, knee, foot, 0.045, 0.03, K.INK, ink, 6)
+		ball(ls, 0.045, at(knee), K.BONE, bone * 0.85, 6)
+		for t in 3:  # claws
+			seg(ls, foot, foot + Vector3((t - 1) * 0.035, -0.04, 0.09), 0.014, 0.003, K.BONE, Color(0.9, 0.86, 0.74), 4)
+		leg_meshes.append(ls.commit())
 	for i in 9:
 		var b := Node3D.new()
-		b.name = "Shade%d" % i
-		var st := new_st()
-		lathe(st, PackedVector2Array([Vector2(0.0, -0.9), Vector2(0.35, -0.7), Vector2(0.45, 0.0), Vector2(0.38, 0.6), Vector2(0.2, 0.9), Vector2(0.0, 1.0)]),
-			Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 0.95, 0)), K.CLOTH, Color(1, 1, 1), 10, 0.25)
-		ball(st, 0.32, Transform3D(Basis.from_scale(Vector3(0.8, 0.8, 1.2)), Vector3(0, 1.25, 1.05)), K.CLOTH, Color(1, 1, 1), 10)
+		b.name = "Beast%d" % i
 		var body := MeshInstance3D.new()
-		body.mesh = st.commit()
-		body.material_override = beast_mat
+		body.mesh = body_mesh
+		body.material_override = surf
 		b.add_child(body)
-		var eyes := new_st()
-		for sx in [-1, 1]:
-			ball(eyes, 0.06, at(Vector3(sx * 0.13, 1.32, 1.33)), K.EMBER, Color(1.0, 0.4, 0.12), 6)
-		var em := MeshInstance3D.new()
-		em.mesh = eyes.commit()
-		em.material_override = surf
-		b.add_child(em)
 		var legs: Array = []
 		for k in 4:
 			var leg := Node3D.new()
-			leg.position = Vector3(0.22 * (1 if k % 2 else -1), 0.85, 0.55 if k < 2 else -0.55)
-			var ls := new_st()
-			cyl(ls, 0.07, 0.1, 0.85, at(Vector3(0, -0.42, 0)), K.CLOTH, Color(1, 1, 1), 6)
+			leg.position = Vector3(0.2 * (1 if k % 2 else -1), 0.92, 0.48 if k < 2 else -0.5)
 			var lm := MeshInstance3D.new()
-			lm.mesh = ls.commit()
-			lm.material_override = beast_mat
+			lm.mesh = leg_meshes[0 if k < 2 else 1]
+			lm.material_override = surf
 			leg.add_child(lm)
 			b.add_child(leg)
 			legs.append(leg)
-		var a := PI / 2.0 + (i - 4) * 0.42 + _rng.randf_range(-0.1, 0.1)  # out of the wood on your side, round to the flanks
-		var from := Vector3(cos(a) * 34.0, 0, sin(a) * 34.0 - 4.0)
-		var house: Dictionary = houses[i % houses.size()]
+		b.scale = Vector3.ONE * _rng.randf_range(0.85, 1.15)
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var a := side * (1.35 + (i / 2) * 0.16 + _rng.randf_range(-0.05, 0.05))  # out of the wood on both flanks of the village
+		var dir := Vector3(sin(a), 0, -cos(a))
+		var from := VILLAGE + dir * 30.0
+		var to := VILLAGE + dir * _rng.randf_range(9.0, 12.0)  # they creep to the village's edge, between it and you
 		b.visible = false
 		add_child(b)
-		beasts.append({"node": b, "legs": legs, "from": from, "to": (house["door"] as Vector3), "t": -_rng.randf_range(0.0, 3.0), "speed": _rng.randf_range(0.075, 0.11), "back": false})
+		beasts.append({"node": b, "legs": legs, "from": from, "to": to, "t": -_rng.randf_range(0.0, 3.0), "speed": _rng.randf_range(0.06, 0.09), "back": false})
 
 
 func release_beasts() -> void:

@@ -1,7 +1,7 @@
 class_name Launcher
 extends Node
 ## The start of the game (docs/STORY.md, scene by scene). The real island floats asleep under fireflies with the
-## gilt title above it and two wooden plaques: Wake and Skip story. Wake plays the
+## title above it and two wooden plaques: Wake and Skip story. Wake plays the
 ## immersive opening (scripts/ui/opening_stage.gd), then wakes the game and walks the player through the first day with small hints
 ## (pick up a card, set it on the grass, help someone, tap a villager, start the night).
 ## It owns no game rules: it only drives Game's public state (asleep, press_override) and reads it.
@@ -14,8 +14,9 @@ const TUTORIAL_HINT_POS := Vector3(0, 0.20, -Game.HALF - 0.08)
 const HINTS := [
 	"Pick up a card from the tray.",
 	"Set it on the grass and let go.",
-	"Someone is praying. Find the gold mote and tap them.",
+	"Someone is praying. Find the glowing mote and tap them.",
 	"Tap a villager to hear their thoughts.",
+	"Lift the cracked mirror by your side and look at the dark trees: it shows where the shades will come from tonight.",
 	"Night falls on its own. Hold the hourglass to hurry the day.",
 ]
 
@@ -37,6 +38,7 @@ var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once),
 
 
 func _ready() -> void:
+	UiFonts.install()
 	game = Game.new()
 	game.name = "Game"
 	add_child(game)
@@ -284,6 +286,8 @@ func _tutorial(delta: float) -> void:
 		3:
 			done = game.life != null and game.life.villagers.any(func(v): return v.taps > 0) or _step_time > 40.0
 		4:
+			done = game.foresight.showing or game.phase != Game.Phase.DAY or _step_time > 45.0
+		5:
 			done = game.phase != Game.Phase.DAY
 	if done:
 		_step += 1

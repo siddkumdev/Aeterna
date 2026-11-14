@@ -34,18 +34,15 @@ const CHAPTERS := [
 		[3.0, "narrator", "So Skotos rose out of the wood, and laid a curse upon your island."],
 		[12.0, "skotos", "At every nightfall, your Veil will fail."],
 		[20.0, "skotos", "Let us see how long they believe in a god who cannot keep the dark out."]]},
-	{"name": "IV.  THE FALL", "mood": "fall", "look": 0.0, "loops": ["story_fire", "story_burning"], "len": 30.0, "lines": [
-		[2.0, "narrator", "Five days to build. Five nights to hold."],
-		[9.0, "narrator", "The dark grows stronger each night."],
-		[17.0, "narrator", "And on the fifth night, the village always falls."]]},
-	{"name": "V.  THE HOURGLASS", "mood": "still", "look": 0.0, "loops": ["story_dusk"], "len": 28.0, "lines": [
-		[2.0, "narrator", "But you are a god."],
-		[7.0, "narrator", "You turn the hourglass, and time runs back."],
-		[17.0, "narrator", "The fires sink. The Veil knits itself together. The village wakes again. Only you remember."]]},
-	{"name": "VI.  YOUR TURN", "mood": "dawn", "look": 0.0, "loops": ["story_meadow"], "len": 30.0, "lines": [
-		[3.0, "maren", "Little god... if you are listening, keep us through one more night."],
+	{"name": "IV.  THE DARK COMES", "mood": "curse", "look": 0.0, "loops": ["story_dread"], "len": 30.0, "lines": [
+		[2.0, "narrator", "That night, the Veil broke."],
+		[9.0, "narrator", "And out of the Dark Wood came his shades, hungry, toward the village."],
+		[18.0, "narrator", "They come every night now. Each night, the dark grows stronger."]]},
+	{"name": "V.  YOUR TURN", "mood": "dawn", "look": 0.0, "loops": ["story_meadow"], "len": 40.0, "lines": [
+		[3.0, "maren", "Little god... if you are listening, keep us safe tonight."],
 		[11.5, "narrator", "Each day, build before the sun sets. Help your people: their faith is your light."],
-		[21.0, "narrator", "Watch over them."]]},
+		[20.0, "narrator", "And keep the cracked mirror close. Hold it up by day and look toward the Dark Wood: it shows where the shades will come from tonight."],
+		[31.0, "narrator", "Watch over them."]]},
 ]
 
 var game
@@ -230,7 +227,8 @@ func _build_overlay() -> void:
 	_cap_band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_cap.add_child(_cap_band)
 	_cap_name = _label(36, Vector3(0, 0.085, 0.002))
-	_cap_text = _label(44, Vector3(0, -0.02, 0.002))
+	_cap_name.font = UiFonts.title()
+	_cap_text = _label(50, Vector3(0, -0.02, 0.002))
 	_cap_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_cap_text.width = 1050.0
 	_cap_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
@@ -546,7 +544,7 @@ func _tick_3(t: float) -> void:
 
 # ------------------------------------------------------------------ IV. the fall: the Veil shatters, the dark comes, the roofs burn
 func _enter_4() -> void:
-	world.set_mood("fall", 0.0)
+	world.set_mood("curse", 0.0)
 	world.skotos.visible = true
 	world.skotos_eyes.light_energy = 4.0
 	world.veil_mat.set_shader_parameter("crack", 0.9)
@@ -566,91 +564,43 @@ func _tick_4(t: float) -> void:
 			var h: Dictionary = world.houses[i % world.houses.size()]
 			world.people[i].go(h["door"], "flee", 3.2)
 		world.people[0].go(StoryWorld.VILLAGE + Vector3(0, 0, 0.8), "walk", 1.0)
-	if _once("fire", 9.5):
-		for f in world.fires:
-			f.emitting = true
-		world.surf.set_shader_parameter("window_glow", 0.0)
-		create_tween().tween_property(world, "scorch", 1.0, 14.0)
-		_sound("story_thunder", Vector3.INF, -3.0)
+	if _once("doors", 9.5):
+		world.surf.set_shader_parameter("window_glow", 0.35)  # shutters closing
+		_sound("story_thunder", Vector3.INF, -6.0)
 	if _once("camp_out", 12.0):
 		for g in world.camp:
 			g.emitting = false
 
 
-# ------------------------------------------------------------------ V. the hourglass: you turn it, and time runs back
+# ------------------------------------------------------------------ V. your turn: the shades wait at the edge; Maren prays to you, and dawn drives them back
 func _enter_5() -> void:
-	world.set_mood("fall", 0.0)
-	world.hourglass.visible = true
-	world.hourglass.rotation = Vector3.ZERO
-	world.sand_top.scale = Vector3(1, 0.1, 1)
-	world.sand_bottom.scale = Vector3.ONE
-	world.surf.set_shader_parameter("ember_glow", 1.0)
-
-
-func _tick_5(t: float) -> void:
-	world.hourglass.position.y = 1.55 + sin(t * 1.1) * 0.03
-	if _once("turn", 5.0):
-		var tw := create_tween()
-		tw.tween_property(world.hourglass, "rotation:z", PI, 2.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-		_sound("story_rise", Vector3.INF, -3.0)
-	if _once("rewind", 7.5):
-		world.hourglass.rotation.z = 0.0  # the turned glass is the same glass upright: swap the sand round
-		world.sand_top.scale = Vector3.ONE
-		world.sand_bottom.scale = Vector3(1, 0.1, 1)
-		create_tween().tween_property(world.sand_top, "scale:y", 0.1, 18.0)
-		create_tween().tween_property(world.sand_bottom, "scale:y", 1.0, 18.0)
-		world.clock_rate = -1.6
-		world.sky_mat.set_shader_parameter("flow", -6.0)
-		world.unshards.emitting = true
-		for f in world.fires:
-			f.emitting = false
-		world.recall_beasts()
-		create_tween().tween_property(world, "scorch", 0.0, 9.0)
-		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 0.0, 9.0)
-		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.0, 1.0, 9.0)
-		var sk := create_tween()
-		sk.tween_property(world.skotos, "position:y", world.skotos.position.y - 40.0, 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		sk.parallel().tween_property(world.skotos_eyes, "light_energy", 0.0, 6.0)
-		world.set_mood("predawn", 12.0)
-		for i in world.people.size():
-			var p: StoryPerson = world.people[i]
-			p.go(StoryWorld.VILLAGE + Vector3(cos(i * 0.63) * 3.5, 0, sin(i * 0.63) * 3.5), "walk", 2.2)
-	if _once("still", 17.0):
-		world.clock_rate = 1.0
-		world.sky_mat.set_shader_parameter("flow", 1.0)
-		world.unshards.emitting = false
-		for g in world.camp:
-			g.emitting = true
-		world.surf.set_shader_parameter("window_glow", 1.0)
-
-
-# ------------------------------------------------------------------ VI. your turn: dawn again; they wake, and Maren prays to you
-func _enter_6() -> void:
-	world.set_mood("predawn", 0.0)
-	world.set_mood("dawn", 10.0)
+	world.set_mood("curse", 0.0)
+	world.set_mood("dawn", 14.0)
 	world.hourglass.visible = false
 	world.skotos.visible = false
 	world.scorch = 0.0
 	world.clock_rate = 1.0
-	world.veil_mat.set_shader_parameter("crack", 0.0)
-	world.veil_mat.set_shader_parameter("strength", 0.9)
+	world.veil_mat.set_shader_parameter("crack", 0.9)
+	world.veil_mat.set_shader_parameter("strength", 0.0)
 	world.wind = 0.8
 	for i in world.people.size():
 		var p: StoryPerson = world.people[i]
 		if i == 0:
-			p.place(Vector3(0.4, StoryWorld.height(0.4, -5.0), -5.0), PI)  # Maren on the path, near you, facing you
+			p.place(Vector3(0.3, StoryWorld.height(0.3, -3.2), -3.2), 0.0)  # Maren on the path, near you, facing you
 			continue
-		p.set_pose("sleep")
-	for b in world.beasts:
-		b["node"].visible = false
+		p.set_pose("idle")  # awake, watching from their doors
+		var h: Dictionary = world.houses[i % world.houses.size()]
+		var d: Vector3 = -(h["door"] as Vector3)  # face out toward you
+		p.place(h["door"], atan2(d.x, d.z))
 
 
-func _tick_6(t: float) -> void:
+func _tick_5(t: float) -> void:
 	if _once("kneel", 2.0):
 		world.people[0].set_pose("pray")
-	if _once("wake", 9.0):
-		for i in range(1, world.people.size()):
-			world.people[i].set_pose("idle")
+	if _once("dawn_back", 9.0):  # the light returns and the shades slink back into the wood
+		world.recall_beasts()
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.0, 0.9, 8.0)
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 0.0, 8.0)
 	if _once("faith", 13.0):
 		world.motes.emitting = true
 		_sound("story_rise", Vector3.INF, -8.0)

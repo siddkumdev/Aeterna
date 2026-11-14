@@ -1,10 +1,10 @@
 class_name Bubble
 extends Node3D
 ## A small parchment speech bubble that pops over a head (or the shrine), faces the player, and shrinks away.
-## Palette: wall_cream parchment, shell_gold edge, ink text. Billboard, unshaded, so it reads in any light.
+## Palette: wall_cream parchment, leather-brown edge, ink text. Billboard, unshaded, so it reads in any light.
 
 const PARCHMENT := Color("F4E4B8")
-const EDGE := Color("A87A1C")
+const EDGE := Color("5A3A24")  # leather brown edge (no gilding, 2026-11-14)
 const INK := Color("111C30")
 const WIDTH := 0.16  # m; compact enough for the village view while still readable at seated VR distance
 const FONT_SIZE := 42

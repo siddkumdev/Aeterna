@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-13, Steps 1-3 plus visual/rendering (`0869f55`) and opening/audio/UX (`631e37d`) fixes self-tested (508 checks) and pushed; awaiting Quest test.
+Last updated: 2026-11-14 (sykeriin: story/ledger/fonts/trees/characters/perf, see decisions.md 2026-11-14; desktop only, not on the Quest). Before: Steps 1-3 plus visual/rendering (`0869f55`) and opening/audio/UX (`631e37d`) fixes self-tested (508 checks) and pushed; awaiting Quest test.
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.

@@ -10,7 +10,7 @@ func _initialize() -> void:
 	root.add_child(l)
 	for i in 40:
 		await process_frame
-	l._press_plaque("wake")
+	l._press_plaque("skip")
 	l._skip = true
 	for i in 30:
 		await process_frame

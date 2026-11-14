@@ -1,10 +1,10 @@
 class_name StoryPanel
 extends Node3D
 ## A big parchment that floats over the island and shows lines of story: the opening narration and "The Tale". Same
-## look as the speech bubbles (wall_cream paper, shell_gold edge, ink text), only larger. Faces the player.
+## look as the speech bubbles (wall_cream paper, leather-brown edge, ink text), only larger. Faces the player.
 
 const PARCHMENT := Color("F4E4B8")
-const EDGE := Color("A87A1C")
+const EDGE := Color("5A3A24")  # leather brown edge (no gilding, 2026-11-14)
 const INK := Color("111C30")
 const W := 0.46
 const H := 0.20

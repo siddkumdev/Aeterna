@@ -10,7 +10,7 @@ const SIZE := Vector3(0.15, 0.052, 0.012)
 const WOOD := Color("9A6538")  # wood_mid
 const WOOD_HOT := Color("C6924C")  # wood_light
 const EDGE := Color("5B2920")  # wood_dark
-const GOLD := Color("E8B83A")  # shell_gold
+const GOLD := Color("3A2A20")  # dark iron studs (no gilding, 2026-11-14)
 const INK := Color("F4E4B8")  # wall_cream text on the dark wood
 
 var text := ""

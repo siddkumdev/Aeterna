@@ -11,7 +11,7 @@ const W := 0.063
 const H := 0.088
 const T := 0.002
 const LIFT_SCALE := 1.2
-const GOLD := Color("E8B83A")  # shell_gold
+const GOLD := Color("C9B48A")  # pale bone (no gilding, 2026-11-14)
 const FACE_SHADER := """
 shader_type spatial;
 render_mode unshaded;

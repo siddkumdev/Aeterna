@@ -35,11 +35,43 @@ func _ready() -> void:
 	_book = Node3D.new()
 	_book.name = "Book"
 	add_child(_book)
-	_box("cover_gold", Vector3(W + 0.020, PH + 0.020, 0.003), Vector3(0, 0, -0.0075), Color("E8B83A"), 18)
-	_box("cover_oak", Vector3(W + 0.012, PH + 0.012, 0.004), Vector3(0, 0, -0.0045), Color("5B2920"), 19)
-	_box("spine", Vector3(0.010, PH + 0.014, 0.009), Vector3(0, 0, -0.0010), Color("3F1B15"), 19)
-	_box("pages_l", Vector3(PW - 0.002, PH - 0.002, 0.005), Vector3(-PW / 2.0, 0, -0.0020), Color("E8D29A"), 20)
-	_box("pages_r", Vector3(PW - 0.002, PH - 0.002, 0.005), Vector3(PW / 2.0, 0, -0.0020), Color("E8D29A"), 20)
+	# A leather-bound register (the user, 2026-11-14: a real book, leather, cream pages, no gilding): thick boards
+	# that overhang the pages, a rounded spine with raised bands, a stack of page edges on each side, a stitched
+	# gutter and a ribbon. Drawn back to front by render priority (no depth test, like the other panels).
+	var leather := Color("4A2A18")
+	_box("cover_l", Vector3(PW + 0.012, PH + 0.016, 0.007), Vector3(-PW / 2.0 - 0.004, 0, -0.0125), leather, 16, true)
+	_box("cover_r", Vector3(PW + 0.012, PH + 0.016, 0.007), Vector3(PW / 2.0 + 0.004, 0, -0.0125), leather, 16, true)
+	_box("cover_lip_l", Vector3(0.004, PH + 0.016, 0.009), Vector3(-W / 2.0 - 0.008, 0, -0.011), leather.lightened(0.08), 17, true)
+	_box("cover_lip_r", Vector3(0.004, PH + 0.016, 0.009), Vector3(W / 2.0 + 0.008, 0, -0.011), leather.lightened(0.08), 17, true)
+	var spine := MeshInstance3D.new()
+	var sc := CylinderMesh.new()
+	sc.top_radius = 0.011
+	sc.bottom_radius = 0.011
+	sc.height = PH + 0.016
+	spine.mesh = sc
+	spine.material_override = _mat(leather.darkened(0.15), 16, true)
+	spine.position = Vector3(0, 0, -0.016)
+	_book.add_child(spine)
+	for k in 4:  # raised bands across the spine
+		var band := MeshInstance3D.new()
+		var bc := CylinderMesh.new()
+		bc.top_radius = 0.0125
+		bc.bottom_radius = 0.0125
+		bc.height = 0.004
+		band.mesh = bc
+		band.material_override = _mat(leather.darkened(0.3), 17, true)
+		band.position = Vector3(0, lerpf(-PH * 0.36, PH * 0.36, k / 3.0), -0.016)
+		_book.add_child(band)
+	var edge := Color("D9C9A4")
+	for side in [-1.0, 1.0]:  # page stacks: thin slabs, each a touch smaller, so the edge shows its leaves
+		for k in 5:
+			var inset := 0.0012 * k
+			_box("pages_%d_%d" % [int(side), k], Vector3(PW - 0.003 - inset, PH - 0.004 - inset * 1.5, 0.0019),
+				Vector3(side * (PW / 2.0 - inset / 2.0), 0, -0.0012 - 0.0019 * k), edge.darkened(0.04 * (k % 2) + 0.02 * k), 19 - k / 3, true)
+	_box("gutter", Vector3(0.006, PH - 0.004, 0.0004), Vector3(0, 0, 0.0012), Color(0.22, 0.13, 0.07), 23)
+	for k in 9:  # the binding thread showing in the gutter
+		_box("stitch_%d" % k, Vector3(0.0012, 0.008, 0.0004), Vector3(0, lerpf(-PH * 0.42, PH * 0.42, k / 8.0), 0.0016), Color("C9B48A"), 24)
+	_box("ribbon", Vector3(0.006, 0.022, 0.0006), Vector3(0.012, -PH / 2.0 - 0.006, 0.0014), Color("6E1E16"), 24)
 	_face("left", Vector3(-PW / 2.0, 0, 0.0008), _book, 21)
 	_face("right", Vector3(PW / 2.0, 0, 0.0008), _book, 21)
 	_leaf = Node3D.new()
@@ -53,22 +85,26 @@ func _ready() -> void:
 	scale = Vector3.ONE * 0.01
 
 
-func _mat(col: Color, prio: int) -> StandardMaterial3D:
+func _mat(col: Color, prio: int, lit := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if lit:  # leather and page edges take the light, so the book has form
+		m.roughness = 0.75
+		m.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	else:
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = col
 	m.no_depth_test = true  # always readable, like the other panels
 	m.render_priority = prio
 	return m
 
 
-func _box(nm: String, size: Vector3, at: Vector3, col: Color, prio: int) -> void:
+func _box(nm: String, size: Vector3, at: Vector3, col: Color, prio: int, lit := false) -> void:
 	var mi := MeshInstance3D.new()
 	mi.name = nm
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	mi.material_override = _mat(col, prio)
+	mi.material_override = _mat(col, prio, lit)
 	mi.position = at
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_book.add_child(mi)

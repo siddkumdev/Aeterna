@@ -1,9 +1,9 @@
 extends SceneTree
 ## The immersive opening (desktop window): --xr-mode off --path godot -s res://tools/opening_shot.gd -- OUT_PREFIX
-## Plays it at 6x speed and writes OUT_PREFIX_c1a.png .. _c6b.png (early and late in each chapter).
+## Plays it at 6x speed and writes OUT_PREFIX_c1a.png .. _c5b.png (early and late in each chapter).
 
 const SHOTS := [[[9.0, "a"], [29.0, "b"]], [[7.0, "a"], [21.0, "b"]], [[11.0, "a"], [27.0, "b"]],
-	[[7.0, "a"], [20.0, "b"]], [[4.0, "a"], [14.0, "b"]], [[6.0, "a"], [22.0, "b"]]]
+	[[7.0, "a"], [20.0, "b"]], [[6.0, "a"], [22.0, "b"]]]
 
 
 func _initialize() -> void:

@@ -341,3 +341,11 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - Six chapters with fades, low head-locked captions, typed text with per-speaker voice blips (narrator, Skotos, Maren), and ambience per chapter.
 - Skotos is a huge smoke god (~60 m) in the Dark Wood behind the player, purple rim and eyes (Warden purple, no blue).
 - The Tale plaque is removed; the title has Wake and a "Skip story" plaque. Skipping during the story: hold a pinch 1.5 s (Esc on desktop). Fixes the story vanishing on the first click.
+
+## 2026-11-14: story look, ledger, fonts, Quest performance (sykeriin)
+- Opening threat: Veil cracks + shades, no fire. The rewind moves to the first in-game fall.
+- Ledger: a real book. Leather covers, cream pages, dark-brown ink, no gilding. No gold or gilt anywhere in the UI (title card, cards, plaques, bubbles, story panel, ledger).
+- Fonts: Cinzel (titles) and EB Garamond (text), both OFL, from github.com/google/fonts.
+- Story graphics: denser grass (kept), realistic spruces and broadleaf trees (real limbs, sprays along limbs, a leader instead of a star top), new ink-and-bone beasts, better villagers (smooth shading, elbows, hands, knees), Maren as an elder with shawl, apron and bun.
+- Performance: hold 72 fps on every Quest. PerfTier sets per-device quality (HIGH = Quest 3/3S/Pro, LOW = Quest 2/1/unknown) and steps quality down when frames drop.
+- The cracked mirror (lens) is explained in the story, the first-day hints and the ledger.

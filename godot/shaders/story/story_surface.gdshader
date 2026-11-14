@@ -71,17 +71,17 @@ void fragment() {
 		ao = mix(0.5, 1.0, course);
 		rough = 1.0;
 	} else if (kind == 4.0) {  // woven wool and linen
-		vec2 u = q * 260.0;
-		float weave = (sin(u.x) * sin(u.y)) * 0.5 + 0.5;
-		col = tint * (0.82 + 0.18 * weave) * (0.85 + 0.3 * fbm3(lp * 8.0, 2));
+		// soft folds and wear, no fine weave (it shimmered into stripes at a distance)
+		float folds = fbm3(vec3(lp.x * 6.0, lp.y * 2.5, lp.z * 6.0), 3);
+		col = tint * (0.9 + 0.12 * folds);  // low contrast, so no contour rings
 		rough = 0.95;
 		back = col * 0.15;
 	} else if (kind == 5.0) {  // skin: warm, blotchy, light passes through the edges
 		float b = fbm3(lp * 30.0, 3);
-		col = tint * (0.9 + 0.18 * b);
-		col = mix(col, col * vec3(1.08, 0.86, 0.82), smoothstep(0.4, 0.7, fbm3(lp * 9.0, 2)) * 0.5);
-		rough = 0.55;
-		back = vec3(0.5, 0.14, 0.08) * 0.5;
+		col = tint * (0.95 + 0.06 * b);  // even skin: a faint grain, no blotches
+		col = mix(col, col * vec3(1.05, 0.92, 0.9), smoothstep(0.45, 0.7, fbm3(lp * 6.0, 2)) * 0.25);
+		rough = 0.6;
+		back = tint * vec3(0.35, 0.16, 0.12) * 0.35;  // a little warm light through the ears and fingers
 	} else if (kind == 6.0) {  // hair
 		float s = vnoise2(vec2((lp.x + lp.z) * 140.0, lp.y * 8.0));
 		col = tint * (0.6 + 0.6 * s);
@@ -124,6 +124,17 @@ void fragment() {
 		col = tint * (0.7 + 0.4 * fbm3(lp * 12.0, 3));
 		metal = 0.8;
 		rough = 0.6;
+	} else if (kind == 14.0) {  // bone: pitted, yellowed and dirty in the hollows
+		float n = fbm3(lp * 30.0, 3);
+		col = tint * (0.78 + 0.3 * n);
+		col = mix(col, col * vec3(0.7, 0.62, 0.48), smoothstep(0.55, 0.3, n));
+		rough = 0.55;
+		ao = 0.75 + 0.25 * n;
+	} else if (kind == 15.0) {  // ink hide: near-black, a faint oily sheen and dull ember veins
+		float n = fbm3(lp * 9.0 + vec3(0.0, clock * 0.15, 0.0), 3);
+		col = tint * (0.8 + 0.4 * n);
+		emit += vec3(1.0, 0.3, 0.06) * smoothstep(0.62, 0.7, n) * 0.6;
+		rough = 0.35;
 	}
 	col *= 1.0 - scorch * 0.6 * float(kind < 4.0);
 	ALBEDO = col;

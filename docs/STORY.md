@@ -139,3 +139,9 @@ A paper-cutout puppet theatre in front of the player before the island appears (
 4. **The Fall:** "Five days to build. Five nights to hold." / "The dark grows stronger each night." / "And on the fifth night, the village always falls."
 5. **The Hourglass:** "But you are a god." / "You turn the hourglass, and time runs back." / "The village wakes again. Only you remember."
 6. **Your Turn:** "Each day, build before the sun sets." / "Help your people. Their faith is your light." / "Watch over them."
+
+
+## The opening, revised (2026-11-14, sykeriin)
+- Five chapters: I The Island, II The Forgotten, III The Curse, IV The Dark Comes, V Your Turn. No fire and no burning houses: the threat is the Veil cracking and ink-and-bone shades coming out of the Dark Wood ("That night, the Veil broke." / "And out of the Dark Wood came his shades, hungry, toward the village." / "They come every night now. Each night, the dark grows stronger.").
+- The opening no longer shows the rewind or the loop. The hourglass/rewind lines play at the first loop-back in the game (loop 1): "But you are a god." / "You turn the hourglass..." / "The Veil knits itself together... Only you remember."
+- Chapter V explains the cracked mirror (the Crystal Lens): "And keep the cracked mirror close. Hold it up by day and look toward the Dark Wood: it shows where the shades will come from tonight." The first-day walkthrough has a matching hint (step 5 of 6), and the ledger's How to Play page has the same line.

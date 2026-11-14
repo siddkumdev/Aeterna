@@ -1,14 +1,13 @@
 class_name TitleCard
 extends Node3D
-## Gilded words that come up over the island for a moment and fade (the user, 2026-11-11: after the hourglass,
+## Words that come up over the island for a moment and fade (the user, 2026-11-11: after the hourglass,
 ## "text with gilded edges ... time has been rewinded loop 2"). No box: gold lettering with a dark edge between two
 ## thin gilt rules. TitleCard.show_over(parent, at, "TIME HAS BEEN REWOUND", "Loop II") frees itself when done.
 
 const SIZE := Vector2(1200, 360)
 const W := 0.8  # m
-const GOLD := Color("E8B83A")
-const GOLD_LIGHT := Color("FFD45A")  # fire_yellow
-const EDGE := Color("5B2920")  # wood_dark
+const EDGE := Color("1E140E")  # a soft ink edge so the words read over a bright sky
+const CREAM := Color("F6E9CF")
 
 var title := ""
 var sub := ""
@@ -22,25 +21,25 @@ class Face extends Control:
 	var px := 84
 
 	func _draw() -> void:
-		var f := ThemeDB.fallback_font
+		## Plain lettering in Cinzel, warm cream with a soft dark edge, one thin rule under the title (the user,
+		## 2026-11-14: the gilded frame did not make sense, so it is gone).
+		var f := UiFonts.title()
 		var mid := TitleCard.SIZE.x / 2.0
-		for y in [58.0, 302.0]:  # a double rule with a diamond at its middle, above and below
-			draw_line(Vector2(140, y), Vector2(TitleCard.SIZE.x - 140, y), TitleCard.EDGE, 9.0)
-			draw_line(Vector2(140, y), Vector2(TitleCard.SIZE.x - 140, y), TitleCard.GOLD, 5.0)
-			draw_colored_polygon(PackedVector2Array([Vector2(mid - 22, y), Vector2(mid, y - 15), Vector2(mid + 22, y), Vector2(mid, y + 15)]), TitleCard.EDGE)
-			draw_colored_polygon(PackedVector2Array([Vector2(mid - 16, y), Vector2(mid, y - 10), Vector2(mid + 16, y), Vector2(mid, y + 10)]), TitleCard.GOLD_LIGHT)
-			for x in [140.0, TitleCard.SIZE.x - 140.0]:
-				draw_circle(Vector2(x, y), 9, TitleCard.EDGE)
-				draw_circle(Vector2(x, y), 6, TitleCard.GOLD_LIGHT)
-		_line(f, title, 168 + (px - 84) * 0.3, px, TitleCard.GOLD_LIGHT)
-		_line(f, sub, 262, 64, TitleCard.GOLD_LIGHT)
+		var y := 206.0
+		for k in 24:  # a hairline that fades toward its ends
+			var x0 := lerpf(mid - 300.0, mid, k / 24.0)
+			var a := (k + 1) / 24.0
+			draw_line(Vector2(x0, y), Vector2(x0 + 12.5, y), Color(TitleCard.CREAM, a * 0.8), 2.5)
+			draw_line(Vector2(TitleCard.SIZE.x - x0 - 12.5, y), Vector2(TitleCard.SIZE.x - x0, y), Color(TitleCard.CREAM, a * 0.8), 2.5)
+		_line(f, title, 168 + (px - 84) * 0.3, px, TitleCard.CREAM)
+		_line(UiFonts.italic(), sub, 270, 60, TitleCard.CREAM.darkened(0.08))
 
 	func _line(f: Font, s: String, y: float, px: int, col: Color) -> void:
 		var w := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 		var fs := px if w <= TitleCard.SIZE.x - 120 else int(px * (TitleCard.SIZE.x - 120) / w)
 		w = f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var at := Vector2((TitleCard.SIZE.x - w) / 2.0, y)
-		draw_string_outline(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 14, TitleCard.EDGE)
+		draw_string_outline(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 10, Color(TitleCard.EDGE, 0.75))
 		draw_string(f, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 

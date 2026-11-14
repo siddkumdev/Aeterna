@@ -7,14 +7,15 @@ extends Control
 
 const SIZE := Vector2(560, 760)
 const COUNT := 6  # God, Village, Towers, Spells, Quests, How to play
-const PARCHMENT := Color("F4E4B8")
-const PARCH_SHADE := Color("E8D29A")
-const INK := Color("111C30")
-const GOLD := Color("E8B83A")
-const GOLD_DARK := Color("A87A1C")
-const OAK := Color("5B2920")
-const OAK_LIGHT := Color("9A6538")
-const EMBER := Color("E8452C")
+# Cream paper and dark-brown iron-gall ink (the user, 2026-11-14: a real book, no gilding, nicer text).
+const PARCHMENT := Color("EFE3C8")
+const PARCH_SHADE := Color("E2D3B0")
+const INK := Color("3A2618")
+const GOLD := Color("7A5A40")  # brown ink wash (no gilding)
+const GOLD_DARK := Color(0.36, 0.24, 0.15, 0.45)  # a faint ruled line
+const OAK := Color("2E1C10")  # headings
+const OAK_LIGHT := Color("7A5A40")  # small print
+const EMBER := Color("9C3420")  # the red-brown rubric ink
 const GREEN := Color("5D8548")  # leaf_green
 const QUIT_RECT := Rect2(140, SIZE.y - 112, SIZE.x - 280, 46)
 const ROMAN: Array[String] = ["I", "II", "III", "IV", "V", "VI", "VII"]
@@ -22,8 +23,9 @@ const TITLES: Array[String] = ["The God", "The Village", "Towers", "Spells", "Qu
 const HOW: Array[String] = [
 	"Pick a card up from the tray, set it on the grass and let go.",
 	"Pinch and hold a tower to crush it back into faith.",
-	"Tap a villager to hear their thoughts. Gold motes mark quests: carry, touch or tap to help.",
+	"Tap a villager to hear their thoughts. Glowing motes mark quests: carry, touch or tap to help.",
 	"Hold the hourglass to hurry the day. Night falls on its own.",
+	"By day, lift the cracked mirror and look at the dark trees: it shows where the shades will come from tonight.",
 	"Hold the island's rim to move or turn it; two hands resize it.",
 	"Left palm up for a second opens this book. Tap the right page to turn forward, the left to turn back.",
 ]
@@ -39,12 +41,12 @@ func _init() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, SIZE), PARCHMENT)
-	draw_rect(Rect2(14, 14, SIZE.x - 28, SIZE.y - 28), GOLD_DARK, false, 3.0)
-	draw_rect(Rect2(22, 22, SIZE.x - 44, SIZE.y - 44), GOLD, false, 2.0)
-	for p in [Vector2(30, 30), Vector2(SIZE.x - 30, 30), Vector2(30, SIZE.y - 30), Vector2(SIZE.x - 30, SIZE.y - 30)]:
-		draw_circle(p, 6, GOLD_DARK)
-	_center(TITLES[clampi(page, 0, COUNT - 1)], Vector2(SIZE.x / 2.0, 78), 40, OAK)
-	draw_line(Vector2(60, 98), Vector2(SIZE.x - 60, 98), GOLD_DARK, 3.0)
+	_paper()
+	var head: String = TITLES[clampi(page, 0, COUNT - 1)]
+	var hw: float = UiFonts.title().get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, 38).x
+	draw_string(UiFonts.title(), Vector2((SIZE.x - hw) / 2.0, 80), head, HORIZONTAL_ALIGNMENT_LEFT, -1, 38, OAK)
+	draw_line(Vector2(SIZE.x / 2.0 - 90, 100), Vector2(SIZE.x / 2.0 + 90, 100), Color(INK, 0.6), 1.5)
+	draw_circle(Vector2(SIZE.x / 2.0, 100), 3.0, Color(INK, 0.7))
 	_center(ROMAN[clampi(page, 0, ROMAN.size() - 1)], Vector2(SIZE.x / 2.0, SIZE.y - 38), 24, OAK_LIGHT)
 	match page:
 		0:
@@ -109,8 +111,7 @@ func _page_village() -> void:
 	for i in mini(folk.size(), 12):
 		var f: Dictionary = folk[i]
 		var r := Rect2(40, 116 + i * 52, SIZE.x - 80, 48)
-		draw_rect(r, GOLD_DARK)
-		draw_rect(r.grow(-2), PARCH_SHADE)
+		_rule(r)
 		_left(String(f.get("name", "")), r.position + Vector2(10, 21), 20, OAK)
 		_left(String(f.get("role", "")), r.position + Vector2(190, 21), 16, OAK_LIGHT)
 		var said := String(f.get("said", ""))
@@ -122,8 +123,7 @@ func _page_cards(label: String, list: Array) -> void:
 	for i in list.size():
 		var c: Dictionary = list[i]
 		var r := Rect2(40, 160 + i * 68, SIZE.x - 80, 62)
-		draw_rect(r, GOLD_DARK)
-		draw_rect(r.grow(-3), PARCH_SHADE)
+		_rule(r)
 		_fit(String(c.get("title", "")), r.position + Vector2(12, 26), 22, OAK, r.size.x - 24)
 		var bits: Array[String] = []
 		for s in c.get("stats", []):
@@ -136,12 +136,11 @@ func _page_quests() -> void:
 	var quests: Array = data.get("quests", [])
 	var y := 124.0
 	if quests.is_empty():
-		_wrap_center("No one has asked for anything yet today. Gold motes will appear on the houses.", Rect2(60, 260, SIZE.x - 120, 200), 24, OAK_LIGHT)
+		_wrap_center("No one has asked for anything yet today. Glowing motes will appear on the houses.", Rect2(60, 260, SIZE.x - 120, 200), 24, OAK_LIGHT)
 	for q: Dictionary in quests:
 		var r := Rect2(36, y, SIZE.x - 72, 138)
 		var done: bool = q.get("done", false)
-		draw_rect(r, GOLD_DARK)
-		draw_rect(r.grow(-3), PARCH_SHADE if not done else Color("D8E0B4"))
+		_rule(r)
 		_fit(String(q.get("name", "")), r.position + Vector2(14, 30), 24, OAK, r.size.x - 120)
 		_fit("asked by %s" % q.get("who", ""), r.position + Vector2(14, 54), 17, OAK_LIGHT, r.size.x - 120)
 		_fit("\"%s\"" % q.get("ask", ""), r.position + Vector2(14, 84), 17, INK, r.size.x - 120)
@@ -159,17 +158,39 @@ func _page_quests() -> void:
 func _page_how() -> void:
 	var y := 122.0
 	for line in HOW:
-		draw_circle(Vector2(56, y + 14), 5, GOLD_DARK)
+		draw_circle(Vector2(56, y + 14), 3.5, INK)
 		_wrap_left(line, Rect2(76, y, SIZE.x - 120, 78), 20, INK)
 		y += 78
 	_center("Watch over them.", Vector2(SIZE.x / 2.0, SIZE.y - 134), 24, EMBER)
-	draw_rect(QUIT_RECT, EMBER)
-	draw_rect(QUIT_RECT.grow(-3), Color("E8C888"))
+	draw_rect(QUIT_RECT, Color(EMBER, 0.12))
+	draw_rect(QUIT_RECT, EMBER, false, 2.0)
 	_center("Quit Game", Vector2(SIZE.x / 2.0, QUIT_RECT.position.y + 32), 22, INK)
 
 
 func _font() -> Font:
-	return ThemeDB.fallback_font
+	return UiFonts.text()
+
+
+func _rule(r: Rect2) -> void:
+	## A ruled line under an entry, as in a hand-kept register.
+	draw_line(Vector2(r.position.x, r.end.y), Vector2(r.end.x, r.end.y), GOLD_DARK, 1.2)
+
+
+func _paper() -> void:
+	## Aged paper: browned edges, a shadow into the gutter on the spine side, a few foxing spots. Seeded per page so
+	## it does not flicker on redraw.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 97 + page * 13
+	for k in 14:  # edges brown a little toward the outside
+		var g := 2.0 + k * 3.0
+		draw_rect(Rect2(g, g, SIZE.x - 2.0 * g, SIZE.y - 2.0 * g), Color(0.55, 0.38, 0.2, 0.05 * (1.0 - k / 14.0)), false, 6.0)
+	var spine_left := page % 2 == 1  # right-hand pages have the spine on their left edge
+	for k in 30:  # the page curving down into the gutter
+		var x := float(k) * 2.0 if spine_left else SIZE.x - float(k + 1) * 2.0
+		draw_rect(Rect2(x, 0, 2.0, SIZE.y), Color(0.25, 0.15, 0.08, 0.2 * pow(1.0 - k / 30.0, 2.0)))
+	for k in 18:
+		var c := Vector2(rng.randf_range(20, SIZE.x - 20), rng.randf_range(20, SIZE.y - 20))
+		draw_circle(c, rng.randf_range(1.0, 4.5), Color(0.5, 0.32, 0.15, rng.randf_range(0.04, 0.12)))
 
 
 func _center(s: String, at: Vector2, px: int, col: Color) -> void:
