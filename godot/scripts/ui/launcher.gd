@@ -1,8 +1,8 @@
 class_name Launcher
 extends Node
 ## The start of the game (docs/STORY.md, scene by scene). The real island floats asleep under fireflies with the
-## gilt title above it and three wooden plaques on the table: Wake, The Tale, Hands / Controllers. Wake plays the
-## opening narration on parchment, then wakes the game and walks the player through the first day with small hints
+## gilt title above it and two wooden plaques: Wake and Skip story. Wake plays the
+## immersive opening (scripts/ui/opening_stage.gd), then wakes the game and walks the player through the first day with small hints
 ## (pick up a card, set it on the grass, help someone, tap a villager, start the night).
 ## It owns no game rules: it only drives Game's public state (asleep, press_override) and reads it.
 
@@ -11,7 +11,6 @@ const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
 const TUTORIAL_HINT_POS := Vector3(0, 0.20, -Game.HALF - 0.08)
-const TALE := "You are a very small god. Your whole world is this island: a meadow, twelve people, a well and a shrine.\n\nYour Veil, woven from their faith, keeps the Dark Wood out. But Skotos, a god the world forgot, has cursed it: every nightfall, it breaks.\n\nPlace towers. Cast your spells. Help your people. And if the worst happens... you are a god. You can try again."
 const HINTS := [
 	"Pick up a card from the tray.",
 	"Set it on the grass and let go.",
@@ -25,8 +24,7 @@ static var prefer_controllers := false  # placeholder for the Hands / Controller
 var game: Game
 var _title: Node3D
 var _plaques := {}  # id -> Plaque
-var _panel: StoryPanel
-var _state := "title"  # title / tale / narrating / playing
+var _state := "title"  # title / narrating / playing
 var _skip := false
 var _step := 0
 var _step_time := 0.0
@@ -71,27 +69,27 @@ func _build_title() -> void:
 	wake.scale = Vector3.ONE * 1.7
 	_title.add_child(wake)
 	_plaques["wake"] = wake
-	var tale := Plaque.make("The Tale")
-	tale.position = Vector3(0.3, 0.03, half + 0.1)
-	tale.rotation_degrees.x = -50
-	tale.scale = Vector3.ONE * 0.8
-	_title.add_child(tale)
-	_plaques["tale"] = tale
+	# The Tale parchment is gone (sykeriin 2026-11-14): Wake plays the story; this one goes straight to the game.
+	var skip := Plaque.make("Skip story")
+	skip.position = Vector3(0.32, 0.03, half + 0.1)
+	skip.rotation_degrees.x = -50
+	skip.scale = Vector3.ONE * 0.8
+	_title.add_child(skip)
+	_plaques["skip"] = skip
 	if game._xr:
 		_xr_rig = Node3D.new()
 		_xr_rig.name = "TitleRig"
 		_xr_rig.visible = false  # shown when the headset's pose is known (_place_xr_rig)
 		game.add_child(_xr_rig)
-		for id in ["wake", "tale"]:
+		for id in ["wake", "skip"]:
 			var pl: Node3D = _plaques[id]
 			pl.get_parent().remove_child(pl)
 			_xr_rig.add_child(pl)
 			pl.rotation_degrees = Vector3(-30, 0, 0)
 		(_plaques["wake"] as Node3D).position = Vector3(-0.11, 0, 0)
 		(_plaques["wake"] as Node3D).scale = Vector3.ONE * 1.5
-		(_plaques["tale"] as Node3D).position = Vector3(0.24, -0.03, 0.02)
-		(_plaques["tale"] as Node3D).scale = Vector3.ONE * 0.85
-	_panel = StoryPanel.make(game.board, Vector3(0, 0.34, 0.15))
+		(_plaques["skip"] as Node3D).position = Vector3(0.26, -0.03, 0.02)
+		(_plaques["skip"] as Node3D).scale = Vector3.ONE * 0.85
 	_title.add_child(_fireflies())
 	if game.veil:
 		game.veil.snap(1.0, 0.0)
@@ -135,9 +133,9 @@ func _place_xr_rig() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if _auto_at >= 0.0 and _state == "title":  # the whole story starts by itself; hovering The Tale pauses it
-		var tale_hot := _plaques.has("tale") and (_plaques["tale"] as Plaque).hot
-		if not tale_hot:
+	if _auto_at >= 0.0 and _state == "title":  # the whole story starts by itself; hovering Skip story pauses it
+		var skip_hot := _plaques.has("skip") and (_plaques["skip"] as Plaque).hot
+		if not skip_hot:
 			_auto_at -= delta
 			if _auto_at < 0.0:
 				_press_plaque("wake")
@@ -187,10 +185,6 @@ func _on_press(world: Vector3, origin: Vector3, dir: Vector3) -> bool:
 	if touched != "":
 		_press_plaque(touched)
 		return true
-	if _state == "tale":
-		_state = "title"
-		_auto_at = AUTO_START
-		_close_panel()
 	return true  # nothing else can be pressed while the title is up
 
 
@@ -200,60 +194,43 @@ func _touch_pad() -> float:
 
 
 func _press_plaque(id: String) -> void:
+	if _state != "title":  # one press only: a press registered twice must not start the story twice
+		return
 	game.snd("menu_open")
 	match id:
 		"wake":
-			_wake()
-		"tale":
-			if _state == "tale":
-				_state = "title"
-				_auto_at = AUTO_START
-				_close_panel()
-			else:
-				_state = "tale"
-				_show_panel(TALE)
+			_wake(true)
+		"skip":
+			_wake(false)
 
 
-func _show_panel(line: String) -> void:
-	## The title steps aside while a parchment is open.
-	if is_instance_valid(_card):
-		_card.visible = false
-	_panel.position = Vector3(0, 0.3, 0.1)
-	_panel.show_text(line)
 
 
-func _close_panel() -> void:
-	_panel.hide_panel()
-	if is_instance_valid(_card):
-		_card.visible = true
-
-
-func _wake() -> void:
-	## The opening, played on the island itself (the user, 2026-11-10: "explain the story piece by piece in an
-	## in-game rendered animation"). Each beat is a line of gilded words and something that happens to the real
-	## island: dawn, the people waking, their faith rising into the Veil, the dusk, Skotos's crack, the Veil
-	## shattering, the hourglass turning time back, dawn again. Any press skips it.
+func _wake(story := true) -> void:
+	## story = true: the immersive opening (scripts/ui/opening_stage.gd), then the first dawn. false (Skip story): the
+	## first dawn straight away.
 	_state = "narrating"
 	_skip = false
-	_panel.hide_panel()
 	_title.visible = false
 	if _xr_rig:
 		_xr_rig.queue_free()
 		_xr_rig = null
 	var v: VeilDome = game.veil
-	# The opening is a puppet theatre of its own in front of you (scripts/ui/opening_stage.gd), not the island acted out.
 	game.board.visible = false
 	if v:
 		v.snap(0.0, 0.0)
-	var stage := OpeningStage.new()
-	stage.game = game
-	stage.name = "OpeningStage"
-	game.add_child(stage)
-	var cam: Camera3D = game._xr_cam if game._xr_cam else get_viewport().get_camera_3d()
-	stage.place(cam, game.board.global_position + Vector3(0, 0.5, 1.0))
-	await stage.play()
-	_skip = stage._skipped
-	stage.queue_free()
+	if story:
+		var stage := OpeningStage.new()
+		stage.game = game
+		stage.name = "OpeningStage"
+		game.add_child(stage)
+		var cam: Camera3D = game._xr_cam if game._xr_cam else get_viewport().get_camera_3d()
+		stage.place(cam, game.board.global_position + Vector3(0, 0.5, 1.0))
+		await stage.play()
+		_skip = stage._skipped
+		stage.queue_free()
+	else:
+		_skip = true
 	game.board.visible = true
 	if game.lighting:
 		game.lighting.set_mood("dawn", 0.5)

@@ -1,6 +1,10 @@
 extends SceneTree
-## The puppet-theatre opening (desktop window): --xr-mode off --path godot -s res://tools/opening_shot.gd -- OUT_PREFIX
+## The immersive opening (desktop window): --xr-mode off --path godot -s res://tools/opening_shot.gd -- OUT_PREFIX
 ## Plays it at 6x speed and writes OUT_PREFIX_c1a.png .. _c6b.png (early and late in each chapter).
+
+const SHOTS := [[[9.0, "a"], [29.0, "b"]], [[7.0, "a"], [21.0, "b"]], [[11.0, "a"], [27.0, "b"]],
+	[[7.0, "a"], [20.0, "b"]], [[4.0, "a"], [14.0, "b"]], [[6.0, "a"], [22.0, "b"]]]
+
 
 func _initialize() -> void:
 	var prefix := OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "opening"
@@ -26,7 +30,9 @@ func _initialize() -> void:
 		var st: OpeningStage = l.game.get_node_or_null("OpeningStage")
 		if st == null:
 			continue
-		for pair in [[5.0, "a"], [16.0, "b"]]:
+		if st._chapter < 0:
+			continue
+		for pair in SHOTS[st._chapter]:
 			var key := "c%d%s" % [st._chapter + 1, pair[1]]
 			if st._t >= pair[0] and not got.has(key):
 				got[key] = true

@@ -792,6 +792,107 @@ def fog_loop(r, v):
     return mix((pk(hush), 0, 0.9), (pk(tone), 0, 0.15), seconds=d)
 
 
+# ============================================================================== THE STORY (opening, 2026-11-14)
+# The immersive opening (scripts/story/): its own ambience beds and the speakers' voices, all from the same recorded
+# grains as the rest of the game. Voices are gibberish syllables ("boops") at each speaker's own pitch, one per typed word.
+
+@recipe("story_meadow", "A39", bus="ambience", peak=-12, rms=-28, loop=True, xfade=0.6, note="story loop: open meadow at dawn, real wind in the grass, birdsong close and far, a faint sheep bell")
+def story_meadow(r, v):
+    d = 16.6
+    wind = lp(bed("bed_wind", r, d), 3200)
+    birds = lp(bed("bed_birds", r, d), 9000)
+    bells = far(lp(grain("sheep_bells", r, 1.0, seconds=3.0), 5000), r, 3500, 0.7, 0.5)
+    return mix((pk(wind), 0, 0.5), (pk(birds), 0, 0.75), (pk(bells), 4.0, 0.12), (pk(bells), 11.0, 0.08), seconds=d)
+
+
+@recipe("story_dusk", "A40", bus="ambience", peak=-12, rms=-29, loop=True, xfade=0.6, note="story loop: the Dark Wood at dusk, low wind, creaking boughs, a far owl, a slow drone underneath")
+def story_dusk(r, v):
+    d = 18.6
+    wind = lp(bed("bed_wind", r, d), 900)
+    drone = lp(bed("bed_drone", r, d), 700)
+    crick = lp(bed("bed_crickets", r, d), 7000)
+    owl = far(grain("owl", r, 0.95), r, 2500, 0.8, 0.5)
+    creak = far(grain("creak", r, 0.8), r, 2000, 0.7, 0.5)
+    return mix((pk(wind), 0, 0.6), (pk(drone), 0, 0.3), (pk(crick), 0, 0.35), (pk(owl), 6.0, 0.25), (pk(creak), 12.5, 0.2), seconds=d)
+
+
+@recipe("story_dread", "A40", bus="ambience", peak=-11, rms=-26, loop=True, xfade=0.8, note="story loop: Skotos is near, a deep drone, whispers in the trees and a storm wind")
+def story_dread(r, v):
+    d = 14.8
+    drone = lp(bed("bed_drone", r, d), 500)
+    wh = lp(bed("bed_whisper", r, d), 4000)
+    wind = lp(bed("bed_wind", r, d), 1400)
+    return mix((pk(drone), 0, 0.7), (pk(wh), 0, 0.3), (pk(wind), 0, 0.55), seconds=d)
+
+
+@recipe("story_fire", "A40", bus="ambience", peak=-12, rms=-28, loop=True, xfade=0.5, note="story loop: a village fire up close, real crackle and soft flame roar (played from the fire itself)")
+def story_fire(r, v):
+    return pk(lp(bed("bed_fire", r, 10.5), 9000))
+
+
+@recipe("story_burning", "A40", bus="ambience", peak=-10, rms=-25, loop=True, xfade=0.6, note="story loop: the village burns, big fire roar, crackle, wind and far thunder")
+def story_burning(r, v):
+    d = 12.6
+    fire = lp(bed("bed_fire", r, d), 8000)
+    wind = lp(bed("bed_wind", r, d), 1200)
+    th = far(grain("thunder", r, 0.7, seconds=4.0), r, 900, 0.9, 0.5)
+    return mix((pk(fire), 0, 0.8), (pk(wind), 0, 0.5), (pk(th), 3.0, 0.4), seconds=d)
+
+
+@recipe("voice_narrator", "A32", bus="sfx", peak=-14, takes=8, tuned=True, vary=0.03,
+        note="story narrator: one soft, older-voice syllable per word (gibberish, no real words)")
+def voice_narrator(r, v):
+    s = voice("voice_old", r, seconds=float(r.uniform(0.09, 0.14)), step=float(r.choice([-1, 0, 0, 1])))
+    return room(s * 0.7, 0.4, 0.2)[:, 0]
+
+
+@recipe("voice_skotos", "A22", bus="sfx", peak=-9, takes=6, tuned=True, spatial=True, vary=0.03,
+        note="story: Skotos speaks, a man's syllable pitched far down, a creature growl and a whisper under it")
+def voice_skotos(r, v):
+    s = voice("voice_m", r, seconds=0.24, step=-7.0)
+    g = lp(grain("creature", r, 0.55, spread=0.03, seconds=0.35), 1500)
+    w = lp(grain("whisper", r, 0.8, seconds=0.35), 3000)
+    return reverb(mix((s, 0, 1.0), (g, 0, 0.25), (w, 0.02, 0.2)), 1.6, 0.3)
+
+
+@recipe("voice_maren", "A32", bus="sfx", peak=-13, takes=6, tuned=True, spatial=True, vary=0.03,
+        note="story: Maren (and the villagers) speak, a woman's syllable at her own pitch")
+def voice_maren(r, v):
+    s = voice("voice_f", r, seconds=float(r.uniform(0.09, 0.13)), step=float(r.choice([0, 1, 2])))
+    return room(s * 0.7, 0.3, 0.15)[:, 0]
+
+
+@recipe("story_crack", "A22", duck=True, peak=-6, spatial=True, cooldown=0.6, takes=3, note="story: the Veil overhead cracks, real glass stress and a low thunder")
+def story_crack(r, v):
+    gl = lp(grain("glass", r, 0.6, seconds=1.0), 6000)
+    sh = lp(grain("shards", r, 0.7, seconds=0.8), 5000)
+    th = lp(grain("thunder", r, 0.8, seconds=2.0), 900)
+    return reverb(mix((gl, 0, 0.8), (sh, 0.05, 0.4), (th, 0.1, 0.6)), 1.8, 0.3)
+
+
+@recipe("story_shatter", "A22", duck=True, peak=-4, note="story: the Veil shatters, a sky of real glass falling, thunder and a magic swell")
+def story_shatter(r, v):
+    a = lp(grain("shards", r, 0.85, seconds=2.0), 8000)
+    b = lp(grain("shards", r, 0.65, seconds=2.4), 6000)
+    gl = lp(grain("glass", r, 0.5, seconds=2.0), 5000)
+    th = lp(grain("thunder", r, 0.7, seconds=3.0), 1000)
+    mg = lp(grain("magic", r, 0.7, seconds=2.0), 6000)
+    return reverb(mix((a, 0, 0.9), (b, 0.25, 0.7), (gl, 0.1, 0.5), (th, 0, 0.9), (mg, 0.4, 0.35)), 2.2, 0.32)
+
+
+@recipe("story_rise", "A22", duck=True, peak=-5, note="story: Skotos rises from the Dark Wood, a long creature groan, timber creaks and thunder")
+def story_rise(r, v):
+    g = lp(grain("creature", r, 0.45, spread=0.02, seconds=3.5), 1800)
+    c = far(grain("creak", r, 0.6), r, 1500, 0.8, 0.4)
+    th = lp(grain("thunder", r, 0.55, seconds=4.0), 700)
+    return reverb(mix((g, 0, 1.0), (c, 0.6, 0.4), (th, 0.2, 0.8)), 2.0, 0.3)
+
+
+@recipe("story_thunder", "A40", peak=-7, takes=3, note="story: far thunder rolling over the island")
+def story_thunder(r, v):
+    return far(grain("thunder", r, 0.8, seconds=4.0), r, 1600, 0.9, 0.4)
+
+
 # ============================================================================== BUILD
 
 

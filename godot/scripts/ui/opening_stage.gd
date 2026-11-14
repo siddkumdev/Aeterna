@@ -1,618 +1,658 @@
 class_name OpeningStage
 extends Node3D
-## The opening (the user, 2026-11-11: "like an actual opening scene, a full experience, not acted out in the village";
-## "make it like a puppet show"): a paper-cutout puppet theatre that appears in front of you before the island does.
-## Six chapters of about 20 s: the island and the Veil, Skotos the forgotten god, the curse, the fall, the hourglass,
-## your turn. Every puppet is a flat cut-out built in code from palette colours (no outside art), with a soft paper
-## shadow, sliding on rods in layers that parallax as you move your head. Gilded captions under each scene. Words are
-## in docs/STORY.md ("The opening"). Skip: hold a pinch (or the mouse), or press Space / Esc.
-## Palette only: Warden purple for Skotos, gold and ember for the Veil, never blue.
+## The opening (sykeriin, 2026-11-14: "an immersive experience... cover the player's 360 view... as realistic as you
+## can get it"; replaces the 2026-11-11 puppet theatre). You stand INSIDE the island at human scale, in a world built
+## from code (scripts/story/story_world.gd): a meadow at dawn, the village ahead, the Dark Wood all round, the island's
+## cliff and a sea of cloud below. Six chapters, each a new time of day; fades between them; captions low in your
+## view, typed word by word with a voice "boop" per word for whoever speaks (narrator, Skotos, Maren). Its own sky and
+## ambience; passthrough is off for the story only and comes back after. Words: docs/STORY.md ("The opening").
+## Skip: let go, then hold a pinch (or the mouse / Space) for SKIP_HOLD; Esc skips at once.
 
 signal finished
 
-const W := 1.1  # m, the stage's width
-const H := 0.66  # m
-const CHAPTER_TIME := 20.0
-const SKIP_HOLD := 0.8  # s of a held pinch that skips it
-const INK := Color("111C30")
-const NIGHT := Color("1B1226")
-const DEEP := Color("3B1F5C")
-const PURPLE := Color("8A5BC7")
-const MAROON := Color("7A2318")
-const OAK := Color("5B2920")
-const GOLD := Color("E8B83A")
-const GLOW := Color("FFD45A")
-const EMBER := Color("F6A45D")
-const RED := Color("E8452C")
-const CREAM := Color("F4E4B8")
-const WALL := Color("EAD9A8")
-const ROOF := Color("D9673A")
-const GRASS := Color("6FA04F")
-const GRASS_D := Color("4F7F3A")
-const ROCK := Color("7A5A3C")
-const PINE := Color("2F5D3A")
-const PINE_D := Color("1E3F2B")
+const SKIP_HOLD := 1.5
+const EYE := 1.62  # m, the desktop camera's eye height
+const CAPTION_DIST := 1.5
+const WORD_GAP := 0.24  # s between typed words
+const VOICE := {"narrator": "voice_narrator", "skotos": "voice_skotos", "maren": "voice_maren"}
+const NAME := {"narrator": "", "skotos": "SKOTOS", "maren": "MAREN, THE PRIESTESS"}
+const NAME_COL := {"narrator": Color(1.0, 0.85, 0.55), "skotos": Color(0.78, 0.55, 1.0), "maren": Color(1.0, 0.7, 0.45)}
 
+## Each chapter: a name, a mood, where to look (yaw in degrees, 0 = toward the village, 180 = behind you), the
+## ambience loops, its length, and its lines [at s, speaker, text]. The cues (_cue_N) run alongside.
 const CHAPTERS := [
-	{"name": "I.  THE ISLAND", "lines": [
-		["Beyond the edge of the map,", "a very small island floats."],
-		["Twelve people live on it,", "and one small god who watches over them."],
-		["Their faith weaves the Veil:", "a warm dome of light that keeps the dark away."]]},
-	{"name": "II.  THE FORGOTTEN", "lines": [
-		["In the Dark Wood around it,", "another god once ruled."],
-		["His name was Skotos.", "His temples rotted. His people forgot him."],
-		["And a god who is forgotten", "goes hungry."]]},
-	{"name": "III.  THE CURSE", "lines": [
-		["So Skotos laid a curse upon your island:", ""],
-		["\"At every nightfall,", "your Veil will fail.\""],
-		["\"Let us see how long they believe", "in a god who cannot keep the dark out.\""]]},
-	{"name": "IV.  THE FALL", "lines": [
-		["Five days to build. Five nights to hold.", ""],
-		["The dark grows stronger each night.", ""],
-		["And on the fifth night,", "the village always falls."]]},
-	{"name": "V.  THE HOURGLASS", "lines": [
-		["But you are a god.", ""],
-		["You turn the hourglass,", "and time runs back."],
-		["The village wakes again.", "Only you remember."]]},
-	{"name": "VI.  YOUR TURN", "lines": [
-		["Each day, build before the sun sets.", ""],
-		["Help your people. Their faith is your light.", ""],
-		["Watch over them.", ""]]},
+	{"name": "I.  THE ISLAND", "mood": "predawn", "look": 0.0, "loops": ["story_meadow"], "len": 34.0, "lines": [
+		[3.0, "narrator", "Beyond the edge of the map, a very small island floats on a sea of cloud."],
+		[11.0, "narrator", "Twelve people live on it, and one small god who watches over them."],
+		[19.0, "narrator", "Every morning they light the fire, draw water, and say a prayer to the little stone god in the square."],
+		[27.0, "narrator", "Their faith weaves the Veil: a warm dome of light that keeps the dark away."]]},
+	{"name": "II.  THE FORGOTTEN", "mood": "dusk", "look": 180.0, "loops": ["story_dusk"], "len": 28.0, "lines": [
+		[2.5, "narrator", "Turn around. Behind you, in the Dark Wood, another god once ruled."],
+		[10.0, "narrator", "His name was Skotos. His temples rotted. His people forgot him."],
+		[18.5, "narrator", "And a god who is forgotten goes hungry."]]},
+	{"name": "III.  THE CURSE", "mood": "curse", "look": 180.0, "loops": ["story_dread"], "len": 34.0, "lines": [
+		[3.0, "narrator", "So Skotos rose out of the wood, and laid a curse upon your island."],
+		[12.0, "skotos", "At every nightfall, your Veil will fail."],
+		[20.0, "skotos", "Let us see how long they believe in a god who cannot keep the dark out."]]},
+	{"name": "IV.  THE FALL", "mood": "fall", "look": 0.0, "loops": ["story_fire", "story_burning"], "len": 30.0, "lines": [
+		[2.0, "narrator", "Five days to build. Five nights to hold."],
+		[9.0, "narrator", "The dark grows stronger each night."],
+		[17.0, "narrator", "And on the fifth night, the village always falls."]]},
+	{"name": "V.  THE HOURGLASS", "mood": "still", "look": 0.0, "loops": ["story_dusk"], "len": 28.0, "lines": [
+		[2.0, "narrator", "But you are a god."],
+		[7.0, "narrator", "You turn the hourglass, and time runs back."],
+		[17.0, "narrator", "The fires sink. The Veil knits itself together. The village wakes again. Only you remember."]]},
+	{"name": "VI.  YOUR TURN", "mood": "dawn", "look": 0.0, "loops": ["story_meadow"], "len": 30.0, "lines": [
+		[3.0, "maren", "Little god... if you are listening, keep us through one more night."],
+		[11.5, "narrator", "Each day, build before the sun sets. Help your people: their faith is your light."],
+		[21.0, "narrator", "Watch over them."]]},
 ]
 
 var game
-var _content: Node3D  # the current chapter's puppets
-var _head_root: Node3D  # the chapter name, above the stage
-var _cap_root: Node3D  # the captions, below it
-var _hint_root: Node3D
-var _frame: Node3D
+var world: StoryWorld
 var _chapter := -1
 var _t := 0.0
-var _tick := Callable()
-var _skip_t := 0.0
 var _skipped := false
 var _started := false
+var _skip_t := 0.0
+var _armed := false  # the skip only counts after every press that started the story is let go
+var _cam: Camera3D  # the desktop camera (none in the headset)
+var _old_cam: Camera3D
+var _look_yaw := 0.0
 var _fade: MeshInstance3D
-var _lines_shown := 0
-var _movers: Array = []  # [node, base position, phase, amplitude]
+var _fade_mat: StandardMaterial3D
+var _cap: Node3D
+var _cap_band: MeshInstance3D
+var _cap_mat: ShaderMaterial
+var _cap_name: Label3D
+var _cap_text: Label3D
+var _hint: Label3D
+var _title: Node3D
+var _words: PackedStringArray = []
+var _speaker := ""
+var _word_i := 0
+var _word_t := 0.0
+var _cap_hold := 0.0
+var _lines_done := 0
+var _loops := {}  # id -> AudioStreamPlayer
+var _cued := {}
+var _rng := RandomNumberGenerator.new()
+var _saved := {}
 
 
-# ------------------------------------------------------------------ shapes
-static func ellipse(cx: float, cy: float, rx: float, ry: float, n := 20) -> PackedVector2Array:
-	var p := PackedVector2Array()
-	for i in n:
-		var a := TAU * i / n
-		p.append(Vector2(cx + cos(a) * rx, cy + sin(a) * ry))
-	return p
-
-
-static func rect(x0: float, y0: float, x1: float, y1: float) -> PackedVector2Array:
-	return PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0), Vector2(x1, y1), Vector2(x0, y1)])
-
-
-static func tri(a: Vector2, b: Vector2, c: Vector2) -> PackedVector2Array:
-	return PackedVector2Array([a, b, c])
-
-
-static func arc_band(cx: float, cy: float, r: float, w: float, a0: float, a1: float, n := 28) -> PackedVector2Array:
-	var p := PackedVector2Array()
-	for i in n + 1:
-		var a := lerpf(a0, a1, float(i) / n)
-		p.append(Vector2(cx + cos(a) * (r + w / 2.0), cy + sin(a) * (r + w / 2.0)))
-	for i in range(n, -1, -1):
-		var a := lerpf(a0, a1, float(i) / n)
-		p.append(Vector2(cx + cos(a) * (r - w / 2.0), cy + sin(a) * (r - w / 2.0)))
-	return p
-
-
-static func ridge(x0: float, x1: float, base: float, amp: float, freq: float, ph: float, bottom: float) -> PackedVector2Array:
-	var p := PackedVector2Array()
-	var n := 24
-	for i in n + 1:
-		var x := lerpf(x0, x1, float(i) / n)
-		p.append(Vector2(x, base + sin(x * freq + ph) * amp + sin(x * freq * 2.3 + ph * 1.7) * amp * 0.4))
-	p.append(Vector2(x1, bottom))
-	p.append(Vector2(x0, bottom))
-	return p
-
-
-func poly(parent: Node3D, pts: PackedVector2Array, col: Color, z := 0.0, shadow := true) -> MeshInstance3D:
-	## One flat paper piece: the polygon, with a soft dark shadow cut behind it.
-	var idx := Geometry2D.triangulate_polygon(pts)
-	var mi := MeshInstance3D.new()
-	var verts := PackedVector3Array()
-	for p in pts:
-		verts.append(Vector3(p.x, p.y, 0))
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = verts
-	arr[Mesh.ARRAY_INDEX] = idx
-	var m := ArrayMesh.new()
-	if not idx.is_empty():
-		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	mi.mesh = m
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = col
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	if col.a < 1.0:
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mi.material_override = mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.position.z = z
-	parent.add_child(mi)
-	if shadow and col.a >= 0.99:
-		var sh := mi.duplicate() as MeshInstance3D
-		var sm := StandardMaterial3D.new()
-		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		sm.albedo_color = Color(0, 0, 0, 0.35)
-		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		sm.cull_mode = BaseMaterial3D.CULL_DISABLED
-		sh.material_override = sm
-		sh.position = Vector3(0.007, -0.009, -0.004)
-		mi.add_child(sh)
-	return mi
-
-
-func group(parent: Node3D, at: Vector3) -> Node3D:
-	var g := Node3D.new()
-	g.position = at
-	parent.add_child(g)
-	return g
-
-
-# ------------------------------------------------------------------ puppets
-func sky(top: Color, bottom: Color, z := -0.02) -> void:
-	var n := 8
-	for i in n:
-		var y0 := lerpf(H / 2.0, -H / 2.0, float(i) / n)
-		var y1 := lerpf(H / 2.0, -H / 2.0, float(i + 1) / n)
-		poly(_content, rect(-W / 2.0 - 0.02, y1 - 0.002, W / 2.0 + 0.02, y0), top.lerp(bottom, float(i) / (n - 1)), z, false)
-
-
-func stars(count: int, seed_: int, col := CREAM, z := -0.015) -> Node3D:
-	var g := group(_content, Vector3(0, 0, z))
-	var r := RandomNumberGenerator.new()
-	r.seed = seed_
-	for i in count:
-		var c := Vector2(r.randf_range(-W / 2.0, W / 2.0), r.randf_range(-0.05, H / 2.0))
-		var s := r.randf_range(0.004, 0.011)
-		var star := poly(g, PackedVector2Array([c + Vector2(0, s * 2), c + Vector2(s * 0.5, s * 0.5), c + Vector2(s * 2, 0), c + Vector2(s * 0.5, -s * 0.5), c + Vector2(0, -s * 2),
-			c + Vector2(-s * 0.5, -s * 0.5), c + Vector2(-s * 2, 0), c + Vector2(-s * 0.5, s * 0.5)]), col, 0.0, false)
-		_movers.append([star, star.position, r.randf() * TAU, 0.0])
-	return g
-
-
-func pine(parent: Node3D, x: float, y: float, h: float, col: Color, z := 0.0) -> void:
-	var w := h * 0.42
-	poly(parent, rect(x - w * 0.07, y, x + w * 0.07, y + h * 0.2), OAK, z, false)
-	for k in 3:
-		var by := y + h * (0.15 + k * 0.26)
-		var ww := w * (1.0 - k * 0.28)
-		poly(parent, tri(Vector2(x - ww, by), Vector2(x + ww, by), Vector2(x, by + h * 0.4)), col, z + 0.001 * k)
-
-
-func house(parent: Node3D, x: float, y: float, s: float, wall := WALL, roof := ROOF, lit := true, z := 0.0) -> Node3D:
-	var g := group(parent, Vector3(x, y, z))
-	poly(g, rect(-s * 0.5, 0, s * 0.5, s * 0.55), wall)
-	poly(g, tri(Vector2(-s * 0.62, s * 0.52), Vector2(s * 0.62, s * 0.52), Vector2(0, s * 1.05)), roof, 0.001)
-	poly(g, rect(-s * 0.12, s * 0.14, s * 0.12, s * 0.4), GLOW if lit else Color("3A2A22"), 0.002, false)
-	poly(g, rect(s * 0.28, s * 0.62, s * 0.38, s * 0.9), Color("8A8A86"), 0.0005, false)
-	return g
-
-
-func villager(parent: Node3D, x: float, y: float, col: Color, s := 1.0) -> Node3D:
-	var g := group(parent, Vector3(x, y, 0))
-	poly(g, PackedVector2Array([Vector2(-0.010, 0), Vector2(0.010, 0), Vector2(0.006, 0.028), Vector2(-0.006, 0.028)]).duplicate(), col, 0.0, false)
-	poly(g, ellipse(0, 0.036, 0.008, 0.008, 10), Color("F2C9A0"), 0.001, false)
-	g.scale = Vector3.ONE * s
-	return g
-
-
-func sun(parent: Node3D, x: float, y: float, r: float, col := GLOW) -> Node3D:
-	var g := group(parent, Vector3(x, y, 0))
-	for k in 12:
-		var a := TAU * k / 12
-		var d := Vector2(cos(a), sin(a))
-		var n := Vector2(-d.y, d.x)
-		poly(g, tri(d * r * 1.05 + n * r * 0.13, d * r * 1.05 - n * r * 0.13, d * r * 1.55), EMBER, 0.0, false)
-	poly(g, ellipse(0, 0, r, r, 24), col, 0.001, false)
-	return g
-
-
-func island(parent: Node3D, x: float, y: float, s: float, lit := true) -> Node3D:
-	## A floating island: grass top, hanging rock, little houses, trees, a well.
-	var g := group(parent, Vector3(x, y, 0))
-	poly(g, PackedVector2Array([Vector2(-0.20 * s, 0), Vector2(0.20 * s, 0), Vector2(0.14 * s, -0.06 * s), Vector2(0.07 * s, -0.12 * s), Vector2(0.02 * s, -0.17 * s), Vector2(-0.03 * s, -0.11 * s),
-		Vector2(-0.10 * s, -0.07 * s)]), ROCK, 0.0)
-	poly(g, rect(-0.20 * s, -0.012 * s, 0.20 * s, 0.0), Color("5E4228"), 0.001, false)
-	poly(g, ellipse(0, 0.012 * s, 0.205 * s, 0.045 * s, 28), GRASS, 0.002)
-	poly(g, ellipse(0, 0.016 * s, 0.19 * s, 0.032 * s, 28), GRASS_D, 0.003, false)
-	house(g, -0.09 * s, 0.020 * s, 0.07 * s, WALL, ROOF, lit, 0.004)
-	house(g, 0.03 * s, 0.014 * s, 0.06 * s, WALL, Color("3E8F86"), lit, 0.004)
-	house(g, 0.12 * s, 0.024 * s, 0.05 * s, WALL, ROOF, lit, 0.004)
-	pine(g, -0.16 * s, 0.026 * s, 0.07 * s, PINE, 0.005)
-	pine(g, 0.17 * s, 0.03 * s, 0.06 * s, PINE_D, 0.005)
-	return g
-
-
-func veil(parent: Node3D, cx: float, cy: float, r: float, a := 0.5) -> MeshInstance3D:
-	## The Veil: a warm gold dome over the island, two bands.
-	var v := poly(parent, arc_band(cx, cy, r, 0.012, 0.0, PI), Color(GLOW, a), 0.02, false)
-	poly(v, arc_band(cx, cy, r * 0.96, 0.022, 0.0, PI), Color(EMBER, a * 0.4), 0.0, false)
-	return v
-
-
-func skotos(parent: Node3D, x: float, y: float, s: float) -> Node3D:
-	## Skotos: tall, hooded in dark, a bone mask, a crown of spikes and an eclipse halo behind the head (the Warden's purples and gold).
-	var g := group(parent, Vector3(x, y, 0))
-	var halo := group(g, Vector3(0, 0.34 * s, -0.01))
-	for k in 18:
-		var a := TAU * k / 18
-		var d := Vector2(cos(a), sin(a))
-		var n := Vector2(-d.y, d.x)
-		var L := 0.075 * s if k % 2 == 0 else 0.048 * s
-		poly(halo, tri(d * 0.085 * s + n * 0.008 * s, d * 0.085 * s - n * 0.008 * s, d * (0.085 * s + L)), GOLD if k % 3 else PURPLE, 0.0, false)
-	poly(halo, ellipse(0, 0, 0.085 * s, 0.085 * s, 28), INK, 0.001, false)
-	poly(halo, arc_band(0, 0, 0.09 * s, 0.008 * s, 0.0, TAU, 36), GOLD, 0.002, false)
-	poly(g, PackedVector2Array([Vector2(-0.07 * s, 0), Vector2(0.07 * s, 0), Vector2(0.045 * s, 0.26 * s), Vector2(0.03 * s, 0.30 * s), Vector2(-0.03 * s, 0.30 * s), Vector2(-0.045 * s, 0.26 * s)]), DEEP, 0.003)
-	poly(g, rect(-0.06 * s, 0.10 * s, 0.06 * s, 0.112 * s), GOLD, 0.004, false)
-	poly(g, ellipse(0, 0.335 * s, 0.032 * s, 0.040 * s, 16), CREAM, 0.005)
-	poly(g, rect(-0.016 * s, 0.338 * s, -0.006 * s, 0.346 * s), INK, 0.006, false)
-	poly(g, rect(0.006 * s, 0.338 * s, 0.016 * s, 0.346 * s), INK, 0.006, false)
-	for k in 7:
-		var cx := lerpf(-0.03, 0.03, k / 6.0) * s
-		var h := (0.040 if k % 2 == 0 else 0.026) * s
-		poly(g, tri(Vector2(cx - 0.006 * s, 0.368 * s), Vector2(cx + 0.006 * s, 0.368 * s), Vector2(cx, 0.368 * s + h)), GOLD, 0.005, false)
-	for sx in [-1, 1]:  # long arms spread wide
-		poly(g, PackedVector2Array([Vector2(sx * 0.05 * s, 0.24 * s), Vector2(sx * 0.14 * s, 0.30 * s), Vector2(sx * 0.15 * s, 0.285 * s), Vector2(sx * 0.055 * s, 0.215 * s)]), DEEP, 0.002)
-	return g
-
-
-func hourglass(parent: Node3D, x: float, y: float, s: float) -> Node3D:
-	var g := group(parent, Vector3(x, y, 0))
-	poly(g, tri(Vector2(-0.07 * s, 0.14 * s), Vector2(0.07 * s, 0.14 * s), Vector2(0, 0.0)), Color(CREAM, 0.55), 0.0, false)
-	poly(g, tri(Vector2(-0.07 * s, -0.14 * s), Vector2(0.07 * s, -0.14 * s), Vector2(0, 0.0)), Color(CREAM, 0.55), 0.0, false)
-	poly(g, rect(-0.09 * s, 0.14 * s, 0.09 * s, 0.16 * s), GOLD, 0.002)
-	poly(g, rect(-0.09 * s, -0.16 * s, 0.09 * s, -0.14 * s), GOLD, 0.002)
-	for sx in [-1, 1]:
-		poly(g, rect(sx * 0.085 * s - 0.004 * s, -0.14 * s, sx * 0.085 * s + 0.004 * s, 0.14 * s), GOLD, 0.002, false)
-	var top := poly(g, tri(Vector2(-0.05 * s, 0.12 * s), Vector2(0.05 * s, 0.12 * s), Vector2(0, 0.02 * s)), GLOW, 0.001, false)
-	var bottom := poly(g, tri(Vector2(-0.065 * s, -0.135 * s), Vector2(0.065 * s, -0.135 * s), Vector2(0, -0.04 * s)), GLOW, 0.001, false)
-	top.name = "SandTop"
-	bottom.name = "SandBottom"
-	return g
-
-
-# ------------------------------------------------------------------ the theatre
-func _build_frame() -> void:
-	_frame = Node3D.new()
-	_frame.name = "Frame"
-	add_child(_frame)
-	poly(_frame, rect(-W / 2.0 - 0.30, -H / 2.0 - 0.30, W / 2.0 + 0.30, -H / 2.0 - 0.002), Color(0.02, 0.01, 0.03), 0.06, false)  # the dark below
-	poly(_frame, rect(-W / 2.0 - 0.30, H / 2.0 + 0.002, W / 2.0 + 0.30, H / 2.0 + 0.30), Color(0.02, 0.01, 0.03), 0.06, false)
-	for sx in [-1, 1]:  # curtains
-		var curtain := poly(_frame, PackedVector2Array([Vector2(sx * (W / 2.0 + 0.30), H / 2.0 + 0.30), Vector2(sx * (W / 2.0 - 0.07), H / 2.0 + 0.30), Vector2(sx * (W / 2.0 - 0.02), 0.0),
-			Vector2(sx * (W / 2.0 - 0.09), -H / 2.0 - 0.30), Vector2(sx * (W / 2.0 + 0.30), -H / 2.0 - 0.30)]), MAROON, 0.07)
-		for k in 5:  # folds
-			var fx: float = sx * (W / 2.0 + 0.02 + k * 0.05)
-			poly(curtain, rect(fx - 0.004, -H / 2.0, fx + 0.004, H / 2.0), Color(0.35, 0.1, 0.08), 0.001, false)
-	poly(_frame, PackedVector2Array([Vector2(-W / 2.0 - 0.02, H / 2.0), Vector2(W / 2.0 + 0.02, H / 2.0), Vector2(W / 2.0 + 0.02, H / 2.0 - 0.05), Vector2(0, H / 2.0 - 0.09), Vector2(-W / 2.0 - 0.02, H / 2.0 - 0.05)]), OAK, 0.065)
-	poly(_frame, rect(-W / 2.0 - 0.02, H / 2.0 - 0.008, W / 2.0 + 0.02, H / 2.0), GOLD, 0.066, false)
-	poly(_frame, rect(-W / 2.0 - 0.02, -H / 2.0, W / 2.0 + 0.02, -H / 2.0 + 0.012), GOLD, 0.066, false)
-	for k in 9:  # footlights
-		poly(_frame, ellipse(lerpf(-W / 2.0 + 0.06, W / 2.0 - 0.06, k / 8.0), -H / 2.0 + 0.022, 0.011, 0.011, 10), GLOW, 0.067, false)
-
-
+# ------------------------------------------------------------------ set up and tear down
 func _ready() -> void:
-	_build_frame()
-	_content = Node3D.new()
-	_content.name = "Content"
-	add_child(_content)
-	_head_root = Node3D.new()
-	_head_root.position = Vector3(0, H / 2.0 + 0.075, 0.07)
-	add_child(_head_root)
-	_cap_root = Node3D.new()
-	_cap_root.position = Vector3(0, -H / 2.0 - 0.14, 0.12)
-	add_child(_cap_root)
-	_hint_root = Node3D.new()
-	_hint_root.position = Vector3(0, -H / 2.0 - 0.32, 0.12)
-	_hint_root.scale = Vector3.ONE * 0.72
-	add_child(_hint_root)
-	_fade = poly(self, rect(-W / 2.0 - 0.3, -H / 2.0 - 0.3, W / 2.0 + 0.3, H / 2.0 + 0.3), Color(0, 0, 0, 1), 0.09, false)
-	(_fade.material_override as StandardMaterial3D).transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	visible = false
+	_rng.randomize()
 
 
 func place(cam: Camera3D, fallback: Vector3) -> void:
-	## In front of you, a metre away, turned to face you. In the headset it stays level with your eyes.
+	## Where you stand. In the headset: on the real floor under you, facing where you look. On the desktop: a camera
+	## of our own at eye height.
 	var at := fallback
-	var f := Vector3(0, 0, 1)
+	var f := Vector3(0, 0, -1)
 	if cam:
 		f = -cam.global_transform.basis.z
-		if game and game._xr:
-			f.y = 0.0
-		f = f.normalized()
-		at = cam.global_position + f * 1.0 + Vector3(0, -0.04 if game and game._xr else 0.0, 0)
-	global_position = at
-	rotation.y = atan2(-f.x, -f.z)  # +Z (the stage's face) points back at you
-	visible = true
+		at = cam.global_position
+	f.y = 0.0
+	f = f.normalized() if f.length() > 0.05 else Vector3(0, 0, -1)
+	var floor_y := at.y - EYE
+	if game and game._xr and game._xr_origin:
+		floor_y = (game._xr_origin as Node3D).global_position.y
+	global_position = Vector3(at.x, floor_y, at.z)
+	rotation = Vector3(0, atan2(-f.x, -f.z), 0)  # local -Z (the village) is where you were looking
 
 
+func _xr() -> bool:
+	return game != null and game._xr and game._xr_cam != null
+
+
+func _view_cam() -> Camera3D:
+	return game._xr_cam if _xr() else _cam
+
+
+func _enter() -> void:
+	## Swap the game's room for the story's world: own sky (passthrough off), own light, no game ambience.
+	world = StoryWorld.new()
+	world.name = "World"
+	add_child(world)
+	if game:
+		_saved["board"] = game.board.visible if game.board else false
+		if game.board:
+			game.board.visible = false
+		if game.haze:
+			_saved["haze"] = game.haze.visible
+			game.haze.visible = false
+		if game.lighting:
+			var l: Node = game.lighting
+			l.set_process(false)
+			for c in l.get_children():
+				if c is WorldEnvironment:
+					_saved["we"] = c
+					_saved["env"] = c.environment
+					c.environment = world.env
+				elif c is Light3D:
+					_saved["light_%s" % c.name] = c.visible
+					c.visible = false
+		if game.audio:
+			game.audio.set_scatter([], Callable())
+	var vp := get_viewport()
+	_saved["transparent"] = vp.transparent_bg
+	vp.transparent_bg = false
+	var xr := XRServer.find_interface("OpenXR")
+	if xr and xr.is_initialized():
+		_saved["blend"] = xr.environment_blend_mode
+		if xr.get_supported_environment_blend_modes().has(XRInterface.XR_ENV_BLEND_MODE_OPAQUE):
+			xr.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_OPAQUE
+		if xr.has_method("is_passthrough_enabled") and xr.is_passthrough_enabled():
+			_saved["passthrough"] = true
+			xr.stop_passthrough()
+	if not _saved.has("we"):  # no game lighting (a shot tool): bring our own environment
+		var we := WorldEnvironment.new()
+		we.environment = world.env
+		add_child(we)
+	if not _xr():
+		_old_cam = vp.get_camera_3d()
+		_cam = Camera3D.new()
+		_cam.name = "StoryCamera"
+		_cam.fov = 70.0
+		_cam.near = 0.05
+		_cam.far = 600.0
+		add_child(_cam)
+		_cam.position = Vector3(0, EYE, 0)
+		_cam.current = true
+
+
+func _leave() -> void:
+	for id in _loops:
+		(_loops[id] as AudioStreamPlayer).stop()
+	var vp := get_viewport()
+	vp.transparent_bg = _saved.get("transparent", vp.transparent_bg)
+	var xr := XRServer.find_interface("OpenXR")
+	if xr and xr.is_initialized():
+		if _saved.has("blend"):
+			xr.environment_blend_mode = _saved["blend"]
+		if _saved.get("passthrough", false):
+			xr.start_passthrough()
+	if game:
+		if _saved.has("we") and is_instance_valid(_saved["we"]):
+			(_saved["we"] as WorldEnvironment).environment = _saved["env"]
+		if game.lighting:
+			game.lighting.set_process(true)
+			for c in game.lighting.get_children():
+				if c is Light3D and _saved.has("light_%s" % c.name):
+					c.visible = _saved["light_%s" % c.name]
+		if game.haze and _saved.has("haze"):
+			game.haze.visible = _saved["haze"]
+		if game.audio and game.has_method("_phase_sound"):
+			game._phase_sound(0, game.phase)
+	if _cam:
+		_cam.current = false
+		if is_instance_valid(_old_cam):
+			_old_cam.current = true
+
+
+# ------------------------------------------------------------------ the overlay: fade, captions, skip hint
+func _build_overlay() -> void:
+	var holder := _view_cam()
+	_fade_mat = StandardMaterial3D.new()
+	_fade_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_fade_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_fade_mat.no_depth_test = true
+	_fade_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_fade_mat.render_priority = 100
+	_fade_mat.albedo_color = Color(0, 0, 0, 1)
+	var s := SphereMesh.new()
+	s.radius = 0.3
+	s.height = 0.6
+	s.radial_segments = 16
+	s.rings = 8
+	_fade = MeshInstance3D.new()
+	_fade.name = "Fade"
+	_fade.mesh = s
+	_fade.material_override = _fade_mat
+	_fade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(_fade)
+	_cap = Node3D.new()
+	_cap.name = "Caption"
+	add_child(_cap)
+	_cap.top_level = true
+	_cap_mat = ShaderMaterial.new()
+	_cap_mat.shader = load("res://shaders/story/story_caption.gdshader")
+	_cap_mat.set_shader_parameter("alpha", 0.0)
+	_cap_mat.render_priority = 90
+	var q := QuadMesh.new()
+	q.size = Vector2(1.2, 0.26)
+	_cap_mat.set_shader_parameter("size", q.size)
+	_cap_band = MeshInstance3D.new()
+	_cap_band.mesh = q
+	_cap_band.material_override = _cap_mat
+	_cap_band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_cap.add_child(_cap_band)
+	_cap_name = _label(36, Vector3(0, 0.085, 0.002))
+	_cap_text = _label(44, Vector3(0, -0.02, 0.002))
+	_cap_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_cap_text.width = 1050.0
+	_cap_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_cap_text.position.y = 0.05
+	_hint = _label(26, Vector3(0, -0.2, 0.002))
+	_hint.modulate = Color(1, 0.9, 0.75, 0.0)
+	_title = Node3D.new()
+	_title.position = Vector3(0, 0.62, 0)
+	_cap.add_child(_title)
+
+
+func _label(px: int, at: Vector3) -> Label3D:
+	var l := Label3D.new()
+	l.font_size = px
+	l.pixel_size = 0.001
+	l.outline_size = 10
+	l.outline_modulate = Color(0, 0, 0, 0.85)
+	l.modulate = Color(1.0, 0.95, 0.86, 1.0)
+	l.no_depth_test = true
+	l.render_priority = 95
+	l.outline_render_priority = 94
+	l.shaded = false
+	l.double_sided = false
+	l.position = at
+	l.text = ""
+	_cap.add_child(l)
+	return l
+
+
+func _place_caption(delta: float, snap := false) -> void:
+	## Lazily head-locked: it waits low in front of you and follows when you turn away.
+	var cam := _view_cam()
+	if cam == null:
+		return
+	var f := -cam.global_transform.basis.z
+	f.y = 0.0
+	if f.length() < 0.05:
+		return
+	f = f.normalized()
+	var eye := cam.global_position
+	var cur := _cap.global_position - eye
+	cur.y = 0.0
+	var dir := f
+	if not snap and cur.length() > 0.05:
+		var c := cur.normalized()
+		var ang := c.signed_angle_to(f, Vector3.UP)
+		dir = c.rotated(Vector3.UP, ang * minf(1.0, delta * (3.0 if absf(ang) > 0.45 else 0.6)))
+	_cap.global_position = eye + dir * CAPTION_DIST + Vector3(0, -0.42, 0)
+	_cap.global_rotation = Vector3(-0.25, atan2(-dir.x, -dir.z), 0)
+
+
+func _say(speaker: String, text: String) -> void:
+	_speaker = speaker
+	_words = text.split(" ", false)
+	_word_i = 0
+	_word_t = 0.0
+	_cap_name.text = NAME[speaker]
+	_cap_name.modulate = NAME_COL[speaker]
+	_cap_text.text = ""
+	_cap_text.modulate = Color(1.0, 0.95, 0.86) if speaker == "narrator" else NAME_COL[speaker].lerp(Color.WHITE, 0.55)
+	_cap_hold = 0.0
+	create_tween().tween_method(func(a): _cap_mat.set_shader_parameter("alpha", a), float(_cap_mat.get_shader_parameter("alpha")), 0.82, 0.4)
+
+
+func _step_caption(delta: float) -> void:
+	if _word_i < _words.size():
+		_word_t -= delta
+		if _word_t <= 0.0:
+			var w := _words[_word_i]
+			_word_i += 1
+			_cap_text.text = " ".join(_words.slice(0, _word_i))
+			_word_t = WORD_GAP * (1.35 if _speaker == "skotos" else 1.0) + (0.32 if w.ends_with(".") or w.ends_with(",") or w.ends_with(":") else 0.0)
+			if _word_i % 2 == 1 or _speaker != "narrator":
+				_voice(_speaker)
+	elif _words.size() > 0:
+		_cap_hold += delta
+		if _cap_hold > 3.2:
+			_words = []
+			var tw := create_tween()
+			tw.tween_method(func(a): _cap_mat.set_shader_parameter("alpha", a), 0.82, 0.0, 0.6)
+			tw.parallel().tween_property(_cap_text, "modulate:a", 0.0, 0.6)
+			tw.parallel().tween_property(_cap_name, "modulate:a", 0.0, 0.6)
+
+
+# ------------------------------------------------------------------ sound
+func _sound(id: String, at := Vector3.INF, db := 0.0, range_m := 60.0, loop := false) -> Node:
+	## The story's own players: the bank's 3D range is a tabletop's (8 m), the story's is a valley's.
+	if game == null or game.audio == null or not game.audio.manifest.has(id):
+		return null
+	var bank: AudioBank = game.audio
+	var m: Dictionary = bank.manifest[id]
+	var files: Array = m["files"]
+	var s := bank._stream(files[_rng.randi_range(0, files.size() - 1)]["file"], loop)
+	if s == null:
+		return null
+	var p: Node
+	if at != Vector3.INF:
+		var p3 := AudioStreamPlayer3D.new()
+		p3.unit_size = 6.0
+		p3.max_distance = range_m
+		p3.attenuation_filter_cutoff_hz = 20500.0
+		p3.volume_db = db
+		p = p3
+	else:
+		var p2 := AudioStreamPlayer.new()
+		p2.volume_db = db
+		p = p2
+	p.set("stream", s)
+	p.set("bus", m["bus"])
+	p.set("pitch_scale", 1.0 + _rng.randf_range(-float(m.get("vary", 0.0)), float(m.get("vary", 0.0))))
+	add_child(p)
+	if p is AudioStreamPlayer3D:
+		(p as AudioStreamPlayer3D).global_position = at
+	if not loop:
+		p.finished.connect(p.queue_free)
+	p.call("play")
+	return p
+
+
+func _voice(speaker: String) -> void:
+	match speaker:
+		"maren":
+			_sound(VOICE[speaker], world.people[0].global_position + Vector3(0, 1.5, 0), -2.0, 40.0)
+		"skotos":
+			_sound(VOICE[speaker], Vector3.INF, 2.0)
+		_:
+			_sound(VOICE[speaker], Vector3.INF, -3.0)
+
+
+func _set_loops(ids: Array) -> void:
+	for id in _loops.keys():
+		if not ids.has(id):
+			var p: AudioStreamPlayer = _loops[id]
+			_loops.erase(id)
+			var tw := create_tween()
+			tw.tween_property(p, "volume_db", -50.0, 2.0)
+			tw.tween_callback(p.queue_free)
+	for id in ids:
+		if not _loops.has(id):
+			var p := _sound(id, Vector3.INF, -50.0, 0.0, true) as AudioStreamPlayer
+			if p:
+				_loops[id] = p
+				create_tween().tween_property(p, "volume_db", 0.0, 2.5)
+
+
+# ------------------------------------------------------------------ the show
 func play() -> void:
 	## Runs the whole opening; returns when it ends or is skipped.
+	_enter()
+	_build_overlay()
+	visible = true
+	_place_caption(0.0, true)
 	_started = true
-	var tw := create_tween()
-	tw.tween_property(_fade.material_override, "albedo_color:a", 0.0, 1.2)
-	_hint_line("Hold a pinch to skip")
+	await get_tree().process_frame  # the world's first frame (shaders compile) happens under black
+	_hint.text = "Hold a pinch to skip the story"
+	create_tween().tween_property(_hint, "modulate:a", 0.75, 1.0).set_delay(2.0)
 	for ch in CHAPTERS.size():
 		if _skipped:
 			break
 		_start_chapter(ch)
-		while _t < CHAPTER_TIME and not _skipped:
+		_fade_to(0.0, 2.2 if ch == 0 else 1.4)
+		var length: float = CHAPTERS[ch]["len"]
+		while _t < length - 1.4 and not _skipped:
 			await get_tree().process_frame
-	var out := create_tween()
-	out.tween_property(_fade.material_override, "albedo_color:a", 1.0, 0.8)
-	await out.finished
+		if ch < CHAPTERS.size() - 1 and not _skipped:
+			await _fade_to(1.0, 1.2).finished
+	await _fade_to(1.0, 1.0 if not _skipped else 0.6).finished
+	_leave()
 	finished.emit()
 
 
-func _hint_line(s: String) -> void:
-	TitleCard.show_over(_hint_root, Vector3.ZERO, s, "", 4.0, 30)
+func _fade_to(a: float, seconds: float) -> Tween:
+	var tw := create_tween()
+	tw.tween_property(_fade_mat, "albedo_color:a", a, seconds)
+	return tw
 
 
 func _start_chapter(i: int) -> void:
 	_chapter = i
 	_t = 0.0
-	_lines_shown = 0
-	_movers.clear()
-	if _content:
-		_content.queue_free()
-	_content = Node3D.new()
-	_content.name = "Content"
-	add_child(_content)
-	_tick = Callable()
-	call("_ch%d" % (i + 1))
-	TitleCard.show_over(_head_root, Vector3.ZERO, CHAPTERS[i]["name"], "", -1.0, 44)
-	if game:
-		match i:
-			0: game.snd("dawn_bell")
-			1: game.snd("forest_rumble")
-			2: game.snd("boss_roar")
-			3: game.snd("night_fall")
-			4: game.snd("heal_chime")
-			5: game.snd("dawn_bell")
+	_lines_done = 0
+	_cued.clear()
+	var c: Dictionary = CHAPTERS[i]
+	world.set_mood(c["mood"], 0.0)
+	_look_yaw = c["look"]
+	if _cam:
+		_cam.rotation = Vector3(-0.03, deg_to_rad(_look_yaw), 0)
+	_set_loops(c["loops"])
+	TitleCard.show_over(_title, Vector3.ZERO, c["name"], "", 4.5, 40)
+	call("_enter_%d" % (i + 1))
 
 
 func _process(delta: float) -> void:
 	if not _started:
 		return
 	_t += delta
-	_follow_head(delta)
 	_step_skip(delta)
-	var lines: Array = CHAPTERS[clampi(_chapter, 0, CHAPTERS.size() - 1)]["lines"]
-	if _chapter >= 0 and _lines_shown < lines.size() and _t >= 1.0 + _lines_shown * 6.2:
-		TitleCard.show_over(_cap_root, Vector3.ZERO, lines[_lines_shown][0], lines[_lines_shown][1], 5.6, 46)
-		_lines_shown += 1
-	for m in _movers:
-		if is_instance_valid(m[0]):
-			(m[0] as Node3D).scale = Vector3.ONE * (0.8 + 0.4 * sin(_t * 2.0 + float(m[2])))
-	if _tick.is_valid():
-		_tick.call(_t)
+	_place_caption(delta)
+	_step_caption(delta)
+	if _chapter < 0:
+		return
+	var lines: Array = CHAPTERS[_chapter]["lines"]
+	if _lines_done < lines.size() and _t >= float(lines[_lines_done][0]):
+		_say(lines[_lines_done][1], lines[_lines_done][2])
+		_lines_done += 1
+	call("_tick_%d" % (_chapter + 1), _t)
+	if _cam:  # the desktop camera drifts slowly toward the chapter's view, with a breath of sway
+		var want := deg_to_rad(_look_yaw) + sin(_t * 0.17) * 0.05
+		_cam.rotation.y = lerp_angle(_cam.rotation.y, want, minf(1.0, delta * 0.8))
+		_cam.rotation.x = -0.03 + sin(_t * 0.23) * 0.01
+
+
+func _once(key: String, at_t: float) -> bool:
+	## True the first frame _t passes at_t in this chapter.
+	if _t >= at_t and not _cued.has(key):
+		_cued[key] = true
+		return true
+	return false
 
 
 func _step_skip(delta: float) -> void:
-	var held := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_ESCAPE)
+	var held := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_key_pressed(KEY_SPACE)
 	if game:
 		for h in game._hands:
 			if is_instance_valid(h) and h.is_pressing():
 				held = true
 	if Input.is_key_pressed(KEY_ESCAPE):
-		_skip_t = SKIP_HOLD
-	_skip_t = _skip_t + delta if held else 0.0
+		_skipped = true
+		return
+	if not _armed:
+		_armed = not held  # the pinch that pressed Wake is still down: wait for it to let go
+		return
+	_skip_t = _skip_t + delta if held else maxf(0.0, _skip_t - delta * 2.0)
+	if _skip_t > 0.05:
+		var n := int(clampf(_skip_t / SKIP_HOLD, 0.0, 1.0) * 10.0)
+		_hint.text = "Skipping  " + "■".repeat(n) + "□".repeat(10 - n)
+		_hint.modulate.a = 0.95
+	elif _hint.text.begins_with("Skipping"):
+		_hint.text = "Hold a pinch to skip the story"
 	if _skip_t >= SKIP_HOLD:
 		_skipped = true
 
 
-func _follow_head(delta: float) -> void:
-	if not visible or game == null or not game._xr or game._xr_cam == null:
-		return
-	var cam: Camera3D = game._xr_cam
-	var f := -cam.global_transform.basis.z
-	f.y = 0.0
-	if f.length() < 0.05:
-		return
-	f = f.normalized()
-	var flat := Vector3(global_position.x - cam.global_position.x, 0.0, global_position.z - cam.global_position.z)
-	var dist := flat.length()
-	if dist < 0.05:
-		return
-	var d := flat / dist
-	if f.angle_to(d) > 0.38:
-		var yaw := lerp_angle(atan2(d.x, d.z), atan2(f.x, f.z), minf(1.0, delta * 2.5))
-		var dir := Vector3(sin(yaw), 0.0, cos(yaw))
-		global_position = Vector3(cam.global_position.x, cam.global_position.y - 0.04, cam.global_position.z) + dir * dist
-		rotation.y = atan2(-dir.x, -dir.z)
+# ------------------------------------------------------------------ I. the island: dawn over the meadow, the village waking
+func _enter_1() -> void:
+	world.set_mood("predawn", 0.0)
+	world.set_mood("dawn", 12.0)
+	world.veil_mat.set_shader_parameter("strength", 0.0)
+	world.wind = 0.7
 
 
-# ------------------------------------------------------------------ the six chapters (each builds its puppets and sets a per-frame tick)
-func _ch1() -> void:
-	sky(Color("F6C98A"), Color("F2A65C"))
-	var s := sun(_content, 0.30, 0.16, 0.05)
-	poly(_content, ridge(-W / 2.0, W / 2.0, -0.25, 0.04, 6.0, 0.4, -H / 2.0), Color("C77D4A"), 0.0)
-	poly(_content, ridge(-W / 2.0, W / 2.0, -0.31, 0.03, 7.0, 2.0, -H / 2.0), Color("9A5A3A"), 0.01)
-	var isl := island(_content, 0.0, -0.04, 1.9)
-	var vil: Array = []
-	for i in 6:
-		vil.append(villager(isl, -0.15 + i * 0.06, 0.035, [CREAM, RED, GLOW, EMBER, PURPLE, GRASS][i], 1.2))
-	var v := veil(_content, 0.0, -0.04, 0.45, 0.0)
-	var motes := group(_content, Vector3.ZERO)
-	for i in 14:
-		var m := poly(motes, ellipse(0, 0, 0.006, 0.006, 8), GLOW, 0.03, false)
-		_movers.append([m, Vector3.ZERO, i * 0.7, 0.0])
-	_tick = func(t: float):
-		isl.position.y = -0.04 + sin(t * 1.2) * 0.012
-		s.rotation.z = t * 0.2
-		s.position.y = 0.16 + minf(t * 0.004, 0.03)
-		for i in vil.size():
-			vil[i].position.y = 0.035 + absf(sin(t * 3.0 + i)) * 0.006
-		for i in motes.get_child_count():  # faith rises from the people into the sky, then the Veil knits
-			var k := fposmod(t * 0.18 + i / 14.0, 1.0)
-			var from := Vector2(-0.15 + (i % 7) * 0.05, -0.01)
-			(motes.get_child(i) as Node3D).position = Vector3(from.x * (1.0 - k) + 0.0, from.y + k * 0.34 * (1.0 - 0.3 * k), 0.03)
-		(v.material_override as StandardMaterial3D).albedo_color.a = clampf((t - 9.0) / 4.0, 0.0, 0.55)
-		v.scale = Vector3.ONE * lerpf(0.6, 1.0, clampf((t - 9.0) / 4.0, 0.0, 1.0))
-		v.position = Vector3(0, -0.04 * (1.0 - v.scale.x), 0.02)
+func _tick_1(t: float) -> void:
+	if _once("morning", 13.0):
+		world.set_mood("morning", 16.0)
+	if _once("walk", 9.0):  # people go about the morning: water from the well, wood to the fire
+		world.people[3].go(StoryWorld.VILLAGE + Vector3(-2.5, 0, 2.7))
+		world.people[7].go(StoryWorld.FIRE_AT + Vector3(1.0, 0, 2.2))
+		world.people[9].go(StoryWorld.VILLAGE + Vector3(2.0, 0, -6.5))
+	if _once("pray", 19.5):
+		for i in [0, 1, 2, 5, 8]:
+			world.people[i].face(StoryWorld.VILLAGE + Vector3(0, 0, -1.5))
+			world.people[i].set_pose("pray")
+	if _once("faith", 26.0):
+		world.motes.emitting = true
+		_sound("story_rise", Vector3.INF, -6.0)
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.0, 1.0, 6.0)
 
 
-func _ch2() -> void:
-	sky(Color("1A0F26"), Color("3B1F5C"))
-	stars(26, 7)
-	var moon := poly(_content, ellipse(-0.35, 0.2, 0.05, 0.05, 24), CREAM, -0.01, false)
-	poly(moon, ellipse(0.02, 0.01, 0.045, 0.045, 24), Color("2A1740"), 0.001, false)
-	var wood := group(_content, Vector3.ZERO)
-	for i in 14:
-		pine(wood, -0.6 + i * 0.09, -0.34 + (i % 3) * 0.01, 0.2 + (i % 4) * 0.05, Color("0B0814") if i % 2 else Color("120C1E"), 0.0 + (i % 3) * 0.002)
-	var temple := group(_content, Vector3(-0.30, -0.30, 0.01))  # a rotting temple: broken pillars, a cracked roof
-	for k in 4:
-		poly(temple, rect(-0.09 + k * 0.06, 0, -0.07 + k * 0.06, 0.09 - (k % 2) * 0.04), Color("2B2438"))
-	poly(temple, tri(Vector2(-0.12, 0.09), Vector2(0.12, 0.09), Vector2(-0.01, 0.15)), Color("2B2438"), 0.001)
-	var sk := skotos(_content, 0.16, -0.33, 1.25)
-	var faith := group(_content, Vector3.ZERO)
-	for i in 10:
-		poly(faith, ellipse(0, 0, 0.005, 0.005, 8), GLOW, 0.03, false)
-	var far := island(_content, 0.45, 0.02, 0.5)
-	_tick = func(t: float):
-		sk.position.y = -0.33 + sin(t * 0.9) * 0.008
-		var a := clampf(t / 5.0, 0.0, 1.0)  # he appears, then thins: a god who is forgotten goes hungry
-		sk.scale = Vector3.ONE * lerpf(1.0, 0.86, clampf((t - 12.0) / 7.0, 0.0, 1.0))
-		for i in faith.get_child_count():  # the people's faith drifts away from him toward the little island
-			var k := fposmod(t * 0.1 + i / 10.0, 1.0)
-			(faith.get_child(i) as Node3D).position = Vector3(lerpf(-0.45 + (i % 5) * 0.09, 0.45, k), lerpf(-0.30, 0.04, k) + sin(k * PI) * 0.1, 0.03)
-		far.position.y = 0.02 + sin(t * 1.3) * 0.01
-		sk.visible = a > 0.05
+# ------------------------------------------------------------------ II. the forgotten: dusk, the ruined temple in the wood behind you
+func _enter_2() -> void:
+	world.set_mood("dusk", 0.0)
+	world.motes.emitting = false
+	world.veil_mat.set_shader_parameter("strength", 0.75)
+	world.wind = 1.3
+	for p in world.people:
+		p.set_pose("idle")
+	world.surf.set_shader_parameter("window_glow", 1.4)
 
 
-func _ch3() -> void:
-	sky(Color("2A1330"), Color("5A2A3A"))
-	stars(18, 11)
-	var isl := island(_content, 0.0, -0.26, 1.4)
-	var v := veil(_content, 0.0, -0.26, 0.34, 0.6)
-	var sk := skotos(_content, 0.0, -0.17, 0.8)
-	var cracks := group(_content, Vector3(0, 0, 0.03))
-	var zig := PackedVector2Array([Vector2(0.0, 0.17), Vector2(-0.03, 0.12), Vector2(0.02, 0.08), Vector2(-0.04, 0.03), Vector2(0.01, -0.02), Vector2(-0.02, -0.06)])
-	for i in zig.size() - 1:
-		var a := zig[i]
-		var b := zig[i + 1]
-		var d := (b - a).normalized()
-		var n := Vector2(-d.y, d.x) * 0.004
-		poly(cracks, PackedVector2Array([a + n, b + n, b - n, a - n]), PURPLE, 0.0, false)
-	cracks.visible = false
-	var shards := group(_content, Vector3.ZERO)
-	for i in 10:
-		poly(shards, tri(Vector2(-0.01, 0), Vector2(0.01, 0), Vector2(0, 0.025)), GLOW if i % 2 else EMBER, 0.03, false)
-	shards.visible = false
-	var night := poly(_content, rect(-W / 2.0, -H / 2.0, W / 2.0, H / 2.0), Color(0.05, 0.0, 0.08, 0.0), 0.04, false)
-	_tick = func(t: float):
-		sk.position = Vector3(0, -0.17 + sin(t) * 0.01, 0)
-		sk.scale = Vector3.ONE * (1.0 + 0.15 * clampf(t / 10.0, 0.0, 1.0))
-		isl.position.y = -0.26 + sin(t * 1.2) * 0.008
-		cracks.visible = t > 8.0
-		cracks.scale = Vector3.ONE * (1.0 + maxf(t - 8.0, 0.0) * 0.05)
-		v.visible = t < 14.0
-		(night.material_override as StandardMaterial3D).albedo_color.a = clampf((t - 14.0) / 5.0, 0.0, 0.5)
-		shards.visible = t > 14.0
-		for i in shards.get_child_count():  # the Veil breaks into falling embers
-			var k := clampf((t - 14.0 - i * 0.12) / 4.0, 0.0, 1.0)
-			var a := PI * (0.1 + 0.8 * i / 9.0)
-			(shards.get_child(i) as Node3D).position = Vector3(cos(a) * 0.34, -0.26 + sin(a) * 0.34 - k * 0.3, 0.03)
-			(shards.get_child(i) as Node3D).rotation.z = k * 6.0 * (1 if i % 2 else -1)
+func _tick_2(t: float) -> void:
+	if _once("rumble", 10.5):
+		_sound("story_thunder", Vector3.INF, -12.0)
+	if _once("dim", 18.0):
+		world.set_mood("curse", 14.0)
 
 
-func _ch4() -> void:
-	sky(Color("F6C98A"), Color("F2A65C"))
-	var isl := island(_content, 0.0, -0.10, 2.0)
-	var suns := group(_content, Vector3(0, 0.22, 0))
-	var days := []
-	for i in 5:  # five days along the top: the sun for each, the fifth one a black sun
-		var d := group(suns, Vector3(-0.32 + i * 0.16, 0, 0.0))
-		poly(d, ellipse(0, 0, 0.028, 0.028, 18), GLOW if i < 4 else INK, 0.0, false)
-		poly(d, arc_band(0, 0, 0.034, 0.005, 0.0, TAU, 24), GOLD if i < 4 else PURPLE, 0.001, false)
-		d.scale = Vector3.ZERO
-		days.append(d)
-	var dark := poly(_content, rect(-W / 2.0, -H / 2.0, W / 2.0, H / 2.0), Color(0.05, 0.0, 0.08, 0.0), 0.03, false)
-	var creep := group(_content, Vector3.ZERO)
-	for i in 16:  # dark shapes creep in from the edges, low
-		var r := RandomNumberGenerator.new()
-		r.seed = i * 31
-		var x := (-0.55 if i % 2 == 0 else 0.55)
-		var m := poly(creep, PackedVector2Array([Vector2(-0.02, 0), Vector2(0.02, 0), Vector2(0.015, 0.05), Vector2(0.0, 0.07), Vector2(-0.015, 0.05)]), Color("0B0814"), 0.035)
-		m.position = Vector3(x, -0.20 + r.randf_range(-0.06, 0.04), 0.035)
-		m.set_meta("x0", x)
-		m.set_meta("i", i)
-	_tick = func(t: float):
-		isl.position.y = -0.10 + sin(t * 1.2) * 0.01
-		for i in days.size():
-			days[i].scale = Vector3.ONE * clampf((t - 1.0 - i * 2.6) / 0.8, 0.0, 1.0)
-		var night_k := clampf((t - 12.0) / 6.0, 0.0, 1.0)
-		(dark.material_override as StandardMaterial3D).albedo_color.a = night_k * 0.55
-		for m in creep.get_children():
-			var i: int = m.get_meta("i")
-			var x0: float = m.get_meta("x0")
-			var k := clampf((t - 9.0 - i * 0.2) / 8.0, 0.0, 1.0)
-			m.position.x = lerpf(x0, 0.0 + (i % 5 - 2) * 0.06, k)
+# ------------------------------------------------------------------ III. the curse: Skotos rises out of the wood
+func _enter_3() -> void:
+	world.set_mood("curse", 0.0)
+	world.skotos.visible = true
+	world.skotos.position.y = StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 34.0
+	world.wind = 2.0
 
 
-func _ch5() -> void:
-	sky(Color("1A0F26"), Color("3B1F5C"))
-	stars(20, 5)
-	var hg := hourglass(_content, 0.0, 0.0, 1.9)
-	var isl := island(_content, 0.0, -0.25, 0.9)
-	var rings := group(_content, Vector3(0, 0, -0.01))
-	for r in [0.3, 0.38]:
-		poly(rings, arc_band(0, 0, r, 0.006, 0.0, TAU, 40), GLOW if r < 0.35 else EMBER, 0.0, false)
-	var ticks := []
-	for k in 12:
-		var a := TAU * k / 12
-		var m := poly(rings, rect(-0.004, 0.31, 0.004, 0.345), GOLD, 0.001, false)
-		m.rotation.z = a
-		ticks.append(m)
-	var hand := poly(_content, PackedVector2Array([Vector2(-0.006, 0), Vector2(0.006, 0), Vector2(0.003, 0.26), Vector2(-0.003, 0.26)]), GLOW, 0.02, false)
-	var motes := group(_content, Vector3.ZERO)
-	for i in 14:
-		poly(motes, ellipse(0, 0, 0.005, 0.005, 8), GLOW, 0.03, false)
-	_tick = func(t: float):
-		hg.rotation.z = lerpf(0.0, PI, clampf((t - 5.0) / 4.0, 0.0, 1.0))  # it turns over
-		var k := clampf((t - 9.0) / 9.0, 0.0, 1.0)  # the sand runs back up
-		var top := hg.get_node("SandTop") as MeshInstance3D
-		var bottom := hg.get_node("SandBottom") as MeshInstance3D
-		top.scale = Vector3.ONE * (0.15 + 0.85 * (1.0 - k) if t > 5.0 else 1.0)
-		bottom.scale = Vector3.ONE * (0.15 + 0.85 * k)
-		hand.rotation.z = -t * 0.9 if t > 9.0 else 0.0  # the clock hand sweeps backward
-		rings.rotation.z = -t * 0.12
-		isl.position.y = -0.25 + sin(t * 1.3) * 0.008
-		for i in motes.get_child_count():
-			var kk := fposmod(t * 0.2 + i / 14.0, 1.0)
-			var a := TAU * i / 14 + t * 0.4
-			(motes.get_child(i) as Node3D).position = Vector3(cos(a) * (0.08 + kk * 0.3), sin(a) * (0.08 + kk * 0.3), 0.03)
+func _tick_3(t: float) -> void:
+	if _once("rise", 1.0):
+		_sound("story_rise", Vector3.INF, -2.0)
+		var tw := create_tween()
+		tw.tween_property(world.skotos, "position:y", StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 3.0, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(world.skotos_eyes, "light_energy", 4.0, 9.0)
+	if _once("thunder1", 6.0):
+		_sound("story_thunder", Vector3.INF, -4.0)
+	if _once("crack1", 15.0):
+		_sound("story_crack", StoryWorld.VILLAGE + Vector3(0, 12, 0), 0.0, 80.0)
+		world.veil_mat.set_shader_parameter("crack_at", Vector3(0.3, 0.8, 0.5).normalized())
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.0, 0.45, 2.0)
+	if _once("crack2", 24.0):
+		_sound("story_crack", StoryWorld.VILLAGE + Vector3(0, 12, 0), 0.0, 80.0)
+		_sound("story_thunder", Vector3.INF, -2.0)
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.45, 0.85, 2.5)
+	world.skotos.rotation.y = atan2(-StoryWorld.SKOTOS_AT.x, -StoryWorld.SKOTOS_AT.z) + sin(t * 0.3) * 0.06
 
 
-func _ch6() -> void:
-	sky(Color("F6D9A0"), Color("F2A65C"))
-	sun(_content, 0.0, 0.05, 0.12)
-	poly(_content, ridge(-W / 2.0, W / 2.0, -0.24, 0.04, 5.0, 1.0, -H / 2.0), Color("C77D4A"), 0.0)
-	var isl := island(_content, 0.0, -0.12, 2.6)
-	var v := veil(_content, 0.0, -0.12, 0.58, 0.5)
-	var stat := group(_content, Vector3(0, -0.12, 0.05))
-	poly(stat, PackedVector2Array([Vector2(-0.012, 0.018), Vector2(0.012, 0.018), Vector2(0.008, 0.06), Vector2(-0.008, 0.06)]), Color("D9A63A"), 0.0)
-	poly(stat, ellipse(0, 0.068, 0.008, 0.009, 10), Color("7A2318"), 0.001, false)
-	var embers := group(_content, Vector3.ZERO)
-	for i in 12:
-		poly(embers, ellipse(0, 0, 0.005, 0.005, 8), GLOW, 0.04, false)
-	_tick = func(t: float):
-		isl.position.y = -0.12 + sin(t * 1.2) * 0.01
-		stat.position.y = -0.12 + sin(t * 1.2) * 0.01 + 0.02
-		(v.material_override as StandardMaterial3D).albedo_color.a = 0.35 + 0.15 * sin(t * 1.5)
-		for i in embers.get_child_count():
-			var k := fposmod(t * 0.15 + i / 12.0, 1.0)
-			(embers.get_child(i) as Node3D).position = Vector3(-0.3 + (i % 6) * 0.12, -0.2 + k * 0.5, 0.04)
+# ------------------------------------------------------------------ IV. the fall: the Veil shatters, the dark comes, the roofs burn
+func _enter_4() -> void:
+	world.set_mood("fall", 0.0)
+	world.skotos.visible = true
+	world.skotos_eyes.light_energy = 4.0
+	world.veil_mat.set_shader_parameter("crack", 0.9)
+	world.veil_mat.set_shader_parameter("strength", 0.8)
+	world.wind = 2.4
+
+
+func _tick_4(t: float) -> void:
+	if _once("shatter", 1.5):
+		_sound("story_shatter", Vector3.INF, 0.0)
+		world.shards.restart()
+		world.shards.emitting = true
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.8, 0.0, 1.2)
+	if _once("beasts", 4.0):
+		world.release_beasts()
+		for i in range(1, world.people.size()):  # they run for their doors
+			var h: Dictionary = world.houses[i % world.houses.size()]
+			world.people[i].go(h["door"], "flee", 3.2)
+		world.people[0].go(StoryWorld.VILLAGE + Vector3(0, 0, 0.8), "walk", 1.0)
+	if _once("fire", 9.5):
+		for f in world.fires:
+			f.emitting = true
+		world.surf.set_shader_parameter("window_glow", 0.0)
+		create_tween().tween_property(world, "scorch", 1.0, 14.0)
+		_sound("story_thunder", Vector3.INF, -3.0)
+	if _once("camp_out", 12.0):
+		for g in world.camp:
+			g.emitting = false
+
+
+# ------------------------------------------------------------------ V. the hourglass: you turn it, and time runs back
+func _enter_5() -> void:
+	world.set_mood("fall", 0.0)
+	world.hourglass.visible = true
+	world.hourglass.rotation = Vector3.ZERO
+	world.sand_top.scale = Vector3(1, 0.1, 1)
+	world.sand_bottom.scale = Vector3.ONE
+	world.surf.set_shader_parameter("ember_glow", 1.0)
+
+
+func _tick_5(t: float) -> void:
+	world.hourglass.position.y = 1.55 + sin(t * 1.1) * 0.03
+	if _once("turn", 5.0):
+		var tw := create_tween()
+		tw.tween_property(world.hourglass, "rotation:z", PI, 2.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		_sound("story_rise", Vector3.INF, -3.0)
+	if _once("rewind", 7.5):
+		world.hourglass.rotation.z = 0.0  # the turned glass is the same glass upright: swap the sand round
+		world.sand_top.scale = Vector3.ONE
+		world.sand_bottom.scale = Vector3(1, 0.1, 1)
+		create_tween().tween_property(world.sand_top, "scale:y", 0.1, 18.0)
+		create_tween().tween_property(world.sand_bottom, "scale:y", 1.0, 18.0)
+		world.clock_rate = -1.6
+		world.sky_mat.set_shader_parameter("flow", -6.0)
+		world.unshards.emitting = true
+		for f in world.fires:
+			f.emitting = false
+		world.recall_beasts()
+		create_tween().tween_property(world, "scorch", 0.0, 9.0)
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.9, 0.0, 9.0)
+		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("strength", v), 0.0, 1.0, 9.0)
+		var sk := create_tween()
+		sk.tween_property(world.skotos, "position:y", world.skotos.position.y - 40.0, 10.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		sk.parallel().tween_property(world.skotos_eyes, "light_energy", 0.0, 6.0)
+		world.set_mood("predawn", 12.0)
+		for i in world.people.size():
+			var p: StoryPerson = world.people[i]
+			p.go(StoryWorld.VILLAGE + Vector3(cos(i * 0.63) * 3.5, 0, sin(i * 0.63) * 3.5), "walk", 2.2)
+	if _once("still", 17.0):
+		world.clock_rate = 1.0
+		world.sky_mat.set_shader_parameter("flow", 1.0)
+		world.unshards.emitting = false
+		for g in world.camp:
+			g.emitting = true
+		world.surf.set_shader_parameter("window_glow", 1.0)
+
+
+# ------------------------------------------------------------------ VI. your turn: dawn again; they wake, and Maren prays to you
+func _enter_6() -> void:
+	world.set_mood("predawn", 0.0)
+	world.set_mood("dawn", 10.0)
+	world.hourglass.visible = false
+	world.skotos.visible = false
+	world.scorch = 0.0
+	world.clock_rate = 1.0
+	world.veil_mat.set_shader_parameter("crack", 0.0)
+	world.veil_mat.set_shader_parameter("strength", 0.9)
+	world.wind = 0.8
+	for i in world.people.size():
+		var p: StoryPerson = world.people[i]
+		if i == 0:
+			p.place(Vector3(0.4, StoryWorld.height(0.4, -5.0), -5.0), PI)  # Maren on the path, near you, facing you
+			continue
+		p.set_pose("sleep")
+	for b in world.beasts:
+		b["node"].visible = false
+
+
+func _tick_6(t: float) -> void:
+	if _once("kneel", 2.0):
+		world.people[0].set_pose("pray")
+	if _once("wake", 9.0):
+		for i in range(1, world.people.size()):
+			world.people[i].set_pose("idle")
+	if _once("faith", 13.0):
+		world.motes.emitting = true
+		_sound("story_rise", Vector3.INF, -8.0)
+	if _once("morning", 16.0):
+		world.set_mood("morning", 12.0)

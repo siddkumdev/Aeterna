@@ -1,7 +1,7 @@
 extends SceneTree
 ## The start experience (desktop window, not --headless):
 ##   <godot console> --xr-mode off --path godot -s res://tools/title_shot.gd -- OUT_PREFIX
-## Writes OUT_PREFIX_title.png, _tale.png, _narration.png, _hint.png and prints TITLESHOT lines.
+## Writes OUT_PREFIX_title.png, _narration.png, _hint.png and prints TITLESHOT lines.
 
 func _initialize() -> void:
 	var prefix := OS.get_cmdline_user_args()[0] if OS.get_cmdline_user_args().size() > 0 else "title_shot"
@@ -19,18 +19,17 @@ func _initialize() -> void:
 	cam.look_at(look, Vector3.UP)
 	await _snap(prefix + "_title")
 	print("TITLESHOT state ", l._state, " asleep ", l.game.asleep, " plaques ", l._plaques.keys())
-	l._press_plaque("tale")
-	for i in 30:
-		await process_frame
-	await _snap(prefix + "_tale")
-	l._press_plaque("tale")  # closes it
 	l._press_plaque("wake")
+	l._press_plaque("wake")  # a double press must not start it twice
 	for i in 40:
 		await process_frame
 	await _snap(prefix + "_narration")
 	print("TITLESHOT narrating: ", l._state)
-	l._skip = true
-	for i in 30:
+	var st: OpeningStage = l.game.get_node_or_null("OpeningStage")
+	print("TITLESHOT stages ", l.game.get_children().filter(func(c): return c is OpeningStage).size())
+	if st:
+		st._skipped = true
+	for i in 120:
 		await process_frame
 	print("TITLESHOT after skip: ", l._state, " asleep ", l.game.asleep)
 	cam.global_position = l.game.board.to_global(Vector3(0.0, 0.42, 1.15))  # the player's seat, looking at the tray

@@ -2514,6 +2514,214 @@
   "tracker": "A20",
   "vary": 0.03
  },
+ "story_burning": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_burning.wav",
+    "peak_db": -5.3,
+    "rms_db": -25.0,
+    "seam": 3.75,
+    "seconds": 12.0
+   }
+  ],
+  "loop": true,
+  "note": "story loop: the village burns, big fire roar, crackle, wind and far thunder",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
+ "story_crack": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.6,
+  "duck": true,
+  "files": [
+   {
+    "file": "story_crack_1.wav",
+    "peak_db": -6.0,
+    "rms_db": -25.5,
+    "seam": null,
+    "seconds": 2.186
+   },
+   {
+    "file": "story_crack_2.wav",
+    "peak_db": -6.0,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 2.236
+   },
+   {
+    "file": "story_crack_3.wav",
+    "peak_db": -6.0,
+    "rms_db": -25.4,
+    "seam": null,
+    "seconds": 2.074
+   }
+  ],
+  "loop": false,
+  "note": "story: the Veil overhead cracks, real glass stress and a low thunder",
+  "spatial": true,
+  "tracker": "A22",
+  "vary": 0.03
+ },
+ "story_dread": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_dread.wav",
+    "peak_db": -11.0,
+    "rms_db": -26.0,
+    "seam": 0.1,
+    "seconds": 14.0
+   }
+  ],
+  "loop": true,
+  "note": "story loop: Skotos is near, a deep drone, whispers in the trees and a storm wind",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
+ "story_dusk": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_dusk.wav",
+    "peak_db": -14.3,
+    "rms_db": -29.0,
+    "seam": 0.25,
+    "seconds": 18.0
+   }
+  ],
+  "loop": true,
+  "note": "story loop: the Dark Wood at dusk, low wind, creaking boughs, a far owl, a slow drone underneath",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
+ "story_fire": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_fire.wav",
+    "peak_db": -5.1,
+    "rms_db": -28.0,
+    "seam": 3.32,
+    "seconds": 10.0
+   }
+  ],
+  "loop": true,
+  "note": "story loop: a village fire up close, real crackle and soft flame roar (played from the fire itself)",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
+ "story_meadow": {
+  "bus": "ambience",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_meadow.wav",
+    "peak_db": -14.3,
+    "rms_db": -28.0,
+    "seam": 0.75,
+    "seconds": 16.0
+   }
+  ],
+  "loop": true,
+  "note": "story loop: open meadow at dawn, real wind in the grass, birdsong close and far, a faint sheep bell",
+  "spatial": false,
+  "tracker": "A39",
+  "vary": 0.03
+ },
+ "story_rise": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": true,
+  "files": [
+   {
+    "file": "story_rise.wav",
+    "peak_db": -5.0,
+    "rms_db": -19.8,
+    "seam": null,
+    "seconds": 4.477
+   }
+  ],
+  "loop": false,
+  "note": "story: Skotos rises from the Dark Wood, a long creature groan, timber creaks and thunder",
+  "spatial": false,
+  "tracker": "A22",
+  "vary": 0.03
+ },
+ "story_shatter": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": true,
+  "files": [
+   {
+    "file": "story_shatter.wav",
+    "peak_db": -4.0,
+    "rms_db": -21.6,
+    "seam": null,
+    "seconds": 4.118
+   }
+  ],
+  "loop": false,
+  "note": "story: the Veil shatters, a sky of real glass falling, thunder and a magic swell",
+  "spatial": false,
+  "tracker": "A22",
+  "vary": 0.03
+ },
+ "story_thunder": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "story_thunder_1.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.3,
+    "seam": null,
+    "seconds": 0.991
+   },
+   {
+    "file": "story_thunder_2.wav",
+    "peak_db": -7.0,
+    "rms_db": -24.8,
+    "seam": null,
+    "seconds": 0.947
+   },
+   {
+    "file": "story_thunder_3.wav",
+    "peak_db": -7.0,
+    "rms_db": -22.6,
+    "seam": null,
+    "seconds": 0.918
+   }
+  ],
+  "loop": false,
+  "note": "story: far thunder rolling over the island",
+  "spatial": false,
+  "tracker": "A40",
+  "vary": 0.03
+ },
  "throw_whoosh": {
   "bus": "ui",
   "combo": false,
@@ -2730,6 +2938,185 @@
   "spatial": true,
   "tracker": "A32",
   "vary": 0.05
+ },
+ "voice_maren": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "voice_maren_1.wav",
+    "peak_db": -13.0,
+    "rms_db": -28.3,
+    "seam": null,
+    "seconds": 0.375
+   },
+   {
+    "file": "voice_maren_2.wav",
+    "peak_db": -13.0,
+    "rms_db": -30.4,
+    "seam": null,
+    "seconds": 0.342
+   },
+   {
+    "file": "voice_maren_3.wav",
+    "peak_db": -13.0,
+    "rms_db": -29.4,
+    "seam": null,
+    "seconds": 0.323
+   },
+   {
+    "file": "voice_maren_4.wav",
+    "peak_db": -13.0,
+    "rms_db": -28.7,
+    "seam": null,
+    "seconds": 0.373
+   },
+   {
+    "file": "voice_maren_5.wav",
+    "peak_db": -13.0,
+    "rms_db": -28.1,
+    "seam": null,
+    "seconds": 0.349
+   },
+   {
+    "file": "voice_maren_6.wav",
+    "peak_db": -13.0,
+    "rms_db": -29.7,
+    "seam": null,
+    "seconds": 0.341
+   }
+  ],
+  "loop": false,
+  "note": "story: Maren (and the villagers) speak, a woman's syllable at her own pitch",
+  "spatial": true,
+  "tracker": "A32",
+  "vary": 0.0
+ },
+ "voice_narrator": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "voice_narrator_1.wav",
+    "peak_db": -14.0,
+    "rms_db": -28.9,
+    "seam": null,
+    "seconds": 0.454
+   },
+   {
+    "file": "voice_narrator_2.wav",
+    "peak_db": -14.0,
+    "rms_db": -29.5,
+    "seam": null,
+    "seconds": 0.415
+   },
+   {
+    "file": "voice_narrator_3.wav",
+    "peak_db": -14.0,
+    "rms_db": -28.4,
+    "seam": null,
+    "seconds": 0.46
+   },
+   {
+    "file": "voice_narrator_4.wav",
+    "peak_db": -14.0,
+    "rms_db": -28.3,
+    "seam": null,
+    "seconds": 0.461
+   },
+   {
+    "file": "voice_narrator_5.wav",
+    "peak_db": -14.0,
+    "rms_db": -30.5,
+    "seam": null,
+    "seconds": 0.424
+   },
+   {
+    "file": "voice_narrator_6.wav",
+    "peak_db": -14.0,
+    "rms_db": -30.5,
+    "seam": null,
+    "seconds": 0.424
+   },
+   {
+    "file": "voice_narrator_7.wav",
+    "peak_db": -14.0,
+    "rms_db": -29.1,
+    "seam": null,
+    "seconds": 0.421
+   },
+   {
+    "file": "voice_narrator_8.wav",
+    "peak_db": -14.0,
+    "rms_db": -30.5,
+    "seam": null,
+    "seconds": 0.424
+   }
+  ],
+  "loop": false,
+  "note": "story narrator: one soft, older-voice syllable per word (gibberish, no real words)",
+  "spatial": false,
+  "tracker": "A32",
+  "vary": 0.0
+ },
+ "voice_skotos": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "voice_skotos_1.wav",
+    "peak_db": -9.0,
+    "rms_db": -28.6,
+    "seam": null,
+    "seconds": 1.594
+   },
+   {
+    "file": "voice_skotos_2.wav",
+    "peak_db": -9.0,
+    "rms_db": -27.6,
+    "seam": null,
+    "seconds": 1.536
+   },
+   {
+    "file": "voice_skotos_3.wav",
+    "peak_db": -9.0,
+    "rms_db": -26.7,
+    "seam": null,
+    "seconds": 1.623
+   },
+   {
+    "file": "voice_skotos_4.wav",
+    "peak_db": -9.0,
+    "rms_db": -28.0,
+    "seam": null,
+    "seconds": 1.593
+   },
+   {
+    "file": "voice_skotos_5.wav",
+    "peak_db": -9.0,
+    "rms_db": -28.5,
+    "seam": null,
+    "seconds": 1.573
+   },
+   {
+    "file": "voice_skotos_6.wav",
+    "peak_db": -9.0,
+    "rms_db": -30.0,
+    "seam": null,
+    "seconds": 1.508
+   }
+  ],
+  "loop": false,
+  "note": "story: Skotos speaks, a man's syllable pitched far down, a creature growl and a whisper under it",
+  "spatial": true,
+  "tracker": "A22",
+  "vary": 0.0
  },
  "ward_cast": {
   "bus": "sfx",

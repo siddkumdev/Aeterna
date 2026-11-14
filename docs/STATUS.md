@@ -63,3 +63,8 @@ Last updated: 2026-11-13, Steps 1-3 plus visual/rendering (`0869f55`) and openin
 - First run: the story told piece by piece as an in-game animation on the island.
 - Hands look: the user will judge it in the headset.
 - Performance: OVR Metrics Tool.
+
+
+## 2026-11-14 (sykeriin) Opening story rebuilt
+- 360° procedural story world (`godot/scripts/story/`), director in `ui/opening_stage.gd`, Skip plaque in the launcher. Desktop shots: `godot/tools/opening_shot.gd`.
+- Open: not tried on a headset; chapter VI's last shot is not captured (shot guard); Skotos only reads when you look up; burning-house flames look like flat sprites; critics not run yet on this round.

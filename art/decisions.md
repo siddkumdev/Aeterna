@@ -335,3 +335,9 @@ Built the first pass from the 2026-10-19 notes: burner flame, muzzle flash and s
 - 2026-11-13 (Siddharth, I04 A2): tapping any villager—including one with an active quest such as the praying villager—increments `v.taps` and advances the `"Tap a villager"` tutorial step.
 - 2026-11-13 (Siddharth, UX A3): building the first tower shows a one-time stacked toast explaining pinch-and-hold tower selling (`Game.SELL_TOWER_HINT`), and the final spread of the Ledger (`page 5`) carries an in-game `"Quit Game"` button seal.
 - 2026-11-13 (Siddharth, Ledger 4g A4): keep hold-to-open left-palm Ledger control, and shift the open book `14 cm` (`Game.LEDGER_INWARD_SHIFT = 0.14 m`) toward the board center so the palm OS menu reticle never covers the right page text.
+
+## 2026-11-14 · Opening story rebuilt as an immersive 360° world (decided by sykeriin)
+- The opening is now a full opaque 360° procedural world (StoryWorld + director in `opening_stage.gd`); passthrough is off only during the story and restored after. Procedural textures only, no assets.
+- Six chapters with fades, low head-locked captions, typed text with per-speaker voice blips (narrator, Skotos, Maren), and ambience per chapter.
+- Skotos is a huge smoke god (~60 m) in the Dark Wood behind the player, purple rim and eyes (Warden purple, no blue).
+- The Tale plaque is removed; the title has Wake and a "Skip story" plaque. Skipping during the story: hold a pinch 1.5 s (Esc on desktop). Fixes the story vanishing on the first click.
