@@ -998,6 +998,9 @@ func _build_people() -> void:
 		people[i]._wait = rr.randf_range(1.0, 6.0)
 
 
+const STATUE_K := 0.8
+
+
 func _story_statue(c: Vector3) -> void:
 	## The little god as the game's statue (ew_village_statue_v01: hooded pilgrim, long robe, drooping sleeves, cupped hands
 	## holding an ember bowl, a gold sun-disc behind the hood, a round mossy base), carved at life size with the detail the
@@ -1008,7 +1011,7 @@ func _story_statue(c: Vector3) -> void:
 	var dark := Color(0.3, 0.28, 0.25)
 	var gold := Color(0.85, 0.62, 0.25)
 	var shade := Color(0.05, 0.045, 0.04)
-	var o := Transform3D(Basis.IDENTITY, c)
+	var o := Transform3D(Basis.from_scale(Vector3.ONE * STATUE_K), c)  # the user, 2026-11-14: "a little smaller"
 	cyl(st, 1.55, 1.65, 0.5, o * at(Vector3(0, 0.25, 0)), K.ROCK, stone * 0.9, 28)
 	cyl(st, 1.7, 1.7, 0.1, o * at(Vector3(0, 0.52, 0)), K.ROCK, stone * 0.95, 28)
 	lathe(st, PackedVector2Array([Vector2(1.42, 0.55), Vector2(1.38, 0.75), Vector2(1.22, 1.6), Vector2(1.02, 2.6), Vector2(0.86, 3.35), Vector2(0.8, 3.55),
@@ -1063,7 +1066,7 @@ func _story_statue(c: Vector3) -> void:
 	glow.light_color = Color(1.0, 0.55, 0.22)
 	glow.light_energy = 2.0
 	glow.omni_range = 5.0
-	glow.position = c + Vector3(0, 4.8, 1.5)
+	glow.position = c + Vector3(0, 4.8, 1.5) * STATUE_K
 	add_child(glow)
 	# the sun-disc behind the hood: a dished face, a ring, straight and short rays
 	var dz := Basis(Vector3.RIGHT, PI / 2.0)
@@ -1601,41 +1604,71 @@ func _build_beasts() -> void:
 		var a := side * (1.35 + (i / 2) * 0.16 + _rng.randf_range(-0.05, 0.05))  # out of the wood on both flanks of the village
 		var dir := Vector3(sin(a), 0, -cos(a))
 		var from := VILLAGE + dir * 30.0
-		var to := VILLAGE + Vector3(side * _rng.randf_range(2.5, 9.0), 0, _rng.randf_range(12.0, 17.0))  # out of the wood and into the meadow in front of the village, in plain sight (the user, 2026-11-14: could not see them)
+		var to := VILLAGE + Vector3(side * _rng.randf_range(2.0, 9.0), 0, _rng.randf_range(20.0, 23.0))  # out of the wood and into the meadow in front of the village, in plain sight (the user, 2026-11-14: could not see them)
 		b.visible = false
 		add_child(b)
-		beasts.append({"node": b, "legs": legs, "from": from, "to": to, "t": -_rng.randf_range(0.0, 0.3), "speed": _rng.randf_range(0.13, 0.19), "back": false})
+		var round_ := VILLAGE + Vector3(side * 25.0, 0, 15.0)  # outside the ring of houses (r 16 plus their size), never through them
+		beasts.append({"node": b, "legs": legs, "from": from, "round": round_, "to": to, "path": [round_, to], "i": 0, "delay": _rng.randf_range(0.0, 1.5),
+			"speed": _rng.randf_range(4.0, 5.5), "wait": 0.0, "back": false, "side": side})
 
 
 func release_beasts() -> void:
 	for b in beasts:
 		b["node"].visible = true
+		b["node"].position = b["from"]
 		b["back"] = false
+		b["path"] = [b["round"], b["to"]]
+		b["i"] = 0
 
 
 func recall_beasts() -> void:
+	## Dawn: they bolt back to the wood the way they came, round the houses.
 	for b in beasts:
 		b["back"] = true
+		b["path"] = [b["round"], b["from"]]
+		b["i"] = 0
+		b["speed"] = 6.0
 
 
 func _tick_beasts(delta: float) -> void:
+	## They lope out of the wood round the outside of the village, then prowl the meadow between it and you: they stalk
+	## to a spot, stop, sniff the air, turn, and go on. At dawn they bolt back.
 	for b in beasts:
 		var n: Node3D = b["node"]
 		if not n.visible:
 			continue
-		b["t"] = clampf(b["t"] + delta * b["speed"] * (-2.5 if b["back"] else 1.0), -3.0, 1.0)
-		var k := clampf(b["t"], 0.0, 1.0)
-		var p: Vector3 = (b["from"] as Vector3).lerp(b["to"], k)
-		p.y = height(p.x, p.z)
-		n.position = p
-		var dir: Vector3 = (b["to"] as Vector3) - (b["from"] as Vector3)
-		n.rotation.y = atan2(dir.x, dir.z)
-		var moving := 1.0 if (k > 0.0 and k < 1.0) else 0.15
-		var ph := clock * 9.0 + n.get_index()
+		if b["delay"] > 0.0:
+			b["delay"] -= delta
+			continue
+		var path: Array = b["path"]
+		var moving := 0.0
+		if b["i"] < path.size():
+			var goal: Vector3 = path[b["i"]]
+			var d := goal - n.position
+			d.y = 0.0
+			if d.length() > 0.3:
+				n.position += d.normalized() * minf(d.length(), b["speed"] * delta)
+				n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), minf(1.0, delta * 5.0))
+				moving = 1.0
+			else:
+				b["i"] += 1
+				if b["i"] >= path.size():
+					if b["back"]:
+						n.visible = false
+						continue
+					b["wait"] = randf_range(1.0, 3.5)
+		elif not b["back"]:  # prowling
+			b["wait"] -= delta
+			n.rotation.y += sin(clock * 1.3 + n.get_index()) * delta * 0.6  # sniffing about
+			if b["wait"] <= 0.0:
+				var q: Vector3 = VILLAGE + Vector3(b["side"] * randf_range(1.0, 11.0), 0, randf_range(19.5, 24.0))
+				b["path"] = [q]
+				b["i"] = 0
+				b["speed"] = randf_range(1.2, 2.2)
+		n.position.y = height(n.position.x, n.position.z)
+		var ph := clock * (9.0 if b["speed"] > 3.0 else 5.0) + n.get_index()
 		for j in 4:
-			(b["legs"][j] as Node3D).rotation.x = sin(ph + (PI if j in [1, 2] else 0.0)) * 0.7 * moving
-		if b["back"] and b["t"] <= -2.9:
-			n.visible = false
+			(b["legs"][j] as Node3D).rotation.x = sin(ph + (PI if j in [1, 2] else 0.0)) * 0.7 * maxf(moving, 0.1)
 
 
 # ------------------------------------------------------------------ the hourglass
