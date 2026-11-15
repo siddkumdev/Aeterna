@@ -2521,14 +2521,7 @@
   "duck": false,
   "files": [
    {
-    "file": "storm_rain_1.wav",
-    "peak_db": -8.1,
-    "rms_db": -31.0,
-    "seam": 0.38,
-    "seconds": 8.4
-   },
-   {
-    "file": "storm_rain_2.wav",
+    "file": "storm_rain.wav",
     "peak_db": -8.1,
     "rms_db": -31.0,
     "seam": 0.38,

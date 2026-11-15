@@ -41,7 +41,7 @@ def game(name):
 
 
 def context(st):
-    rain = game("storm_rain_1.wav")
+    rain = game("storm_rain.wav")
     n = S.n_of(6.6)
     rain = np.tile(rain, 2)[:n].copy()
     fi, fo = S.n_of(0.4), S.n_of(0.5)

@@ -126,7 +126,7 @@ INSTALL = {
                   "a Storm Cloud strike that hits nothing: a real distant thunder roll, quieter and darker (restart r15)"),
     "storm_snap": (lambda r: room(M.chain_snap(r), 0.15, 0.04), 4, -27.0, "boulder_hit", "A20",
                    "each extra enemy a strike chains to: a short quiet real crack (restart r15)"),
-    "storm_rain": (lambda r: M.storm_rain(r), 2, -31.0, "boulder_hit", "A20",
+    "storm_rain": (lambda r: M.storm_rain(r), 1, -31.0, "boulder_hit", "A20",
                    "soft real rain under the Storm Cloud while it is up; seamless loop on the cloud (restart r15)"),
     "rage_cast": (lambda r: room(M.rage9(r), 0.25, 0.08), 2, -19.9, "rage_cast", "A20", "Rage: a swelling heartbeat from a real drum (restart r9)"),
     "ward_cast": (lambda r: room(M.root11(1.0, 0.35, 0.15)(r), 0.25, 0.08), 2, -21.3, "ward_cast", "A20", "Root Ward: roots and branches sliding, leaf rustle (restart r11 root_a)"),
