@@ -38,6 +38,10 @@ static func build_underside(board: Node3D) -> Node3D:
 	board.add_child(under)
 	for n in under.find_children("*", "Node3D", true, false):
 		var part := str(n.get_meta("ew_part", ""))
+		if part == "drift" or part == "fins":
+			for m in ModelUtil.walk(n):
+				if m is MeshInstance3D:
+					(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if part == "drift":
 			var tw := n.create_tween().set_loops()
 			tw.tween_property(n, "position:y", n.position.y + 0.012, 3.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -102,6 +106,7 @@ static func build_forest(board: Node3D, rng_seed: int) -> void:
 			var s := rng.randf_range(0.8, 1.15) * (0.8 if side == "south" else 1.0)
 			clump.scale = Vector3(s, s * rng.randf_range(0.9, 1.1), s)
 			forest.add_child(clump)
+	ModelUtil.merge_static_meshes(forest, [], GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "ForestMerged")
 
 
 static func build_grid_lines(board: Node3D) -> MeshInstance3D:
@@ -121,6 +126,7 @@ static func build_grid_lines(board: Node3D) -> MeshInstance3D:
 	var lines := MeshInstance3D.new()
 	lines.mesh = im
 	lines.material_override = ModelUtil.flat_material(Color8(0xFF, 0xF4, 0xDC), true, 0.35)
+	lines.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	lines.visible = false
 	board.add_child(lines)
 	return lines
@@ -133,6 +139,7 @@ static func build_rim_handles(board: Node3D) -> Array[MeshInstance3D]:
 	root.name = "RimHandles"
 	board.add_child(root)
 	var rails: Array[MeshInstance3D] = []
+	var rail_nodes: Array[Node] = []
 	var wood_mat := ModelUtil.flat_material(Color8(0x5B, 0x29, 0x20))  # wood_dark
 	var brass_mat := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))  # brass/rarity_gold
 	brass_mat.emission_enabled = true
@@ -158,10 +165,14 @@ static func build_rim_handles(board: Node3D) -> Array[MeshInstance3D]:
 			post.mesh = post_mesh
 			post.material_override = wood_mat
 			post.position = Vector3(sx, 0.0, -0.014)
+			post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			holder.add_child(post)
 		var rail := MeshInstance3D.new()
 		rail.mesh = rail_mesh
 		rail.material_override = brass_mat
+		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(rail)
 		rails.append(rail)
+		rail_nodes.append(rail)
+	ModelUtil.merge_static_meshes(root, rail_nodes, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "HandlesMerged")
 	return rails

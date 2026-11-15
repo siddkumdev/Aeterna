@@ -20,6 +20,7 @@ var flowers: FlowerField  # the meadow flowers and clover that ride along (they 
 var _hidden: Dictionary = {}  # cells whose tufts are currently scaled to nothing
 var _gusts: Array = [null, null, null, null]  # {"start": Vector2, "dir": Vector2, "len": float, "age": float}
 var _push_buf: PackedVector4Array = PackedVector4Array()
+var _last_push_count := -1
 var _gust_a: PackedVector4Array = PackedVector4Array()
 var _gust_s: PackedVector4Array = PackedVector4Array()
 var _gusts_dirty := true
@@ -212,6 +213,16 @@ func set_pushers(world_points: Array) -> void:
 	var n := mini(world_points.size(), MAX_PUSH)
 	if _push_buf.size() != MAX_PUSH:
 		_push_buf.resize(MAX_PUSH)
+	var changed := n != _last_push_count
+	if not changed:
+		for i in n:
+			var wp: Vector4 = world_points[i]
+			if not _push_buf[i].is_equal_approx(wp):
+				changed = true
+				break
+	if not changed:
+		return
+	_last_push_count = n
 	for i in n:
 		_push_buf[i] = world_points[i]
 	for i in range(n, MAX_PUSH):

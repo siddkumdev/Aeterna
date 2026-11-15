@@ -39,10 +39,8 @@ void vertex() {
 	float sway = sin(t * 2.0 + ph) * 0.6 + sin(t * 3.3 + ph * 1.7 + 1.3) * 0.22 + sin(t * 0.5 + base.x * 8.0 + base.z * 6.0) * 0.45;
 	vec2 off = wd * sway * wind_amp * h * h;
 	float flatten = 0.0;
-	for (int i = 0; i < 16; i++) {
-		if (i >= push_count) {
-			break;
-		}
+	int pc = clamp(push_count, 0, 16);
+	for (int i = 0; i < pc; i++) {
 		vec4 p = pushers[i];
 		vec2 d = base.xz - p.xz;
 		float dist = length(d);
@@ -70,8 +68,8 @@ void vertex() {
 	}
 	gtint = gk;
 	VERTEX.y *= 1.0 - 0.45 * flatten * h;
-	mat3 inv = inverse(mat3(MODEL_MATRIX));
-	vec3 local = inv * vec3(off.x, 0.0, off.y);
+	mat3 m3 = mat3(MODEL_MATRIX);
+	vec3 local = (transpose(m3) / max(dot(m3[0], m3[0]), 0.0001)) * vec3(off.x, 0.0, off.y);
 	VERTEX.xz += local.xz;
 }
 

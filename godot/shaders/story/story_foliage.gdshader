@@ -28,10 +28,12 @@ void fragment() {
 	vec3 col = COLOR.rgb;
 	if (kind < 0.5) {
 		// a fir spray: a stem, side twigs angled toward the tip, and needles along every twig
+		float cam_dist = length(wp - INV_VIEW_MATRIX[3].xyz);
+		float detail = clamp((36.0 - cam_dist) / 10.0, 0.0, 1.0);
 		float env = (1.0 - uv.x * 0.75) * (0.75 + 0.25 * vnoise2(vec2(uv.x * 6.0, floor(uv.y * 2.0) * 3.1)));
 		float twig_t = uv.x * 9.0 - across * 1.4;
 		float twig = abs(fract(twig_t) - 0.5);
-		float needles = vnoise2(vec2(uv.x * 140.0, across * 30.0));
+		float needles = detail > 0.001 ? mix(0.55, vnoise2(vec2(uv.x * 140.0, across * 30.0)), detail) : 0.55;
 		float shape = step(across, env) * step(0.08, uv.x);
 		float stem = step(across, 0.05 * (1.0 - uv.x));
 		mask = max(stem, shape * step(twig, 0.1 + 0.32 * needles) * step(0.35, needles + 0.4 * (1.0 - across)));

@@ -61,12 +61,14 @@ func _build_bar(height: float) -> void:
 	bm.size = Vector3(BAR_W, 0.006, 0.002)
 	bg.mesh = bm
 	bg.material_override = ModelUtil.flat_material(Color8(0x2A, 0x22, 0x20), true)
+	bg.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_bar.add_child(bg)
 	_bar_fill = MeshInstance3D.new()
 	var fm := BoxMesh.new()
 	fm.size = Vector3(BAR_W, 0.0045, 0.0025)
 	_bar_fill.mesh = fm
 	_bar_fill.material_override = ModelUtil.flat_material(Color8(0xE8, 0x9A, 0x3C), true)
+	_bar_fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_bar.add_child(_bar_fill)
 	_bar.visible = false
 

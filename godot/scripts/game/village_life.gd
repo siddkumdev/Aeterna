@@ -316,6 +316,7 @@ func _spawn_lurkers() -> void:
 		var rig := CharacterRig.new()
 		add_child(rig)
 		rig.setup(ENEMY_MODELS[k][0], ENEMY_MODELS[k][1])
+		rig.set_cast_shadows(false)
 		rig.scale = Vector3.ONE * LURKER_SCALE
 		var c := _edge_cell()
 		rig.position = NavGrid.cell_centre(c) + Vector3(0, 0.05 if k == "wisp" else LURKER_LIFT, 0)

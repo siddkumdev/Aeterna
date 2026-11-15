@@ -20,6 +20,7 @@ var family := "char"  # char, bark (Grunt), veil (Scout), spore (Splitter), lant
 var anim := "idle"
 var gait := 0.0  # how fast it is moving, cells per second
 var act_k := 0.0
+var cast_shadows := true
 var model: Node3D
 var parts := {}
 
@@ -72,6 +73,18 @@ func setup(model_key: String, rig_family := "char") -> void:
 	for n in ModelUtil.walk(model):
 		if n is MeshInstance3D:
 			_meshes.append(n)
+	_apply_shadow_settings()
+
+
+func set_cast_shadows(on: bool) -> void:
+	cast_shadows = on
+	_apply_shadow_settings()
+
+
+func _apply_shadow_settings() -> void:
+	for m in _meshes:
+		var keep := cast_shadows and (parts.is_empty() or not m.has_meta("ew_part") or str(m.get_meta("ew_part")) in ["body", "head"])
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if keep else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func marker(suffix: String) -> Marker3D:

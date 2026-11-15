@@ -20,6 +20,8 @@ var _f_cell: Array[Vector2i] = []
 var _c_xf: Array[Transform3D] = []
 var _c_cell: Array[Vector2i] = []
 var _hidden: Dictionary = {}
+var _last_push_count := -1
+var _last_push_buf: PackedVector4Array = PackedVector4Array()
 
 
 static func build(parent: Node3D, nav: NavGrid, tiles: Array[Rect2], props: Array[Vector2], rng_seed: int) -> FlowerField:
@@ -203,5 +205,9 @@ func refresh(nav: NavGrid) -> void:
 
 
 func set_pushers(arr: PackedVector4Array, count: int) -> void:
+	if _last_push_count == count and _last_push_buf == arr:
+		return
+	_last_push_count = count
+	_last_push_buf = arr.duplicate()
 	_mat.set_shader_parameter("pushers", arr)
 	_mat.set_shader_parameter("push_count", count)

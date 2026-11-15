@@ -73,7 +73,7 @@ void sky() {
 		float mare = fbm3(d * 60.0, 3);
 		col += vec3(0.95, 0.9, 0.82) * disc * (0.8 + 0.4 * mare) * 2.5 * moon + vec3(0.6, 0.55, 0.6) * pow(max(md, 0.0), 300.0) * 0.4 * moon;
 	}
-	if (curse > 0.0 && h > 0.0 && !AT_CUBEMAP_PASS) {
+	if (curse > 0.0 && h > 0.0) {
 		// a slow wound of light in the clouds over the Dark Wood
 		float rift = fbm2(d.xz / max(d.y, 0.05) * 1.3 + vec2(clock * 0.03, 0.0), 4);
 		col += curse_color * 1.6 * smoothstep(0.62, 0.8, rift) * curse * smoothstep(0.0, 0.3, h);

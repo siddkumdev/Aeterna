@@ -124,6 +124,7 @@ func _enter() -> void:
 	world = StoryWorld.new()
 	world.name = "World"
 	add_child(world)
+	world.apply_perf_tier(PerfTier.detect())
 	if game:
 		_saved["board"] = game.board.visible if game.board else false
 		if game.board:

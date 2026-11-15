@@ -2289,6 +2289,47 @@ func _perf_fixes() -> void:
 	tray.set_cards(card_list)
 	check("CardTray shares one compiled face shader across cards",
 		tray._face_shader != null and tray.cards[0]._print_materials[0].shader == tray.cards[1]._print_materials[0].shader)
+	var c0_vps := tray.cards[0].get_children().filter(func(x): return x is SubViewport)
+	var c1_vps := tray.cards[1].get_children().filter(func(x): return x is SubViewport)
+	var c0_quads_off := tray.cards[0].get_children().all(func(x): return not (x is MeshInstance3D) or x == tray.cards[0]._body or (x as MeshInstance3D).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	check("Card3D shares card-back SubViewport across tray without retaining headless waiters",
+		c0_vps.size() == 1 and c1_vps.size() == 1 and Card3D._back_waiters.is_empty() and c0_quads_off)
+	var p_path: String = GameConfig.TOWERS[GameConfig.TOWER_ORDER[0]]["scene"]
+	var dummy_img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	Card3D._portrait_cache[p_path] = ImageTexture.create_from_image(dummy_img)
+	await tray.cards[0]._render_portrait()
+	c0_vps = tray.cards[0].get_children().filter(func(x): return x is SubViewport)
+	check("Card3D caches tower portraits without leaving an extra 3D SubViewport attached",
+		tray.cards[0]._face.art == Card3D._portrait_cache[p_path] and c0_vps.size() <= 1)
+	Card3D._portrait_cache.erase(p_path)
+	check("Static board Forest, Paths, and Props are merged into minimal draw batches",
+		g.board.get_node("Forest").get_child_count() <= 3
+		and g.board.get_node("Dressing/Paths").get_child_count() <= 3
+		and g.board.get_node("Dressing/Props").get_child_count() <= 3)
+	var rig_chk := CharacterRig.new()
+	root.add_child(rig_chk)
+	rig_chk.setup("elder_ram")
+	var sub_off := (not rig_chk.parts.has("arm_l")) or (rig_chk.parts["arm_l"] as MeshInstance3D).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var main_on := (not rig_chk.parts.has("body")) or (rig_chk.parts["body"] as MeshInstance3D).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	check("CharacterRig keeps body shadows on while disabling tiny sub-part shadow casters", sub_off and main_on)
+	rig_chk.set_cast_shadows(false)
+	var all_off := rig_chk._meshes.all(func(m): return m.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	check("CharacterRig.set_cast_shadows(false) disables all mesh shadow casting", all_off)
+	rig_chk.queue_free()
+	var sw := StoryWorld.new()
+	root.add_child(sw)
+	check("StoryWorld splits Pines, FarPines, Flowers, and Bushes into frustum-culled wedges",
+		sw.find_child("Pines0_*", false, false) != null
+		and sw.find_child("FarPines0_*", false, false) != null
+		and sw.find_child("Flowers_*", false, false) != null
+		and sw.find_child("Bushes_*", false, false) != null)
+	sw.apply_perf_tier(PerfTier.HIGH)
+	check("StoryWorld.apply_perf_tier(HIGH) disables mobile bloom and sets orthogonal sun shadows",
+		not sw.env.glow_enabled and not sw.env.adjustment_enabled
+		and sw.env.reflected_light_source == Environment.REFLECTION_SOURCE_DISABLED
+		and sw.env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY
+		and sw.sun.directional_shadow_mode == DirectionalLight3D.SHADOW_ORTHOGONAL)
+	sw.queue_free()
 	tray.queue_free()
 	g.queue_free()
 	await process_frame

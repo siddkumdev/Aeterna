@@ -103,6 +103,7 @@ var _rng := RandomNumberGenerator.new()
 var _noise := FastNoiseLite.new()
 var _arrays := {}
 var _fx_mats: Array[ShaderMaterial] = []
+var _tier := PerfTier.DESKTOP
 
 
 # ------------------------------------------------------------------ the land
@@ -206,6 +207,7 @@ func _apply_mood() -> void:
 	sun.light_energy = m["energy"]
 	env.fog_light_color = m["fog"]
 	env.fog_density = m["fog_d"] * FOG_SCALE  # cleaner air (the user, 2026-11-14: "I don't like the haze that much")
+	env.ambient_light_color = (m["horizon"] as Color).lerp(m["zenith"] as Color, 0.45)
 	env.ambient_light_energy = m["amb"]
 
 
@@ -374,6 +376,32 @@ func _build_env() -> void:
 	sun.directional_shadow_max_distance = 45.0
 	sun.shadow_blur = 1.5
 	add_child(sun)
+	apply_perf_tier(PerfTier.detect())
+
+
+func apply_perf_tier(tier: int) -> void:
+	## Match Quest TBDR / fill limits without stripping visual mood on desktop.
+	_tier = tier
+	if env == null or sun == null:
+		return
+	if tier != PerfTier.DESKTOP:
+		env.glow_enabled = false
+		env.adjustment_enabled = false
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+		sun.directional_shadow_max_distance = 28.0
+		sun.shadow_blur = 1.0 if tier == PerfTier.HIGH else 0.0
+	else:
+		env.glow_enabled = true
+		env.adjustment_enabled = true
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_max_distance = 45.0
+		sun.shadow_blur = 1.5
+	if not _mood.is_empty():
+		_apply_mood()
 
 
 func _build_ground() -> void:
@@ -711,22 +739,14 @@ func _build_grass() -> void:
 	cyl(st, 0.004, 0.004, 0.35, at(Vector3(0, 0.17, 0)), K.LEAVES, Color(0.25, 0.4, 0.12), 3)
 	ball(st, 0.028, Transform3D(Basis.from_scale(Vector3(1, 0.4, 1)), Vector3(0, 0.35, 0)), K.CLOTH, Color(1, 1, 1), 6)
 	ball(st, 0.01, at(Vector3(0, 0.36, 0)), K.CLOTH, Color(1.0, 0.75, 0.2), 4)
-	var fm := MultiMesh.new()
-	fm.transform_format = MultiMesh.TRANSFORM_3D
-	fm.mesh = st.commit()
-	fm.instance_count = 400
+	var flower_xfs: Array = []
 	for i in 400:
 		var r := _rng.randf_range(1.5, 20.0)
 		var a := _rng.randf_range(0, TAU)
 		var x := cos(a) * r
 		var z := sin(a) * r
-		fm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.7, 1.3)), Vector3(x, height(x, z), z)))
-	var fmi := MultiMeshInstance3D.new()
-	fmi.name = "Flowers"
-	fmi.multimesh = fm
-	fmi.material_override = surf
-	fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(fmi)
+		flower_xfs.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.7, 1.3)), Vector3(x, height(x, z), z)))
+	_scatter_wedges(st.commit(), flower_xfs, "Flowers", 12, false)
 
 
 # ------------------------------------------------------------------ the Dark Wood
@@ -908,6 +928,20 @@ func _scatter(mesh: Mesh, xfs: Array, name_: String, shadows := true) -> void:
 	add_child(mmi)
 
 
+func _scatter_wedges(mesh: Mesh, xfs: Array, prefix: String, wedges := 12, shadows := false) -> void:
+	## Bucket instances into angular wedges round the origin so off-camera arcs frustum-cull cleanly.
+	var buckets: Array = []
+	for w in wedges:
+		buckets.append([])
+	for xf: Transform3D in xfs:
+		var w := posmod(int(floor((atan2(xf.origin.z, xf.origin.x) + PI) / TAU * wedges)), wedges)
+		(buckets[w] as Array).append(xf)
+	for w in wedges:
+		var b: Array = buckets[w]
+		if not b.is_empty():
+			_scatter(mesh, b, "%s_%d" % [prefix, w], shadows)
+
+
 func _build_wood() -> void:
 	foliage_mat = ShaderMaterial.new()
 	foliage_mat.shader = FOLIAGE
@@ -933,9 +967,9 @@ func _build_wood() -> void:
 		continue
 		sets[i % 3].append(Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z)))
 	for k in 3:
-		_scatter(_pine(11 + k * 7), sets[k], "Pines%d" % k, false)  # the wood starts 22 m out: its shadows cost a fifth of the frame for little
+		_scatter_wedges(_pine(11 + k * 7), sets[k], "Pines%d" % k, 12, false)  # the wood starts 22 m out: its shadows cost a fifth of the frame for little
 	for k in 2:
-		_scatter(_pine_far(40 + k), far_sets[k], "FarPines%d" % k, false)
+		_scatter_wedges(_pine_far(40 + k), far_sets[k], "FarPines%d" % k, 12, false)
 	var oaks: Array = []
 	for p in [Vector3(-14, 0, -9), Vector3(13, 0, -27), Vector3(-9, 0, -31), Vector3(16, 0, -6)]:
 		oaks.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.9, 1.2)), Vector3(p.x, height(p.x, p.z) - 0.1, p.z)))
@@ -949,7 +983,7 @@ func _build_wood() -> void:
 		if _path_dist(Vector2(x, z)) < 2.0 or Vector2(x - VILLAGE.x, z - VILLAGE.z).length() < 13.0:
 			continue
 		bushes.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.6, 1.5)), Vector3(x, height(x, z) - 0.1, z)))
-	_scatter(_bush(), bushes, "Bushes", false)
+	_scatter_wedges(_bush(), bushes, "Bushes", 12, false)
 
 
 func _build_ruin() -> void:

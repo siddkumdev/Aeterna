@@ -33,6 +33,8 @@ var _tiles: Array[Rect2] = []  # footprints of every path tile, in cell coordina
 var _props: Array[Vector2] = []  # where every prop stands, in cell coordinates (the grass clears a ring round each)
 var _landmarks_at := {}  # prop name -> the first cell it stands on (where the villagers do their jobs)
 var _root: Node3D
+var _paths_root: Node3D
+var _props_root: Node3D
 var _nav: NavGrid
 var _z := 0
 
@@ -47,10 +49,18 @@ static func build(board: Node3D, rng_seed: int) -> Dictionary:
 	d._root = Node3D.new()
 	d._root.name = "Dressing"
 	board.add_child(d._root)
+	d._paths_root = Node3D.new()
+	d._paths_root.name = "Paths"
+	d._root.add_child(d._paths_root)
 	d._paths()
+	ModelUtil.merge_static_meshes(d._paths_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "PathsMerged")
 	var shrine := d._shrine()
+	d._props_root = Node3D.new()
+	d._props_root.name = "Props"
+	d._root.add_child(d._props_root)
 	d._house_props()
 	d._landmarks()
+	ModelUtil.merge_static_meshes(d._props_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "PropsMerged")
 	var out: Array[Vector2i] = []
 	for c in d._nav.kind:
 		if d._nav.kind[c] == "decor":
@@ -107,7 +117,7 @@ func _arms_rotation(native: Array, want: Array) -> float:
 
 func _tile(kind: String, centre: Vector2, extent: Vector2, native: Array, want: Array, yaw := NAN) -> void:
 	var n: Node3D = _scene(TILE[kind]).instantiate()
-	_root.add_child(n)
+	_paths_root.add_child(n)
 	_z += 1
 	n.position = _to_local(centre) + Vector3(0, EPS * _z, 0)
 	n.rotation.y = yaw if not is_nan(yaw) else _arms_rotation(native, want)
@@ -164,7 +174,7 @@ func _usable(cell: Vector2i) -> bool:
 
 func _place(name: String, cell: Vector2i, facing: float, scale := 1.0) -> void:
 	var n: Node3D = _scene(VILLAGE + "ew_village_%s.glb" % name).instantiate()
-	_root.add_child(n)
+	_props_root.add_child(n)
 	var jitter := Vector2(_rng.randf_range(-0.16, 0.16), _rng.randf_range(-0.16, 0.16))
 	n.position = _to_local(Vector2(cell) + Vector2(0.5, 0.5) + jitter) + Vector3(0, 0.0015, 0)  # a hair up: above the grass
 	_props.append(Vector2(cell) + Vector2(0.5, 0.5) + jitter)
@@ -197,7 +207,7 @@ func _house_props() -> void:
 			_place(HOUSE_PROPS[_rng.randi_range(0, HOUSE_PROPS.size() - 1)], c, facing)
 			if _rng.randf() < 0.35:  # a small second item in the same cell
 				var n: Node3D = _scene(VILLAGE + "ew_village_%s.glb" % SMALL_PROPS[_rng.randi_range(0, SMALL_PROPS.size() - 1)]).instantiate()
-				_root.add_child(n)
+				_props_root.add_child(n)
 				var at := Vector2(c) + Vector2(0.5, 0.5) + Vector2(_rng.randf_range(0.18, 0.3), _rng.randf_range(-0.3, 0.3)).rotated(facing)
 				n.position = _to_local(at) + Vector3(0, 0.0015, 0)
 				_props.append(at)

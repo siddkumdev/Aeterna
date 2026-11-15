@@ -39,6 +39,7 @@ func setup(under: Node3D) -> void:
 		var rig := CharacterRig.new()
 		a.add_child(rig)
 		rig.setup(CAST[i % CAST.size()][0])
+		rig.set_cast_shadows(false)
 		rig.scale = Vector3.ONE * SCALE
 		rig.anim = CAST[i % CAST.size()][1]
 		_idle.append(rig.anim)
@@ -57,6 +58,7 @@ func setup(under: Node3D) -> void:
 	cyl.rings = 1
 	_thread.mesh = cyl
 	_thread.material_override = _mat
+	_thread.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_thread.visible = false
 	add_child(_thread)
 	_spark = MeshInstance3D.new()
@@ -67,6 +69,7 @@ func setup(under: Node3D) -> void:
 	ball.rings = 4
 	_spark.mesh = ball
 	_spark.material_override = _mat
+	_spark.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_spark.visible = false
 	add_child(_spark)
 	_wait = randf_range(1.0, GAP.x)
