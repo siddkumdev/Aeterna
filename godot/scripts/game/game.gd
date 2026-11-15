@@ -1865,12 +1865,13 @@ func _process(delta: float) -> void:
 	_tick_day(delta)
 	_tick_quests(delta)
 	_tick_rim(delta)
-	if _xr:
+	if _xr and not asleep:
 		PerfTier.govern(delta, get_viewport(), lighting.sun, XRServer.find_interface("OpenXR"))
-	_perf_log_t -= delta
-	if _xr and _perf_log_t <= 0.0:
-		_perf_log_t = 5.0
-		print("[perf] fps=%d tier=%s step=%d" % [Engine.get_frames_per_second(), PerfTier.name_of(PerfTier.tier), PerfTier.step])
+	if _xr and (GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose()):
+		_perf_log_t -= delta
+		if _perf_log_t <= 0.0:
+			_perf_log_t = 5.0
+			print("[perf] fps=%d tier=%s step=%d" % [Engine.get_frames_per_second(), PerfTier.name_of(PerfTier.tier), PerfTier.step])
 	if _xr and ledger:
 		var palm := palm_pose()
 		ledger_from_palm(delta, palm[0], palm[1], palm[2], _eye())
@@ -2086,10 +2087,11 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 		return
 	var raw_up := normal.dot(Vector3.UP) if found else -1.0
 	var d := at.distance_to(eye)
-	_palm_log_t -= delta
-	if found and _palm_log_t <= 0.0:
-		_palm_log_t = 2.0
-		print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [raw_up, d, eye.y - at.y, ledger.open])  # for the headset log
+	if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
+		_palm_log_t -= delta
+		if found and _palm_log_t <= 0.0:
+			_palm_log_t = 2.0
+			print("[ledger] left palm seen: up=%.2f dist=%.2f below_eye=%.2f open=%s" % [raw_up, d, eye.y - at.y, ledger.open])  # for the headset log
 	var in_reach := found and d >= GameConfig.PALM_REACH.x and d <= GameConfig.PALM_REACH.y and at.y <= eye.y - GameConfig.PALM_BELOW_EYE
 	var up := raw_up if in_reach else -1.0  # a hand resting in the lap, behind you or up by your face is not the gesture
 	var busy := asleep or (_hands.size() > 0 and ((_held_card and _held_card_hand == _hands[0]) or _held_spell_cards.has(_hands[0])))
@@ -2107,7 +2109,8 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 			var open_pos := at + Vector3(0, 0.17, 0) + inward * LEDGER_INWARD_SHIFT
 			_face_ledger(open_pos, eye)  # it appears once, over the palm and shifted inward toward the board
 			ledger.set_open(true)
-			print("[ledger] opened by the left palm, up=%.2f dist=%.2f" % [up, d])
+			if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
+				print("[ledger] opened by the left palm, up=%.2f dist=%.2f" % [up, d])
 	elif busy or (found and in_reach and raw_up <= -0.5):
 		_palm_time = 0.0
 		_palm_close_time = 0.0
@@ -2507,7 +2510,7 @@ func hand_pressed(h: GameHand) -> void:
 
 
 func _hand_log(h: GameHand, event: String) -> void:
-	if OS.is_debug_build():
+	if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
 		print("[hand] %s %s" % [h.name, event])
 
 
@@ -3342,10 +3345,12 @@ func _build_rig() -> void:
 		_camera.rotation_degrees.x = -47.0
 		_build_mouse_hand()
 		_build_vignette()
-		if OS.get_environment("AETERNA_WATCH") == "1":
-			var watch := WatchLink.new()  # the Galaxy Watch drives the mouse hand (scripts/game/watch_link.gd)
-			watch.name = "watch_link"
-			add_child(watch)
+		if OS.get_environment("AETERNA_WATCH") == "1" and ResourceLoader.exists("res://scripts/game/watch_link.gd"):
+			var watch_script := load("res://scripts/game/watch_link.gd") as Script
+			if watch_script:
+				var watch: Node = watch_script.new()  # the Galaxy Watch drives the mouse hand (scripts/game/watch_link.gd)
+				watch.name = "watch_link"
+				add_child(watch)
 		return
 	var origin := XROrigin3D.new()
 	add_child(origin)

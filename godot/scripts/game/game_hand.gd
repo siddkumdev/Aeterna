@@ -221,7 +221,7 @@ func _update_pinch() -> void:
 		_pinching = true
 		var already_down := not _down.is_empty()
 		_down.erase("trigger_click")  # the runtime and joints describe the same physical pinch
-		if OS.is_debug_build():
+		if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
 			print("[hand] %s pinch start %.2f" % [visual.side, s])
 		if already_down:
 			_down["pinch"] = true  # replace the source without emitting a second logical press

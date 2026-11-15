@@ -2330,6 +2330,11 @@ func _perf_fixes() -> void:
 		and sw.env.ambient_light_source == Environment.AMBIENT_SOURCE_SKY
 		and sw.sun.directional_shadow_mode == DirectionalLight3D.SHADOW_ORTHOGONAL)
 	sw.queue_free()
+	var ep := ConfigFile.new()
+	var ep_err := ep.load("res://export_presets.cfg")
+	var excl := str(ep.get_value("preset.0", "exclude_filter", "")) if ep_err == OK else ""
+	check("Quest export preset excludes tools/* and tests/* and silences XR log spam",
+		ep_err == OK and excl.contains("tools/*") and excl.contains("tests/*") and not GameConfig.VERBOSE_XR_LOG)
 	tray.queue_free()
 	g.queue_free()
 	await process_frame

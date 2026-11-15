@@ -25,10 +25,16 @@ Set up on 2026-11-10. The first install on a Quest 3 worked (`adb install` Succe
 5. **Editor settings:** `export/android/java_sdk_path` (JDK 17) and `android_sdk_path` in Godot's editor settings.
 
 ## Build and install
-Run this in your own terminal: Claude Code's background runs get stopped for low memory during the Gradle step.
+`godot/export_presets.cfg` excludes `tools/*`, `tests/*`, `*.ps1`, and `watch_link.gd` so offline profilers and tests stay out of the Quest APK, and `GameConfig.VERBOSE_XR_LOG = false` keeps continuous XR logs off by default (set `GameConfig.VERBOSE_XR_LOG = true` or `command_line/extra_args="--verbose"` in `export_presets.cfg` for headset log diagnostics; pass `--verbose` on desktop).
+
+Run this in your own terminal: background runs can get stopped for low memory during the Gradle step. Use `--export-debug "Quest 3"` to sign with your local Android debug keystore, or `--export-release "Quest 3"` once a release keystore is configured in Godot Editor Settings:
 ```powershell
 cd godot
 & (Select-String -Path ..\local.env -Pattern '^GODOT_EXE=(.*)').Matches[0].Groups[1].Value.Trim('"') --headless --xr-mode off --path . --export-debug "Quest 3" ../_work/aeterna_quest.apk
 & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r ..\_work\aeterna_quest.apk
+```
+For a release-mode APK (requires release keystore set in Godot Editor Settings):
+```powershell
+& (Select-String -Path ..\local.env -Pattern '^GODOT_EXE=(.*)').Matches[0].Groups[1].Value.Trim('"') --headless --xr-mode off --path . --export-release "Quest 3" ../_work/aeterna_quest_release.apk
 ```
 In the headset: Library → Unknown Sources → Aeterna. The headset must allow USB debugging. Check with `adb devices`, which should say `device`, not `unauthorized`.

@@ -48,6 +48,7 @@ const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the
 # the env var AETERNA_EASY_REACH=1 (set by run_sim.ps1), so keyboard-driven hands can find small objects. Real
 # headset: 1.
 const EASY_REACH := 2.0
+const VERBOSE_XR_LOG := false  # silence continuous/per-pinch XR logcat spam on Quest 3 unless --verbose is passed
 const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle of where the head looks (gaps are ~32 deg apart from the seat)
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
 const BUILT_SYSTEMS: Array[String] = ["airship", "spells"]

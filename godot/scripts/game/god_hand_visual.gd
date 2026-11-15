@@ -242,7 +242,8 @@ func _process(delta: float) -> void:
 		_still_t = 0.0
 	if live != _was_live:
 		_was_live = live
-		print("[hand] %s %s (data=%s flags=%d fps=%d)" % [side, "tracked" if live else "LOST", str(_tracker != null and _tracker.has_tracking_data), flags, Engine.get_frames_per_second()])
+		if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
+			print("[hand] %s %s (data=%s flags=%d fps=%d)" % [side, "tracked" if live else "LOST", str(_tracker != null and _tracker.has_tracking_data), flags, Engine.get_frames_per_second()])
 	if live:
 		for i in J_COUNT:
 			_joints[i] = _tracker.get_hand_joint_transform(i)
