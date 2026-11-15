@@ -131,6 +131,7 @@ func _place_xr_rig() -> void:
 	_xr_rig.global_position = cam.global_position + f * 0.5 + Vector3(0, -0.2, 0)
 	_xr_rig.rotation.y = atan2(-f.x, -f.z)
 	_xr_rig.visible = true
+	game.place_seated_board()
 
 
 func _process(delta: float) -> void:
@@ -246,6 +247,8 @@ func _wake(story := true) -> void:
 	game.snd("dawn_bell")
 	_title.queue_free()
 	_plaques.clear()
+	game._board_placed = false
+	game._tray_placed = false
 	game.asleep = false
 	_state = "playing"
 	TitleCard.show_over(game.board, Vector3(0, 0.36, -0.1), "THE FIRST DAWN", "Watch over them.")

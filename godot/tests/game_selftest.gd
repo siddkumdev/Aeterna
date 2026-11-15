@@ -37,6 +37,7 @@ func _initialize() -> void:
 	await _tray_rules()
 	await _perf_fixes()
 	await _visual_rendering_fixes()
+	await _seated_experience()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -2373,4 +2374,129 @@ func _visual_rendering_fixes() -> void:
 	check("building a second tower does not repeat the one-time sell-tower toast",
 		g_rig._toast.text != Game.SELL_TOWER_HINT)
 	g_rig.queue_free()
+	await process_frame
+
+
+func _seated_experience() -> void:
+	## 2026-11-15: seated optimizations (visible rim handles, Lazy-Susan spin, 0.8x auto-center, tray-docked lens, one-hand compass, seated opening rotation).
+	var sbt := Game.seated_board_transform(Vector3(0.2, 1.2, 0.3), Vector3(0.0, -0.3, -1.0))
+	check("seated board centres ahead at eye_y - SEATED_BOARD_DROP and 0.8x scale",
+		sbt.origin.is_equal_approx(Vector3(0.2, 1.2 - GameConfig.SEATED_BOARD_DROP, 0.3 - GameConfig.SEATED_BOARD_DIST))
+		and is_equal_approx(sbt.basis.get_scale().x, GameConfig.SEATED_BOARD_SCALE))
+	var head := Vector3(0.0, 1.2, 0.0)
+	var too_far := Game.board_clamp(Transform3D(Basis.IDENTITY, Vector3(0.0, 2.0, -5.0)), head)
+	var too_near := Game.board_clamp(Transform3D(Basis.IDENTITY, Vector3(0.0, 0.1, -0.05)), head)
+	check("board_clamp keeps the island within comfortable seated height and arm reach",
+		too_far.origin.y <= head.y - 0.18 + 0.001
+		and Vector2(too_far.origin.x - head.x, too_far.origin.z - head.z).length() <= GameConfig.BOARD_MAX_DIST + 0.001
+		and is_equal_approx(too_near.origin.y, GameConfig.BOARD_MIN_Y)
+		and Vector2(too_near.origin.x - head.x, too_near.origin.z - head.z).length() >= GameConfig.BOARD_MIN_DIST - 0.001)
+	var center := Vector3(0.0, 0.78, -0.72)
+	var p0 := center + Vector3(0.0, 0.0, 0.48)
+	var p1 := center + Vector3(0.48, 0.0, 0.0)
+	var spin_yaw := Game.rim_one_hand_yaw(center, p0, p1)
+	var spun := Game.rim_transform(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.8), center), [p0] as Array[Vector3], [p1] as Array[Vector3], spin_yaw)
+	check("one-hand tangential Lazy-Susan rim sweep turns the board around its centre",
+		absf(spun.basis.get_euler().y - PI / 2.0) < 0.01 and spun.origin.distance_to(center) < 0.01)
+
+	var g: Game = load("res://scripts/game/game.gd").new()
+	g.with_rig = true
+	g.with_life = false
+	root.add_child(g)
+	for i in 4:
+		await process_frame
+	check("four visible rim handles sit inside the instant-grab rim zone",
+		GameConfig.RIM_HOLD == 0.0 and g._rim_handles.size() == 4 and g._rim_handles.all(func(r): return g.on_rim(r.global_position)))
+	check("Crystal Lens and Board Compass dock on the CardTray wings",
+		g._lens.get_parent() == g._tray and g._board_compass != null and g._board_compass.get_parent() == g._tray)
+
+	var cam := XRCamera3D.new()
+	root.add_child(cam)
+	cam.global_position = Vector3(0.0, 1.2, 0.0)
+	cam.look_at(Vector3(0.0, 1.2, -1.0), Vector3.UP)
+	g._xr = true
+	g.easy_reach = false
+	g._xr_cam = cam
+	g._board_placed = false
+	g._tray_placed = false
+	for i in 2:
+		await process_frame
+	check("XR start auto-centres board to seated pose (0.8x) and places tray in front",
+		g._board_placed and is_equal_approx(g.board.scale.x, GameConfig.SEATED_BOARD_SCALE)
+		and g._tray_placed and g._tray.global_position.z > g.board.global_position.z)
+
+	var lens_before := g._lens.global_position
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	var start_pos := g.board.global_position
+	var h0 := g._rim_handles[0].global_position
+	hand.global_position = h0
+	g.hand_pressed(hand)
+	check("rim handle pinch grabs the board immediately with no hold delay",
+		g._rim_hands.has(hand))
+	var rel := h0 - start_pos
+	hand.global_position = start_pos + Vector3(rel.z, rel.y, -rel.x)
+	hand.rotation.y = PI / 2.0  # forearm follows the Lazy-Susan sweep without double-counting rotation
+	g._tick_rim(0.05)
+	check("one-hand tangential rim sweep turns smoothly without forearm double-rotation or off-pivot drift",
+		absf(g.board.basis.get_euler().y - PI / 2.0) < 0.05 and g.board.global_position.distance_to(start_pos) < 0.02)
+	g.recenter_seated_board()
+	g._tick_rim(0.02)
+	check("recenter clears active rim grip and resets board pose cleanly",
+		g._rim_hands.is_empty() and is_equal_approx(g.board.basis.get_euler().y, 0.0))
+
+	hand.rotation = Vector3.ZERO
+	var glass_grab: Vector3 = g._fast_glass.global_position + Vector3(0, 0.03, 0)
+	hand.global_position = glass_grab
+	g.hand_pressed(hand)
+	check("pinching the tray hourglass activates the hourglass without docked lens or card stealing it",
+		g._fast_pending.has(hand) and g._lens_hand == null and g._held_card == null)
+	g.hand_released(hand)
+	g.easy_reach = true
+	hand.global_position = glass_grab
+	g.hand_pressed(hand)
+	check("tray hourglass stays grabbable without docked lens steal even under easy_reach",
+		g._fast_pending.has(hand) and g._lens_hand == null and g._held_card == null)
+	g.hand_released(hand)
+	g.easy_reach = false
+
+	hand.global_position = g.lens_grip_position()
+	g.hand_pressed(hand)
+	check("pinching the docked Crystal Lens picks up the lens, not the tray or hourglass",
+		g._lens_hand == hand and g._tray_hand == null and not g._fast_pending.has(hand))
+	g.hand_released(hand)
+	check("releasing the lens returns it cleanly to its tray dock",
+		g._lens_hand == null and g._lens.global_position.distance_to(lens_before) < 0.002)
+
+	hand.global_position = g._board_compass.global_position
+	g.hand_pressed(hand)
+	g.hand_released(hand)
+	check("tapping the tray compass cycles board scale one-handedly (80% -> 100%)",
+		is_equal_approx(g.board.scale.x, 1.0) and g._compass_label.text == "100%")
+	g.hand_pressed(hand)
+	g._tick_rim(GameConfig.COMPASS_RESET_HOLD + 0.05)
+	g.hand_released(hand)
+	check("holding the tray compass recenters the board back to 80% seated pose",
+		is_equal_approx(g.board.scale.x, GameConfig.SEATED_BOARD_SCALE) and g._compass_label.text == "80%")
+
+	var ch2_line: String = OpeningStage.CHAPTERS[1]["lines"][0][2]
+	check("opening Chapter II adapts narration for seated play without behind-chair turn",
+		OpeningStage.EYE < 1.35 and not ch2_line.to_lower().contains("turn around"))
+	var st := OpeningStage.new()
+	root.add_child(st)
+	var st_cam := Camera3D.new()
+	st.add_child(st_cam)
+	st._cam = st_cam
+	st.world = StoryWorld.new()
+	st.add_child(st.world)
+	st._build_overlay()
+	st._start_chapter(1)
+	check("opening Chapter II rotates StoryWorld into the seated front view",
+		is_equal_approx(st.world.rotation.y, PI)
+		and st.world.to_global(StoryWorld.VILLAGE).distance_to(StoryWorld.VILLAGE) > 10.0)
+	st.queue_free()
+	hand.queue_free()
+	cam.queue_free()
+	g.queue_free()
 	await process_frame

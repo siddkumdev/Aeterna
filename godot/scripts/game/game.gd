@@ -99,7 +99,8 @@ var _rim_pending := {}  # hand -> seconds it has held a pinch on the rim; the is
 var _rim_hands: Array = []  # the hands pinching the table rim (move, turn, resize the island)
 var _rim_start := Transform3D.IDENTITY  # the board when the current grip began
 var _rim_p0: Array[Vector3] = []  # where each gripping hand was then
-var _rim_yaw0 := 0.0  # one hand: its wrist yaw then
+var _rim_handles: Array[MeshInstance3D] = []  # visible edge handles for Lazy-Susan board movement
+var _board_placed := false  # seated XR auto-centering done once per wake / start
 var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in the headset, L on the desktop
 var _ledger_latched := false  # opened by a button or key: stays until closed the same way
 var _palm_time := 0.0  # how long the left palm has been turned up
@@ -170,6 +171,10 @@ var _fast_glass: Node3D  # the small hourglass on the tray: pinch = fast
 var _fast_label: Label3D
 var _faith_seal: Node3D  # the wax seal at the tray's corner, with the faith on it
 var _faith_label: Label3D
+var _board_compass: Node3D  # carved scale / recenter compass on the tray's left wing
+var _compass_label: Label3D
+var _compass_scale := -1.0
+var _compass_pending := {}  # hand -> seconds held on the compass (tap cycles scale, hold recenters)
 var _toast: Label3D  # newest short message line above the tray
 var _toast_stack: Array[Label3D] = []  # older still-visible toasts stacked above _toast
 var _toast_last := ""
@@ -226,6 +231,7 @@ func _ready() -> void:
 		board.add_child(island_workers)
 		island_workers.setup(under)
 	WorldBuilder.build_forest(board, 7)
+	_rim_handles = WorldBuilder.build_rim_handles(board)
 	_grid_lines = WorldBuilder.build_grid_lines(board)
 	_towers_root = _child(board, "Towers")
 	_enemies_root = _child(board, "Enemies")
@@ -1727,6 +1733,8 @@ func _press_button(id: String) -> void:
 				_show_toast("Hold the hourglass to hurry the day")  # a stray touch never speeds time (the user, 2026-11-11)
 			else:
 				toggle_fast()
+		"compass":
+			cycle_board_scale()
 		"night":
 			start_night()
 		"restart":
@@ -2170,6 +2178,43 @@ func _build_tray_bits() -> void:
 	hold.add_child(_fast_label)
 	var box := Vector3(0.045, 0.06, 0.045)
 	_buttons["fast"] = {"node": hold, "mat": StandardMaterial3D.new(), "label": _fast_label, "hover": false, "box": AABB(Vector3(-box.x / 2.0, 0, -box.z / 2.0), box)}
+	var compass := Node3D.new()
+	compass.name = "BoardCompass"
+	_tray.add_child(compass)
+	_board_compass = compass
+	var disc := MeshInstance3D.new()
+	var dcyl := CylinderMesh.new()
+	dcyl.top_radius = 0.021
+	dcyl.bottom_radius = 0.023
+	dcyl.height = 0.008
+	dcyl.radial_segments = 20
+	disc.mesh = dcyl
+	var cmat := ModelUtil.flat_material(Color8(0x5B, 0x29, 0x20))
+	disc.material_override = cmat
+	compass.add_child(disc)
+	var dring := MeshInstance3D.new()
+	var dtor := TorusMesh.new()
+	dtor.inner_radius = 0.0205
+	dtor.outer_radius = 0.0235
+	dtor.rings = 24
+	dtor.ring_segments = 6
+	dring.mesh = dtor
+	dring.material_override = ModelUtil.flat_material(Color("F2B630"))
+	dring.position.y = 0.0025
+	compass.add_child(dring)
+	_compass_label = Label3D.new()
+	_compass_label.font_size = 46
+	_compass_label.pixel_size = 0.00029
+	_compass_label.outline_size = 8
+	_compass_label.modulate = Color("FFD45A")
+	_compass_label.outline_modulate = Color("5B2920")
+	_compass_label.rotation_degrees.x = -90
+	_compass_label.position.y = 0.0055
+	compass.add_child(_compass_label)
+	compass.rotation_degrees.x = 40
+	var cbox := Vector3(0.05, 0.03, 0.05)
+	_buttons["compass"] = {"node": compass, "mat": cmat, "label": _compass_label, "hover": false, "box": AABB(Vector3(-cbox.x / 2.0, -0.015, -cbox.z / 2.0), cbox)}
+	_update_compass_label()
 	_toast = _make_toast_label("Toast", TOAST_POS)
 	_toast_stack.clear()
 	for i in range(TOAST_STACK_MAX - 1):
@@ -2252,6 +2297,8 @@ func _tick_toast_label(l: Label3D, delta: float) -> void:
 
 func _tick_tray_bits(delta: float) -> void:
 	_tick_clock()
+	if _compass_label and board and not is_equal_approx(_compass_scale, board.scale.x):
+		_update_compass_label()
 	if _fast_glass:
 		var m := _fast_glass.get_node_or_null("Model")
 		if m:
@@ -2327,14 +2374,23 @@ func foresight_signs(_on: bool) -> void:
 	_refresh_buttons()
 
 
+func _tray_lens_rest(half_w: float) -> Transform3D:
+	return Transform3D(Basis(Vector3.RIGHT, -1.08) * Basis(Vector3.UP, 0.45), Vector3(half_w + 0.145, 0.012, 0.022))
+
+
 func _build_lens() -> void:
-	## The Crystal Lens rests on the table's right corner, past the signs (stand-in for "belt side").
+	## The Crystal Lens rests on the tray's right wing when the tray is active, or the table corner in headless tests.
 	var res = load(GameConfig.LENS_SCENE)
 	if res == null:
 		return
 	_lens = res.instantiate()
-	board.add_child(_lens)
-	_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5), Vector3(HALF - 0.1, 0.012, HALF + 0.09))
+	var dock_parent: Node3D = _tray if _tray != null else board
+	dock_parent.add_child(_lens)
+	if _tray != null:
+		var half_w := GameConfig.TOWER_ORDER.size() * CardTray.CARD_SPACING / 2.0
+		_lens_rest = _tray_lens_rest(half_w)
+	else:
+		_lens_rest = Transform3D(Basis(Vector3.RIGHT, -PI / 2.0 + 0.35) * Basis(Vector3.UP, 0.5), Vector3(HALF - 0.1, 0.012, HALF + 0.09))
 	_lens.transform = _lens_rest
 	for n in ModelUtil.walk(_lens):
 		if n is Marker3D and str(n.name).ends_with("grip_anchor"):
@@ -2371,18 +2427,28 @@ func hand_pressed(h: GameHand) -> void:
 			return
 		if ledger.near_open_book(tp, 0.08):
 			return  # a tap on the spine or during turn cooldown must not fall through to a ray press on the other page
+	var glass_d := tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) if _fast_glass != null and _fast_glass.is_visible_in_tree() else INF
+	var compass_d := tp.distance_to(_board_compass.global_position) if _board_compass != null and _board_compass.is_visible_in_tree() else INF
+	var lens_d := _lens_grab_distance(h)
 	if _tray and _held_card == null:
 		var cd := _tray.card_near(tp, card_reach())
 		# The tray's own wood (outside a card's face) takes the whole tray: a pinch within TRAY_GRAB_PAD of the base
 		# grabs it unless the point is on a card's face (within half a card's height of its centre), where the card keeps priority.
-		if h != _mouse_hand and _tray_hand == null and _held_spell_cards.is_empty() and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) 				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) 				and not _on_tray_hourglass(tp):
+		if h != _mouse_hand and _tray_hand == null and _held_spell_cards.is_empty() and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) \
+				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) \
+				and not _on_tray_hourglass(tp) and not _on_tray_compass(tp) and not _on_tray_lens(h):
 			_tray_grab(h)
 			return
-		if cd and _grab_card(cd, h):
+		var card_d := cd.global_position.distance_to(tp) if cd else INF
+		if cd and not (_on_tray_hourglass(tp) and glass_d < card_d) \
+				and not (_on_tray_compass(tp) and compass_d < card_d) \
+				and not (not placing() and _on_tray_lens(h) and lens_d < card_d) \
+				and _grab_card(cd, h):
 			_hand_log(h, "target card:%s" % cd.data.get("id", "unknown"))
 			return
 	if not placing():
-		if _lens and _lens_hand == null and h.global_position.distance_to(lens_grip_position()) <= reach(GameConfig.LENS_GRAB_REACH):
+		if _on_tray_lens(h) and not (_on_tray_hourglass(tp) and glass_d <= lens_d) \
+				and not (_on_tray_compass(tp) and compass_d <= lens_d):
 			_lens_hand = h
 			return
 		if grab_request(request_near(tp), h):
@@ -2398,6 +2464,13 @@ func hand_pressed(h: GameHand) -> void:
 		else:
 			_fast_pending[h] = 0.0  # held for GameConfig.FAST_HOLD, then it hurries the day (see _tick_rim)
 			_show_toast("Hold to hurry the day")
+		return
+	if _on_tray_compass(tp):
+		if h == _mouse_hand:
+			cycle_board_scale()
+		else:
+			_compass_pending[h] = 0.0
+			_show_toast("Tap to resize · Hold to recenter")
 		return
 	if life and not placing():
 		var nearest_v: Villager = null
@@ -2420,8 +2493,13 @@ func hand_pressed(h: GameHand) -> void:
 				crush_start(t, h, tp)  # crush_step measures the drift from this same touch point
 				return
 	if h != _mouse_hand and not placing() and on_rim(tp):
-		_rim_pending[h] = 0.0  # a deliberate hold, not a passing pinch, picks the island up
-		snd("pinch")
+		if GameConfig.RIM_HOLD <= 0.0:
+			_rim_hands.append(h)
+			_rim_anchor()
+			snd("grab")
+		else:
+			_rim_pending[h] = 0.0
+			snd("pinch")
 		return
 	_active_hand = h
 	snd("pinch")
@@ -2489,19 +2567,11 @@ func _rim_anchor() -> void:
 	_rim_p0.clear()
 	for h in _rim_hands:
 		_rim_p0.append(h.touch_point())  # the same point on_rim tested and _tick_rim follows
-	if _rim_hands.size() == 1:
-		_rim_yaw0 = _hand_yaw(_rim_hands[0])
-
-
-static func _hand_yaw(h: Node3D) -> float:
-	var f := -h.global_basis.z
-	return atan2(-f.x, -f.z)
 
 
 static func rim_transform(start: Transform3D, p0: Array[Vector3], p: Array[Vector3], yaw := 0.0) -> Transform3D:
-	## The board after a rim grip (the user, 2026-11-11). One hand: it follows the hand and turns with the wrist
-	## (`yaw`, radians). Two hands: it follows their midpoint, turns with the line between them and grows or
-	## shrinks with their distance, kept within GameConfig.BOARD_SCALE. It always stays level.
+	## The board after a rim grip. One hand: Lazy-Susan spin around the board's centre from sweeping tangentially in XZ
+	## (`yaw`, radians) plus translation when pulled/pushed. Two hands: midpoint, turn and resize within GameConfig.BOARD_SCALE.
 	if p.size() == 1:
 		return Transform3D(Basis(Vector3.UP, yaw), p[0]) * Transform3D(Basis.IDENTITY, -p0[0]) * start
 	var a0 := p0[1] - p0[0]
@@ -2516,6 +2586,41 @@ static func rim_transform(start: Transform3D, p0: Array[Vector3], p: Array[Vecto
 	return Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * k), mid) * Transform3D(Basis.IDENTITY, -mid0) * start
 
 
+static func rim_one_hand_yaw(center: Vector3, p0: Vector3, p: Vector3) -> float:
+	## Tangential Lazy-Susan spin around the board's centre from sweeping the gripped rim handle in XZ.
+	var v0 := Vector2(p0.x - center.x, p0.z - center.z)
+	var v1 := Vector2(p.x - center.x, p.z - center.z)
+	return 0.0 if v0.length() < 0.05 or v1.length() < 0.05 else -v0.angle_to(v1)
+
+
+static func seated_board_transform(head_pos: Vector3, head_forward: Vector3) -> Transform3D:
+	## Initial seated placement: centred directly in front of the player at eye_y - SEATED_BOARD_DROP and 0.8x scale.
+	var f := Vector3(head_forward.x, 0.0, head_forward.z)
+	f = f.normalized() if f.length() > 0.05 else Vector3(0.0, 0.0, -1.0)
+	var yaw := atan2(-f.x, -f.z)
+	var y := clampf(head_pos.y - GameConfig.SEATED_BOARD_DROP, GameConfig.BOARD_MIN_Y, GameConfig.BOARD_MAX_Y)
+	var pos := Vector3(head_pos.x + f.x * GameConfig.SEATED_BOARD_DIST, y, head_pos.z + f.z * GameConfig.SEATED_BOARD_DIST)
+	return Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * GameConfig.SEATED_BOARD_SCALE), pos)
+
+
+static func board_clamp(board_xf: Transform3D, head_pos: Vector3) -> Transform3D:
+	## Keeps the board inside comfortable seated height and arm reach relative to the headset.
+	var out := board_xf
+	var max_y := maxf(GameConfig.BOARD_MIN_Y, minf(GameConfig.BOARD_MAX_Y, head_pos.y - 0.18))
+	out.origin.y = clampf(out.origin.y, GameConfig.BOARD_MIN_Y, max_y)
+	var flat := Vector2(out.origin.x - head_pos.x, out.origin.z - head_pos.z)
+	var d := flat.length()
+	if d < 0.001:
+		flat = Vector2(0.0, -GameConfig.BOARD_MIN_DIST)
+	elif d < GameConfig.BOARD_MIN_DIST:
+		flat = flat / d * GameConfig.BOARD_MIN_DIST
+	elif d > GameConfig.BOARD_MAX_DIST:
+		flat = flat / d * GameConfig.BOARD_MAX_DIST
+	out.origin.x = head_pos.x + flat.x
+	out.origin.z = head_pos.z + flat.y
+	return out
+
+
 func _tick_rim(delta := 0.0) -> void:
 	for h in _fast_pending.keys():
 		if not is_instance_valid(h) or _fast_glass == null or h.touch_point().distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) > reach(GameConfig.TOUCH_REACH * 2.0):
@@ -2525,6 +2630,14 @@ func _tick_rim(delta := 0.0) -> void:
 		if _fast_pending[h] >= GameConfig.FAST_HOLD:
 			_fast_pending.erase(h)
 			toggle_fast()
+	for h in _compass_pending.keys():
+		if not is_instance_valid(h) or not _on_tray_compass(h.target_point()):
+			_compass_pending.erase(h)
+			continue
+		_compass_pending[h] += delta
+		if _compass_pending[h] >= GameConfig.COMPASS_RESET_HOLD:
+			_compass_pending.erase(h)
+			recenter_seated_board()
 	for h in _rim_pending.keys():
 		if not is_instance_valid(h):
 			_rim_pending.erase(h)
@@ -2537,19 +2650,38 @@ func _tick_rim(delta := 0.0) -> void:
 			snd("grab")
 		elif _rim_pending[h] >= GameConfig.RIM_HOLD:
 			_rim_pending.erase(h)  # slid off the rim while holding: nothing happens
+	if not _rim_handles.is_empty():
+		var grabbed := not _rim_hands.is_empty()
+		var hovered := false
+		if not grabbed and with_rig and not asleep and not placing():
+			for h in _hands:
+				if is_instance_valid(h) and not h.is_lost() and h != _mouse_hand and on_rim(h.target_point()):
+					hovered = true
+					break
+		var rmat := _rim_handles[0].material_override as StandardMaterial3D
+		if rmat:
+			rmat.emission_energy_multiplier = 0.75 if grabbed else (0.42 if hovered else 0.18)
 	if _rim_hands.is_empty():
 		return
 	var p: Array[Vector3] = []
 	for h in _rim_hands.slice(0, 2):
 		p.append(h.touch_point())
 	var p0: Array[Vector3] = _rim_p0.slice(0, 2)
-	board.global_transform = rim_transform(_rim_start, p0, p, _hand_yaw(_rim_hands[0]) - _rim_yaw0 if p.size() == 1 else 0.0)
+	var one_yaw := rim_one_hand_yaw(_rim_start.origin, p0[0], p[0]) if p.size() == 1 else 0.0
+	var xf := rim_transform(_rim_start, p0, p, one_yaw)
+	board.global_transform = board_clamp(xf, _eye()) if _xr else xf
+	_update_compass_label()
 
 
 func hand_released(h: GameHand, cancelled := false) -> void:
 	## cancelled: the hand lost tracking mid-pinch (GameHand.cancelled). Nothing is built, cast, delivered or moved.
 	if _fast_pending.has(h):
 		_fast_pending.erase(h)
+		return
+	if _compass_pending.has(h):
+		_compass_pending.erase(h)
+		if not cancelled:
+			cycle_board_scale()
 		return
 	if _rim_pending.has(h):
 		_rim_pending.erase(h)
@@ -2565,6 +2697,7 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 			board.global_transform = _rim_start  # undo this grip's move/turn
 		_rim_hands.erase(h)
 		_rim_anchor()
+		_update_compass_label()
 		snd("release")
 		return
 	if not _crush.is_empty() and (_crush["hand"] == h or (_crush["hand"] == null and h == _mouse_hand)):
@@ -2778,11 +2911,23 @@ func _head_valid() -> bool:
 	return true
 
 
+func place_seated_board() -> void:
+	if not _xr or _xr_cam == null or not _head_valid():
+		return
+	board.global_transform = seated_board_transform(_eye(), -_xr_cam.global_transform.basis.z)
+	_board_placed = true
+	_update_compass_label()
+
+
 func _update_tray() -> void:
 	## Placed once, when the game first wakes after app start; after that it stays where the player left it, through
 	## new runs, loops, rewinds, day and night, and whatever happens to the island.
 	if _tray == null or asleep:
 		return
+	if _xr and not _board_placed:
+		if not _head_valid():
+			return
+		place_seated_board()
 	if not _tray_placed:
 		if not _head_valid():
 			return  # retry every frame until the headset reports a real pose
@@ -2800,6 +2945,65 @@ func _update_tray() -> void:
 
 func _on_tray_hourglass(tp: Vector3) -> bool:
 	return _fast_glass != null and _fast_glass.is_visible_in_tree() and tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) <= reach(GameConfig.TOUCH_REACH * 1.4)
+
+
+func _on_tray_compass(tp: Vector3) -> bool:
+	return _board_compass != null and _board_compass.is_visible_in_tree() and tp.distance_to(_board_compass.global_position) <= reach(GameConfig.TOUCH_REACH * 1.4)
+
+
+func _lens_grab_distance(h: GameHand) -> float:
+	if _lens == null or _lens_hand != null:
+		return INF
+	var grip := lens_grip_position()
+	return minf(h.global_position.distance_to(grip), h.target_point().distance_to(grip))
+
+
+func _on_tray_lens(h: GameHand) -> bool:
+	return _lens_grab_distance(h) <= reach(GameConfig.LENS_GRAB_REACH)
+
+
+func _update_compass_label() -> void:
+	if _compass_label and board:
+		_compass_scale = board.scale.x
+		_compass_label.text = "%d%%" % roundi(_compass_scale * 100.0)
+
+
+func cycle_board_scale() -> void:
+	var steps := GameConfig.BOARD_SCALE_STEPS
+	var cur := board.scale.x
+	var idx := 0
+	var best := INF
+	for i in steps.size():
+		var diff := absf(steps[i] - cur)
+		if diff < best:
+			best = diff
+			idx = i
+	var next_s: float = steps[(idx + 1) % steps.size()]
+	var rot := board.global_basis.orthonormalized()
+	board.global_basis = rot.scaled(Vector3.ONE * next_s)
+	if _xr:
+		board.global_transform = board_clamp(board.global_transform, _eye())
+	if not _rim_hands.is_empty():
+		_rim_anchor()
+	_update_compass_label()
+	_show_toast("Board %d%%" % roundi(next_s * 100.0))
+	snd("pinch")
+
+
+func recenter_seated_board() -> void:
+	_rim_hands.clear()
+	_rim_p0.clear()
+	_rim_pending.clear()
+	_tray_hand = null
+	var fwd := -_xr_cam.global_transform.basis.z if _xr_cam else Vector3(0.0, 0.0, -1.0)
+	board.global_transform = seated_board_transform(_eye(), fwd)
+	_board_placed = true
+	if _tray:
+		_tray.global_transform = tray_start_transform(board.global_transform, _eye())
+		_tray_placed = true
+	_update_compass_label()
+	_show_toast("Board recentered")
+	snd("grab")
 
 
 func _tray_grab(h: GameHand) -> void:
@@ -2915,6 +3119,8 @@ func _refresh_buttons() -> void:
 					spells.tokens[sid].visible = phase == Phase.NIGHT and cd <= 0.0
 			"fast":
 				pass
+			"compass":
+				c = Color8(0x5B, 0x29, 0x20)
 			"sell":
 				b["node"].visible = day
 				if not day or towers.is_empty():
@@ -2948,6 +3154,8 @@ func _refresh_buttons() -> void:
 			b["node"].visible = false  # 2026-11-11: no slabs. Selling is a held pinch, the day ends by itself, speed is the tray hourglass
 		if id == "fast":
 			b["node"].visible = phase == Phase.DAY or phase == Phase.NIGHT
+		elif id == "compass":
+			b["node"].visible = true
 		if b["hover"]:
 			c = c.lightened(0.25)
 		b["mat"].albedo_color = c
@@ -2960,9 +3168,15 @@ func _refresh_buttons() -> void:
 func _place_tray_bits(n_cards: int) -> void:
 	var half_w := n_cards * CardTray.CARD_SPACING / 2.0  # the cards; the tray runs CardTray.ENDS further each side
 	if _faith_seal:
-		_faith_seal.position = Vector3(-half_w - 0.045, 0.012, 0.01)
+		_faith_seal.position = Vector3(-half_w - 0.050, 0.012, 0.01)
+	if _board_compass:
+		_board_compass.position = Vector3(-half_w - 0.118, 0.008, 0.0)
 	if _fast_glass:
-		_fast_glass.position = Vector3(half_w + 0.045, 0.0, -0.005)
+		_fast_glass.position = Vector3(half_w + 0.048, 0.0, -0.005)
+	if _lens and _lens.get_parent() == _tray:
+		_lens_rest = _tray_lens_rest(half_w)
+		if _lens_hand == null:
+			_lens.transform = _lens_rest
 
 
 func _refresh_tray() -> void:

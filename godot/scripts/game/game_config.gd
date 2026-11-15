@@ -237,10 +237,19 @@ const PALM_REACH := Vector2(0.15, 0.65)  # m from the eye: the palm counts only 
 const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 
 # Moving the island (the user, 2026-11-11): pinch the table rim. One hand drags and turns, two hands resize.
-const RIM_WIDTH := 0.05  # m outside the island's edge that counts as the rim (was 0.1: it picked the island up by accident)
+const RIM_WIDTH := 0.065  # m outside the island's edge that counts as the rim (plus visible handles)
 const FAST_HOLD := 1.0  # s a pinch must stay on the tray hourglass to hurry the day (the user: it triggered by itself)
-const RIM_HOLD := 0.6  # s a pinch must be held on the rim before the island follows the hand
+const RIM_HOLD := 0.0  # s a pinch must be held on the rim before the island follows the hand (0 = instant grab)
 const BOARD_SCALE := Vector2(0.6, 2.0)
+const SEATED_BOARD_SCALE := 0.8
+const SEATED_BOARD_DROP := 0.42  # m below seated headset eye height
+const SEATED_BOARD_DIST := 0.72  # m forward from headset
+const BOARD_MIN_Y := 0.45
+const BOARD_MAX_Y := 1.10
+const BOARD_MIN_DIST := 0.32
+const BOARD_MAX_DIST := 1.25
+const COMPASS_RESET_HOLD := 0.6  # s held on the tray compass to recenter board and tray
+const BOARD_SCALE_STEPS: Array[float] = [0.8, 1.0, 1.2, 0.6]
 # The card tray (Siddharth 2026-11-12, after a headset recording; the game is played SITTING). It starts along the
 # board's front edge (the edge nearest the headset), low and tipped up toward the player, and can be grabbed and moved
 # on its own. It never follows the island. Start pose, measured from the island's edge and the board's top surface:

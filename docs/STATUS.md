@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-14 (sykeriin: story/ledger/fonts/trees/characters/perf, see decisions.md 2026-11-14; desktop only, not on the Quest). Before: Steps 1-3 plus visual/rendering (`0869f55`) and opening/audio/UX (`631e37d`) fixes self-tested (508 checks) and pushed; awaiting Quest test.
+Last updated: 2026-11-15 (Siddharth: seated VR overhaul — instant Lazy-Susan brass rim handles, `0.8x` auto-center & `board_clamp`, tray-docked Crystal Lens + one-hand Board Compass, `OpeningStage` forward chapter rotation; 525 checks pass, desktop/headless only, not on the Quest). Before: `b315ea0` (sykeriin 2026-11-14 story/perf) + `631e37d` (opening/audio/UX) self-tested and pushed; awaiting Quest test.
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -23,6 +23,7 @@ Last updated: 2026-11-14 (sykeriin: story/ledger/fonts/trees/characters/perf, se
 - Wizard sounds (Siddharth).
 
 ## Untested on the Quest
+- 2026-11-15 (Siddharth): seated-play overhaul (`art/decisions.md` 2026-11-15): 4 visible brass rim handles (`RIM_HOLD = 0.0`, `RIM_WIDTH = 0.065`) + 1-hand Lazy-Susan spin, `0.8x` XR wake auto-center (`SEATED_BOARD_DROP = 0.42`, `SEATED_BOARD_DIST = 0.72`, `board_clamp`), tray-docked Crystal Lens (`CardTray.ENDS = 0.165`) and one-hand Board Compass (tap scale, `0.6 s` hold recenter), and `OpeningStage` rotating `StoryWorld` forward on Chapters II/III (`_work/seated_tray_v4_start.png`, `_work/seated_open_c2a.png`). 525 checks pass (`code-critic` PASS); live Quest/simulator XR verification pending.
 - 2026-11-14 (later): story perf cut (about 6.8M -> 1.0M primitives; this laptop's GPU timings swing too much to quote an fps), chapter V in the village square, rewritten lines, caption outline fade. Measure with `godot/tools/story_perf.gd`.
 - 2026-11-12: hands fixes 8daf5fe / 86911fe and the new card tray (starts at the board's front edge, low, tilted; grab the wood to move it; never follows the island; `Game._update_tray`, shot `godot/tools/tray_shot.gd`) are untested on the headset. Video review results: `_work/video_review/issues.md`.- Passthrough (may still need the blocked vendor plugin).
 - 2026-11-13: A3 hourglass day hurry is 20x (was 10x); regression-covered, not tested on the headset.

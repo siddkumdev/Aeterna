@@ -11,7 +11,7 @@ extends Node3D
 signal finished
 
 const SKIP_HOLD := 1.5
-const EYE := 1.62  # m, the desktop camera's eye height
+const EYE := 1.25  # m, seated eye height fallback
 const CAPTION_DIST := 1.5
 const WORD_GAP := 0.24  # s between typed words
 const VOICE := {"narrator": "voice_narrator", "skotos": "voice_skotos", "maren": "voice_maren"}
@@ -27,7 +27,7 @@ const CHAPTERS := [
 		[19.0, "maren", "Morning, little one. Pip let the goats into the bakery again. Keep him alive till supper, would you?"],
 		[27.0, "narrator", "Every prayer is a thread of light. Together, they weave the Veil."]]},
 	{"name": "II.  THE FORGOTTEN", "mood": "dusk", "look": 180.0, "loops": ["story_dusk"], "len": 28.0, "lines": [
-		[2.5, "narrator", "Now turn around. The wood behind you had a god of its own, once."],
+		[2.5, "narrator", "Beyond the meadow, the Dark Wood had a god of its own, once."],
 		[10.0, "narrator", "Skotos. Their people stopped praying, one by one. Their temple sank into the roots, and their name was forgotten."],
 		[18.5, "narrator", "A forgotten god does not die. They starve. And they watch the warm little lights of those still loved."]]},
 	{"name": "III.  THE CURSE", "mood": "curse", "look": 180.0, "loops": ["story_dread"], "len": 34.0, "lines": [
@@ -431,10 +431,11 @@ func _start_chapter(i: int) -> void:
 	_lines_done = 0
 	_cued.clear()
 	var c: Dictionary = CHAPTERS[i]
-	world.set_mood(c["mood"], 0.0)
 	_look_yaw = c["look"]
+	world.rotation.y = deg_to_rad(_look_yaw)
+	world.set_mood(c["mood"], 0.0)
 	if _cam:
-		_cam.rotation = Vector3(-0.03, deg_to_rad(_look_yaw), 0)
+		_cam.rotation = Vector3(-0.03, 0.0, 0)
 	_set_loops(c["loops"])
 	TitleCard.show_over(_title, Vector3.ZERO, c["name"], "", 4.5, 40)
 	call("_enter_%d" % (i + 1))
@@ -454,8 +455,8 @@ func _process(delta: float) -> void:
 		_say(lines[_lines_done][1], lines[_lines_done][2])
 		_lines_done += 1
 	call("_tick_%d" % (_chapter + 1), _t)
-	if _cam:  # the desktop camera drifts slowly toward the chapter's view, with a breath of sway
-		var want := deg_to_rad(_look_yaw) + sin(_t * 0.17) * 0.05
+	if _cam:  # seated-friendly gentle sway forward while world turns during chapter fades
+		var want := sin(_t * 0.17) * 0.05
 		_cam.rotation.y = lerp_angle(_cam.rotation.y, want, minf(1.0, delta * 0.8))
 		var tilt := (_pitch * 0.85 if _aerial else -0.03) + sin(_t * 0.23) * 0.01
 		_cam.rotation.x = lerpf(_cam.rotation.x, tilt, minf(1.0, delta * 2.0))
@@ -559,11 +560,11 @@ func _tick_3(t: float) -> void:
 	if _once("rift2", 23.0):
 		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("rift", v), 0.55, 0.9, 6.0)
 	if _once("crack1", 15.0):
-		_sound("story_crack", StoryWorld.VILLAGE + Vector3(0, 12, 0), 0.0, 80.0)
+		_sound("story_crack", world.to_global(StoryWorld.VILLAGE + Vector3(0, 12, 0)), 0.0, 80.0)
 		world.veil_mat.set_shader_parameter("crack_at", Vector3(0.3, 0.8, 0.5).normalized())
 		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.0, 0.45, 2.0)
 	if _once("crack2", 24.0):
-		_sound("story_crack", StoryWorld.VILLAGE + Vector3(0, 12, 0), 0.0, 80.0)
+		_sound("story_crack", world.to_global(StoryWorld.VILLAGE + Vector3(0, 12, 0)), 0.0, 80.0)
 		_sound("story_thunder", Vector3.INF, -2.0)
 		create_tween().tween_method(func(v): world.veil_mat.set_shader_parameter("crack", v), 0.45, 0.85, 2.5)
 	world.skotos.rotation.y = atan2(-StoryWorld.SKOTOS_AT.x, -StoryWorld.SKOTOS_AT.z) + sin(t * 0.3) * 0.06

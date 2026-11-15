@@ -6,7 +6,7 @@ extends Node3D
 ## Layout: cards stand slightly tilted back in a shallow arc, front toward the player (who sits on +Z).
 
 const CARD_SPACING := 0.07
-const ENDS := 0.09  # room at each end of the tray for the faith seal and the small hourglass
+const ENDS := 0.165  # room at each end of the tray for the compass, faith seal, hourglass and crystal lens
 const FAN_ARC := 0.06  # radians of tilt per card away from the middle
 const OAK := Color("9A6538")  # wood_mid
 const OAK_DARK := Color("5B2920")  # wood_dark

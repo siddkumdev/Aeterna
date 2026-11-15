@@ -124,3 +124,44 @@ static func build_grid_lines(board: Node3D) -> MeshInstance3D:
 	lines.visible = false
 	board.add_child(lines)
 	return lines
+
+
+static func build_rim_handles(board: Node3D) -> Array[MeshInstance3D]:
+	## Four carved wood-and-brass grab handles along the cardinal edges so seated players can see where to spin/slide the island.
+	var half := GameConfig.SIZE * GameConfig.CELL / 2.0
+	var root := Node3D.new()
+	root.name = "RimHandles"
+	board.add_child(root)
+	var rails: Array[MeshInstance3D] = []
+	var wood_mat := ModelUtil.flat_material(Color8(0x5B, 0x29, 0x20))  # wood_dark
+	var brass_mat := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))  # brass/rarity_gold
+	brass_mat.emission_enabled = true
+	brass_mat.emission = Color8(0xF6, 0xA4, 0x5D)
+	brass_mat.emission_energy_multiplier = 0.18
+	var rail_mesh := BoxMesh.new()
+	rail_mesh.size = Vector3(0.20, 0.016, 0.018)
+	var post_mesh := BoxMesh.new()
+	post_mesh.size = Vector3(0.022, 0.020, 0.032)
+	var sides := [
+		[Vector3(0, -0.002, half + 0.032), 0.0],
+		[Vector3(0, -0.002, -(half + 0.032)), PI],
+		[Vector3(half + 0.032, -0.002, 0), PI / 2.0],
+		[Vector3(-(half + 0.032), -0.002, 0), -PI / 2.0],
+	]
+	for side in sides:
+		var holder := Node3D.new()
+		holder.position = side[0]
+		holder.rotation.y = side[1]
+		root.add_child(holder)
+		for sx in [-0.082, 0.082]:
+			var post := MeshInstance3D.new()
+			post.mesh = post_mesh
+			post.material_override = wood_mat
+			post.position = Vector3(sx, 0.0, -0.014)
+			holder.add_child(post)
+		var rail := MeshInstance3D.new()
+		rail.mesh = rail_mesh
+		rail.material_override = brass_mat
+		holder.add_child(rail)
+		rails.append(rail)
+	return rails
