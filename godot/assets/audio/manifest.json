@@ -3316,58 +3316,58 @@
    {
     "file": "wizard_hit_1.wav",
     "peak_db": -2.0,
-    "rms_db": -20.6,
+    "rms_db": -20.7,
     "seam": null,
-    "seconds": 0.443
+    "seconds": 0.431
    },
    {
     "file": "wizard_hit_2.wav",
-    "peak_db": -2.3,
+    "peak_db": -2.2,
     "rms_db": -20.5,
     "seam": null,
-    "seconds": 0.454
+    "seconds": 0.434
    },
    {
     "file": "wizard_hit_3.wav",
     "peak_db": -2.0,
-    "rms_db": -22.4,
+    "rms_db": -22.5,
     "seam": null,
-    "seconds": 0.437
+    "seconds": 0.421
    },
    {
     "file": "wizard_hit_4.wav",
     "peak_db": -2.0,
-    "rms_db": -21.8,
+    "rms_db": -22.1,
     "seam": null,
-    "seconds": 0.475
+    "seconds": 0.465
    },
    {
     "file": "wizard_hit_5.wav",
     "peak_db": -2.0,
     "rms_db": -21.8,
     "seam": null,
-    "seconds": 0.405
+    "seconds": 0.387
    },
    {
     "file": "wizard_hit_6.wav",
     "peak_db": -2.0,
-    "rms_db": -21.2,
+    "rms_db": -21.4,
     "seam": null,
-    "seconds": 0.46
+    "seconds": 0.438
    },
    {
     "file": "wizard_hit_7.wav",
     "peak_db": -2.0,
-    "rms_db": -21.7,
+    "rms_db": -21.9,
     "seam": null,
-    "seconds": 0.409
+    "seconds": 0.406
    },
    {
     "file": "wizard_hit_8.wav",
     "peak_db": -2.0,
-    "rms_db": -22.3,
+    "rms_db": -22.4,
     "seam": null,
-    "seconds": 0.466
+    "seconds": 0.455
    }
   ],
   "loop": false,

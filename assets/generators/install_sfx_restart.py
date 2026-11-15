@@ -34,6 +34,10 @@ def room(x, size=0.2, wet=0.07):  # a small room, then mono: 3D sounds are place
     return y.mean(axis=1) if y.ndim == 2 else y
 
 
+def _mono(x):  # the wizard_hit recipe already ends in its own small room
+    return x.mean(axis=1) if x.ndim == 2 else x
+
+
 def fire_orb_parts(r):
     """The two halves of the approved real-recording Fire Orb (round 12): (launch layers, hit layers)."""
     sw = S.curve([(0, 0.05), (0.35, 1.0), (0.9, 0.05)], 0.9, log=False)
@@ -107,7 +111,7 @@ def wizard_launch(r):
 # id: (render fn(r), takes, target rms dB or None = silent, manifest entry to copy bus/spatial/cooldown/vary from, tracker, note)
 INSTALL = {
     "wizard_launch": (wizard_launch, 6, -18.3, "fireball_launch", "A15", "Wizard Tower shot: warm rush built from real fire recordings (restart r14 wizard_launch_a_warm_rush)"),
-    "wizard_hit": (lambda r: room(M.wizard_hit_real("a")(r), 0.14, 0.06), 8, -20.5, "fireball_hit", "A15", "Wizard Tower fireball lands: soft fwoomf burst from real fire whooshes and campfire, same family as wizard_launch (restart r16)"),
+    "wizard_hit": (lambda r: _mono(M.wizard_hit_real("a")(r)), 8, -20.5, "fireball_hit", "A15", "Wizard Tower fireball lands: soft fwoomf burst from real fire whooshes and campfire, same family as wizard_launch (restart r16)"),
     "orb_launch": (lambda r: room(fire_orb_parts(r)[0], 0.25, 0.08), 4, -17.5, "fireball_launch", "A20", "Fire Orb spell launch: real fire whooshes (restart r12)"),
     "orb_hit": (lambda r: room(fire_orb_parts(r)[1], 0.25, 0.08), 4, -18.5, "fireball_hit", "A20", "Fire Orb spell burst: real cannon thump and fire (restart r12)"),
     "crossbow_shot": (lambda r: room(M.xbow_shot_real(r)), 6, -22.4, "crossbow_shot", "A16", "Longbow Tower shot: springy wooden thwip from a real bow release, wood knock and whoosh (restart r16)"),

@@ -26,7 +26,7 @@ OUT = os.path.join(ROOT, "_work", "audio_ab")
 GAME = os.path.join(ROOT, "godot", "assets", "audio")
 
 SETS = {
-    "wizard_hit": (lambda v: (lambda r: I.room(M.wizard_hit_real(v)(r), 0.14, 0.06)), -20.5),
+    "wizard_hit": (lambda v: (lambda r: I._mono(M.wizard_hit_real(v)(r))), -20.5),
     "airship_shot": (lambda v: (lambda r: I.room(M.airship_shot_real(v)(r))), -18.3),
     "airship_hit": (lambda v: (lambda r: I.room(M.airship_hit_real(v)(r))), -20.5),
 }
