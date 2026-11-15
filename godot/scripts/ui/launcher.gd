@@ -11,13 +11,16 @@ const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
 const TUTORIAL_HINT_POS := Vector3(0, 0.20, -Game.HALF - 0.08)
+const TUTORIAL_BUILD_CELL := Vector2i(17, 11)
 const HINTS := [
-	"Pick up a card from the tray.",
-	"Set it on the grass and let go.",
-	"Someone is praying. Find the glowing mote and tap them.",
-	"Tap a villager to hear their thoughts.",
-	"Lift the cracked mirror by your side and look at the dark trees: it shows where the shades will come from tonight.",
-	"Night falls on its own. Hold the hourglass to hurry the day.",
+	"Pinch a glowing tower card on your tray.",
+	"Drop the card on the golden ring by the road.",
+	"Grab a brass handle on the board rim and spin the island.",
+	"Someone is praying! Tap the villager under the golden mote.",
+	"Tap a villager walking the path to hear their thoughts.",
+	"Lift the mirror on your tray and look at the dark trees.",
+	"Hold the hourglass on your tray to call Night 1.",
+	"Night 1! Pinch Fire Orb or Boulder and drop it on the shades!",
 ]
 
 static var prefer_controllers := false  # placeholder for the Hands / Controllers plaque
@@ -33,6 +36,17 @@ var _card: TitleCard
 var _t := 0.0
 var _hint_root: Node3D
 var _hint_card: TitleCard
+var _cue_root: Node3D
+var _target_ring: MeshInstance3D
+var _ring_mat: StandardMaterial3D
+var _ring_scale := 1.0
+var _ghost_timer := 0.0
+var _active_ghost: GhostHand
+var _start_board_yaw := 0.0
+var _start_board_pos := Vector3.ZERO
+var _taps_at_step := 0
+var _step_entered := -1
+var _last_run_serial := -1
 var _auto_at := -1.0  # when the story starts by itself (the title shows a few seconds first)
 var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
 
@@ -162,7 +176,7 @@ func _process(delta: float) -> void:
 			p.hot = hot
 			if id == "wake":
 				p.scale = Vector3.ONE * (1.7 + 0.08 * sin(_t * 2.2))  # it breathes: press me
-	elif game.loop == 0 and _step < HINTS.size():
+	elif game != null and is_instance_valid(game) and (_last_run_serial != game.run_serial or (game.loop == 0 and _step < HINTS.size())):
 		_tutorial(delta)
 
 
@@ -251,11 +265,12 @@ func _wake(story := true) -> void:
 	game._tray_placed = false
 	game.asleep = false
 	_state = "playing"
-	TitleCard.show_over(game.board, Vector3(0, 0.36, -0.1), "THE FIRST DAWN", "Watch over them.")
 	game.say_at_shrine(StoryText.prayer(0, 0))
 	_step = 0
 	_step_time = 0.0
-	_hint(HINTS[0])
+	_step_entered = -1
+	_last_run_serial = game.run_serial
+	_enter_step(0)
 
 
 func _hint(line: String) -> void:
@@ -273,29 +288,279 @@ func _end_hints() -> void:
 	if _hint_card and is_instance_valid(_hint_card):
 		_hint_card.dismiss()
 	_hint_card = null
+	_clear_ghost()
+	if is_instance_valid(_cue_root):
+		_cue_root.queue_free()
+	_cue_root = null
+	_target_ring = null
+	_ring_mat = null
+	if is_instance_valid(game):
+		game.set_tutorial_spotlight("")
+
+
+func _ensure_cues() -> void:
+	if not is_instance_valid(game) or not game.with_rig:
+		return
+	if _cue_root == null or not is_instance_valid(_cue_root):
+		_cue_root = Node3D.new()
+		_cue_root.name = "TutorialCues"
+		game.add_child(_cue_root)
+	if _target_ring == null or not is_instance_valid(_target_ring):
+		_target_ring = MeshInstance3D.new()
+		_target_ring.name = "TargetRing"
+		var tor := TorusMesh.new()
+		tor.inner_radius = 0.050
+		tor.outer_radius = 0.072
+		tor.rings = 32
+		tor.ring_segments = 12
+		_target_ring.mesh = tor
+		_ring_mat = ModelUtil.flat_material(Color(GLOW.r, GLOW.g, GLOW.b, 0.92), true)
+		_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_ring_mat.no_depth_test = false
+		_ring_mat.emission_enabled = true
+		_ring_mat.emission = GLOW
+		_ring_mat.emission_energy_multiplier = 1.65
+		_ring_mat.render_priority = 24
+		_target_ring.material_override = _ring_mat
+		_target_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_cue_root.add_child(_target_ring)
+
+
+func _clear_ghost() -> void:
+	if is_instance_valid(_active_ghost):
+		_active_ghost.queue_free()
+	_active_ghost = null
+
+
+func _total_villager_taps() -> int:
+	if game == null or game.life == null:
+		return 0
+	var total := 0
+	for v in game.life.villagers:
+		total += v.taps
+	return total
+
+
+func _nearest_villager_pos() -> Vector3:
+	if game == null or game.life == null:
+		return game.board.to_global(Vector3(0, 0.03, 0))
+	var anchor := game.board.to_global(Vector3(0, 0, Game.HALF * 0.5))
+	var best_pos := Vector3.INF
+	var best_d := INF
+	for v in game.life.villagers:
+		if is_instance_valid(v) and v.visible:
+			var d := v.global_position.distance_squared_to(anchor)
+			if d < best_d:
+				best_d = d
+				best_pos = v.global_position + Vector3(0, 0.02, 0)
+	return best_pos if best_pos != Vector3.INF else game.board.to_global(Vector3(0, 0.03, 0))
+
+
+func tutorial_build_cell() -> Vector2i:
+	## Picks an open front/east 2x2 grass cell for the first tutorial tower so seeded props never block it.
+	if game == null or not is_instance_valid(game) or game.nav == null:
+		return TUTORIAL_BUILD_CELL
+	var standing := game.standing_houses()
+	for c in [TUTORIAL_BUILD_CELL, Vector2i(16, 11), Vector2i(11, 3), Vector2i(9, 3), Vector2i(5, 11)]:
+		if game.nav.can_build(c, GameConfig.TOWER_SIZE, standing):
+			return c
+	for y in range(2, 20):
+		for x in range(2, 20):
+			var c := Vector2i(x, y)
+			if game.nav.can_build(c, GameConfig.TOWER_SIZE, standing):
+				return c
+	return TUTORIAL_BUILD_CELL
+
+
+func _ring_target_for_step() -> Array:
+	## Returns [world_pos, ring_scale, visible] for the active tutorial step's golden cue ring.
+	if game == null or not is_instance_valid(game):
+		return [Vector3.ZERO, 1.0, false]
+	match _step:
+		0, 1:
+			return [game.board.to_global(NavGrid.footprint_centre(tutorial_build_cell(), GameConfig.TOWER_SIZE) + Vector3(0, 0.025, 0)), 1.0, true]
+		2:
+			var rim_pos := game._rim_handles[0].global_position if not game._rim_handles.is_empty() and is_instance_valid(game._rim_handles[0]) \
+				else game.board.to_global(Vector3(0, 0.004, Game.HALF + 0.032))
+			return [rim_pos + Vector3(0, 0.022, 0), 0.9, true]
+		3:
+			var q_pos := game.board.to_global(Vector3(0, 0.03, 0))
+			if not game.requests.is_empty() and is_instance_valid(game.requests[0]) and game.requests[0].asker() != null:
+				q_pos = game.requests[0].asker().global_position + Vector3(0, 0.02, 0)
+			return [q_pos, 0.65, true]
+		4:
+			return [_nearest_villager_pos(), 0.65, true]
+		5:
+			var l_pos := game.lens_grip_position() if game._lens else Vector3.INF
+			if l_pos == Vector3.INF:
+				return [Vector3.ZERO, 0.55, false]
+			return [l_pos + Vector3(0, 0.018, 0), 0.55, true]
+		6:
+			if game._fast_glass == null or not is_instance_valid(game._fast_glass):
+				return [Vector3.ZERO, 0.55, false]
+			return [game._fast_glass.global_position + Vector3(0, 0.022, 0), 0.55, true]
+		7:
+			for e in game.enemies:
+				if is_instance_valid(e) and e.alive:
+					return [e.global_position + Vector3(0, 0.02, 0), 1.0, true]
+			var north: Array = GameConfig.SPAWNS["north"]
+			return [game.board.to_global(NavGrid.cell_centre(north[north.size() / 2]) + Vector3(0, 0.015, 0)), 1.0, true]
+	return [Vector3.ZERO, 1.0, false]
+
+
+func _update_ring() -> void:
+	_ensure_cues()
+	if _target_ring == null or not is_instance_valid(_target_ring):
+		return
+	var info := _ring_target_for_step()
+	_target_ring.visible = info[2]
+	if not info[2]:
+		return
+	_target_ring.global_position = info[0]
+	_ring_scale = info[1]
+	var s := _ring_scale * (1.0 + 0.12 * sin(_t * 5.0))
+	_target_ring.scale = Vector3(s, s * 0.35, s)
+	if _ring_mat:
+		_ring_mat.albedo_color.a = 0.72 + 0.20 * sin(_t * 5.0)
+
+
+func _spawn_step_ghost() -> void:
+	_ensure_cues()
+	_clear_ghost()
+	if _cue_root == null or not game.with_rig:
+		return
+	var info := _ring_target_for_step()
+	if not info[2]:
+		return
+	var target: Vector3 = info[0]
+	match _step:
+		0:
+			if game._tray and not game._tray.cards.is_empty() and is_instance_valid(game._tray.cards[0]):
+				var tb := Basis(Vector3.UP, atan2(game._tray.global_transform.basis.z.x, game._tray.global_transform.basis.z.z))
+				var from_pos := game._tray.cards[0].global_position + tb * Vector3(-0.046, 0.016, -0.008)
+				_active_ghost = GhostHand.carry(_cue_root, from_pos, from_pos + tb * Vector3(0.014, 0.042, -0.032))
+				_active_ghost.basis = tb * Basis.from_euler(Vector3(deg_to_rad(28.0), 0.0, deg_to_rad(-28.0)))
+			else:
+				_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.03, 0))
+		1:
+			var pick: Card3D = null
+			if game._tray:
+				for c in game._tray.cards:
+					if is_instance_valid(c):
+						if pick == null:
+							pick = c
+						if String(c.data.get("id", "")) == game.selected:
+							pick = c
+							break
+			if pick != null:
+				_active_ghost = GhostHand.carry(_cue_root, pick.global_position + Vector3(0, 0.02, 0), target + Vector3(0, 0.025, 0))
+			else:
+				_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.025, 0))
+		2:
+			_active_ghost = GhostHand.carry(_cue_root, target + Vector3(-0.07, 0.01, 0), target + Vector3(0.07, 0.01, 0))
+		3:
+			if not game.requests.is_empty() and is_instance_valid(game.requests[0]) and is_instance_valid(game.requests[0]._ghost):
+				return
+			_active_ghost = GhostHand.tap(_cue_root, target + Vector3(0, 0.015, 0))
+		4:
+			_active_ghost = GhostHand.tap(_cue_root, target + Vector3(0, 0.015, 0))
+		5:
+			_active_ghost = GhostHand.carry(_cue_root, target, target + Vector3(0, 0.14, -0.05))
+		6:
+			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.02, 0))
+		7:
+			var from_at := game._tray.cards[0].global_position + Vector3(0, 0.02, 0) if game._tray and not game._tray.cards.is_empty() and is_instance_valid(game._tray.cards[0]) \
+				else target + Vector3(0, 0.08, 0.08)
+			_active_ghost = GhostHand.carry(_cue_root, from_at, target + Vector3(0, 0.03, 0))
+	if is_instance_valid(_active_ghost):
+		if _active_ghost._mat:
+			_active_ghost._mat.albedo_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.85 if _step == 0 else 0.68)
+			_active_ghost._mat.emission_enabled = false
+		if _step != 6:
+			_active_ghost.scale = Vector3.ONE * 1.4
+
+
+func _enter_step(idx: int) -> void:
+	_step = idx
+	_step_time = 0.0
+	_step_entered = idx
+	_clear_ghost()
+	_ghost_timer = 0.08
+	if _step >= HINTS.size():
+		_end_hints()
+		return
+	_hint(HINTS[_step])
+	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "hourglass", "spells"]
+	game.set_tutorial_spotlight(spotlights[_step])
+	match _step:
+		2:
+			_start_board_yaw = game.board.rotation.y
+			_start_board_pos = game.board.global_position
+		3:
+			if game.requests.is_empty() and not game.quest_plan.is_empty():
+				game.post_next_quest()
+		4:
+			_taps_at_step = _total_villager_taps()
+	_update_ring()
 
 
 func _tutorial(delta: float) -> void:
-	## The first day, one small hint at a time. Each moves on when the player does the thing (or after a while).
+	## Interactive, step-gated tutorial: highlights the active target with a golden ring + GhostHand, never silently times out.
+	if game == null or not is_instance_valid(game):
+		return
+	if _last_run_serial != game.run_serial:
+		_last_run_serial = game.run_serial
+		if game.loop == 0 and game.night == 0 and game.phase == Game.Phase.DAY:
+			_enter_step(0)
+			return
+	if _step >= HINTS.size():
+		return
+	if game.loop > 0 or game.night > 0 or game.phase in [Game.Phase.CARDS, Game.Phase.DONE]:
+		_step = HINTS.size()
+		_end_hints()
+		return
+	if _step_entered != _step:
+		_enter_step(_step)
+	if game.phase == Game.Phase.NIGHT and _step < 7:
+		_enter_step(7)
+		return
 	_step_time += delta
+	_ghost_timer -= delta
+	if _ghost_timer <= 0.0 and not is_instance_valid(_active_ghost):
+		_spawn_step_ghost()
+		_ghost_timer = 2.8
+	_update_ring()
+	if _step == 1 and game.towers.is_empty() and game._held_card == null and game.selected == "":
+		_enter_step(0)
+		return
 	var done := false
 	match _step:
 		0:
-			done = game._held_card != null
+			done = game._held_card != null or game.selected != "" or not game.towers.is_empty()
 		1:
 			done = not game.towers.is_empty()
+			if done:
+				game.spawn_tutorial_shade(game.towers[0])
 		2:
-			done = game._helped > 0 or _step_time > 70.0
+			done = not game._rim_hands.is_empty() \
+				or absf(angle_difference(game.board.rotation.y, _start_board_yaw)) > 0.03 \
+				or game.board.global_position.distance_to(_start_board_pos) > 0.015
 		3:
-			done = game.life != null and game.life.villagers.any(func(v): return v.taps > 0) or _step_time > 40.0
+			done = game._helped > 0
 		4:
-			done = game.foresight.showing or game.phase != Game.Phase.DAY or _step_time > 45.0
+			done = _total_villager_taps() > _taps_at_step
 		5:
-			done = game.phase != Game.Phase.DAY
+			done = game.foresight.showing or game.phase != Game.Phase.DAY
+		6:
+			done = game.phase == Game.Phase.NIGHT
+		7:
+			done = game.spells.cooldown.values().any(func(cd): return cd > 0.0) or game.phase != Game.Phase.NIGHT
 	if done:
-		_step += 1
-		_step_time = 0.0
-		if _step < HINTS.size():
-			_hint(HINTS[_step])
-		else:
+		if _step + 1 >= HINTS.size():
+			_step = HINTS.size()
+			game.snd("trust_chime")
+			game.last_message = "Well struck! Defend the village till dawn."
+			game._refresh_ui()
 			_end_hints()
+		else:
+			_enter_step(_step + 1)

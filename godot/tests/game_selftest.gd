@@ -38,6 +38,7 @@ func _initialize() -> void:
 	await _perf_fixes()
 	await _visual_rendering_fixes()
 	await _seated_experience()
+	await _interactive_tutorial()
 	await _crews()
 	await _guards()
 	await _decor()
@@ -2321,27 +2322,38 @@ func _tray_rules() -> void:
 	check("nightfall routes Skotos's long subtitle through the wrapped tray label",
 		g.phase == Game.Phase.NIGHT and g._toast.text == g.last_message \
 		and g._toast.text.begins_with("Skotos: ") and g._toast.text.length() > 50)
-	check("toasts sit clearly above the tray cards so the tray never covers them",
-		g._toast.position.y >= 0.12 and g._toast.vertical_alignment == VERTICAL_ALIGNMENT_BOTTOM)
-	g._show_toast("New quest: Bucket")
-	g._show_toast("Not enough faith.")
-	check("back-to-back toasts stack on separate non-overlapping vertical slots",
-		g._toast.text == "Not enough faith." and g._toast_stack.size() == Game.TOAST_STACK_MAX - 1 \
-		and g._toast_stack[0].text == "New quest: Bucket" and g._toast_stack[0].modulate.a > 0.9 \
-		and g._toast_stack[0].position.y - g._toast.position.y >= Game.TOAST_STACK_STEP - 0.001)
+	check("toasts sit clearly above the tray cards with a slim 8px outline",
+		g._toast.position.y >= 0.12 and g._toast.vertical_alignment == VERTICAL_ALIGNMENT_BOTTOM \
+		and g._toast.outline_size == 8)
+	g._show_toast("Dusk is coming.")
+	g._show_toast("Night 1. They come from the forest.")
+	var stack_clear := true
+	for sl in g._toast_stack:
+		if sl.text != "" or sl.visible or sl.outline_modulate.a > 0.01:
+			stack_clear = false
+	check("back-to-back status toasts replace in _toast instead of stacking ghost outlines",
+		g._toast.text == "Night 1. They come from the forest." and g._toast.visible \
+		and g._toast.modulate.a > 0.9 \
+		and is_equal_approx(g._toast.outline_modulate.a, g._toast.modulate.a) \
+		and stack_clear)
 	g._refresh_hud()
-	check("repeated HUD refresh with unchanged message does not duplicate the active toast",
-		g._toast.text == "Not enough faith." and g._toast_stack[0].text == "New quest: Bucket")
+	check("repeated HUD refresh with unchanged message keeps the single active toast clean",
+		g._toast.text == "Night 1. They come from the forest.")
 	g.last_message = "Can't build there."
 	g._refresh_hud()
 	g._show_toast("Hold to hurry the day")
 	g.last_message = "Can't build there."
 	g._refresh_hud()
-	check("repeating an explicit message after another toast still shows it again",
-		g._toast.text == "Can't build there." and g._toast_stack[0].text == "Hold to hurry the day")
+	var stack_clear_after := true
+	for sl in g._toast_stack:
+		if sl.text != "" or sl.visible or sl.outline_modulate.a > 0.01:
+			stack_clear_after = false
+	check("repeating an explicit message after another toast still replaces cleanly",
+		g._toast.text == "Can't build there." and stack_clear_after)
 	g._tick_tray_bits(Game.TOAST_HOLD + 0.1)
-	check("fading out clears _toast_last so the same toast can show later",
-		g._toast.modulate.a <= 0.01 and g._toast_last == "")
+	check("fading out clears toast text, visibility, outline alpha, and _toast_last",
+		g._toast.modulate.a <= 0.01 and g._toast.outline_modulate.a <= 0.01 \
+		and g._toast.text == "" and not g._toast.visible and g._toast_last == "")
 	g2.queue_free()
 	cam.queue_free()
 	g.queue_free()
@@ -2639,4 +2651,120 @@ func _seated_experience() -> void:
 	hand.queue_free()
 	cam.queue_free()
 	g.queue_free()
+	await process_frame
+
+
+func _interactive_tutorial() -> void:
+	## Step-gated interactive tutorial: active spotlighting, card pickup/revert, daytime Live Fire shade, board spin, prayer, villager tap, lens, Night 1 spell finale.
+	var l: Launcher = load("res://scripts/ui/launcher.gd").new()
+	root.add_child(l)
+	for _i in 6:
+		await process_frame
+	l._press_plaque("skip")
+	await process_frame
+	var g := l.game
+	check("tutorial starts at step 0 highlighting tower cards",
+		l._state == "playing" and l._step == 0 and g.tutorial_spotlight == "cards" \
+		and l._hint_card != null and l._target_ring != null and l._target_ring.visible)
+	g._press_button("fast")
+	g.toggle_fast()
+	check("hourglass and KEY_TAB stay locked during card-spotlight steps", not g.day_fast and g.phase == Game.Phase.DAY)
+
+	g._held_card = g._tray.cards[0]
+	l._tutorial(0.05)
+	check("picking up a tower card advances tutorial to step 1 (place on grass)",
+		l._step == 1 and g.tutorial_spotlight == "cards")
+
+	g._held_card = null
+	g.selected = ""
+	l._tutorial(0.05)
+	check("dropping the card without building reverts step 1 back to step 0",
+		l._step == 0 and g.tutorial_spotlight == "cards")
+
+	g.selected = "fire"
+	l._tutorial(0.05)
+	check("selecting a tower kind advances to step 1", l._step == 1)
+	var build_cell := l.tutorial_build_cell()
+	var built := g.try_build("fire", build_cell)
+	var faith_before_fire := g.faith
+	l._tutorial(0.05)
+	check("building tower spawns harmless daytime Live Fire shade and advances to step 2",
+		built and l._step == 2 and g.tutorial_spotlight == "rim" \
+		and g.enemies.size() == 1 and g.phase == Game.Phase.DAY)
+	var shade_clear := false
+	if g.enemies.size() == 1:
+		var sc: Vector2i = g.enemies[0].cell
+		shade_clear = not g.nav.kind.has(sc) \
+			and not [sc + Vector2i(1, 0), sc + Vector2i(-1, 0), sc + Vector2i(0, 1), sc + Vector2i(0, -1)].any(
+				func(nb): return g.nav.kind.get(nb, "") in ["house", "tower", "decor"])
+	check("Live Fire tutorial shade spawns clear of houses, towers, and decor", shade_clear)
+
+	var t_fire := 0.0
+	while not g.enemies.is_empty() and t_fire < 8.0:
+		g.step(0.05)
+		t_fire += 0.05
+	check("Live Fire tutorial shade dies cleanly in daytime for +15 faith",
+		g.enemies.is_empty() and g.phase == Game.Phase.DAY \
+		and g.faith >= faith_before_fire + Game.TUTORIAL_SHADE_REWARD)
+
+	l._tutorial(120.0)
+	check("tutorial never silently skips after a long idle wait",
+		l._step == 2 and l._hint_card != null and is_instance_valid(l._hint_card))
+
+	g.board.rotation.y += deg_to_rad(25.0)
+	l._tutorial(0.05)
+	check("spinning the island advances to step 3 and ensures prayer quest is posted",
+		l._step == 3 and g.tutorial_spotlight == "board" and not g.requests.is_empty())
+
+	var asker: Villager = null
+	if not g.requests.is_empty():
+		asker = g.requests[0].asker()
+		g.tap_villager(asker)
+	l._tutorial(0.05)
+	check("answering the first prayer increments _helped and advances to step 4",
+		g._helped > 0 and l._step == 4 and g.tutorial_spotlight == "board")
+
+	if asker != null:
+		g.tap_villager(asker)
+	l._tutorial(0.05)
+	check("tapping a villager advances to step 5 (Crystal Lens foresight)",
+		l._step == 5 and g.tutorial_spotlight == "lens")
+
+	g.set_lens(true)
+	l._tutorial(0.05)
+	check("peeking through Crystal Lens advances to step 6 (hourglass)",
+		l._step == 6 and g.tutorial_spotlight == "hourglass")
+
+	g.start_night()
+	l._tutorial(0.05)
+	check("starting Night 1 advances to step 7 (God Spell finale)",
+		l._step == 7 and g.tutorial_spotlight == "spells" and g.phase == Game.Phase.NIGHT)
+
+	var casted := g.cast_spell("fire_orb", NavGrid.footprint_centre(build_cell, GameConfig.TOWER_SIZE))
+	l._tutorial(0.05)
+	check("casting a Night 1 spell finishes tutorial and clears spotlight",
+		casted and l._step == Launcher.HINTS.size() and g.tutorial_spotlight == "" \
+		and l._hint_card == null and (l._target_ring == null or not l._target_ring.visible))
+
+	g.new_run(7)
+	l._tutorial(0.05)
+	check("restarting a run via new_run() resets the tutorial back to step 0",
+		l._step == 0 and g.tutorial_spotlight == "cards" and l._hint_card != null)
+
+	g.selected = "guard"
+	l._tutorial(0.05)
+	var guard_cell := l.tutorial_build_cell()
+	var built_guard := g.try_build("guard", guard_cell)
+	l._tutorial(0.05)
+	var t_guard := 0.0
+	while not g.enemies.is_empty() and t_guard < 12.0:
+		g.step(0.05)
+		t_guard += 0.05
+	for _i in 60:
+		g.step(0.05)
+	var guards_idle: bool = built_guard and not g.towers.is_empty() and g.towers[0].guards.all(func(gd): return gd.state == "idle")
+	check("Guard Tower guards finish daytime Live Fire shade and return to idle post",
+		built_guard and g.enemies.is_empty() and guards_idle and g.phase == Game.Phase.DAY)
+
+	l.queue_free()
 	await process_frame

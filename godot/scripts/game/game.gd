@@ -33,7 +33,7 @@ enum Phase { DAY, NIGHT, CARDS, DONE }
 # Table height; the 1.2 m board's near edge sits 0.25 m in front of a seated player
 const SELL_RING_Y := 0.024  # just above the grass tufts: it stays depth-tested, so the tower hides its back half
 const TRAY_SUBTITLE_WIDTH := 620.0  # px: two short centred lines instead of a view-wide nightfall sentence
-const TOAST_POS := Vector3(0, 0.125, -0.015)  # above the tray cards, clear of the tray wood and inside the seated view
+const TOAST_POS := Vector3(0, 0.165, -0.028)  # clear above the tilted tray cards from both seated and elevated angles
 const TOAST_LINE_STEP := 0.024  # m per wrapped line when anchored at bottom
 const TOAST_STACK_GAP := 0.018  # m extra clear space between stacked toasts
 const TOAST_STACK_STEP := TOAST_LINE_STEP + TOAST_STACK_GAP  # minimum vertical step between 1-line toasts
@@ -181,6 +181,9 @@ var _toast_last := ""
 const DAY_CLOCK_POS := Vector3(0, 0.42, -HALF - 0.08)
 const LEDGER_INWARD_SHIFT := 0.14
 const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
+const TUTORIAL_SHADE_REWARD := 15
+var tutorial_spotlight := ""  # "", "cards", "rim", "board", "lens", "hourglass", "spells"
+var run_serial := 0
 var _sell_hint_shown := false
 var quit_requested := false
 var _hud_toast_serial := 0
@@ -291,6 +294,7 @@ func _child(parent: Node, n: String) -> Node3D:
 # ---------------------------------------------------------------- run, phases
 
 func new_run(rng_seed: int) -> void:
+	run_serial += 1
 	run_seed = rng_seed
 	loop = 0
 	cards = {}
@@ -306,19 +310,20 @@ func new_run(rng_seed: int) -> void:
 	_hud_toast_serial = _msg_serial
 	_sell_hint_shown = false
 	quit_requested = false
+	_set_toast_alpha(_toast, 0.0)
 	if _toast:
 		_toast.text = ""
-		_toast.modulate.a = 0.0
 		_toast.set_meta("left", 0.0)
 	for l in _toast_stack:
 		l.text = ""
-		l.modulate.a = 0.0
 		l.set_meta("left", 0.0)
+		_set_toast_alpha(l, 0.0)
 	_start_loop("Day 1. Build before the sun sets.")
 
 
 func _start_loop(message: String) -> void:
 	## Everything the time loop resets (spec 15): night counter, faith, towers, village damage.
+	set_tutorial_spotlight("")
 	for t in towers:
 		t.queue_free()
 	towers.clear()
@@ -476,6 +481,10 @@ func _doom_step(delta: float) -> void:
 func start_night() -> bool:
 	if phase != Phase.DAY:
 		return false
+	for e in enemies.duplicate():
+		if is_instance_valid(e) and e.get_meta("tutorial_shade", false):
+			enemies.erase(e)
+			e.queue_free()
 	night_time = 0.0
 	_doom_started = false
 	_doom_timer = 0.0
@@ -1096,6 +1105,8 @@ func set_speed(s: float) -> void:
 func toggle_fast() -> void:
 	## The tray hourglass (the user, 2026-11-11). By day it hurries the day on; at night it reads "2x" and runs
 	## GameConfig.NIGHT_FAST (4) times as fast.
+	if phase == Phase.DAY and tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+		return
 	if phase == Phase.DAY:
 		day_fast = not day_fast
 	elif phase == Phase.NIGHT:
@@ -1184,7 +1195,27 @@ func crush_step(delta: float) -> bool:
 
 
 func step(delta: float) -> void:
-	## One game tick. Only the night moves; building happens on input.
+	## One game tick. Night waves drive combat; during the day, only active tutorial skirmishes step.
+	if phase == Phase.DAY:
+		if not enemies.is_empty():
+			for e in enemies.duplicate():
+				if is_instance_valid(e) and e.has_meta("tutorial_shade") and (towers.is_empty() or e.attacking):
+					e.alive = false
+					enemies.erase(e)
+					e.queue_free()
+		var guards_active := towers.any(func(t): return t.cfg["kind"] == "spawner" and t.guards.any(func(gd): return gd.state != "idle"))
+		if enemies.is_empty() and shots.is_empty() and not guards_active:
+			return
+		for e in enemies.duplicate():
+			if is_instance_valid(e):
+				e.step(delta)
+		for t in towers:
+			t.step(delta)
+		for s in shots.duplicate():
+			if is_instance_valid(s) and not s.done:
+				s.step(delta)
+		shots = shots.filter(func(s): return is_instance_valid(s) and not s.done)
+		return
 	if phase != Phase.NIGHT:
 		return
 	night_time += delta
@@ -1238,6 +1269,83 @@ func _spawn(cell: Vector2i, kind: String, at := Vector3.INF) -> Enemy:
 	snd("wisp_screech" if kind == "wisp" else "enemy_spawn", e.global_position)
 	e.died.connect(_on_enemy_died)
 	enemies.append(e)
+	return e
+
+
+func spawn_tutorial_shade(t: Tower) -> Enemy:
+	## Spawns one slow, harmless daytime shade on open grass beside the first built tower for an instant combat payoff.
+	if t == null or not is_instance_valid(t):
+		return null
+	var kind := "wisp" if t.kind == "airship" else "grunt"
+	var side := 1.0 if t.position.x >= 0.0 else -1.0
+	var base_dir := Vector3(side * 0.35, 0.0, 0.94).normalized()
+	var chosen_cell := t.cell
+	var chosen_pos := Vector3.ZERO
+	var found := false
+	for dist_cells: float in [2.8, 3.2, 2.4]:
+		if found:
+			break
+		for ang_deg: float in [0.0, 35.0, -35.0, 70.0, -70.0, 110.0, -110.0, 150.0, -150.0, 180.0]:
+			var dir: Vector3 = base_dir.rotated(Vector3.UP, deg_to_rad(ang_deg))
+			var p: Vector3 = t.position + dir * (dist_cells * GameConfig.CELL)
+			p.x = clampf(p.x, -HALF + GameConfig.CELL * 3.5, HALF - GameConfig.CELL * 3.5)
+			p.z = clampf(p.z, -HALF + GameConfig.CELL * 3.5, HALF - GameConfig.CELL * 3.5)
+			var c := NavGrid.local_to_cell(p).clamp(Vector2i(3, 3), Vector2i(GameConfig.SIZE - 4, GameConfig.SIZE - 4))
+			var standing := standing_houses()
+			if kind == "wisp":
+				var far_enough := true
+				for hi in standing:
+					var hpos := house_point(hi)
+					if Vector2(p.x - hpos.x, p.z - hpos.z).length() < GameConfig.CELL * 2.0:
+						far_enough = false
+						break
+				if not far_enough:
+					continue
+				chosen_cell = c
+				chosen_pos = Vector3(p.x, 0.0, p.z)
+				found = true
+				break
+			var clear := not nav.astar.is_point_solid(c) and not nav.kind.has(c)
+			if clear:
+				for nb in [c + Vector2i(1, 0), c + Vector2i(-1, 0), c + Vector2i(0, 1), c + Vector2i(0, -1)]:
+					if nav.kind.get(nb, "") in ["house", "tower", "decor"]:
+						clear = false
+						break
+			if clear and (nav.route(c, standing).get("path", []) as Array).size() >= 3:
+				chosen_cell = c
+				chosen_pos = Vector3(p.x, 0.0, p.z)
+				found = true
+				break
+	if not found:
+		for ang_deg: float in [0.0, 45.0, -45.0, 90.0, -90.0, 135.0, -135.0, 180.0]:
+			var dir: Vector3 = base_dir.rotated(Vector3.UP, deg_to_rad(ang_deg))
+			var p: Vector3 = t.position + dir * (2.6 * GameConfig.CELL)
+			p.x = clampf(p.x, -HALF + GameConfig.CELL * 2.5, HALF - GameConfig.CELL * 2.5)
+			p.z = clampf(p.z, -HALF + GameConfig.CELL * 2.5, HALF - GameConfig.CELL * 2.5)
+			var c := NavGrid.local_to_cell(p).clamp(Vector2i(2, 2), Vector2i(GameConfig.SIZE - 3, GameConfig.SIZE - 3))
+			if kind == "wisp" or (not nav.astar.is_point_solid(c) and not nav.route(c, standing_houses()).is_empty()):
+				chosen_cell = c
+				chosen_pos = Vector3(p.x, 0.0, p.z)
+				found = true
+				break
+	if not found:
+		chosen_pos = Vector3(clampf(t.position.x + base_dir.x * 2.5 * GameConfig.CELL, -HALF + 0.12, HALF - 0.12), 0.0, clampf(t.position.z + base_dir.z * 2.5 * GameConfig.CELL, -HALF + 0.12, HALF - 0.12))
+		chosen_cell = NavGrid.local_to_cell(chosen_pos).clamp(Vector2i(1, 1), Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
+	var e := _spawn(chosen_cell, kind, chosen_pos)
+	e.stats = e.stats.duplicate()
+	e.stats["dps"] = 0.0
+	e.hp = 8.0
+	e.slow(0.35, 30.0)
+	e.set_meta("tutorial_shade", true)
+	e.died.connect(func(dead: Enemy):
+		if is_instance_valid(self):
+			faith += TUTORIAL_SHADE_REWARD
+			var pos := dead.global_position if is_instance_valid(dead) else t.global_position
+			snd("trust_chime", pos)
+			if with_rig:
+				_faith_sparkle(pos + Vector3(0, 0.06, 0))
+			last_message = "First shade felled! +%d faith" % TUTORIAL_SHADE_REWARD
+			_refresh_ui())
 	return e
 
 
@@ -1751,6 +1859,9 @@ func _press_button(id: String) -> void:
 		return
 	match id:
 		"fast":
+			if tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+				_show_toast("Finish the current tutorial step first.")
+				return
 			if _xr:
 				_show_toast("Hold the hourglass to hurry the day")  # a stray touch never speeds time (the user, 2026-11-11)
 			else:
@@ -2286,16 +2397,24 @@ func _make_toast_label(node_name: String, pos: Vector3) -> Label3D:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	l.outline_size = 16
-	l.modulate = Color("F4E4B8")  # wall_cream
-	l.outline_modulate = Color("5B2920")
+	l.outline_size = 8
+	l.modulate = Color("FFF3D6")
+	l.outline_modulate = Color("2A1E16")
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	l.render_priority = 10
 	l.position = pos
-	l.modulate.a = 0.0
 	_tray.add_child(l)
+	_set_toast_alpha(l, 0.0)
 	return l
+
+
+func _set_toast_alpha(l: Label3D, a: float) -> void:
+	if l == null:
+		return
+	l.modulate.a = a
+	l.outline_modulate.a = a
+	l.visible = a > 0.005 and l.text != ""
 
 
 func _layout_toast_stack() -> void:
@@ -2312,12 +2431,17 @@ func _layout_toast_stack() -> void:
 
 
 func _tick_toast_label(l: Label3D, delta: float) -> void:
-	if l and l.modulate.a > 0.0:
-		var left: float = maxf(0.0, l.get_meta("left", 0.0) - delta)
-		l.set_meta("left", left)
-		l.modulate.a = clampf(left / 0.6, 0.0, 1.0)
-		if left <= 0.0 and l == _toast:
+	if l == null or not l.visible:
+		return
+	var left: float = maxf(0.0, l.get_meta("left", 0.0) - delta)
+	l.set_meta("left", left)
+	if left <= 0.0:
+		l.text = ""
+		_set_toast_alpha(l, 0.0)
+		if l == _toast:
 			_toast_last = ""
+		return
+	_set_toast_alpha(l, clampf(left / 0.6, 0.0, 1.0))
 
 
 func _tick_tray_bits(delta: float) -> void:
@@ -2325,34 +2449,44 @@ func _tick_tray_bits(delta: float) -> void:
 	if _compass_label and board and not is_equal_approx(_compass_scale, board.scale.x):
 		_update_compass_label()
 	if _fast_glass:
+		if tutorial_spotlight == "hourglass":
+			_fast_glass.scale = Vector3.ONE * (1.0 + 0.1 * sin(Time.get_ticks_msec() * 0.007))
+		elif _fast_glass.scale != Vector3.ONE:
+			_fast_glass.scale = Vector3.ONE
 		var m := _fast_glass.get_node_or_null("Model")
 		if m:
 			m.rotation.z = fmod(m.rotation.z + delta * 5.0, TAU) if is_fast() else lerp_angle(m.rotation.z, 0.0, minf(1.0, delta * 6.0))
 	_tick_toast_label(_toast, delta)
 	for l in _toast_stack:
 		_tick_toast_label(l, delta)
+	if _tray:
+		var card_pulse := 0.85 + 0.45 * sin(Time.get_ticks_msec() * 0.008)
+		var highlight_cards := tutorial_spotlight in ["cards", "spells"]
+		for c in _tray.cards:
+			if c._body and c._body.material_override is StandardMaterial3D:
+				var bm := c._body.material_override as StandardMaterial3D
+				if highlight_cards and c.glow:
+					bm.emission_enabled = true
+					bm.emission = Color("FFD45A")
+					bm.emission_energy_multiplier = card_pulse
+					c._body.scale = Vector3(1.10, 1.08, 0.92)
+				elif bm.emission_enabled:
+					bm.emission_enabled = false
+					c._body.scale = Vector3.ONE
 
 
 func _show_toast(line: String) -> void:
 	if _toast == null or line == "" or asleep or line == _toast_last:
 		return
 	_toast_last = line
-	var cur_left: float = _toast.get_meta("left", 0.0)
-	if _toast.text != "" and cur_left > 0.05 and _toast.modulate.a > 0.05:
-		for i in range(_toast_stack.size() - 1, 0, -1):
-			var prev := _toast_stack[i - 1]
-			var dst := _toast_stack[i]
-			dst.text = prev.text
-			dst.set_meta("left", prev.get_meta("left", 0.0))
-			dst.modulate.a = prev.modulate.a
-		if not _toast_stack.is_empty():
-			_toast_stack[0].text = _toast.text
-			_toast_stack[0].set_meta("left", cur_left)
-			_toast_stack[0].modulate.a = _toast.modulate.a
+	for dst in _toast_stack:
+		dst.text = ""
+		dst.set_meta("left", 0.0)
+		_set_toast_alpha(dst, 0.0)
 	_toast.text = line
-	_toast.modulate.a = 1.0
+	_toast.position = TOAST_POS
 	_toast.set_meta("left", TOAST_HOLD)
-	_layout_toast_stack()
+	_set_toast_alpha(_toast, 1.0)
 
 
 func _build_spell_tokens(ui: Node3D, x0: float, w: float, gap: float) -> void:
@@ -2484,6 +2618,9 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell_hand = h
 			return
 	if _on_tray_hourglass(tp):
+		if tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+			_show_toast("Finish the current tutorial step first.")
+			return
 		if h == _mouse_hand:
 			toggle_fast()
 		else:
@@ -2517,8 +2654,12 @@ func hand_pressed(h: GameHand) -> void:
 			if Vector2(d.x, d.z).length() <= GameConfig.CELL * 1.1 and d.y > -0.01 and d.y <= 0.16:
 				crush_start(t, h, tp)  # crush_step measures the drift from this same touch point
 				return
-	if h != _mouse_hand and not placing() and on_rim(tp):
-		if GameConfig.RIM_HOLD <= 0.0:
+	if not placing() and on_rim(tp):
+		if h == _mouse_hand:
+			board.rotation.y += deg_to_rad(25.0)
+			_update_compass_label()
+			snd("grab")
+		elif GameConfig.RIM_HOLD <= 0.0:
 			_rim_hands.append(h)
 			_rim_anchor()
 			snd("grab")
@@ -2685,7 +2826,8 @@ func _tick_rim(delta := 0.0) -> void:
 					break
 		var rmat := _rim_handles[0].material_override as StandardMaterial3D
 		if rmat:
-			rmat.emission_energy_multiplier = 0.75 if grabbed else (0.42 if hovered else 0.18)
+			var rim_pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
+			rmat.emission_energy_multiplier = 0.75 if grabbed else (0.42 if hovered else (rim_pulse if tutorial_spotlight == "rim" else 0.18))
 	if _rim_hands.is_empty():
 		return
 	var p: Array[Vector3] = []
@@ -2827,10 +2969,14 @@ func _update_lens() -> void:
 			set_lens(true)  # desktop: every gap
 		else:
 			set_lens(false)
-	elif not _xr:
-		var held := Input.is_key_pressed(KEY_L) and phase == Phase.DAY
-		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)).scaled_local(Vector3.ONE * GameConfig.LENS_SCALE) if held else _lens_rest
-		set_lens(held)
+	elif not _xr and Input.is_key_pressed(KEY_L) and phase == Phase.DAY:
+		_lens.transform = _lens_rest.translated(Vector3(0, 0.12, -0.03)).scaled_local(Vector3.ONE * GameConfig.LENS_SCALE)
+		set_lens(true)
+	else:
+		var lens_pulse := 1.0 + 0.09 * sin(Time.get_ticks_msec() * 0.007) if tutorial_spotlight == "lens" else 1.0
+		_lens.transform = _lens_rest.scaled_local(Vector3.ONE * lens_pulse) if lens_pulse != 1.0 else _lens_rest
+		if not _xr:
+			set_lens(false)
 
 
 func _mount_ui_rig() -> void:
@@ -3240,8 +3386,21 @@ func _refresh_tray() -> void:
 	_refresh_card_availability()
 
 
+func set_tutorial_spotlight(mode: String) -> void:
+	## Highlights only the active tutorial affordance on the tray or board; "" restores normal state.
+	tutorial_spotlight = mode
+	if _fast_glass and mode != "hourglass":
+		_fast_glass.scale = Vector3.ONE
+	if _tray:
+		_refresh_card_availability()
+
+
 func _refresh_card_availability() -> void:
 	## Cheap state-only update used every night tick; does not rebuild card data or allocate tray lists.
+	if tutorial_spotlight in ["rim", "board", "lens", "hourglass"]:
+		for c in _tray.cards:
+			c.set_glow(false)
+		return
 	for c in _tray.cards:
 		var id: String = c.data.get("id", "")
 		match c.data.get("kind", ""):
