@@ -48,6 +48,7 @@ func clear_effects() -> void:
 	for h in game.houses:
 		h.ward = 0.0
 	for f in _fx:
+		_end_rain(f)
 		if is_instance_valid(f["node"]):
 			f["node"].queue_free()
 		for extra in ["potion", "shadow"]:  # pieces that are not the effect's main node
@@ -154,7 +155,7 @@ func _storm(pos: Vector3, cfg: Dictionary) -> void:
 		blob.position = Vector3(cos(i * TAU / 5.0) * 0.026, 0.006 * (i % 2), sin(i * TAU / 5.0) * 0.014)
 		VfxKit.toon_set(blob, "depth_bias", 0.004 + 0.003 * i)
 	_fx.append({"kind": "storm", "node": cloud, "left": cfg["duration"], "pos": pos, "next": 0.5, "cfg": cfg,
-		"base_y": cloud.position.y, "age": 0.0})
+		"base_y": cloud.position.y, "age": 0.0, "rain": game.snd_loop("storm_rain", cloud)})
 
 
 func _rage(pos: Vector3, cfg: Dictionary) -> void:
@@ -275,6 +276,7 @@ func step(delta: float) -> void:
 				else:
 					f["node"].visible = int(f["left"] * 40.0) % 3 != 0  # a bolt flickers, then goes
 		if f["left"] <= 0.0:
+			_end_rain(f)
 			if f["kind"] == "roots" and not f.get("replaced", false):
 				game.houses[f["house"]].ward = 0.0
 			if is_instance_valid(f["node"]):
@@ -382,6 +384,13 @@ func _burst(pos: Vector3, damage: float, radius: float, fire := false) -> void:
 	VfxKit.burst(self, at + Vector3(0, 0.01, 0), Color("8C9096"), INK, 10, 0.09, 0.5, 0.005, -0.5)
 
 
+func _end_rain(f: Dictionary) -> void:
+	## The Storm Cloud's rain fades out with the cloud (called once: the effect is removed right after).
+	if f["kind"] == "storm" and not f.get("rain_done", false):
+		f["rain_done"] = true
+		game.snd_loop_stop("storm_rain", f.get("rain"))
+
+
 func _strike(f: Dictionary) -> void:
 	## One lightning strike: the nearest enemy under the cloud, then on to the nearest enemies near the last.
 	var cfg: Dictionary = f["cfg"]
@@ -394,9 +403,12 @@ func _strike(f: Dictionary) -> void:
 		hit.append(at)
 		points.append(at.chest())
 		at.take_damage(cfg["damage"])
-		game.snd("storm_crack", at.global_position)  # a low thunder crack for each enemy struck (Siddharth 2026-11-10)
+		# ONE full real strike per strike, a quiet snap for each extra enemy the chain jumps to (Siddharth 2026-11-15)
+		game.snd("storm_strike" if hit.size() == 1 else "storm_snap", at.global_position)
 		var last: Vector3 = at.position
 		at = _nearest(last, cfg["chain_reach"] * GameConfig.CELL, hit)
+	if hit.is_empty():
+		game.snd("storm_far", from)  # an empty strike: a quieter, more distant roll (Siddharth 2026-11-15)
 	for i in range(points.size() - 1):
 		_bolt(points[i], points[i + 1])  # world points: look_at_from_position below places in world space
 		VfxKit.toon_burst(self, points[i + 1], 0.045, "burst", 0.3)  # a spark where it lands

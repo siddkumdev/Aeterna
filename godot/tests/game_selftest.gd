@@ -1102,16 +1102,37 @@ func _spells() -> void:
 	var sw := _still(g, "wisp", _at(5, 12, 1.5, 0.0))
 	var s2 := _still(g, "boss", _at(5, 12, 3.0, 0.0))
 	var s3 := _still(g, "boss", _at(5, 12, 4.5, 0.0))
+	g.log_sounds = true
+	g.sound_log.clear()
 	check("Storm Cloud casts", g.cast_spell("storm", _at(5, 12)))
+	check("Storm Cloud: the rain starts with the cloud", g.sound_log.count("storm_rain:start") == 1 and g.sound_log.count("storm_rain:stop") == 0)
 	_run(g, 0.4)
 	check("no strike before 0.5 s", is_equal_approx(s1.hp, 200.0))
 	_run(g, 0.3)
 	check("first strike: 8 damage on the first target, the Wisp (air) and the next boss; not the 4th in line",
 		is_equal_approx(s1.hp, 192.0) and (not is_instance_valid(sw) or not sw.alive) and is_equal_approx(s2.hp, 192.0) and is_equal_approx(s3.hp, 200.0))
-	_run(g, 6.5)
+	check("first strike = ONE full strike sound plus a snap for each of the 2 extra chain enemies, no far sound",
+		g.sound_log.count("storm_strike") == 1 and g.sound_log.count("storm_snap") == 2 and g.sound_log.count("storm_far") == 0)
+	check("rain keeps going while the cloud is up", g.sound_log.count("storm_rain:stop") == 0)
+	_run(g, 5.0)
+	check("rain is still on at 6 s of cloud life minus a moment", g.sound_log.count("storm_rain:stop") <= 1)
+	_run(g, 1.5)
 	check("4 strikes in 6 s (0.5, 2.0, 3.5, 5.0): 32 damage, then the cloud is gone",
 		is_equal_approx(s1.hp, 168.0) and g.spells._fx.filter(func(f): return f["kind"] == "storm").is_empty())
+	check("4 strikes = 4 strike sounds and 2 snaps (only the first strike chains to 3: the Wisp dies, the next boss is then out of chain reach); the rain stopped exactly once when the cloud ended",
+		g.sound_log.count("storm_strike") == 4 and g.sound_log.count("storm_snap") == 2 and g.sound_log.count("storm_rain:stop") == 1)
 	_run(g, 6.0)
+	g.spells.cooldown.clear()
+	g.sound_log.clear()
+	check("Storm Cloud over an empty spot casts", g.cast_spell("storm", _at(20, 2)))
+	_run(g, 0.7)
+	check("an empty strike makes the quieter far sound, not a strike or a snap",
+		g.sound_log.count("storm_far") == 1 and g.sound_log.count("storm_strike") == 0 and g.sound_log.count("storm_snap") == 0)
+	g.spells.clear_effects()
+	check("a reset stops the rain (once) and leaves no cloud", g.sound_log.count("storm_rain:stop") == 1 and g.spells._fx.is_empty())
+	g.spells.clear_effects()
+	check("clearing again does not stop the rain twice", g.sound_log.count("storm_rain:stop") == 1)
+	g.log_sounds = false
 
 	# Rage: towers inside the ring shoot faster for 8 s; outside they do not
 	g.queue_free()
@@ -1979,6 +2000,19 @@ func _audio() -> void:
 	a.set_bed("day_bed")
 	var s := a._stream("day_bed.wav", true)
 	check("audio: a bed loops", s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_FORWARD)
+	var follow := Node3D.new()
+	root.add_child(follow)
+	var v0 := a.voices
+	var rain := a.loop_start("storm_rain", follow)
+	check("audio: a spatial loop starts on a node and counts as a voice", rain != null and a.voices == v0 + 1 and a._loops.size() == 1)
+	check("audio: a one-shot id is not a loop", a.loop_start("pinch", follow) == null)
+	a.loop_stop(rain)
+	a.loop_stop(rain)
+	check("audio: stopping a loop frees its voice once", a._loops.is_empty() and a.voices == v0)
+	a.loop_start("storm_rain", follow)
+	follow.free()
+	a._process(0.016)
+	check("audio: a loop whose node is gone stops itself (no leak)", a._loops.is_empty() and a.voices == v0)
 	check("audio: frequent sounds have several takes", a.manifest["pinch"]["files"].size() >= 4)
 	var lims := 0
 	var mb := AudioServer.get_bus_index("Master")

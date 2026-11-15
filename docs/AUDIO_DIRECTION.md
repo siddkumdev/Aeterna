@@ -103,3 +103,24 @@ Answers to the first taste questions, kept in his words. Nothing here is a techn
 ## Restart round results
 - 2026-11-10 round 1 (tower placing), blind pick by Siddharth: choice 2 = `tap_b` (a hollow wooden box with a warm low knock), recipe in assets/generators/make_sfx_restart.py. Not yet in the game.
 - 2026-11-10 round 2 (Wizard Tower launch + hit, 3 choices) sent; awaiting his pick.
+
+## Restart brief, batch 4 (Siddharth, 2026-11-15)
+The Storm Cloud, rebuilt from real recordings (round r15 in `assets/generators/make_sfx_restart.py`, installed by `install_sfx_restart.py`).
+1. The old strike (`storm_crack`, a 0.3 s slice of distant thunder pitched up) "doesn't sound like a real lightning hit". Replaced by a real close
+   lightning strike: real crack then boom, "a bit softened" (only the harshest top is rounded off; still recognisably real lightning). He still
+   hates buzzy, metallic, bit-crushed and electronic zap sounds.
+2. Chains: one strike can hit up to 3 enemies. ONE full strike sound per strike (`storm_strike`, on the first enemy) plus a quiet short real snap
+   (`storm_snap`) on each extra enemy in the chain.
+3. A strike that hits no enemy still sounds: `storm_far`, a quieter, darker, more distant real thunder roll (it was silent).
+4. While the cloud is up (6 s) soft real rain (`storm_rain`, a seamless loop) plays on the cloud, spatial, fading in 0.4 s and out over 0.5 s when
+   the cloud ends, the night resets or the cloud node is freed (`AudioBank.loop_start / loop_stop / stop_loops`).
+5. The cast swell (`storm_cloud_1/2`) stays as it is unless it clashes with the new parts.
+- Sources: the Sonniss "Texas Rain Thunder" recording (Epic Stock Media, kit `storm_strike`: the close strike and two distant rolls) and the
+  Anthousai porch rain (CC0, kit `bed_rain`). Code only cuts, pitches, filters and fades. No synthesis, no downloads.
+- Strike candidates for the blind pick (all softened by a low-pass, high-pass at 140 Hz for headphones and Quest speakers): A full strike 1.6 s
+  (top rounded at 4.5 kHz), B with the first small crack before the crash 2.0 s (3.6 kHz), C tight and round 1.1 s (2.8 kHz). A is the provisional
+  default in the game until he picks (`STORM_STRIKE=B python -I assets/generators/install_sfx_restart.py storm_strike` installs another).
+  Blind set: `python tools/audio_ab_storm.py` writes `_work/audio_ab/storm_strike/` (1.wav 2.wav 3.wav and ctx_N.wav in-game mixes; the key is
+  KEY.txt in the same folder).
+- Next (his decision, same day): replace ALL remaining synthetic tower and spell sounds with real recordings; then he decides on the rest
+  (placing, not-allowed, chimes).

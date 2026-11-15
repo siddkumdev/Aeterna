@@ -18,6 +18,8 @@ const DUCK_DB := -6.0  # a story beat (manifest "duck") lowers ambience and musi
 const DUCKED := ["ambience", "music"]
 const COMBO_STEPS := [0, 2, 4, 7, 9]  # semitones: the major pentatonic of the game's key (C major, make_audio.py)
 const COMBO_GAP_MS := 1200
+const LOOP_FADE_IN := 0.4
+const LOOP_FADE_OUT := 0.5
 
 var enabled := true
 var manifest := {}
@@ -37,6 +39,7 @@ var _scatter_point: Callable  # where -> world position (Vector3.INF = play flat
 var _scatter_gap := Vector2(3.0, 7.0)
 var _scatter_left := 0.0
 var scattered := 0  # counted for tests
+var _loops: Array = []  # looping 3D sounds that follow a node (loop_start): {"p": player, "follow": Node3D}
 
 
 func _add_master_limiter() -> void:
@@ -175,7 +178,65 @@ func set_scatter(pool: Array, point: Callable, gap := Vector2(3.0, 7.0)) -> void
 	_scatter_left = _rng.randf_range(gap.x * 0.5, gap.y)  # the first one comes within one gap too
 
 
+func loop_start(id: String, follow: Node3D) -> Node:
+	## A looping spatial sound that rides on `follow` (the Storm Cloud's rain): fades in, and the caller ends it with
+	## loop_stop. It also ends itself if `follow` is freed, so it can never leak. Returns the player (null = not started).
+	if not enabled or not manifest.has(id) or not is_inside_tree() or follow == null or not follow.is_inside_tree():
+		return null
+	var m: Dictionary = manifest[id]
+	if not m.get("loop", false) or voices >= MAX_VOICES:
+		return null
+	var files: Array = m["files"]
+	var s := _stream(files[_rng.randi_range(0, files.size() - 1)]["file"], true)
+	if s == null:
+		return null
+	var p3 := AudioStreamPlayer3D.new()
+	p3.stream = s
+	p3.bus = m["bus"]
+	p3.unit_size = 0.7
+	p3.max_distance = 8.0
+	p3.attenuation_filter_cutoff_hz = 20500.0  # see play(): no air-absorption dulling on a tabletop
+	p3.volume_db = -60.0
+	add_child(p3)
+	p3.global_position = follow.global_position
+	voices += 1
+	_loops.append({"p": p3, "follow": follow})
+	p3.play()
+	var tw := create_tween()
+	tw.tween_property(p3, "volume_db", 0.0, LOOP_FADE_IN)
+	return p3
+
+
+func loop_stop(p: Node, fade := LOOP_FADE_OUT) -> void:
+	## Fades a loop_start sound out and frees it (safe to call twice, or on a freed node).
+	for i in range(_loops.size()):
+		if _loops[i]["p"] == p:
+			_loops.remove_at(i)
+			var p3 := p as AudioStreamPlayer3D
+			voices -= 1
+			var tw := create_tween()
+			tw.tween_property(p3, "volume_db", -60.0, fade)
+			tw.tween_callback(p3.queue_free)
+			return
+
+
+func stop_loops(fade := LOOP_FADE_OUT) -> void:
+	for e in _loops.duplicate():
+		loop_stop(e["p"], fade)
+
+
+func _follow_loops() -> void:
+	for e in _loops.duplicate():
+		var f = e["follow"]  # untyped: a freed node cannot be assigned to a Node3D variable
+		if is_instance_valid(f) and f.is_inside_tree():
+			(e["p"] as AudioStreamPlayer3D).global_position = f.global_position
+		else:
+			loop_stop(e["p"])
+
+
 func _process(delta: float) -> void:
+	if not _loops.is_empty():
+		_follow_loops()
 	if _scatter.is_empty() or not enabled:
 		return
 	_scatter_left -= delta

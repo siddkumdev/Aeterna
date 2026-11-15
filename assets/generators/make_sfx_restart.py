@@ -633,14 +633,65 @@ ROUNDS_R14 = {"wizard_launch_a_warm_rush": wizard_launch_real_a,
               "wizard_hit_b_wide_bloom": wizard_hit_real_b,
               "wizard_hit_c_warm_tail": wizard_hit_real_c}
 
+# Round r15 (Siddharth 2026-11-15): the Storm Cloud from REAL lightning. Sources: the Sonniss "Texas rain thunder" recording cut as
+# the kit storm_strike (tools/audio_grains.py: window 1 = the close strike, crack at +0.05 s and crash at +0.32 s; windows 2 and 3
+# = two distant thunder rolls) and the Anthousai rain kit bed_rain. Code only cuts, pitches, filters and fades: no synthesis.
+def _strike_src(i):
+    from scipy.io import wavfile
+    sr_, x = wavfile.read(os.path.join(ROOT, "assets", "audio_src", "grains", "storm_strike", "storm_strike_%02d.wav" % i))
+    return x.astype(float) / 32768.0
+
+
+def _storm_cut(i, start, secs, lpf, hpf, pitch=1.0, tail=0.25, attack=0.002):
+    x = _strike_src(i)
+    k = S.SR
+    x = x[int(start * k): int((start + secs * pitch) * k)].copy()
+    if pitch != 1.0:
+        x = np.interp(np.linspace(0, len(x) - 1, max(16, int(len(x) / pitch))), np.arange(len(x)), x)
+    return S.fade(S.lp(S.hp(x, hpf), lpf), attack, tail)
+
+
+def strike_near(start, secs, lpf, tail=0.35, hpf=140):  # the whole close strike, rounded at the top ("a bit softened")
+    def f(r):
+        j = float(r.uniform(-0.008, 0.012))
+        return _storm_cut(1, max(0.0, start + j), secs, lpf, hpf, 1.0, tail)
+    return f
+
+
+def strike_far(r):  # a real distant thunder roll: darker, no sharp front, comes from far away
+    if r.integers(0, 2) == 0:
+        x = _storm_cut(2, 0.12 + float(r.uniform(0, 0.08)), 1.9, 1500, 110, 0.95, 0.5, 0.04)
+    else:
+        x = _storm_cut(3, 0.55 + float(r.uniform(0, 0.15)), 2.0, 1500, 110, 0.95, 0.5, 0.05)
+    return x
+
+
+def chain_snap(r):  # a short real crack cut from the strike's own onsets (the first crack and the crash front)
+    start = [0.045, 0.322, 0.332, 0.345][int(r.integers(0, 4))]
+    return _storm_cut(1, start, 0.14, 4200, 220, 1.12, 0.09, 0.001)
+
+
+def storm_rain(r):  # soft real rain: a window of the porch recording, mono, lows off, loops seamlessly
+    from scipy.io import wavfile
+    n = 1 + int(r.integers(0, 2))
+    sr_, x = wavfile.read(os.path.join(ROOT, "assets", "audio_src", "grains", "bed_rain", "bed_rain_%02d.wav" % n))
+    x = MA._mono(x.astype(float) / 32768.0)
+    x = S.soft_clip(S.pk(S.lp(S.hp(x, 180), 8500)), 3.0)  # tame the loudest drips so the rain stays an even hush
+    return S.loop_seamless(x, 0.6)
+
+
+ROUNDS_R15 = {"strike_a_full": strike_near(0.27, 1.6, 4500), "strike_b_with_first_crack": strike_near(0.0, 2.0, 3600, 0.5),
+              "strike_c_tight_round": strike_near(0.28, 1.1, 2800, 0.3), "strike_far": strike_far, "chain_snap": chain_snap,
+              "storm_rain": storm_rain}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13, "r14": ROUNDS_R14}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13, "r14": ROUNDS_R14, "r15": ROUNDS_R15}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
     out = os.path.join(ROOT, "_work", "audio", "wizard_real" if rnd == "r14" else os.path.join("restart", rnd))
     os.makedirs(out, exist_ok=True)
     for name, fn in ROUNDS[rnd].items():
-        S.write_wav(os.path.join(out, name + ".wav"), fn(1))
+        S.write_wav(os.path.join(out, name + ".wav"), fn(S.rng(1) if rnd == "r15" else 1))
         print("wrote", name)

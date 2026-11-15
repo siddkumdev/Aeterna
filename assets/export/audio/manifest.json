@@ -2473,43 +2473,152 @@
   "tracker": "A20",
   "vary": 0.03
  },
- "storm_crack": {
+ "storm_far": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.3,
+  "duck": false,
+  "files": [
+   {
+    "file": "storm_far_1.wav",
+    "peak_db": -14.1,
+    "rms_db": -27.0,
+    "seam": null,
+    "seconds": 2.114
+   },
+   {
+    "file": "storm_far_2.wav",
+    "peak_db": -14.2,
+    "rms_db": -27.0,
+    "seam": null,
+    "seconds": 2.204
+   },
+   {
+    "file": "storm_far_3.wav",
+    "peak_db": -8.3,
+    "rms_db": -27.0,
+    "seam": null,
+    "seconds": 1.862
+   },
+   {
+    "file": "storm_far_4.wav",
+    "peak_db": -8.3,
+    "rms_db": -27.0,
+    "seam": null,
+    "seconds": 2.086
+   }
+  ],
+  "loop": false,
+  "note": "a Storm Cloud strike that hits nothing: a real distant thunder roll, quieter and darker (restart r15)",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.03
+ },
+ "storm_rain": {
   "bus": "sfx",
   "combo": false,
   "cooldown": 0.0,
   "duck": false,
   "files": [
    {
-    "file": "storm_crack_1.wav",
-    "peak_db": -3.1,
-    "rms_db": -20.0,
-    "seam": null,
-    "seconds": 0.246
+    "file": "storm_rain_1.wav",
+    "peak_db": -8.1,
+    "rms_db": -31.0,
+    "seam": 0.38,
+    "seconds": 8.4
    },
    {
-    "file": "storm_crack_2.wav",
-    "peak_db": -2.0,
-    "rms_db": -22.2,
+    "file": "storm_rain_2.wav",
+    "peak_db": -8.1,
+    "rms_db": -31.0,
+    "seam": 0.38,
+    "seconds": 8.4
+   }
+  ],
+  "loop": true,
+  "note": "soft real rain under the Storm Cloud while it is up; seamless loop on the cloud (restart r15)",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.0
+ },
+ "storm_snap": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.0,
+  "duck": false,
+  "files": [
+   {
+    "file": "storm_snap_1.wav",
+    "peak_db": -12.8,
+    "rms_db": -27.0,
     "seam": null,
-    "seconds": 0.236
+    "seconds": 0.22
    },
    {
-    "file": "storm_crack_3.wav",
-    "peak_db": -4.5,
-    "rms_db": -20.0,
+    "file": "storm_snap_2.wav",
+    "peak_db": -12.5,
+    "rms_db": -27.0,
     "seam": null,
-    "seconds": 0.28
+    "seconds": 0.239
    },
    {
-    "file": "storm_crack_4.wav",
-    "peak_db": -5.4,
-    "rms_db": -20.0,
+    "file": "storm_snap_3.wav",
+    "peak_db": -12.4,
+    "rms_db": -27.0,
     "seam": null,
-    "seconds": 0.293
+    "seconds": 0.22
+   },
+   {
+    "file": "storm_snap_4.wav",
+    "peak_db": -11.7,
+    "rms_db": -27.0,
+    "seam": null,
+    "seconds": 0.249
    }
   ],
   "loop": false,
-  "note": "a Storm Cloud strike hits an enemy: a short low thunder crack (restart r11)",
+  "note": "each extra enemy a strike chains to: a short quiet real crack (restart r15)",
+  "spatial": true,
+  "tracker": "A20",
+  "vary": 0.03
+ },
+ "storm_strike": {
+  "bus": "sfx",
+  "combo": false,
+  "cooldown": 0.3,
+  "duck": false,
+  "files": [
+   {
+    "file": "storm_strike_1.wav",
+    "peak_db": -3.7,
+    "rms_db": -19.0,
+    "seam": null,
+    "seconds": 1.676
+   },
+   {
+    "file": "storm_strike_2.wav",
+    "peak_db": -3.7,
+    "rms_db": -19.0,
+    "seam": null,
+    "seconds": 1.766
+   },
+   {
+    "file": "storm_strike_3.wav",
+    "peak_db": -3.7,
+    "rms_db": -19.0,
+    "seam": null,
+    "seconds": 1.614
+   },
+   {
+    "file": "storm_strike_4.wav",
+    "peak_db": -3.7,
+    "rms_db": -19.0,
+    "seam": null,
+    "seconds": 1.81
+   }
+  ],
+  "loop": false,
+  "note": "a Storm Cloud strike: ONE real close lightning crack and crash per strike, softened (restart r15)",
   "spatial": true,
   "tracker": "A20",
   "vary": 0.03

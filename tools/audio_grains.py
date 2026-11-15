@@ -224,6 +224,13 @@ KITS.update({
 # and an onset inside the previous cut is skipped, so phrases never overlap.
 PHRASE_KITS = {"owl", "sheep_bells", "sheep", "church", "drum", "magic", "shards", "whistle", "creak", "rewind", "bowl", "whisper",
                "bird", "leaves"}
+# Fixed-window kits (a few hand-chosen long cuts of ONE recording; the recipes cut finer from them). Chosen by measuring the
+# source (2026-11-15, Siddharth: real lightning for the Storm Cloud): the close strike (crack at 3.05 s, crash at 3.32 s, rumble
+# to about 6 s) and two distant thunder rolls (43 s, 99 s) of the Sonniss "Texas rain thunder" recording.
+FIXED_KITS = {
+    "storm_strike": (SONNISS + "/Epic Stock Media - Public Spaces - Storms*/STORM_*", "Epic Stock Media (Sonniss)", SONNISS_LIC,
+                     "https://sonniss.com/gameaudiogdc", [(3.0, 3.4), (43.0, 3.4), (98.8, 3.4)]),
+}
 # Bed kits: evenly spaced windows of max seconds (stereo, from 2 s in), not onsets; recipes loop them.
 BED_KITS = {k for k in KITS if k.startswith("bed_")} | {"leaves"}  # a steady rustle has no onsets: windows too
 
@@ -378,8 +385,35 @@ def main():
                         break
         index[kit] = entries
         print("%-11s %2d grains" % (kit, len(entries)))
+    for kit, (pattern, author, lic, url, windows) in FIXED_KITS.items():
+        if only and kit not in only:
+            continue
+        files = sorted(glob.glob(pattern))
+        if not files:
+            print("%-11s SKIPPED (kept as is): missing source %s" % (kit, pattern))
+            continue
+        kdir = os.path.join(OUT, kit)
+        os.makedirs(kdir, exist_ok=True)
+        for f in glob.glob(os.path.join(kdir, "*.wav")):
+            os.remove(f)
+        x = read(files[0])
+        entries = []
+        for a, secs in windows:
+            g = x[int(a * SR): int((a + secs) * SR)].copy()
+            g -= g.mean()
+            g = g / (np.max(np.abs(g)) + 1e-9) * 0.89
+            k = int(0.02 * SR)
+            g[-k:] *= np.linspace(1, 0, k)
+            name = "%s_%02d.wav" % (kit, len(entries) + 1)
+            wavfile.write(os.path.join(kdir, name), SR, (g * 32767).astype(np.int16))
+            entries.append(dict(file=name, seconds=round(len(g) / SR, 3), source=os.path.basename(files[0]), author=author,
+                                licence=lic, url=url, at=a, keep=True))
+        index[kit] = entries
+        rebuilt.append(kit)
+        print("%-11s %2d fixed windows" % (kit, len(entries)))
     json.dump(index, open(index_path, "w", encoding="utf-8"), indent=1)
     write_credits(index)
+    rebuilt = [k for k in rebuilt if k not in FIXED_KITS]
     if rebuilt:  # new cuts have no screen verdict yet (grain() would use them all): screen them now
         print("screening", " ".join(rebuilt))
         subprocess.run([sys.executable, os.path.join(ROOT, "tools", "audio_grain_screen.py"), *rebuilt], check=False)

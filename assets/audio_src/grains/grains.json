@@ -5149,5 +5149,37 @@
    "at": 4.098,
    "keep": true
   }
+ ],
+ "storm_strike": [
+  {
+   "file": "storm_strike_01.wav",
+   "seconds": 3.4,
+   "source": "STORM_Texas Rain Thunder Initial Crash Boom Storm 01 Clap Lightning_ESM_CPS.wav",
+   "author": "Epic Stock Media (Sonniss)",
+   "licence": "Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects)",
+   "url": "https://sonniss.com/gameaudiogdc",
+   "at": 3.0,
+   "keep": true
+  },
+  {
+   "file": "storm_strike_02.wav",
+   "seconds": 3.4,
+   "source": "STORM_Texas Rain Thunder Initial Crash Boom Storm 01 Clap Lightning_ESM_CPS.wav",
+   "author": "Epic Stock Media (Sonniss)",
+   "licence": "Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects)",
+   "url": "https://sonniss.com/gameaudiogdc",
+   "at": 43.0,
+   "keep": true
+  },
+  {
+   "file": "storm_strike_03.wav",
+   "seconds": 3.4,
+   "source": "STORM_Texas Rain Thunder Initial Crash Boom Storm 01 Clap Lightning_ESM_CPS.wav",
+   "author": "Epic Stock Media (Sonniss)",
+   "licence": "Sonniss GDC Game Audio Bundle licence v2.0 (royalty-free, no attribution; not to be redistributed as sound effects)",
+   "url": "https://sonniss.com/gameaudiogdc",
+   "at": 98.8,
+   "keep": true
+  }
  ]
 }

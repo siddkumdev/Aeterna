@@ -119,7 +119,15 @@ INSTALL = {
     "boulder_fall": (boulder_fall, 3, -24.6, "throw_whoosh", "A20", "Boulder released: a short falling whoosh (restart r9)"),
     "boulder_hit": (boulder_hit, 4, -20.0, "boulder_hit", "A20", "Boulder lands: heavy stone thud, dust and rumble (restart r9)"),
     "storm_cloud": (storm_cloud, 2, -22.0, "storm_cloud", "A20", "Storm Cloud cast: a dark rolling thunder swell (restart r11)"),
-    "storm_crack": (lambda r: room(M._g("thunder", r, 1.5, seconds=0.3, lpf=2500, hpf=140), 0.25, 0.08), 4, -20.0, "boulder_hit", "A20", "a Storm Cloud strike hits an enemy: a short low thunder crack (restart r11)"),
+    # Storm Cloud, restart batch 4 (Siddharth 2026-11-15): real lightning. Default strike = candidate A until he picks (STORM_STRIKE=A|B|C).
+    "storm_strike": (lambda r: room(STORM_CANDIDATES[os.environ.get("STORM_STRIKE", "A")](r), 0.25, 0.08), 4, -19.0, "boulder_hit", "A20",
+                     "a Storm Cloud strike: ONE real close lightning crack and crash per strike, softened (restart r15)"),
+    "storm_far": (lambda r: room(M.strike_far(r), 0.3, 0.1), 4, -27.0, "boulder_hit", "A20",
+                  "a Storm Cloud strike that hits nothing: a real distant thunder roll, quieter and darker (restart r15)"),
+    "storm_snap": (lambda r: room(M.chain_snap(r), 0.15, 0.04), 4, -27.0, "boulder_hit", "A20",
+                   "each extra enemy a strike chains to: a short quiet real crack (restart r15)"),
+    "storm_rain": (lambda r: M.storm_rain(r), 2, -31.0, "boulder_hit", "A20",
+                   "soft real rain under the Storm Cloud while it is up; seamless loop on the cloud (restart r15)"),
     "rage_cast": (lambda r: room(M.rage9(r), 0.25, 0.08), 2, -19.9, "rage_cast", "A20", "Rage: a swelling heartbeat from a real drum (restart r9)"),
     "ward_cast": (lambda r: room(M.root11(1.0, 0.35, 0.15)(r), 0.25, 0.08), 2, -21.3, "ward_cast", "A20", "Root Ward: roots and branches sliding, leaf rustle (restart r11 root_a)"),
     "place_thunk": (place_knock, 6, -19.9, "place_thunk", "A10", "a tower is placed: hollow wooden box knock (restart r1 tap_b)"),
@@ -130,17 +138,31 @@ INSTALL = {
     "enemy_death": (lambda r: np.zeros(S.n_of(0.05)), 1, None, "enemy_death", "A17", "SILENT on purpose: he asked for silent or minimal enemy deaths (2026-11-10)"),
     "build_pop": (lambda r: np.zeros(S.n_of(0.05)), 1, None, "build_pop", "A12", "SILENT on purpose: the approved placing sound is the wooden knock alone (2026-11-10)"),
 }
-KEEP_PITCH = {"trust_chime", "help_done"}  # notes in the key: a take's resample would put them off key
+STORM_CANDIDATES = {"A": M.ROUNDS_R15["strike_a_full"], "B": M.ROUNDS_R15["strike_b_with_first_crack"], "C": M.ROUNDS_R15["strike_c_tight_round"]}
+LOOPS = {"storm_rain"}  # seamless loops: no trim, no fades, no pitch change (the file's end meets its start)
+RETIRED = ("storm_crack",)  # sounds replaced by the above: removed from the manifest and the folders
+KEEP_PITCH = {"trust_chime", "help_done"} | LOOPS  # notes in the key: a take's resample would put them off key
 
 
 def _db(v):
     return float(20 * np.log10(v + 1e-12))
 
 
-def install():
+def install(only=None):
     man_path = os.path.join(GODOT_OUT, "manifest.json")
     man = json.load(open(man_path, encoding="utf-8"))
+    for name in RETIRED:
+        if name in man and (not only or any(o in INSTALL for o in only)):
+            for f in man.pop(name)["files"]:
+                for d in (GODOT_OUT, EXPORT_OUT):
+                    for ext in ("", ".import"):
+                        pth = os.path.join(d, f["file"] + ext)
+                        if os.path.exists(pth):
+                            os.remove(pth)
+            print("retired", name)
     for name, (fn, takes, rms, meta_from, tracker, note) in INSTALL.items():
+        if only and name not in only:
+            continue
         meta = dict(man[meta_from])
         files = []
         for k in range(takes):
@@ -148,7 +170,9 @@ def install():
             r = S.rng(seed)
             np.random.seed(seed % (2 ** 31))
             x = np.asarray(fn(r), dtype=float)
-            if rms is not None:
+            if name in LOOPS:
+                x = S.normalise(S.remove_dc(x), rms_db=rms, max_peak_db=-2.0)
+            elif rms is not None:
                 if k > 0 and name not in KEEP_PITCH:
                     kk = TAKE_PITCH[k % len(TAKE_PITCH)]
                     x = np.interp(np.linspace(0, len(x) - 1, max(16, int(len(x) / kk))), np.arange(len(x)), x)
@@ -158,10 +182,16 @@ def install():
             for d in (GODOT_OUT, EXPORT_OUT):
                 sf.write(os.path.join(d, fname), x, 44100, subtype="PCM_16")
             files.append({"file": fname, "peak_db": round(_db(float(np.max(np.abs(x)))), 1),
-                          "rms_db": round(_db(float(np.sqrt(np.mean(x ** 2)))), 1), "seam": None, "seconds": round(len(x) / 44100, 3)})
+                          "rms_db": round(_db(float(np.sqrt(np.mean(x ** 2)))), 1), "seam": round(S.seam_error(x), 2) if name in LOOPS else None, "seconds": round(len(x) / 44100, 3)})
         meta.update({"files": files, "note": note, "tracker": tracker})
-        if name == "storm_crack":
-            meta["cooldown"] = 0.0  # a whole chain is struck in one call: every enemy struck gets its crack
+        if name in ("storm_strike", "storm_far"):
+            meta["cooldown"] = 0.3  # one per strike; clouds are one at a time (cast cooldown 16 s)
+        if name == "storm_snap":
+            meta["cooldown"] = 0.0  # up to two extra chain enemies are struck in one call
+        if name in LOOPS:
+            meta["loop"] = True
+            meta["cooldown"] = 0.0
+            meta["vary"] = 0.0
         man[name] = meta
         print("installed %-16s %d take(s), rms %s" % (name, takes, "silent" if rms is None else rms))
     for d in (GODOT_OUT, EXPORT_OUT):
@@ -170,4 +200,4 @@ def install():
 
 
 if __name__ == "__main__":
-    install()
+    install(sys.argv[1:] or None)

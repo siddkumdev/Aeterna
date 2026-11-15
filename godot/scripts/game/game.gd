@@ -213,6 +213,8 @@ var _camera: Camera3D
 var _hands: Array[GameHand] = []
 var _active_hand: GameHand
 var _xr := false
+var log_sounds := false  # tests: record every sound asked for (headless has no audio rig)
+var sound_log: Array = []
 var audio: AudioBank  # sounds; only made with the rig (headless tests stay silent)
 
 
@@ -366,8 +368,26 @@ func card(id: String) -> int:
 
 func snd(id: String, at := Vector3.INF) -> void:
 	## Plays a sound by name (see AudioBank); does nothing without the rig.
+	if log_sounds:
+		sound_log.append(id)
 	if audio:
 		audio.play(id, at)
+
+
+func snd_loop(id: String, follow: Node3D) -> Node:
+	## A looping sound on a node (the Storm Cloud's rain); returns a handle for snd_loop_stop (null without the rig).
+	if log_sounds:
+		sound_log.append(id + ":start")
+	if audio:
+		return audio.loop_start(id, follow)
+	return null
+
+
+func snd_loop_stop(id: String, handle: Node) -> void:
+	if log_sounds:
+		sound_log.append(id + ":stop")
+	if audio and handle != null:
+		audio.loop_stop(handle)
 
 
 # Ambience one-shots (AudioBank.set_scatter; no beds since 2026-11-08): day = birds and leaves in the forest ring, a villager
