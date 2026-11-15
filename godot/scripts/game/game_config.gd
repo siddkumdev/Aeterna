@@ -20,10 +20,11 @@ const BOSS_NIGHT := 4  # 0-based: the 5th night
 # The last loop of a run is not doomed (the ending is the user's to choose, see docs/STORY.md).
 const DOOM_AT := 70.0
 const DOOM_STEP := 1.1
-const LOOPS_PER_RUN := 5  # 2026-10-22 (Siddharth): 5 loops for M1
+const LOOPS_PER_RUN := 3  # 2026-11-15 (Siddharth): tightened from 5 loops to 3
 # Each loop after the first (spec 16 for loop 2: +40% enemy HP and one extra group per night; Claude's stand-in
 # for loops 3-5: the same step again each loop). Loop n (0-based) = HP x(1 + 0.4 n), n extra groups per night.
-const LOOP_HP_STEP := 0.4
+const LOOP_HP_STEP := 0.22
+const LOOP_FAITH_STEP := 0.20
 const EXTRA_GROUPS_PER_LOOP := 1
 
 # Foresight (spec 13): the Crystal Lens shows the coming night during the day. 3 tiers spread over the 5 loops
@@ -31,7 +32,7 @@ const EXTRA_GROUPS_PER_LOOP := 1
 # icons + counts (no departure times: Siddharth 2026-10-23); 3 adds path ribbons (and where Tunnelers come up) and the rewrite
 # (close one spawn for the night: its groups come from the next open edge instead). The Fog variant never shows.
 const FORESIGHT_TIERS := 3
-const FORESIGHT_TIER_BY_LOOP: Array[int] = [1, 1, 2, 2, 3]
+const FORESIGHT_TIER_BY_LOOP: Array[int] = [1, 2, 3]
 const FORESIGHT_COLOUR := Color("3FB7D9")  # palette crystal_blue: blue is Foresight only
 const LENS_SCENE := "res://assets/foresight/ew_foresight_crystal_lens_v01.glb"
 const TOUCH_REACH := 0.04  # m from a fingertip/hand to a card, prop or token to grab it (one reach for requests and spells; god-hands plan C1)
@@ -113,7 +114,7 @@ const ENEMIES := {
 	"scout": {"name": "Scout", "hp": 10.0, "speed": 0.8, "dps": 2.0, "threat": 1, "unlock": 2, "weight": 3},
 	"splitter": {"name": "Splitter", "hp": 25.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 3, "weight": 2,
 		"splits_into": "splitling", "split_count": 2},
-	"wisp": {"name": "Wisp", "hp": 8.0, "speed": 1.2, "dps": 2.0, "threat": 2, "unlock": 2, "weight": 2,
+	"wisp": {"name": "Wisp", "hp": 8.0, "speed": 1.0, "dps": 2.0, "threat": 2, "unlock": 2, "weight": 2,
 		"flying": true, "fly_height": 4.0},
 	"tunneler": {"name": "Tunneler", "hp": 30.0, "speed": 0.4, "dps": 2.0, "threat": 3, "unlock": 2, "unlock_loop": 1,
 		"weight": 2, "burrows": true},
@@ -140,7 +141,7 @@ const ELITE_DELAY := 14.0  # s after nightfall
 const WAVE_TYPES: Array[String] = ["grunt", "scout", "splitter", "wisp", "tunneler", "fog"]  # what the wave plan may buy
 const FLYER_SHARE := 1.0 / 3.0  # spec 6a guard rail: flyers never more than a third of a night's threat
 # Enemy HP grows each night (2026-10-22, Siddharth: ramp per night): night n has x(1 + HP_RAMP * (n - 1)).
-const HP_RAMP_PER_NIGHT := 0.25
+const HP_RAMP_PER_NIGHT := 0.20
 
 # Waves (spec 6a; 2026-10-22: harder, budgets ramp up). Threat budget per night, 3 groups (one per spawn),
 # a new group every 12 s. Each group leaves the forest in clusters of 2-3 that come out together.
@@ -167,7 +168,7 @@ const SPREAD := 0.3  # each enemy walks up to this many cells off the centre lin
 # limit from spec 7 was removed by Siddharth 2026-10-23).
 const TOWERS := {
 	"fire": {
-		"name": "Wizard Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single",
+		"name": "Wizard Tower", "cost": 60, "range": 5.0, "damage": 14.0, "interval": 1.5, "kind": "single", "splash": 0.6, "splash_mult": 0.5,
 		"scene": "res://assets/defense/ew_defense_wizard_tower_v02.glb", "turn_part": "",  # the hat does not turn to aim
 		"shot": "res://assets/defense/ew_defense_fireball_v01.glb", "shot_speed": 12.0, "fx": "wizard",
 		"crew": "wizard",  # stands at the model's crew_anchor; fireballs leave from the floating orb (Siddharth 2026-11-04)
@@ -178,7 +179,7 @@ const TOWERS := {
 	"guard": {
 		"name": "Guard Tower", "cost": 70, "range": 2.0, "damage": 4.0, "interval": 1.0, "kind": "spawner",
 		"scene": "res://assets/defense/ew_defense_guard_tower_v02.glb", "turn_part": "",
-		"guards": 3, "guard_hp": 30.0, "guard_damage": 4.0, "respawn": 8.0,
+		"guards": 3, "guard_hp": 30.0, "guard_damage": 5.0, "guard_hp_loop_step": 0.20, "guard_dmg_loop_step": 0.15, "respawn": 8.0,
 		"sight": 2.0, "leash": 4.0,  # cells from the post (Siddharth: chase, then walk back)
 		"attack_interval": 1.0, "guard_speed": 0.8, "reach": 0.6,  # ~
 	},
@@ -191,7 +192,7 @@ const TOWERS := {
 	# the shot is a small cannonball (STAND-IN until the Airship gets its own shot).
 	# cost 35 = half the spec's 70 (Siddharth 2026-10-22: "for now")
 	"airship": {
-		"name": "Airship", "cost": 35, "range": 4.0, "damage": 6.0, "interval": 1.0, "kind": "single", "targets": "air",
+		"name": "Airship", "cost": 35, "range": 4.0, "damage": 8.0, "interval": 1.0, "kind": "single", "targets": "both", "ground_mult": 0.5, "max": 2,
 		"scene": "res://assets/defense/ew_defense_airship_v02.glb", "turn_part": "turret",
 		"shot": "res://assets/defense/ew_defense_cannonball_v01.glb", "shot_scale": 0.6, "shot_speed": 14.0, "fx": "fireball",
 		"crew": "pilot",
@@ -201,16 +202,16 @@ const TOWERS := {
 # Numbers from the spec where it gives them (Fire Orb 12 / 1 cell / 8 s, Boulder 15 s and the drop rule of spec 12,
 # Ward 40 for 8 s / 25 s); everything else is Claude's stand-in for the balance pass (marked ~).
 const SPELLS := {
-	"fire_orb": {"name": "Fire Orb", "cooldown": 8.0, "damage": 12.0, "radius": 1.0, "flight": 0.5},
+	"fire_orb": {"name": "Fire Orb", "cooldown": 11.0, "damage": 12.0, "radius": 1.0, "flight": 0.5},
 	# ~ base damage 15 and radius 1.5 cells at height 0; height 1-8 cells scales both (spec 12)
-	"boulder": {"name": "Boulder Drop", "cooldown": 15.0, "damage": 15.0, "radius": 1.5, "min_height": 1.0, "max_height": 8.0, "default_height": 4.0},
+	"boulder": {"name": "Boulder Drop", "cooldown": 18.0, "damage": 15.0, "radius": 1.5, "min_height": 1.0, "max_height": 8.0, "default_height": 4.0},
 	# ~ the chain jumps to up to 2 more enemies within 2 cells of the last one; 6 s of cloud
-	"storm": {"name": "Storm Cloud", "cooldown": 12.0, "duration": 6.0, "interval": 1.5, "damage": 8.0, "reach": 2.5,
+	"storm": {"name": "Storm Cloud", "cooldown": 16.0, "duration": 6.0, "interval": 1.5, "damage": 8.0, "reach": 2.5,
 		"chain": 2, "chain_reach": 2.0, "height": 5.0},
 	# ~ towers inside the ring shoot 50% faster
-	"rage": {"name": "Rage", "cooldown": 25.0, "duration": 8.0, "radius": 3.0, "haste": 1.5},
+	"rage": {"name": "Rage", "cooldown": 25.0, "duration": 10.0, "radius": 3.0, "haste": 1.5},
 	# the spec's Ward Rune, now tree roots from a dropped potion (Siddharth 2026-10-25)
-	"roots": {"name": "Root Ward", "cooldown": 25.0, "duration": 8.0, "absorb": 40.0, "reach": 2.0},
+	"roots": {"name": "Root Ward", "cooldown": 25.0, "duration": 10.0, "absorb": 40.0, "reach": 2.0},
 }
 const SPELL_ORDER: Array[String] = ["fire_orb", "boulder", "storm", "rage", "roots"]
 const SPELL_GRAB_REACH := TOUCH_REACH  # alias kept for spells.gd: m from a hand to a spell token on the table to grab it (VR)

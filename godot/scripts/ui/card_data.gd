@@ -26,10 +26,10 @@ const SPELL_TEXT := {
 	"roots": "Roots rise and soak up damage meant for your people.",
 }
 const TOWER_TEXT := {
-	"fire": "Hurls fireballs at one enemy at a time.",
+	"fire": "Hurls fireballs that scorch nearby foes.",
 	"guard": "Calls Guards who stand firm and fight what comes close.",
 	"crossbow": "A long bolt that pierces every enemy in a line.",
-	"airship": "Shoots only what flies.",
+	"airship": "Hunts flyers first; shells ground foes at half damage.",
 }
 
 

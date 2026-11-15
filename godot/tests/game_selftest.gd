@@ -303,6 +303,51 @@ func _cards() -> void:
 	check("a held card is only offered at a higher rarity", dup_bad == 0)
 	check("loss offers are Common", Cards.offers({}, 1, rng, true).all(func(o): return o["rarity"] == 0))
 
+	# Night 5 on a doomed loop earns a full 3-card Rare/Legendary draft; loop 2+ scales rarity odds & faith income
+	var non_common := 0
+	var non_common_l2 := 0
+	var draft_three := true
+	var dg := await _make_game()
+	for sd_i in range(1, 31):
+		dg.run_seed = sd_i
+		dg.loop = sd_i % 2
+		dg.night = GameConfig.BOSS_NIGHT
+		dg._end_loop(false)
+		draft_three = draft_three and dg.offers.size() == 3
+		for o in dg.offers:
+			if o["rarity"] > 0:
+				non_common += 1
+				if dg.loop == 1:
+					non_common_l2 += 1
+	dg.loop = 0
+	dg.night = 2
+	dg.phase = Game.Phase.DAY
+	dg.start_night()
+	dg._spawn_queue.clear()
+	var wb: Enemy = dg._spawn(Vector2i(12, 3), "boss", _at(12, 3))
+	dg.warden = Warden.new(dg, wb)
+	dg.warden.phase = 2
+	dg._end_loop(false)
+	var boss_p2_draft: bool = dg.offers.size() == 3
+	check("reaching Night 5 or Warden P2+ on a doomed loop grants a 3-card draft with Rare/Legendary rolls (%d non-Common, %d L2)" % [non_common, non_common_l2],
+		draft_three and boss_p2_draft and non_common > 0 and non_common_l2 > 0)
+	dg.loop = 1
+	dg.night = 0
+	dg.phase = Game.Phase.DAY
+	dg.faith = 0
+	var f0 := dg.faith
+	dg.force_quests(["prayer"])
+	var ledger_reward: int = dg.requests[0].info()["reward"]
+	dg.requests[0].done = true
+	dg._pay_quest(dg.requests[0])
+	var quest_l2 := dg.faith - f0
+	dg.faith = 0
+	dg._end_night()
+	check("loop 2 faith income and ledger reward scale +20%% (quest 10->%d, ledger %d, dawn+clear 40->%d)" % [quest_l2, ledger_reward, dg.faith],
+		quest_l2 == 12 and ledger_reward == 12 and dg.faith == 48)
+	dg.queue_free()
+	await process_frame
+
 	# effects: build towers with cards held and check their numbers
 	var g := await _make_game()
 	g.cards = {"quick_fuse": 2, "shield_wall": 1, "long_draw": 0, "sturdy_homes": 1, "deep_pockets": 0}
@@ -554,15 +599,14 @@ func _step2() -> void:
 	g.queue_free()
 	await process_frame
 
-	# Airship: shoots the Wisp down, ignores ground enemies; no limit on how many (Siddharth 2026-10-23)
+	# Airship: shoots flyers first, shells ground enemies at half damage when no flyer is in range; capped at max 2
 	g = await _make_game()
 	g.faith = 1000
 	check("Airship builds", g.try_build("airship", Vector2i(11, 3)))
 	check("second Airship builds", g.try_build("airship", Vector2i(4, 4)))
-	check("a third Airship builds too (no cap)", g.try_build("airship", Vector2i(17, 4)) and not g.at_max("airship"))
+	check("a third Airship is blocked at max 2", not g.try_build("airship", Vector2i(17, 4)) and g.at_max("airship"))
 	g._press_button("airship")
-	check("the Airship sign still picks one up with 3 out", g.selected == "airship" and g._buttons["airship"]["label"].text.contains("35 faith"))
-	g._press_button("airship")
+	check("the Airship sign cannot pick one up at max 2", g.selected == "")
 	g._press_button("fire")
 	check("other towers build with Airships out", g.selected == "fire" and g.try_build("fire", Vector2i(17, 7)))
 	g._press_button("fire")
@@ -576,33 +620,76 @@ func _step2() -> void:
 	await process_frame
 	g = await _make_game()
 	g.try_build("airship", Vector2i(11, 3))
-	var gr := await _night_with(g, "grunt", north, 15.0)
-	check("the Airship never shoots ground enemies", is_instance_valid(gr) and gr.hp == gr.stats["hp"] * 1.0)
+	var gr := await _night_with(g, "grunt", north, 6.0)
+	check("Airship shells ground enemies at half damage (4 per shell) when no flyers are in range",
+		is_instance_valid(gr) and gr.hp < gr.stats["hp"] and is_equal_approx(fposmod(gr.stats["hp"] - gr.hp, 4.0), 0.0))
 	g.queue_free()
 	await process_frame
 
-	# Tunneler: cannot be hit underground, comes up next to a house, then towers can hit it
+	# Airship prioritizes flyers over closer ground enemies; Wizard Tower splashes nearby ground enemies
+	g = await _make_game()
+	g.faith = 1000
+	g.try_build("airship", Vector2i(10, 4))
+	g.try_build("fire", Vector2i(4, 10))
+	_night_start(g)
+	var gr_close := _still(g, "grunt", _at(10, 6))
+	var wi_far := _still(g, "wisp", _at(10, 7, 0.5, 0.0))
+	wi_far.hp = 16.0  # survives 1 shot (8 dmg) so both volleys in 1.5 s must prioritize the flyer
+	var wiz_a := _still(g, "grunt", _at(4, 13))
+	var wiz_b := _still(g, "grunt", _at(4, 13, 0.4, 0.0))
+	wiz_a.hp = 100.0
+	wiz_b.hp = 100.0
+	_run(g, 1.5)
+	check("Airship prioritizes flyers over closer ground enemies",
+		(not is_instance_valid(wi_far) or not wi_far.alive) and is_instance_valid(gr_close) and is_equal_approx(gr_close.hp, gr_close.stats["hp"]))
+	check("Wizard Tower fireball deals 50%% splash to nearby ground enemies (14 primary / 7 splash)",
+		is_instance_valid(wiz_a) and is_instance_valid(wiz_b) and wiz_a.hp < 100.0 and wiz_b.hp < 100.0 and not is_equal_approx(wiz_a.hp, wiz_b.hp))
+	g.queue_free()
+	await process_frame
+
+	g = await _make_game()
+	g.faith = 1000
+	g.try_build("fire", Vector2i(4, 10))
+	_night_start(g)
+	var wiz_sp := _still(g, "splitter", _at(4, 12))
+	wiz_sp.hp = 1.0
+	_run(g, 0.5)
+	var splitlings := g.enemies.filter(func(x): return is_instance_valid(x) and x.kind == "splitling")
+	check("killing a Splitter with Wizard splash does not splash its newly spawned Splitlings",
+		(not is_instance_valid(wiz_sp) or not wiz_sp.alive) and not splitlings.is_empty() and splitlings.all(func(x): return is_equal_approx(x.hp, x.stats["hp"])))
+	g.queue_free()
+	await process_frame
+
+	# Tunneler: cannot be hit underground, pops up ~2 cells outside its target house, then walks in to hit it
 	g = await _make_game()
 	g.faith = 1000
 	g.try_build("guard", Vector2i(11, 2))  # right where it leaves the forest
 	g.start_night()
 	g._spawn_queue.clear()
-	var tu: Enemy = g._spawn(north, "tunneler")
-	var full: float = tu.hp
+	var tu_guard: Enemy = g._spawn(north, "tunneler")
+	var full: float = tu_guard.hp
 	var was_under := true
 	for i in range(200):  # 10 s, still underground, the Guard Tower on top of it
 		g.step(0.05)
-		was_under = was_under and tu.underground
-	check("a Tunneler starts underground and cannot be hit", was_under and is_equal_approx(tu.hp, full))
+		was_under = was_under and tu_guard.underground
+	check("a Tunneler starts underground and cannot be hit", was_under and is_equal_approx(tu_guard.hp, full))
+	g.queue_free()
+	await process_frame
+
+	g = await _make_game()
+	g.start_night()
+	g._spawn_queue.clear()
+	var tu: Enemy = g._spawn(north, "tunneler")
 	var t := 0.0
 	while tu.underground and t < 120.0:
 		g.step(0.05)
 		t += 0.05
-	var goals := g.nav.goals_of(tu.target_house)
-	check("it pops up next to a house (%.1f s)" % (10.0 + t), not tu.underground and goals.has(tu.cell))
-	for i in range(40):
+	var d_surf := Vector2(tu.position.x - g.house_point(tu.target_house).x, tu.position.z - g.house_point(tu.target_house).z).length() / GameConfig.CELL
+	check("it pops up ~2 cells outside a house (%.1f s, %.2f cells)" % [t, d_surf],
+		not tu.underground and d_surf >= 1.8 and not g.nav.goals_of(tu.target_house).has(tu.cell))
+	for i in range(120):
 		g.step(0.05)
-	check("then it hits that house", tu.attacking and g.houses[tu.target_house].hp < g.houses[tu.target_house].max_hp)
+	check("then it walks in and hits that house", tu.attacking and g.houses[tu.target_house].hp < g.houses[tu.target_house].max_hp)
 	g.queue_free()
 	await process_frame
 
@@ -634,20 +721,20 @@ func _step2() -> void:
 		g.step(0.05)
 	var hit1 := is_instance_valid(g1) and g1.hp < hp0
 	var hit2 := is_instance_valid(g2) and g2.hp < hp0
-	check("Twin Cannons Legendary + Long Mooring: both ground targets hit, half damage (3 per shell)",
-		hit1 and hit2 and is_equal_approx(fposmod(hp0 - g1.hp, 3.0), 0.0))
+	check("Twin Cannons Legendary + Long Mooring: both ground targets hit, full damage (8 per shell)",
+		hit1 and hit2 and is_equal_approx(fposmod(hp0 - g1.hp, 8.0), 0.0))
 	g.queue_free()
 	await process_frame
 
 
 func _foresight() -> void:
 	var g := await _make_game()
-	check("a run is 5 loops", GameConfig.LOOPS_PER_RUN == 5)
+	check("a run is 3 loops", GameConfig.LOOPS_PER_RUN == 3)
 	var tiers := []
-	for lp in range(5):
+	for lp in range(GameConfig.LOOPS_PER_RUN):
 		g.loop = lp
 		tiers.append(g.foresight_tier())
-	check("Foresight: 3 tiers over loops 1-2 / 3-4 / 5", tiers == [1, 1, 2, 2, 3])
+	check("Foresight: 3 tiers over loops 1 / 2 / 3", tiers == [1, 2, 3])
 
 	# what each tier reveals, on loop 2's night 3 (Fog variants can come) of several seeds
 	var fog_seen := 0
@@ -755,9 +842,9 @@ func _foresight() -> void:
 	# tier 3 rewrite: close one gap for the night
 	g = await _make_game()
 	check("no rewrite below tier 3", not g.close_spawn("north"))
-	g.loop = 3
-	check("no rewrite at tier 2 (loop 4)", not g.close_spawn("north"))
-	g.loop = 4
+	g.loop = 1
+	check("no rewrite at tier 2 (loop 2)", not g.close_spawn("north"))
+	g.loop = 2
 	var before := g.night_plan()
 	var from_north := before.filter(func(x): return x["spawn"] == "north").size()
 	g.set_lens(true)
@@ -987,9 +1074,9 @@ func _spells() -> void:
 	check("Fire Orb: none outside the radius", is_equal_approx(far.hp, 200.0))
 	check("Fire Orb hits flyers (a Wisp, 8 HP, dies)", not is_instance_valid(wisp) or not wisp.alive)
 	check("a Tunneler underground cannot be hit", is_equal_approx(mole.hp, mole.stats["hp"]) and mole.underground)
-	check("Fire Orb cools down 8 s, then is ready", not g.cast_spell("fire_orb", _at(5, 5)) and g.spells.cooldown["fire_orb"] > 7.0)
-	_run(g, 8.0)
-	check("ready again after 8 s", g.spells.is_ready("fire_orb"))
+	check("Fire Orb cools down 11 s, then is ready", not g.cast_spell("fire_orb", _at(5, 5)) and g.spells.cooldown["fire_orb"] > 10.0)
+	_run(g, 11.0)
+	check("ready again after 11 s", g.spells.is_ready("fire_orb"))
 
 	# Boulder Drop: height scales damage (1 + h/8) and radius (1 + 0.5 h/8), fall time sqrt(2h/(0.25 g))
 	var lo := _still(g, "boss", _at(12, 5))
@@ -999,7 +1086,7 @@ func _spells() -> void:
 	_run(g, 0.3)
 	check("h=1: 15 x 1.125 damage at the centre, inside r=1.59 cells", is_equal_approx(lo.hp, 200.0 - 15.0 * 1.125) and near_lo.hp < 200.0)
 	check("h=1: a target 1.8 cells out is missed", is_equal_approx(edge.hp, 200.0))
-	_run(g, 15.0)
+	_run(g, 18.0)
 	var hi := _still(g, "boss", _at(12, 12))
 	var near_hi := _still(g, "boss", _at(12, 12, 1.8, 0.0))
 	g.cast_spell("boulder", _at(12, 12), 8.0)
@@ -1042,8 +1129,8 @@ func _spells() -> void:
 		_run(g, 8.0)
 		shots.append(g.towers[0].shots_fired)
 		if rage:
-			_run(g, 0.2)
-			check("Rage ends after 8 s", is_equal_approx(g.spells.haste_at(g.towers[0].position), 1.0))
+			_run(g, 2.2)
+			check("Rage ends after 10 s", is_equal_approx(g.spells.haste_at(g.towers[0].position), 1.0))
 		g.queue_free()
 		await process_frame
 	check("Rage: about 1.5x the shots in 8 s (%d vs %d)" % [shots[1], shots[0]], shots[1] >= shots[0] + 2 and float(shots[1]) / shots[0] < 1.8)
@@ -1064,8 +1151,8 @@ func _spells() -> void:
 	g = await _make_game()
 	_night_start(g)
 	g.cast_spell("roots", g.house_point(1))
-	_run(g, 8.2)
-	check("an unused ward fades after 8 s", g.houses[1].ward == 0.0)
+	_run(g, 10.2)
+	check("an unused ward fades after 10 s", g.houses[1].ward == 0.0)
 
 	# the critics' finds (2026-10-28): a second potion keeps its ward, a boulder's shadow never outlives it, Rage's ring is ticked
 	g.queue_free()
@@ -1114,7 +1201,7 @@ func _spells() -> void:
 	g.cards = {"quick_hands": 1}
 	_night_start(g)
 	g.cast_spell("fire_orb", _at(5, 5))
-	check("Quick Hands Rare: cooldown 25% shorter (8 -> 6 s)", is_equal_approx(g.spells.cooldown["fire_orb"], 6.0))
+	check("Quick Hands Rare: cooldown 25% shorter (11 -> 8.25 s)", is_equal_approx(g.spells.cooldown["fire_orb"], 8.25))
 	g._clear_night()
 	g.phase = Game.Phase.DAY  # as if the night had ended
 	g.start_night()
@@ -1267,12 +1354,13 @@ func _doom() -> void:
 	g.warden.step(0.1)  # no crystals: enrage into phase 3
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)  # the final stand
+	g.night_time = 12.0
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)
-	check("doomed Warden keeps a sliver of life", boss.alive and boss.hp > 0.0 and g.warden != null)
+	check("doomed Warden keeps a sliver of life and fast-forwards near DOOM_AT",
+		boss.alive and boss.hp > 0.0 and g.warden != null and g.night_time >= GameConfig.DOOM_AT - 1.5 and g.night_time < GameConfig.DOOM_AT)
 	check("no horn before DOOM_AT", not g._doom_started)
-	g.night_time = GameConfig.DOOM_AT - 0.2  # skip ahead: the test's own Wisps would otherwise wear the houses down first
-	_run(g, 0.5)
+	_run(g, 1.6)
 	check("the horn sounds at DOOM_AT", g._doom_started)
 	_run(g, GameConfig.DOOM_STEP * 4.0)
 	check("the village falls and the loop is lost", g.phase != Game.Phase.NIGHT and not g.loop_won)
@@ -1626,7 +1714,7 @@ func _guards() -> void:
 	check("an enemy within 2 cells: a Guard chases it and the enemy stops to fight it", met)
 	for i in 400:
 		g.step(0.05)
-	check("Guards (4 damage a hit) kill a 20 HP Grunt", not e.alive)
+	check("Guards (5 damage a hit) kill a 20 HP Grunt", not e.alive)
 	check("and the Grunt hurt the Guard that fought it", gt.guards.any(func(x): return x.hp < gt.guard_hp))
 	for i in 400:
 		g.step(0.05)
@@ -1688,6 +1776,12 @@ func _guards() -> void:
 	g.try_build("guard", Vector2i(16, 11))
 	gt = g.towers[0]
 	check("Friendly Faces Rare: 4 Guards, replacements 25% faster", gt.max_guards == 4 and gt.guards.size() == 4 and is_equal_approx(gt.respawn, 8.0 / 1.25))
+	g.loop = 1
+	g.try_build("guard", Vector2i(16, 5))
+	var gt2: Tower = g.towers[1]
+	check("loop 2 Guards scale +20% HP (36) and +15% dmg (5.75)",
+		is_equal_approx(gt2.guard_hp, 36.0) and is_equal_approx(gt2.guard_damage, 5.75))
+	g.loop = 0
 	var gone := gt.guards[0]
 	g.select("sell")
 	g.sell(gt)

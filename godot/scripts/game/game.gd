@@ -561,7 +561,25 @@ func house_point(i: int) -> Vector3:
 
 
 func surface_cell(house: int, p: Vector3) -> Vector2i:
-	## Where a Tunneler heading for `house` from `p` comes up: the free cell next to the house closest to p.
+	## Where a Tunneler heading for `house` from `p` comes up: 1.9-2.8 cells from the house centre so ground
+	## defenses get a fair window; falls back to the adjacent doorstep cells if every outer cell is blocked.
+	var h_pt := house_point(house)
+	var hc := houses[house].cell
+	var outer: Array = []
+	for x in range(hc.x - 3, hc.x + GameConfig.TOWER_SIZE.x + 3):
+		for y in range(hc.y - 3, hc.y + GameConfig.TOWER_SIZE.y + 3):
+			var c := Vector2i(x, y)
+			if not nav.astar.is_in_boundsv(c) or nav.astar.is_point_solid(c) or nav.kind.has(c):
+				continue
+			var cc := NavGrid.cell_centre(c)
+			var d_house := Vector2(cc.x - h_pt.x, cc.z - h_pt.z).length() / GameConfig.CELL
+			if d_house >= 1.9 and d_house <= 2.8:
+				outer.append({"cell": c, "dist": Vector2(cc.x - p.x, cc.z - p.z).length()})
+	outer.sort_custom(func(a, b): return a["dist"] < b["dist"])
+	for item in outer:
+		var c: Vector2i = item["cell"]
+		if not nav.route(c, [house]).is_empty():
+			return c
 	var best := Vector2i(-1, -1)
 	var best_d := INF
 	for c in nav.goals_of(house):
@@ -679,12 +697,13 @@ func _tick_quests(delta: float) -> void:
 func _pay_quest(r: HelpRequest) -> void:
 	snd("help_done")
 	snd("trust_chime")
-	faith += r.reward
+	var paid := r.payout()
+	faith += paid
 	_helped += 1
 	_update_shrine()
 	if with_rig:
 		_faith_sparkle(houses[r.house].global_position + Vector3(0, 0.1, 0))
-	last_message = "%s: +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], r.reward]
+	last_message = "%s: +%d faith" % [GameConfig.REQUESTS[r.kind]["name"], paid]
 	_update_ghost()
 	_refresh_ui()
 
@@ -889,7 +908,8 @@ func pick_spell(id: String) -> void:
 func _end_night() -> void:
 	## The night was cleared: every enemy spawned and defeated with fewer than 3 houses shuttered.
 	var standing := standing_houses().size()
-	var income := standing * GameConfig.DAWN_FAITH_PER_HOUSE + GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT * (night + 1)
+	var mult := 1.0 + GameConfig.LOOP_FAITH_STEP * loop
+	var income := roundi(float(standing * GameConfig.DAWN_FAITH_PER_HOUSE + GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT * (night + 1)) * mult)
 	if card("deep_pockets") == 2 and standing == houses.size():
 		income += 5  # Deep Pockets Legendary: no house shuttered tonight
 	faith += income
@@ -915,6 +935,7 @@ func _end_night() -> void:
 func _end_loop(won: bool) -> void:
 	## Beat the boss: 3 cards, keep 1. Lost a night: 1 Common card. The last loop of the run offers none.
 	loop_won = won
+	var boss_p2 := warden != null and warden.phase >= 2
 	_clear_night()
 	if loop + 1 >= GameConfig.LOOPS_PER_RUN and won:
 		# the last loop, the Warden's end: the player chooses how the story ends (docs/STORY.md section 8)
@@ -927,11 +948,12 @@ func _end_loop(won: bool) -> void:
 		_set_phase(Phase.DONE, how + " New run = R or the sign.")
 		return
 	_rng.seed = run_seed * 977 + loop
-	offers = Cards.offers(cards, 3 if won else 1, _rng, not won)
+	var earned_full_draft := won or night >= GameConfig.BOSS_NIGHT or boss_p2
+	offers = Cards.offers(cards, 3 if earned_full_draft else 1, _rng, not earned_full_draft, loop)
 	if offers.is_empty():
 		_rewind()
 		return
-	var head := "The Warden falls! Choose 1 card to keep." if won else "Night %d lost. The hourglass gives you a card." % (night + 1)
+	var head := "The Warden falls! Choose 1 card to keep." if won else ("Night %d falls. Choose 1 of 3 cards to carry back." % (night + 1) if earned_full_draft else "Night %d lost. The hourglass gives you a card." % (night + 1))
 	_set_phase(Phase.CARDS, head)
 
 

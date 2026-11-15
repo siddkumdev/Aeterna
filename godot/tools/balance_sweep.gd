@@ -1,32 +1,31 @@
 extends SceneTree
-## Balance sweep: a bot with a sensible build order plays whole 5-loop runs (3 seeds) under different faith
-## settings and prints how far each run gets. For M3 tuning:
+## Balance sweep: tests whole 3-loop runs across multiple seeds and reports per-loop survival, win rate,
+## and card rarity offers with active quests + spells. Run:
 ##   <godot console> --headless --xr-mode off --path godot -s res://tools/balance_sweep.gd
-## Extra faith is added by hand on top of the current rules, so GameConfig stays untouched.
 
-# a sensible player's build order: one Fire Tower on each approach, an Airship in the village centre (it reaches
-# every house), then Longbows and more fire on the approaches, Braziers by the houses, a second Airship
 const PLAN := [["fire", Vector2i(11, 4)], ["fire", Vector2i(4, 11)], ["fire", Vector2i(18, 11)], ["airship", Vector2i(16, 11)],
 	["crossbow", Vector2i(8, 4)], ["crossbow", Vector2i(4, 14)], ["crossbow", Vector2i(18, 8)],
-	["guard", Vector2i(14, 6)], ["guard", Vector2i(6, 10)], ["guard", Vector2i(16, 11)],
-	["fire", Vector2i(14, 4)], ["fire", Vector2i(4, 8)], ["fire", Vector2i(18, 14)], ["airship", Vector2i(11, 18)],
+	["guard", Vector2i(14, 6)], ["guard", Vector2i(6, 10)], ["airship", Vector2i(11, 18)],
+	["fire", Vector2i(14, 4)], ["fire", Vector2i(4, 8)], ["fire", Vector2i(18, 14)],
 	["crossbow", Vector2i(8, 18)], ["fire", Vector2i(14, 18)], ["guard", Vector2i(6, 15)], ["guard", Vector2i(17, 15)]]
 
 
 func _initialize() -> void:
 	await process_frame
-	# [label, start faith, dawn per standing house, clear reward per night number]
-	var variants := [["now", 200, 5, 10], ["start 300", 300, 5, 10], ["income x2", 200, 10, 20],
-		["start 300 + income x2", 300, 10, 20], ["start 300 + income x3", 300, 15, 30], ["start 400 + income x3", 400, 15, 30]]
+	var variants := [["balanced_active (now)", 1.0, true], ["balanced_passive (no quests/spells)", 1.0, false], ["income x1.2", 1.2, true]]
 	for v in variants:
+		var wins := 0
 		var res := []
-		for sd in [1, 2, 3]:
-			res.append(await _run(sd, v[1], v[2], v[3]))
-		print("%-24s %s" % [v[0], " | ".join(res)])
+		for sd in range(1, 6):
+			var out: Dictionary = await _run(sd, v[1], v[2])
+			res.append(out["text"])
+			if out["won"]:
+				wins += 1
+		print("%-34s (%d/5 wins) | %s" % [v[0], wins, " | ".join(res)])
 	quit()
 
 
-func _run(sd: int, start: int, dawn: int, clear: int) -> String:
+func _run(sd: int, faith_mult: float, active_play: bool) -> Dictionary:
 	var g: Game = load("res://scripts/game/game.gd").new()
 	g.with_rig = false
 	g.run_seed = sd
@@ -34,34 +33,56 @@ func _run(sd: int, start: int, dawn: int, clear: int) -> String:
 	await process_frame
 	g.new_run(sd)
 	var log := []
-	var last_loop := -1
+	var won := false
 	while g.phase != Game.Phase.DONE:
 		if g.phase == Game.Phase.CARDS:
+			if g.ending_choice:
+				won = true
 			g.choose_card(0)
 			continue
-		if g.loop != last_loop:
-			last_loop = g.loop
-			g.faith += start - GameConfig.START_FAITH
-		for item in PLAN:  # in order: waits to afford the next one rather than skipping it
+		if active_play:
+			g.post_all_quests()
+			for r in g.requests:
+				if not r.done:
+					r.done = true
+					g._pay_quest(r)
+		for item in PLAN:
 			if g.towers.any(func(t): return t.cell == item[1]):
 				continue
 			if not g.try_build(item[0], item[1]):
+				if g.at_max(item[0]):
+					continue
 				break
 		var n := g.night
 		var lp := g.loop
 		g.start_night()
 		var t := 0.0
-		while g.phase == Game.Phase.NIGHT and t < 900.0:
+		while g.phase == Game.Phase.NIGHT and t < 600.0:
+			if active_play:
+				_cast_spells(g)
 			g.step(0.05)
 			t += 0.05
 			if int(t / 0.05) % 40 == 0:
 				await process_frame
-		if g.phase == Game.Phase.DAY and g.loop == lp:
-			g.faith += g.standing_houses().size() * (dawn - GameConfig.DAWN_FAITH_PER_HOUSE) + (clear - GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT) * (n + 1)
-		elif g.loop_won or (g.phase == Game.Phase.CARDS and g.loop_won):
-			log.append("L%d WON" % (lp + 1))
-		else:
-			log.append("L%d n%d" % [lp + 1, n + 1])
+		if g.phase == Game.Phase.DAY and g.loop == lp and faith_mult != 1.0:
+			var base_inc := g.standing_houses().size() * GameConfig.DAWN_FAITH_PER_HOUSE + GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT * (n + 1)
+			g.faith += roundi(base_inc * (faith_mult - 1.0) * (1.0 + GameConfig.LOOP_FAITH_STEP * lp))
+		if not (g.phase == Game.Phase.DAY and g.loop == lp):
+			if g.ending_choice or (g.loop_won and lp + 1 >= GameConfig.LOOPS_PER_RUN):
+				won = true
+				log.append("L%d WON" % (lp + 1))
+			else:
+				log.append("L%d n%d" % [lp + 1, n + 1])
 	g.queue_free()
 	await process_frame
-	return "seed %d: %s" % [sd, " ".join(log)]
+	return {"won": won, "text": "s%d:%s" % [sd, " ".join(log)]}
+
+
+func _cast_spells(g: Game) -> void:
+	for e in g.enemies:
+		if is_instance_valid(e) and e.alive and not e.underground and not e.shielded:
+			for sp in ["storm", "boulder", "fire_orb"]:
+				if g.spells.is_ready(sp):
+					g.cast_spell(sp, e.position)
+			break
+

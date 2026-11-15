@@ -9,6 +9,11 @@ extends RefCounted
 
 const RARITY_NAMES: Array[String] = ["Common", "Rare", "Legendary"]
 const RARITY_ODDS: Array[float] = [0.70, 0.25, 0.05]
+const LOOP_RARITY_ODDS: Array = [
+	[0.70, 0.25, 0.05],
+	[0.50, 0.35, 0.15],
+	[0.35, 0.45, 0.20],
+]
 
 const POOL := {
 	"ember_shot": {"name": "Ember Shot", "applies": "Wizard Tower", "values": [2, 3, 4],
@@ -34,7 +39,7 @@ const POOL := {
 		"legend": "Bolts can also hit flyers"},
 	"long_mooring": {"name": "Long Mooring", "applies": "Airship", "values": [5, 6, 7], "requires": "airship",
 		"text": "Range %s cells (base 4)",
-		"legend": "The Airship can also shoot ground enemies at half damage"},
+		"legend": "Full ground damage and wider splash"},
 	"twin_cannons": {"name": "Twin Cannons", "applies": "Airship", "values": [15, 25, 40], "requires": "airship",
 		"text": "Fires %s%% faster",
 		"legend": "Each volley fires at two different targets"},
@@ -68,16 +73,17 @@ static func available(id: String) -> bool:
 	return req == "" or req in GameConfig.BUILT_SYSTEMS
 
 
-static func roll_rarity(rng: RandomNumberGenerator) -> int:
+static func roll_rarity(rng: RandomNumberGenerator, loop_idx := 0) -> int:
+	var odds: Array = LOOP_RARITY_ODDS[clampi(loop_idx, 0, LOOP_RARITY_ODDS.size() - 1)] if loop_idx > 0 else RARITY_ODDS
 	var r := rng.randf()
-	if r < RARITY_ODDS[2]:
+	if r < odds[2]:
 		return 2
-	if r < RARITY_ODDS[2] + RARITY_ODDS[1]:
+	if r < odds[2] + odds[1]:
 		return 1
 	return 0
 
 
-static func offers(owned: Dictionary, count: int, rng: RandomNumberGenerator, common_only := false) -> Array[Dictionary]:
+static func offers(owned: Dictionary, count: int, rng: RandomNumberGenerator, common_only := false, loop_idx := 0) -> Array[Dictionary]:
 	## Up to `count` different cards as [{"id", "rarity"}]. `owned` maps id -> held rarity.
 	var ids: Array = POOL.keys().filter(func(k): return available(k))
 	for i in range(ids.size() - 1, 0, -1):  # seeded shuffle
@@ -89,7 +95,7 @@ static func offers(owned: Dictionary, count: int, rng: RandomNumberGenerator, co
 	for id in ids:
 		if out.size() >= count:
 			break
-		var r := 0 if common_only else roll_rarity(rng)
+		var r := 0 if common_only else roll_rarity(rng, loop_idx)
 		if owned.has(id) and r <= owned[id]:
 			continue  # only offered again at a higher rarity than the copy you hold
 		out.append({"id": id, "rarity": r})

@@ -37,6 +37,7 @@ var guards: Array[Guard] = []
 var guards_air := false  # Shield Wall Legendary: Guards can hit flyers
 var max_guards := 0
 var guard_hp := 0.0
+var guard_damage := 5.0
 var respawn := 8.0
 var _spawn_timer := 0.0
 var _gate: Node3D  # the model's spawn_anchor: where a new Guard steps out
@@ -136,11 +137,18 @@ func _add_crew(model: Node3D) -> void:
 
 
 func _apply_cards() -> void:
+	shot_mods.clear()
 	damage = cfg["damage"]
 	interval = cfg["interval"]
-	hits_air = cfg.get("targets", "ground") == "air"
-	hits_ground = not hits_air
+	var t_mode: String = cfg.get("targets", "ground")
+	hits_air = t_mode == "air" or t_mode == "both"
+	hits_ground = t_mode == "ground" or t_mode == "both"
+	if cfg.has("ground_mult"):
+		shot_mods["ground_mult"] = cfg["ground_mult"]
+	if cfg.has("splash_mult"):
+		shot_mods["splash_mult"] = cfg["splash_mult"]
 	var range_cells: float = cfg["range"]
+	var loop_idx: int = game.loop if game != null else 0
 	match kind:
 		"fire":
 			var q: int = game.card("quick_fuse")
@@ -153,7 +161,8 @@ func _apply_cards() -> void:
 				shot_mods["burn_spreads"] = e == 2
 		"guard":
 			max_guards = cfg["guards"]
-			guard_hp = cfg["guard_hp"]
+			guard_hp = cfg["guard_hp"] * (1.0 + cfg.get("guard_hp_loop_step", 0.0) * loop_idx)
+			guard_damage = cfg["guard_damage"] * (1.0 + cfg.get("guard_dmg_loop_step", 0.0) * loop_idx)
 			respawn = cfg["respawn"]
 			guards_air = false
 			var sw: int = game.card("shield_wall")
@@ -179,7 +188,8 @@ func _apply_cards() -> void:
 				range_cells = Cards.value("long_mooring", lm)
 				if lm == 2:
 					hits_ground = true
-					shot_mods["ground_mult"] = 0.5  # Long Mooring Legendary: ground enemies at half damage
+					shot_mods["ground_mult"] = 1.0  # Long Mooring Legendary: full ground damage and splash
+					shot_mods["splash_bonus"] = 0.4
 			var tc: int = game.card("twin_cannons")
 			if tc >= 0:
 				interval /= 1.0 + Cards.value("twin_cannons", tc) / 100.0
@@ -246,10 +256,19 @@ func on_kill() -> void:
 
 
 func _nearest(skip: Array) -> Enemy:
+	if kind == "airship" and hits_air and hits_ground:
+		var flyer := _nearest_filtered(skip, true, false)
+		if flyer != null:
+			return flyer
+		return _nearest_filtered(skip, false, true)
+	return _nearest_filtered(skip, hits_air, hits_ground)
+
+
+func _nearest_filtered(skip: Array, allow_air: bool, allow_ground: bool) -> Enemy:
 	var best: Enemy = null
 	var best_d: float = reach
 	for e in game.enemies:
-		if not is_instance_valid(e) or not e.targetable(hits_air, hits_ground) or skip.has(e):
+		if not is_instance_valid(e) or not e.targetable(allow_air, allow_ground) or skip.has(e):
 			continue
 		var v: Vector3 = e.global_position - global_position
 		var d := Vector2(v.x, v.z).length()

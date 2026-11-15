@@ -132,11 +132,16 @@ func asker() -> Node3D:
 	return _helper if _helper else _villager
 
 
+func payout() -> int:
+	## Faith reward scaled by the current loop, matching what completion pays.
+	return roundi(float(reward) * (1.0 + GameConfig.LOOP_FAITH_STEP * (game.loop if game != null else 0)))
+
+
 func info() -> Dictionary:
 	## For the ledger's quest page.
 	var who := StoryText.villager_name(_helper.voice) if _helper and _helper.voice != "" else "A villager"
 	return {"kind": kind, "name": GameConfig.REQUESTS[kind]["name"], "who": who, "ask": StoryText.task(TASK_ID.get(kind, ""), "before"),
-		"how": HOW.get(kind, ""), "reward": reward, "done": done}
+		"how": HOW.get(kind, ""), "reward": payout(), "done": done}
 
 
 func grabbable() -> bool:

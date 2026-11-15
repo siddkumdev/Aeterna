@@ -36,7 +36,7 @@ func launch(from: Vector3, enemy: Enemy, cfg: Dictionary, reach: float, shot_mod
 	mods = shot_mods
 	damage = mods.get("damage", cfg["damage"])
 	speed = cfg["shot_speed"] * GameConfig.CELL
-	splash = cfg.get("splash", 0.0) * GameConfig.CELL
+	splash = (cfg.get("splash", 0.0) + shot_mods.get("splash_bonus", 0.0)) * GameConfig.CELL
 	width = cfg.get("pierce_width", 0.0) * GameConfig.CELL
 	target = enemy
 	_from = from
@@ -90,8 +90,14 @@ func step(delta: float) -> void:
 			var to := _to - global_position
 			var stride := speed * delta
 			if to.length() <= stride:
-				if is_instance_valid(target) and target.targetable(mods.get("air", false), mods.get("ground", true)):
-					_hit_enemy(target)
+				var primary: Enemy = target if is_instance_valid(target) else null
+				var nearby: Array = game.enemies.duplicate() if splash > 0.0 else []
+				if primary != null and primary.targetable(mods.get("air", false), mods.get("ground", true)):
+					_hit_enemy(primary)
+				if splash > 0.0:
+					for e in nearby:
+						if is_instance_valid(e) and e != primary and _can_hit(e) and _flat(e.global_position - _to) <= splash:
+							_hit_enemy(e, mods.get("splash_mult", 0.5))
 				_finish()
 			else:
 				global_position += to.normalized() * stride
@@ -141,8 +147,8 @@ func _can_hit(e: Enemy) -> bool:
 	return e.targetable(mods.get("air", false), mods.get("ground", true))
 
 
-func _hit_enemy(e: Enemy) -> void:
-	var dmg := damage
+func _hit_enemy(e: Enemy, mult := 1.0) -> void:
+	var dmg := damage * mult
 	if not e.flying:
 		dmg *= mods.get("ground_mult", 1.0)
 	if mods.has("burn"):

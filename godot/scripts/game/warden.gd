@@ -13,7 +13,7 @@ extends RefCounted
 ## Each phase is its own body: Enemy.BOSS_FORMS[phase - 1]. NOT built yet: the vines slowing the towers' fire.
 
 const WARDEN_VINES := 3  # phase 4: how many vines (stand-in crystals) ring it
-const WARDEN_VINE_HEAL := 4.0  # phase 4: HP a second healed while a vine stands
+const WARDEN_VINE_HEAL := 2.0  # phase 4: HP a second healed while a vine stands
 const WARDEN_P4_HP := 150.0  # phase 4 HP (before the night/loop scale)
 
 const PURPLE := Color(0.42, 0.25, 0.62)  # the Warden is purple (art bible); the shield tints it
@@ -88,6 +88,9 @@ func _phase_over() -> bool:
 	if phase == 4:
 		if game.is_doomed_night():
 			boss.hp = 1.0  # the fall cannot be won: the Warden keeps a sliver of life (Game.step starts the doom)
+			if game.night_time >= 10.0:
+				game.night_time = maxf(game.night_time, GameConfig.DOOM_AT - 1.5)
+				game._spawn_queue.clear()
 			return true
 		return false
 	phase = 2
