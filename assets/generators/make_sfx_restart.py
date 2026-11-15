@@ -684,14 +684,134 @@ ROUNDS_R15 = {"strike_a_full": strike_near(0.27, 1.6, 4500), "strike_b_with_firs
               "strike_c_tight_round": strike_near(0.28, 1.1, 2800, 0.3), "strike_far": strike_far, "chain_snap": chain_snap,
               "storm_rain": storm_rain}
 
+# Round r16 (Siddharth 2026-11-15): every remaining SYNTHETIC tower and spell sound rebuilt from REAL recordings in the grain library
+# (the old synth recipes above stay in the file but are no longer installed). Code only picks grains (a different grain per take),
+# pitches, filters, layers, bends pitch and fades: no synthesis. The feel per sound is the one written in docs/AUDIO_DIRECTION.md
+# batches 1-3. Sources: bow (benboncan CC BY, ali_6868 CC0 crossbow), wood_knock, blocks, cloth, steps, cannon (CC0 distant cannon),
+# drum (CC0 war drum), stone, dirt, whoosh, bed_wind, thunder, fire_whoosh, bed_fire (credits in docs/AUDIO_CREDITS.md).
+def _c(r, items):
+    return items[int(r.integers(0, len(items)))]
+
+
+def _j(r, lo, hi):
+    return float(r.uniform(lo, hi))
+
+
+def _win(kit, name, start, secs, pitch=1.0, lpf=8000, hpf=90):  # a window of a long grain (bed_wind is 14 s)
+    from scipy.io import wavfile
+    sr_, x = wavfile.read(os.path.join(ROOT, "assets", "audio_src", "grains", kit, name))
+    x = MA._mono(x.astype(float) / 32768.0)
+    x = x[int(start * S.SR): int((start + secs * pitch) * S.SR)].copy()
+    if pitch != 1.0:
+        x = np.interp(np.linspace(0, len(x) - 1, max(16, int(len(x) / pitch))), np.arange(len(x)), x)
+    return S.fade(S.lp(S.hp(x, hpf), lpf), 0.004, 0.05)
+
+
+def _glide(x, r0, r1, secs):
+    """Play a real grain with a falling or rising pitch (playback ratio r0 -> r1 over secs): resampling only."""
+    n = S.n_of(secs)
+    ratio = np.linspace(r0, r1, n)
+    pos = np.cumsum(ratio)
+    pos = pos[pos < len(x) - 1]
+    return np.interp(pos, np.arange(len(x)), x)
+
+
+XB_STRING = ["bow_01.wav", "bow_03.wav", "bow_05.wav", "bow_07.wav", "bow_09.wav", "bow_11.wav"]
+
+
+def xbow_shot_real(r):  # springy wooden 'thwip': a real bow string release and a wood knock of the limb, one soft whoosh of the bolt
+    if r.integers(0, 3) == 0:  # one take in three leads with the real crossbow shot (rounded: its top is bright)
+        string = S.pk(_pick("bow", _c(r, ["bow_13.wav", "bow_14.wav"]), _j(r, 0.9, 1.0), None, 4200, 150))
+    else:
+        string = S.pk(_pick("bow", _c(r, XB_STRING), _j(r, 0.88, 1.08), None, 5200, 140))
+    wood = S.pk(_pick("wood_knock", _c(r, ["wood_knock_02.wav", "wood_knock_03.wav", "wood_knock_12.wav"]), _j(r, 1.0, 1.25), None, 3600, 160))
+    swish = S.pk(_pick("whoosh", _c(r, ["whoosh_02.wav", "whoosh_05.wav", "whoosh_08.wav"]), _j(r, 0.85, 1.0), None, 4200, 900))
+    return S.mix((string, 0, 1.0), (wood, 0, 0.6), (swish, 0.012, 0.3))
+
+
+def xbow_pierce_real(r):  # a soft 'tick' per pierced enemy: one muted real wooden tap and a dull cloth pat
+    tick = S.pk(_pick("wood_knock", _c(r, ["wood_knock_06.wav", "wood_knock_13.wav", "wood_knock_02.wav"]), _j(r, 1.1, 1.4), None, 3000, 200))
+    pat = S.pk(_pick("cloth", "cloth_04.wav", _j(r, 1.1, 1.4), None, 2600, 200))
+    return S.mix((tick, 0, 1.0), (pat, 0.004, 0.35))
+
+
+def guard_clop_real(r):  # a Guard steps out: a soft real footstep, a wood knock and a cloth pat; small
+    step = S.pk(_pick("steps", _c(r, ["steps_01.wav", "steps_02.wav", "steps_03.wav"]), _j(r, 1.0, 1.3), None, 3800, 350))
+    wood = S.pk(_pick("wood_knock", _c(r, ["wood_knock_02.wav", "wood_knock_03.wav", "wood_knock_12.wav"]), _j(r, 1.0, 1.2), None, 3600, 300))
+    cloth = S.pk(_pick("cloth", _c(r, ["cloth_14.wav", "cloth_04.wav", "cloth_11.wav"]), _j(r, 1.0, 1.2), None, 4500, 400))
+    return S.mix((step, 0, 0.8), (wood, 0, 0.7), (cloth, 0.006, 0.45))
+
+
+def guard_hit_real(r):  # a dull light thud: a low real wooden thump, a cloth pat and a soft footstep body
+    low = S.pk(_pick("wood_knock", _c(r, ["wood_knock_02.wav", "wood_knock_03.wav", "wood_knock_12.wav"]), _j(r, 0.85, 1.0), None, 2200, 160))
+    pat = S.pk(_pick("cloth", _c(r, ["cloth_04.wav", "cloth_14.wav"]), _j(r, 0.95, 1.1), None, 3800, 250))
+    body = S.pk(_pick("steps", _c(r, ["steps_01.wav", "steps_02.wav"]), _j(r, 0.9, 1.0), None, 2400, 200))
+    return S.mix((low, 0, 1.0), (pat, 0.002, 0.8), (body, 0.004, 0.4))
+
+
+def airship_shot_real(variant="a"):  # round 'thoomp' of a cannon, softened, with a low drum body and a soft puff of air; no bang
+    def f(r):
+        if variant == "a":  # a: the short real cannon shot leads, a low war-drum body under it
+            boom = S.pk(_pick("cannon", "cannon_01.wav", _j(r, 1.0, 1.1), None, 3400, 200))
+            tail = S.pk(_pick("cannon", "cannon_02.wav", _j(r, 1.0, 1.1), 0.45, 1800, 180)) * S.exp_env(0.45, 0.16, 0.004)
+            body = S.pk(_pick("drum", "drum_01.wav", _j(r, 1.1, 1.25), 0.4, 1500, 180)) * S.exp_env(0.4, 0.12, 0.003)
+            puff = S.pk(_pick("whoosh", _c(r, ["whoosh_09.wav", "whoosh_12.wav"]), _j(r, 0.8, 0.95), None, 3200, 400))
+            return S.soft_clip(S.mix((boom, 0, 1.0), (tail, 0.03, 0.45), (body, 0, 0.4), (puff, 0.0, 0.35)), 1.6)
+        boom = S.pk(_pick("cannon", "cannon_01.wav", _j(r, 0.95, 1.05), None, 3200, 200))  # b: the cannon with its long real tail, no drum
+        tail = S.pk(_pick("cannon", "cannon_02.wav", _j(r, 1.0, 1.1), 0.6, 1900, 180)) * S.exp_env(0.6, 0.22, 0.004)
+        return S.mix((boom, 0, 1.0), (tail, 0.02, 0.8))
+    return f
+
+
+def airship_hit_real(variant="a"):  # a cannonball lands: a heavy soft thump (war drum), stone, a dust puff and the cannon's low tail
+    def f(r):
+        thump = S.pk(_pick("drum", "drum_01.wav", _j(r, 1.1, 1.25), 0.45, 1400, 170)) * S.exp_env(0.45, 0.14, 0.003)
+        stone = S.pk(_pick("stone", _c(r, ["stone_02.wav", "stone_05.wav", "stone_04.wav"]), _j(r, 0.85, 1.0), None, 3000, 150))
+        dust = S.pk(_pick("dirt", _c(r, ["dirt_01.wav", "dirt_03.wav", "dirt_05.wav"]), 1.0, 0.45, 3800, 400)) * S.exp_env(0.45, 0.14, 0.003)
+        low = S.pk(_pick("cannon", "cannon_02.wav", _j(r, 1.0, 1.1), 0.4, 1800, 170)) * S.exp_env(0.4, 0.14, 0.004)
+        if variant == "a":
+            return S.soft_clip(S.mix((thump, 0, 0.8), (stone, 0, 0.7), (dust, 0.02, 0.55), (low, 0.01, 0.45)), 1.5)
+        return S.soft_clip(S.mix((S.pk(_pick("cannon", "cannon_01.wav", _j(r, 0.95, 1.05), None, 2800, 190)), 0, 1.0), (low, 0.01, 0.8), (dust, 0.02, 0.5), (stone, 0, 0.4)), 1.5)
+    return f
+
+
+def wizard_hit_real(variant="a"):  # the fireball lands: the same real fire as wizard_launch (whoosh + campfire), a soft fwoomf burst
+    def f(r):
+        burst = S.pk(_pick("fire_whoosh", _c(r, ["fire_whoosh_02.wav", "fire_whoosh_04.wav", "fire_whoosh_05.wav", "fire_whoosh_01.wav"]),
+                           _j(r, 1.38, 1.58), 0.45, 8500, 110)) * S.exp_env(0.45, 0.14, 0.004)
+        bed = S.pk(_pick("bed_fire", _c(r, ["bed_fire_01.wav", "bed_fire_02.wav", "bed_fire_03.wav"]), _j(r, 1.08, 1.22), 0.4, 7800, 150)) * S.exp_env(0.4, 0.16, 0.004)
+        layers = [(burst, 0, 1.0), (bed, 0.015, 0.34)]
+        if variant == "b":  # b: a soft low cannon-body thump under the burst (the Fire Orb's recipe, smaller): the fireball has weight
+            layers.append((S.pk(_pick("cannon", "cannon_01.wav", _j(r, 0.82, 0.92), None, 1800, 70)), 0, 0.42))
+        return _wizard_real_finish(S.mix(*layers), 8200, -24.0)
+    return f
+
+
+def boulder_fall_real(r):  # the boulder falls: a real air rush swelling, a pitch-falling real whoosh and a low thunder rumble, cut at the impact
+    secs = 0.45
+    n = S.n_of(secs)
+    env = S.curve([(0, 0.06), (0.3, 0.7), (0.42, 1.0), (secs, 0.0)], secs, log=False)
+    src = np.concatenate([S.pk(_pick("whoosh", _c(r, ["whoosh_09.wav", "whoosh_10.wav", "whoosh_14.wav"]), 1.0, None, 6000, 250)) for _ in range(3)])
+    sw = S.pk(_glide(src, 1.15, 0.55, secs))
+    air = S.pk(_win("bed_wind", "bed_wind_0%d.wav" % int(r.integers(1, 4)), _j(r, 1.0, 10.0), secs, 1.0, 3000, 400))
+    rum = S.pk(_win("thunder", "thunder_03.wav", _j(r, 0.3, 1.0), secs, 1.0, 1100, 130))
+    x = S.mix((sw[:n], 0, 1.0), (air[:n], 0, 0.55), (rum[:n], 0, 0.2), seconds=secs)
+    return S.fade(x[:n] * env[:len(x[:n])], 0.01, 0.02)
+
+
+ROUNDS_R16 = {"xbow_shot": xbow_shot_real, "xbow_pierce": xbow_pierce_real, "guard_clop": guard_clop_real, "guard_hit": guard_hit_real,
+              "airship_shot_a": airship_shot_real("a"), "airship_shot_b": airship_shot_real("b"),
+              "airship_hit_a": airship_hit_real("a"), "airship_hit_b": airship_hit_real("b"),
+              "wizard_hit_a": wizard_hit_real("a"), "wizard_hit_b": wizard_hit_real("b"), "boulder_fall": boulder_fall_real}
+
 ROUNDS = {"r1": {"tap_a": tap_a, "tap_b": tap_b, "tap_c": tap_c},
           "r2": {"wiz_a": _package(wiz_launch_a, wiz_hit_a), "wiz_b": _package(wiz_launch_b, wiz_hit_b, 1.4),
-                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13, "r14": ROUNDS_R14, "r15": ROUNDS_R15}
+                 "wiz_c": _package(wiz_launch_c, wiz_hit_c, 2.6)}, "r3": ROUNDS_R3, "r4": ROUNDS_R4, "r5": ROUNDS_R5, "r6": ROUNDS_R6, "r7": ROUNDS_R7, "r8": ROUNDS_R8, "r9": ROUNDS_R9, "r10": ROUNDS_R10, "r11": ROUNDS_R11, "r12": ROUNDS_R12, "r13": ROUNDS_R13, "r14": ROUNDS_R14, "r15": ROUNDS_R15, "r16": ROUNDS_R16}
 
 if __name__ == "__main__":
     rnd = sys.argv[1] if len(sys.argv) > 1 else "r1"
     out = os.path.join(ROOT, "_work", "audio", "wizard_real" if rnd == "r14" else os.path.join("restart", rnd))
     os.makedirs(out, exist_ok=True)
     for name, fn in ROUNDS[rnd].items():
-        S.write_wav(os.path.join(out, name + ".wav"), fn(S.rng(1) if rnd == "r15" else 1))
+        S.write_wav(os.path.join(out, name + ".wav"), fn(S.rng(1) if rnd in ("r15", "r16") else 1))
         print("wrote", name)

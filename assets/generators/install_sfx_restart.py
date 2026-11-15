@@ -107,16 +107,16 @@ def wizard_launch(r):
 # id: (render fn(r), takes, target rms dB or None = silent, manifest entry to copy bus/spatial/cooldown/vary from, tracker, note)
 INSTALL = {
     "wizard_launch": (wizard_launch, 6, -18.3, "fireball_launch", "A15", "Wizard Tower shot: warm rush built from real fire recordings (restart r14 wizard_launch_a_warm_rush)"),
-    "wizard_hit": (lambda r: room(M.wiz4_hit(7500, 0.4, 0.5)(r)), 8, -20.5, "fireball_hit", "A15", "Wizard Tower fireball lands: soft fwoomf burst (restart r4 wiz_a)"),
+    "wizard_hit": (lambda r: room(M.wizard_hit_real("a")(r), 0.14, 0.06), 8, -20.5, "fireball_hit", "A15", "Wizard Tower fireball lands: soft fwoomf burst from real fire whooshes and campfire, same family as wizard_launch (restart r16)"),
     "orb_launch": (lambda r: room(fire_orb_parts(r)[0], 0.25, 0.08), 4, -17.5, "fireball_launch", "A20", "Fire Orb spell launch: real fire whooshes (restart r12)"),
     "orb_hit": (lambda r: room(fire_orb_parts(r)[1], 0.25, 0.08), 4, -18.5, "fireball_hit", "A20", "Fire Orb spell burst: real cannon thump and fire (restart r12)"),
-    "crossbow_shot": (lambda r: room(M.xbow_shot(480, 1.1, 6000, 0.9, 0.35, 9000, 0.45, 4200)(r)), 6, -22.4, "crossbow_shot", "A16", "Longbow Tower shot: tight crossbow thunk with a wood click (restart r7)"),
-    "crossbow_pierce": (lambda r: room(M.xbow_thup(r)), 6, -24.7, "crossbow_pierce", "A16", "bolt pierces an enemy: one soft thup (restart r7)"),
-    "guard_clop": (lambda r: room(M.guard_clop(r)), 4, -24.0, "hit_soft", "A16", "a Guard steps out: soft wood and cloth clop (restart r5)"),
-    "guard_hit": (lambda r: room(M.guard_hit(r)), 6, -25.7, "hit_soft", "A16", "a Guard hits an enemy: dull light thud (restart r5)"),
-    "airship_shot": (lambda r: room(M.cannon_shot(r)), 4, -18.3, "airship_shot", "A16", "Airship cannon shot: round thoomp (restart r5)"),
-    "airship_hit": (lambda r: room(M.cannon_hit(r)), 6, -20.5, "fireball_hit", "A16", "Airship cannonball lands: heavy soft thump (restart r5)"),
-    "boulder_fall": (boulder_fall, 3, -24.6, "throw_whoosh", "A20", "Boulder released: a short falling whoosh (restart r9)"),
+    "crossbow_shot": (lambda r: room(M.xbow_shot_real(r)), 6, -22.4, "crossbow_shot", "A16", "Longbow Tower shot: springy wooden thwip from a real bow release, wood knock and whoosh (restart r16)"),
+    "crossbow_pierce": (lambda r: room(M.xbow_pierce_real(r)), 6, -24.7, "crossbow_pierce", "A16", "bolt pierces an enemy: one soft wooden tick from a real knock and a cloth pat (restart r16)"),
+    "guard_clop": (lambda r: room(M.guard_clop_real(r)), 4, -24.0, "hit_soft", "A16", "a Guard steps out: soft real footstep, wood knock and cloth pat (restart r16)"),
+    "guard_hit": (lambda r: room(M.guard_hit_real(r)), 6, -25.7, "hit_soft", "A16", "a Guard hits an enemy: dull light thud from a low real wood knock, cloth pat and footstep (restart r16)"),
+    "airship_shot": (lambda r: room(M.airship_shot_real("a")(r)), 4, -18.3, "airship_shot", "A16", "Airship cannon shot: round thoomp from a real distant cannon, war drum body and a soft air puff (restart r16)"),
+    "airship_hit": (lambda r: room(M.airship_hit_real("a")(r)), 6, -20.5, "fireball_hit", "A16", "Airship cannonball lands: heavy soft thump from a real war drum, stone, dust and cannon tail (restart r16)"),
+    "boulder_fall": (lambda r: room(M.boulder_fall_real(r), 0.25, 0.08), 3, -24.6, "throw_whoosh", "A20", "Boulder released: a pitch-falling real whoosh, air rush and low rumble (restart r16)"),
     "boulder_hit": (boulder_hit, 4, -20.0, "boulder_hit", "A20", "Boulder lands: heavy stone thud, dust and rumble (restart r9)"),
     "storm_cloud": (storm_cloud, 2, -22.0, "storm_cloud", "A20", "Storm Cloud cast: a dark rolling thunder swell (restart r11)"),
     # Storm Cloud, restart batch 4 (Siddharth 2026-11-15): real lightning. Default strike = candidate A until he picks (STORM_STRIKE=A|B|C).
@@ -148,6 +148,23 @@ def _db(v):
     return float(20 * np.log10(v + 1e-12))
 
 
+def render_take(name, fn, k, rms):
+    """One take of an install sound, exactly as install() writes it (also used by the blind sets and the tour)."""
+    seed = zlib.crc32(("restart:%s:%d" % (name, k)).encode())
+    r = S.rng(seed)
+    np.random.seed(seed % (2 ** 31))
+    x = np.asarray(fn(r), dtype=float)
+    if name in LOOPS:
+        x = S.normalise(S.remove_dc(x), rms_db=rms, max_peak_db=-2.0)
+    elif rms is not None:
+        if k > 0 and name not in KEEP_PITCH:
+            kk = TAKE_PITCH[k % len(TAKE_PITCH)]
+            x = np.interp(np.linspace(0, len(x) - 1, max(16, int(len(x) / kk))), np.arange(len(x)), x)
+        x = S.fade(S.trim_silence(S.remove_dc(x), -55.0, 0.02), 0.0015, 0.05)
+        x = S.normalise(x, rms_db=rms, max_peak_db=-2.0)
+    return x
+
+
 def install(only=None):
     man_path = os.path.join(GODOT_OUT, "manifest.json")
     man = json.load(open(man_path, encoding="utf-8"))
@@ -166,18 +183,7 @@ def install(only=None):
         meta = dict(man[meta_from])
         files = []
         for k in range(takes):
-            seed = zlib.crc32(("restart:%s:%d" % (name, k)).encode())
-            r = S.rng(seed)
-            np.random.seed(seed % (2 ** 31))
-            x = np.asarray(fn(r), dtype=float)
-            if name in LOOPS:
-                x = S.normalise(S.remove_dc(x), rms_db=rms, max_peak_db=-2.0)
-            elif rms is not None:
-                if k > 0 and name not in KEEP_PITCH:
-                    kk = TAKE_PITCH[k % len(TAKE_PITCH)]
-                    x = np.interp(np.linspace(0, len(x) - 1, max(16, int(len(x) / kk))), np.arange(len(x)), x)
-                x = S.fade(S.trim_silence(S.remove_dc(x), -55.0, 0.02), 0.0015, 0.05)
-                x = S.normalise(x, rms_db=rms, max_peak_db=-2.0)
+            x = render_take(name, fn, k, rms)
             fname = "%s_%d.wav" % (name, k + 1) if takes > 1 else "%s.wav" % name
             for d in (GODOT_OUT, EXPORT_OUT):
                 sf.write(os.path.join(d, fname), x, 44100, subtype="PCM_16")

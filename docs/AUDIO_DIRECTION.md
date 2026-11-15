@@ -124,3 +124,19 @@ The Storm Cloud, rebuilt from real recordings (round r15 in `assets/generators/m
   KEY.txt in the same folder).
 - Next (his decision, same day): replace ALL remaining synthetic tower and spell sounds with real recordings; then he decides on the rest
   (placing, not-allowed, chimes).
+
+- Strike: Siddharth said any of the three are good and let Claude choose; B chosen (2026-11-15), installed with `STORM_STRIKE=B python -I assets/generators/install_sfx_restart.py storm_strike` (the default in the installer is still A when the variable is not set).
+- All remaining synthetic tower and spell sounds rebuilt from real recordings (round r16 in `make_sfx_restart.py`, installed by `install_sfx_restart.py`; his decision 2026-11-15). Same ids, take counts, buses and loudness as before. Only existing library grains, code picks a different grain per take, pitches, filters, layers, bends pitch and fades (no synthesis, nothing downloaded). Feel per sound is the batch 1-3 wording:
+  | id | built from (real) | feel it follows |
+  |---|---|---|
+  | crossbow_shot | bow string release (or the real crossbow shot), wood knock, soft whoosh | springy wooden "thwip" |
+  | crossbow_pierce | muted wood-knock tap, dull cloth pat | soft "tick" per hit |
+  | guard_clop | soft footstep, wood knock, cloth pat | small "clop", soft cloth and wood |
+  | guard_hit | low wood knock, cloth pat, footstep body | dull light thud |
+  | airship_shot | real distant cannon + its tail, war-drum body, air puff | Clash Royale cannon, round thoomp, no bang |
+  | airship_hit | war-drum thump, stone, dirt puff, cannon tail | heavy soft landing |
+  | wizard_hit | fire whooshes + campfire (same as wizard_launch) | Clash Royale Wizard fwoomf, matches the launch |
+  | boulder_fall | pitch-falling whooshes, wind bed, low thunder | falling rock, matches boulder_hit |
+  Highs are rolled off (nothing above about 6 kHz) and the lows are cut high-passed at 110-250 Hz per layer for headphones and Quest speakers.
+  Where the batches did not say how a hit should sound for one tower, the closest written rule was used (the cosy "weighty but soft" rule and "the hit depends on the tower"). Blind pairs (candidate A is installed): wizard_hit (with / without a soft cannon-body thump), airship_shot and airship_hit; `python tools/audio_ab_towers.py` writes them and a tour of the whole set to `_work/audio_ab/` (towers_tour.wav).
+  The old synthesis recipe functions stay in the code, no longer installed. Note: wizard_hit was removed from play on 2026-11-11 (see ASSETS.md); the new files only matter if the game plays it again.
