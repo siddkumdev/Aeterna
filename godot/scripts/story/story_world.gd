@@ -466,7 +466,7 @@ func _build_village() -> void:
 		c.y = height(c.x, c.z)
 		var yaw := atan2(VILLAGE.x - c.x, VILLAGE.z - c.z)  # the door faces the square
 		_game_house(c, yaw, i)
-	_prop("well_v02", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
+	_prop("well_v03", VILLAGE + Vector3(-4.0, 0, -3.2), 0.6, 40.0)
 	_shrine(STATUE_AT)
 	_story_statue(STATUE_AT + Vector3(0, PLINTH_H, 0))  # the game's statue's design (statue_v01), carved in full detail at life size
 	_dress_square()

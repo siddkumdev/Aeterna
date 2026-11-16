@@ -23,7 +23,7 @@ const TILE := {
 const HOUSE_PROPS := ["barrel_v02", "barrel_stack_v02", "crate_stack_v02", "haystack_v03", "sacks_v02", "clay_pots_v02",
 	"pumpkins_v02", "bench_v02", "table_stool_v02", "basket_v02", "bucket_v02"]
 const SMALL_PROPS := ["basket_v02", "bucket_v02", "barrel_v02", "clay_pots_v02"]
-const LANDMARKS := ["well_v02", "market_stall_v02", "notice_board_v02", "haystack_v03"]
+const LANDMARKS := ["well_v03", "market_stall_v02", "notice_board_v02", "haystack_v03"]
 const CENTRE_BLOCK := Rect2i(10, 10, 4, 4)  # cells kept free of props: the open centre that fits one tower
 const EPS := 0.00012  # metres: later tiles sit a hair higher so overlapping tiles never z-fight
 

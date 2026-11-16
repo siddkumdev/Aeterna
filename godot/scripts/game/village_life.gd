@@ -176,7 +176,7 @@ func _job_anim(job: String) -> String:
 
 func _job_mark(v: Villager) -> Vector3:
 	## What the job is done at: a landmark prop, a house being repaired, or its own home.
-	var names: Array = {"notices": ["notice_board_v02"], "farm": ["haystack_v03", "pumpkins_v02", "sacks_v02"], "bake": ["market_stall_v02"], "well": ["well_v02"]}.get(v.job, [])
+	var names: Array = {"notices": ["notice_board_v02"], "farm": ["haystack_v03", "pumpkins_v02", "sacks_v02"], "bake": ["market_stall_v02"], "well": ["well_v03"]}.get(v.job, [])
 	for n in names:  # the dressing is random, so the farmer takes whichever crop is there
 		if landmarks.has(n):
 			return NavGrid.cell_centre(landmarks[n])

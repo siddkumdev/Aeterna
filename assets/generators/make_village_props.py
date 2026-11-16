@@ -167,7 +167,7 @@ def haystack():
     return [nb(q) for q in p]
 
 
-def well():
+def well(with_bucket=True):
     p = [nb(cyl("ring", 0.0135, 0.0130, (0, 0, 0), "stone", 10, 0.0128)),
          nb(cyl("rim", 0.0140, 0.0030, (0, 0, 0.0130), "path_stone", 10, 0.0134)),
          nb(cyl("water", 0.0092, 0.0004, (0, 0, 0.0160), "ink", 10))]
@@ -179,9 +179,17 @@ def well():
         p.append(box("post", (0.0030, 0.0030, 0.0300), (sx * 0.0125, 0.0, 0.0145 + 0.0130), "wood_dark"))
     p.append(box("beam", (0.0300, 0.0026, 0.0026), (0, 0, 0.0420), "wood_dark"))
     p.append(nb(bc.gable("roof", 0.0360, 0.0270, 0.0105, (0, 0, 0.0420), "roof_terracotta")))
-    p.append(nb(cyl("bucket", 0.0042, 0.0060, (0.0, 0.0, 0.0268), "wood_light", 6, 0.0050)))
-    p.append(box("rope", (0.0010, 0.0010, 0.0090), (0.0, 0.0, 0.0345), "path_dirt"))
+    if with_bucket:
+        p.append(nb(cyl("bucket", 0.0042, 0.0060, (0.0, 0.0, 0.0268), "wood_light", 6, 0.0050)))
+        p.append(box("rope", (0.0010, 0.0010, 0.0090), (0.0, 0.0, 0.0345), "path_dirt"))
     return p
+
+
+def well_bucket():
+    """v03: the bucket + rope as their own part, centred over the water hole (x = y = 0), rope up to the beam
+    (beam underside z = 0.0407). Pivot = rope top, so Godot can hide it or swing it."""
+    return [nb(cyl("bucket", 0.0042, 0.0060, (0.0, 0.0, 0.0268), "wood_light", 6, 0.0050)),
+            box("rope", (0.0010, 0.0010, 0.0079), (0.0, 0.0, 0.03675), "path_dirt")]
 
 
 def clothesline():
@@ -396,8 +404,11 @@ PROPS = {
 
 def build(name, version="v01"):
     fn, foot, front, hint = PROPS[name]
-    parts = fn()
-    obj = bc.assemble("ew_village_%s_%s" % (name, version), [("", parts, (0, 0, 0), None)])
+    if name == "well" and version not in ("v01", "v02"):
+        obj = bc.assemble("ew_village_%s_%s" % (name, version),
+                          [("", well(False), (0, 0, 0), None), ("bucket", well_bucket(), (0, 0, 0.0407), "")])
+    else:
+        obj = bc.assemble("ew_village_%s_%s" % (name, version), [("", fn(), (0, 0, 0), None)])
     obj["ew_footprint"] = foot
     obj["ew_front"] = front
     obj["ew_place"] = hint

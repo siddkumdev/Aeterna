@@ -112,7 +112,8 @@ var _ref_y := 0.0  # bell: the hand height when the rope was pinched
 var _pull := 0.0
 var _flutter_c := Vector3.ZERO  # letter
 var _flutter: Tween
-var _tw := {}  # node -> a falling or returning tween, killed when the item is pinched again
+var _tw := {}
+var _well_bucket: Node3D  # the well's own hanging bucket (hidden while the quest runs)  # node -> a falling or returning tween, killed when the item is pinched again
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -509,6 +510,12 @@ func _finish() -> void:
 	if _flutter:
 		_flutter.kill()
 	_say("after")
+	if _well_bucket and is_instance_valid(_well_bucket) and _well_bucket.is_inside_tree():
+		_well_bucket.scale = Vector3.ONE * 0.001
+		_well_bucket.visible = true
+		var wt := _well_bucket.create_tween()  # the carried bucket was lowered; the well's own is hauled back up
+		wt.tween_interval(0.5)
+		wt.tween_property(_well_bucket, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK)
 	if _helper:
 		_helper.thank()
 	if _villager and _villager.is_inside_tree():
@@ -888,7 +895,10 @@ func _setup_new(h: House, socket: Vector3, stand: Vector3) -> void:
 		"well":
 			var p := _free_beside(h, true, stand)
 			_patch(p, 0.032)
-			_extra(_model("well_v02"), Vector3(p.x, 0, p.z))
+			var wl := _extra(_model("well_v03"), Vector3(p.x, 0, p.z))
+			_well_bucket = ModelUtil.parts(wl).get("bucket")
+			if _well_bucket:
+				_well_bucket.visible = false  # the loose bucket is THE bucket; the hanging one comes back when it is lowered
 			_goal = Vector3(p.x, 0, p.z)
 			var cands := []
 			for sgn in [-0.9, 0.9]:
