@@ -205,6 +205,8 @@ func refresh(nav: NavGrid) -> void:
 	for i in _xf.size():
 		var c := _cell[i]
 		if now.has(c) != _hidden.has(c):
+			if not now.has(c) and _cleared.has(i):
+				continue  # a quest's clearing keeps this tuft hidden
 			_mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ZERO), _xf[i].origin) if now.has(c) else _xf[i])
 	_hidden = now
 

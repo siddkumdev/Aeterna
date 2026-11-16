@@ -112,8 +112,8 @@ var _ref_y := 0.0  # bell: the hand height when the rope was pinched
 var _pull := 0.0
 var _flutter_c := Vector3.ZERO  # letter
 var _flutter: Tween
-var _tw := {}
-var _well_bucket: Node3D  # the well's own hanging bucket (hidden while the quest runs)  # node -> a falling or returning tween, killed when the item is pinched again
+var _tw := {}  # node -> a falling or returning tween, killed when the item is pinched again
+var _well_bucket: Node3D  # the well's own hanging bucket (hidden while the quest runs)
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -1087,6 +1087,7 @@ func _drop_apples() -> void:
 			var tw := a.create_tween()
 			tw.tween_property(a, "position:y", 0.0, 0.35 + 0.08 * i).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 			_tw[a] = tw
+			tw.finished.connect(func(): _tw.erase(a))
 		if game.with_rig and i == 0:
 			game.snd("grab")
 
@@ -1112,6 +1113,7 @@ func _dodge_new(footprint: Array[Vector2i]) -> void:
 	var cur := _items.find(prop)
 	if cur >= 0:
 		_home = _homes[cur]
+	game._refresh_clearings()
 
 
 func _kill_tw(n: Node) -> void:
@@ -1249,6 +1251,7 @@ func _ring_back() -> void:
 		var tw := create_tween()
 		tw.tween_property(_rope, "position", _rope_home, 0.25).set_trans(Tween.TRANS_SINE)
 		_tw[_rope] = tw
+		tw.finished.connect(func(): _tw.erase(_rope))
 	else:
 		_rope.position = _rope_home
 

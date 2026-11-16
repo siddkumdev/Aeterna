@@ -3193,6 +3193,31 @@ func _new_quests() -> void:
 	g.queue_free()
 	await process_frame
 
+	# the well's own hanging bucket: hidden while the loose bucket is the quest, hauled back up when it is lowered
+	g = await _make_game()
+	g.force_quests(["well"])
+	var wq: HelpRequest = g.requests[0]
+	var hang: Node3D = wq._well_bucket
+	check("well: the hanging bucket is a part of the well and hidden at setup, the loose one shows", hang != null and not hang.visible and wq.prop.visible)
+	g.grab_request(wq)
+	wq.move_to(wq._goal + Vector3(0.5 * C, 0.02, 0))
+	g.release_request()
+	var two := false
+	var t_start := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t_start < 1500:
+		await process_frame
+		var shown := 0
+		for b in [wq.prop, hang]:
+			if b.visible and b.scale.x > 0.1:
+				shown += 1
+		two = two or shown > 1
+	check("well: after it is lowered the well's bucket is back and there are never two buckets in view", hang.visible and hang.scale.x > 0.9 and not wq.prop.visible and not two)
+	g._clear_requests()
+	await process_frame
+	check("well: no hidden bucket is left behind after the requests are cleared", not is_instance_valid(hang))
+	g.queue_free()
+	await process_frame
+
 	# the words: every kind has 4 asking lines and 3 thank-yous, never the same one twice in a row
 	for k: String in GameConfig.REQUESTS:
 		var id: String = HelpRequest.TASK_ID[k]
