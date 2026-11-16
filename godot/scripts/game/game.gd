@@ -155,6 +155,10 @@ var _lens_hand: GameHand  # the hand holding it, or null
 var _xr_cam: XRCamera3D
 var easy_reach := false  # desktop and simulator: grab distances x GameConfig.EASY_REACH and the reach bubbles show
 var _mouse_hand: GameHand  # desktop only
+var _mouse_rim := false  # desktop: the left button is down on a rim handle, the table turns with the mouse
+var _mouse_rim_x0 := 0.0
+var _mouse_rim_yaw0 := 0.0
+const MOUSE_RIM_RAD_PER_PX := 0.006  # table yaw per pixel of horizontal mouse drag (Siddharth 2026-11-16: smooth drag, no 25 degree jump)
 var _hand_height := 0.03  # m above the board: set with the mouse wheel
 var _hand_stem: MeshInstance3D
 var _hand_ring: MeshInstance3D
@@ -179,7 +183,9 @@ var _compass_pending := {}  # hand -> seconds held on the compass (tap cycles sc
 var _toast: Label3D  # newest short message line above the tray
 var _toast_stack: Array[Label3D] = []  # older still-visible toasts stacked above _toast
 var _toast_last := ""
-const DAY_CLOCK_POS := Vector3(0, 0.42, -HALF - 0.08)
+const HUD_GAP := 0.08  # m (board scale 1) between the table's far edge and the day clock / tutorial text
+const DAY_CLOCK_POS := Vector3(0, 0.42, 0)  # local to the HUD root (see update_hud_root)
+var hud_root: Node3D  # day clock + tutorial text: follows the table's position, never its turn (Siddharth 2026-11-16)
 const LEDGER_INWARD_SHIFT := 0.14
 const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
 const TUTORIAL_SHADE_REWARD := 15
@@ -1716,24 +1722,44 @@ func villager_at(origin: Vector3, dir: Vector3, reach_m := 0.025) -> Villager:
 	return best
 
 
-func tap_villager(v: Villager) -> String:
+func _find_prayer_asker(origin: Vector3, dir := Vector3.ZERO, radius := 0.025) -> Node3D:
+	for r in requests:
+		if not r.done and r.kind == "prayer":
+			var who := r.asker()
+			if who == null or not who.is_visible_in_tree():
+				continue
+			var chest := who.global_position + Vector3(0, 0.035, 0)
+			var d := chest.distance_to(origin) if dir == Vector3.ZERO \
+				else Geometry3D.get_closest_point_to_segment_uncapped(chest, origin, origin + dir * 2.0).distance_to(chest)
+			if d < radius:
+				return who
+	return null
+
+
+func tap_villager(v: Node) -> String:
 	## Tap a villager: a bubble with their next thought for this loop; they turn to look at you.
-	if v == null or v.voice == "":
+	if v == null:
 		return ""
 	for r in requests:
 		if r.answer(v):  # the one who prays was heard
-			v.taps += 1
+			if v is Villager:
+				(v as Villager).taps += 1
 			_pay_quest(r)
 			return StoryText.task("answer_prayer", "after")
-	var line := StoryText.thought(v.voice, loop, v.taps)
-	v.taps += 1
+	if not (v is Villager):
+		return ""
+	var vil := v as Villager
+	if vil.voice == "":
+		return ""
+	var line := StoryText.thought(vil.voice, loop, vil.taps)
+	vil.taps += 1
 	if line == "":
 		return ""
-	v.said = line
-	snd("villager_blip", v.global_position)
-	Bubble.say(v, Vector3(0, 0.1, 0), "%s: %s" % [StoryText.villager_name(v.voice), line] if v.taps == 1 else line)
-	if v.state == "stay" or v.state == "go":
-		v.put(v.position, "idle", 2.5, board.to_local(_eye()))  # stops and looks at you while it speaks
+	vil.said = line
+	snd("villager_blip", vil.global_position)
+	Bubble.say(vil, Vector3(0, 0.1, 0), "%s: %s" % [StoryText.villager_name(vil.voice), line] if vil.taps == 1 else line)
+	if vil.state == "stay" or vil.state == "go":
+		vil.put(vil.position, "idle", 2.5, board.to_local(_eye()))  # stops and looks at you while it speaks
 	return line
 
 
@@ -1839,6 +1865,10 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 		var vt := villager_at(origin, dir)
 		if vt:
 			tap_villager(vt)
+			return
+		var pq := _find_prayer_asker(origin, dir, 0.025)
+		if pq:
+			tap_villager(pq)
 			return
 	if spell_sel != "":
 		var sr := _ray_to_board(origin, dir)
@@ -1962,6 +1992,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				CharacterRig.step_legs = not CharacterRig.step_legs
 				last_message = "Walking: %s (G switches)." % ("stepping legs" if CharacterRig.step_legs else "hopping")
 				_refresh_ui()
+	elif event is InputEventMouseMotion and _mouse_rim:
+		mouse_rim_drag(event.position.x)
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_hand:
 		_mouse_hand.release()
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _mouse_hand:
@@ -2026,6 +2058,7 @@ func _process(delta: float) -> void:
 	_tick_day(delta)
 	_tick_quests(delta)
 	_tick_rim(delta)
+	update_hud_root()
 	if _xr and not asleep:
 		PerfTier.govern(delta, get_viewport(), lighting.sun, XRServer.find_interface("OpenXR"))
 	if _xr and (GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose()):
@@ -2395,6 +2428,29 @@ func _build_tray_bits() -> void:
 	board.add_child(_sun)
 
 
+func update_hud_root() -> void:
+	## The day clock and tutorial text stay just behind the table's far edge (seen from the player), at the table's
+	## scale, and keep facing the seated player: they follow the board's position and scale but not its rotation.
+	if board == null:
+		return
+	if hud_root == null:
+		hud_root = Node3D.new()
+		hud_root.name = "HudRoot"
+		add_child(hud_root)
+	var s := board.global_transform.basis.get_scale().x
+	var c := board.global_position
+	var eye := _eye()
+	var away := Vector3(c.x - eye.x, 0.0, c.z - eye.z)
+	away = Vector3(0, 0, -1) if away.length() < 0.05 else away.normalized()
+	var ax := board.global_transform.basis.x
+	var az := board.global_transform.basis.z
+	ax = Vector3(ax.x, 0, ax.z).normalized()
+	az = Vector3(az.x, 0, az.z).normalized()
+	var ext := HALF * (absf(away.dot(ax)) + absf(away.dot(az)))  # how far the (turned) square reaches along "away"
+	hud_root.global_position = c + away * (ext + HUD_GAP) * s
+	hud_root.scale = Vector3.ONE * s
+
+
 func _tick_clock() -> void:
 	## The countdown (the user: "there's no obvious countdown"): a big gilded m:ss over the island all day, red in the last 20 s.
 	if _clock == null:
@@ -2408,7 +2464,9 @@ func _tick_clock() -> void:
 		_clock.no_depth_test = true
 		_clock.render_priority = 12
 		_clock.position = DAY_CLOCK_POS
-		board.add_child(_clock)
+		update_hud_root()
+		hud_root.add_child(_clock)
+	update_hud_root()
 	_clock.visible = phase == Phase.DAY and not asleep
 	if _clock.visible:
 		var left := int(ceil(day_left()))
@@ -2676,6 +2734,12 @@ func hand_pressed(h: GameHand) -> void:
 			_hand_log(h, "target villager:%s" % nearest_v.name)
 			tap_villager(nearest_v)
 			return
+	if not placing():
+		var pq := _find_prayer_asker(tp, Vector3.ZERO, reach(GameConfig.TOUCH_REACH))
+		if pq:
+			_hand_log(h, "target prayer:%s" % pq.name)
+			tap_villager(pq)
+			return
 	if not placing() and phase == Phase.DAY and h != _mouse_hand:
 		for t in towers:  # a pinch right on a built tower, held: it is crushed back into faith
 			var d := tp - t.global_position
@@ -2684,8 +2748,7 @@ func hand_pressed(h: GameHand) -> void:
 				return
 	if not placing() and on_rim(tp):
 		if h == _mouse_hand:
-			board.rotation.y += deg_to_rad(25.0)
-			_update_compass_label()
+			mouse_rim_begin(get_viewport().get_mouse_position().x)  # a plain click without a drag turns nothing
 			snd("grab")
 		elif GameConfig.RIM_HOLD <= 0.0:
 			_rim_hands.append(h)
@@ -2815,6 +2878,20 @@ static func board_clamp(board_xf: Transform3D, head_pos: Vector3) -> Transform3D
 	return out
 
 
+func mouse_rim_begin(x: float) -> void:
+	_mouse_rim = true
+	_mouse_rim_x0 = x
+	_mouse_rim_yaw0 = board.rotation.y
+
+
+func mouse_rim_drag(x: float) -> void:
+	## Desktop: while the button is held on a rim handle the table's yaw follows the mouse horizontally.
+	if not _mouse_rim:
+		return
+	board.rotation.y = _mouse_rim_yaw0 + (x - _mouse_rim_x0) * MOUSE_RIM_RAD_PER_PX
+	_update_compass_label()
+
+
 func _tick_rim(delta := 0.0) -> void:
 	for h in _fast_pending.keys():
 		if not is_instance_valid(h) or _fast_glass == null or h.touch_point().distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) > reach(GameConfig.TOUCH_REACH * 2.0):
@@ -2870,6 +2947,10 @@ func _tick_rim(delta := 0.0) -> void:
 
 func hand_released(h: GameHand, cancelled := false) -> void:
 	## cancelled: the hand lost tracking mid-pinch (GameHand.cancelled). Nothing is built, cast, delivered or moved.
+	if h == _mouse_hand and _mouse_rim:
+		_mouse_rim = false
+		snd("release")
+		return
 	if _fast_pending.has(h):
 		_fast_pending.erase(h)
 		return

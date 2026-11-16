@@ -264,7 +264,7 @@ func _person(delta: float) -> void:
 		_ar.z = -0.05 - 0.03 * sin(t * 1.3)
 	match anim:
 		"startle":  # jumps, arms up
-			_lift = 0.014 * absf(sin(t * 12.0))
+			_lift = 0.02 * absf(sin(t * 12.0))
 			_al.z = 1.6  # the arms are short and the heads big: straight up would hide them behind the head
 			_ar.z = -1.6
 			_hd.x = -0.2
@@ -336,6 +336,18 @@ func _person(delta: float) -> void:
 			_al.z = 1.65 + 0.35 * sin(t * 9.0)
 			_hd.x = -0.15
 			_lift = 0.002 * absf(sin(t * 4.5))
+		"plead":  # please help (Siddharth 2026-11-16): hops with both arms waving, then points ahead at the problem; repeats
+			var k := fposmod(t, 2.6)
+			if k < 1.3:
+				_lift = 0.02 * absf(sin(k / 1.3 * TAU))
+				_sq = 1.0 + 0.05 * cos(k / 1.3 * TAU * 2.0)
+				_al.z = 1.65 + 0.35 * sin(t * 14.0)
+				_ar.z = -1.65 - 0.35 * sin(t * 14.0)
+				_hd.x = -0.25
+			else:
+				_ar.x = -1.45 + 0.1 * sin(t * 6.0)
+				_al.z = 0.35
+				_hd.x = -0.12
 		"cheer":
 			_lift = 0.012 * absf(sin(t * 8.0))
 			_sq = 1.0 + 0.08 * cos(t * 16.0)

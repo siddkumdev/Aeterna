@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-15 (Siddharth: tray toast outline ghost fix + 8-step interactive Live Fire tutorial across `game.gd`, `launcher.gd`, `game_selftest.gd`; `554` checks pass, `code-critic` + `player-critic` PASS; built on gameplay balance overhaul).
+Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -23,6 +23,7 @@ Last updated: 2026-11-15 (Siddharth: tray toast outline ghost fix + 8-step inter
 - Wizard sounds (Siddharth).
 
 ## Untested on the Quest
+- 2026-11-16 (Siddharth): Quest clarity & HUD (`Game.hud_root` keeping Day Clock & tutorial hint behind the table without rotating; reliable Tutorial Step 3 prayer posting & stand-in fallback; `"plead"` villager quest act-out until engaged; warm pulsing `quest_outline.gdshader` overlay on quest items from open until done; smooth desktop mouse rim drag). `608` checks pass, shots in `_work/quest_shots/`; Quest 3 playtest pending.
 - 2026-11-16 (Siddharth): tower-to-enemy juice, looks only (+ readability fix round): hit freeze/squash/push (`Enemy.take_damage` hit_weight/hit_dir), kill spark to nearest house (`KillSparks`, silent), tower wind-up/recoil (`Tower._tick_kick`), hurt cracks + limp below half HP (`enemy_hurt.gdshader`). 594 checks pass; shots in `_work/juice_shots/`; Quest test pending.
 - 2026-11-15 (Siddharth): Tray toast outline ghost fix (`outline_modulate.a` faded in `_set_toast_alpha`/`_tick_toast_label`, `outline_size = 8`, raised `TOAST_POS`, single-slot replacement in `_toast`) and 8-step interactive Live Fire tutorial (`Launcher.HINTS`, depth-tested `TargetRing`, per-step `GhostHand` + tray-yaw tracking, `Game.set_tutorial_spotlight`, hourglass/`toggle_fast` lock, desktop `on_rim` click, `run_serial` reset, daytime `spawn_tutorial_shade` +15 faith combat payoff, Spin-the-Island & Night 1 spell cues). `554` checks pass, `code-critic` + `player-critic` PASS, 4 desktop `--xr-mode off` verification screenshots reviewed; live Quest 3 VR playtest pending.
 - 2026-11-15 (Siddharth): Gameplay balance & 3-loop overhaul (`LOOPS_PER_RUN := 3`, Night 5/P2+ 3-card Rare/Legendary drafts + `LOOP_RARITY_ODDS`, `+20%/loop` faith scaling + Ledger `HelpRequest.payout()`, `LOOP_HP_STEP := 0.22`, `HP_RAMP_PER_NIGHT := 0.20`, `WARDEN_VINE_HEAL := 2.0`, P4 1-HP doom fast-forward, Wizard `0.6`-cell splash, Airship `max: 2` flyer-priority + `50%` ground shells, Guard `5.0` base dmg scaling per loop, outer-ring Tunneler surfacing, Wisp speed `1.0`, spell cooldown/duration rebalance; `537` checks pass, `code-critic` PASS; Quest 3 playtest pending).

@@ -10,7 +10,7 @@ const AUTO_START := 6.0  # s of title before the story begins on its own
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
-const TUTORIAL_HINT_POS := Vector3(0, 0.20, -Game.HALF - 0.08)
+const TUTORIAL_HINT_POS := Vector3(0, 0.20, 0)  # local to Game.hud_root: behind the table, follows its position but not its turn
 const TUTORIAL_BUILD_CELL := Vector2i(17, 11)
 const HINTS := [
 	"Pinch a glowing tower card on your tray.",
@@ -35,6 +35,8 @@ var _step_time := 0.0
 var _card: TitleCard
 var _t := 0.0
 var _hint_root: Node3D
+var _helped_at_step := 0
+var _step3_quest: HelpRequest
 var _hint_card: TitleCard
 var _cue_root: Node3D
 var _target_ring: MeshInstance3D
@@ -280,7 +282,8 @@ func _hint(line: String) -> void:
 	if _hint_root == null or not is_instance_valid(_hint_root):
 		_hint_root = Node3D.new()
 		_hint_root.name = "HintRoot"
-		game.board.add_child(_hint_root)
+		game.update_hud_root()
+		game.hud_root.add_child(_hint_root)
 	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 54)
 
 
@@ -372,6 +375,44 @@ func tutorial_build_cell() -> Vector2i:
 	return TUTORIAL_BUILD_CELL
 
 
+func _open_quest() -> HelpRequest:
+	## The quest the player can do now: the first open one, a prayer first.
+	var best: HelpRequest = null
+	for r in game.requests:
+		if is_instance_valid(r) and not r.done:
+			if r.kind == "prayer":
+				return r
+			if best == null:
+				best = r
+	return best
+
+
+func _ensure_open_quest() -> HelpRequest:
+	## Tutorial step 3 needs a visible prayer quest even when another quest is open or a house has no free villager.
+	for r in game.requests:
+		if is_instance_valid(r) and not r.done and r.kind == "prayer":
+			return r
+	if game.phase != Game.Phase.DAY:
+		return null
+	game.quest_plan = game.quest_plan.filter(func(q): return q.get("kind", "") != "prayer")
+	var home := -1
+	for h in game.standing_houses():  # prefer a house that has a free villager to ask
+		if game.life != null and game.life.villagers.any(func(v): return v.home == h and v.claim == Vector3.INF):
+			home = h
+			break
+	if home < 0 and not game.standing_houses().is_empty():
+		home = game.standing_houses()[0]  # no free villager there: a stand-in kneels by the statue instead
+	return game._post_quest("prayer", home) if home >= 0 else null
+
+
+func _step_line(idx: int) -> String:
+	if idx == 3:
+		var q := _open_quest()
+		if q != null and q.kind != "prayer":
+			return "Someone needs help! " + String(HelpRequest.HOW.get(q.kind, ""))
+	return HINTS[idx]
+
+
 func _ring_target_for_step() -> Array:
 	## Returns [world_pos, ring_scale, visible] for the active tutorial step's golden cue ring.
 	if game == null or not is_instance_valid(game):
@@ -385,8 +426,9 @@ func _ring_target_for_step() -> Array:
 			return [rim_pos + Vector3(0, 0.022, 0), 0.9, true]
 		3:
 			var q_pos := game.board.to_global(Vector3(0, 0.03, 0))
-			if not game.requests.is_empty() and is_instance_valid(game.requests[0]) and game.requests[0].asker() != null:
-				q_pos = game.requests[0].asker().global_position + Vector3(0, 0.02, 0)
+			var oq := _open_quest()
+			if oq != null:
+				q_pos = oq.focus_point() + Vector3(0, 0.02, 0)
 			return [q_pos, 0.65, true]
 		4:
 			return [_nearest_villager_pos(), 0.65, true]
@@ -459,7 +501,8 @@ func _spawn_step_ghost() -> void:
 		2:
 			_active_ghost = GhostHand.carry(_cue_root, target + Vector3(-0.07, 0.01, 0), target + Vector3(0.07, 0.01, 0))
 		3:
-			if not game.requests.is_empty() and is_instance_valid(game.requests[0]) and is_instance_valid(game.requests[0]._ghost):
+			var gq := _open_quest()
+			if gq != null and is_instance_valid(gq._ghost):
 				return
 			_active_ghost = GhostHand.tap(_cue_root, target + Vector3(0, 0.015, 0))
 		4:
@@ -489,7 +532,12 @@ func _enter_step(idx: int) -> void:
 	if _step >= HINTS.size():
 		_end_hints()
 		return
-	_hint(HINTS[_step])
+	if _step == 3:
+		_helped_at_step = game._helped
+		_step3_quest = _ensure_open_quest()
+	else:
+		_step3_quest = null
+	_hint(_step_line(_step))
 	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "hourglass", "spells"]
 	game.set_tutorial_spotlight(spotlights[_step])
 	match _step:
@@ -497,8 +545,7 @@ func _enter_step(idx: int) -> void:
 			_start_board_yaw = game.board.rotation.y
 			_start_board_pos = game.board.global_position
 		3:
-			if game.requests.is_empty() and not game.quest_plan.is_empty():
-				game.post_next_quest()
+			pass
 		4:
 			_taps_at_step = _total_villager_taps()
 	_update_ring()
@@ -546,7 +593,11 @@ func _tutorial(delta: float) -> void:
 				or absf(angle_difference(game.board.rotation.y, _start_board_yaw)) > 0.03 \
 				or game.board.global_position.distance_to(_start_board_pos) > 0.015
 		3:
-			done = game._helped > 0
+			if not is_instance_valid(_step3_quest):
+				_step3_quest = _ensure_open_quest()
+				if _step3_quest != null:
+					_hint(_step_line(3))
+			done = is_instance_valid(_step3_quest) and _step3_quest.done
 		4:
 			done = _total_villager_taps() > _taps_at_step
 		5:

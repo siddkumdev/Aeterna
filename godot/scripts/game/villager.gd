@@ -17,6 +17,7 @@ var home := 0
 var rig: CharacterRig
 var state := "stay"  # stay / go / startle / enter / inside / wait_out / exit
 var claim := Vector3.INF  # a help request: stands here and waves (board-local)
+var ask_face := Vector3.INF  # while asking for help: the spot it turns to and points at (board-local), INF = just waves
 var turn := 0  # which leg of its routine comes next
 
 var _path: Array[Vector2i] = []
@@ -91,12 +92,20 @@ func come_out(after: float) -> void:
 func thank() -> void:
 	## The help request was done: cheers, then goes back to its day.
 	claim = Vector3.INF
+	ask_face = Vector3.INF
 	if state == "stay" or state == "go":
 		_stop("cheer", 2.2)
 
 
 func wave_on(face: Vector3) -> void:
-	_stop("wave", 3.0, face)
+	_stop("wave", 2.6 if ask_face != Vector3.INF else 3.0, face)
+
+
+func stop_asking() -> void:
+	## The player took the request on: back to the plain wave.
+	ask_face = Vector3.INF
+	if state == "stay" and rig and rig.anim == "plead":
+		_stop("wave", 3.0, life.door_point(home))
 
 
 func tick(delta: float) -> void:
@@ -157,6 +166,9 @@ func _walk(delta: float) -> void:
 
 
 func _stop(anim: String, seconds: float, face := Vector3.INF) -> void:
+	if anim == "wave" and claim != Vector3.INF and ask_face != Vector3.INF:  # asking for help: acts the request out
+		anim = "plead"
+		face = ask_face
 	rig.anim = anim
 	rig.gait = 0.0
 	_wait = seconds

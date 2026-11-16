@@ -2516,9 +2516,46 @@ func _visual_rendering_fixes() -> void:
 	check("audio bus levels raise music and ambience for Quest speakers",
 		AudioBank.BUS_DB["ambience"] == -10.0 and AudioBank.BUS_DB["music"] == -6.0)
 	g._tick_clock()
-	check("day clock and tutorial banner sit above the far north island edge without overlapping",
-		g._clock.position.z <= -Game.HALF and Launcher.TUTORIAL_HINT_POS.z <= -Game.HALF \
-		and g._clock.position.y - Launcher.TUTORIAL_HINT_POS.y >= 0.20)
+	check("day clock and tutorial banner sit one above the other on the HUD root, which is not under the board",
+		g.hud_root != null and g._clock.get_parent() == g.hud_root and not g.board.is_ancestor_of(g.hud_root) and g._clock.position.y - Launcher.TUTORIAL_HINT_POS.y >= 0.20)
+	var hud_yaw := g.hud_root.global_transform.basis.get_euler().y
+	var far0 := g.hud_root.global_position.distance_to(g.board.global_position)
+	g.board.rotation.y += deg_to_rad(90.0)
+	g.update_hud_root()
+	var yaw_kept := is_equal_approx(g.hud_root.global_transform.basis.get_euler().y, hud_yaw)
+	var dist_kept := g.hud_root.global_position.distance_to(g.board.global_position) >= Game.HALF * g.board.scale.x
+	check("turning the table does not turn the day clock, which stays behind the table", yaw_kept and dist_kept)
+	g.board.global_position += Vector3(0.3, 0, 0.1)
+	g.board.scale = Vector3.ONE * 1.5
+	g.update_hud_root()
+	check("moving and resizing the table moves and scales the day clock with it",
+		g.hud_root.global_position.distance_to(g.board.global_position) > far0 and is_equal_approx(g.hud_root.scale.x, 1.5))
+	g.board.rotation.y = 0.0
+	g.board.scale = Vector3.ONE
+	g.board.global_position -= Vector3(0.3, 0, 0.1)
+	g.update_hud_root()
+	g.mouse_rim_begin(100.0)
+	g.mouse_rim_drag(100.0)
+	check("a plain click on a rim handle turns nothing", is_zero_approx(g.board.rotation.y))
+	g.mouse_rim_drag(160.0)
+	var y1 := g.board.rotation.y
+	g.mouse_rim_drag(220.0)
+	check("dragging the mouse on a rim handle turns the table smoothly, following the mouse",
+		is_equal_approx(y1, 60.0 * Game.MOUSE_RIM_RAD_PER_PX) and is_equal_approx(g.board.rotation.y, 2.0 * y1))
+	g.mouse_rim_drag(100.0)
+	check("dragging back returns the table", is_zero_approx(g.board.rotation.y))
+	g._mouse_rim = false
+	g.force_quests(["chimney"])
+	var kite: HelpRequest = g.requests[0]
+	var kite_v: Villager = kite.asker()
+	check("an open quest's asker acts the request out: it turns to the problem and pleads",
+		kite_v != null and kite_v.ask_face == kite.problem_point() and kite.focus_point().is_equal_approx(g.board.to_global(kite.prop.position)))
+	if kite_v != null and kite_v.rig != null:
+		kite_v.wave_on(Vector3.INF)
+		check("the asker plays the plead animation while the quest is untouched", kite_v.rig.anim == "plead")
+		kite.grab()
+		check("taking the quest up stops the act-out", kite_v.ask_face == Vector3.INF and kite_v.rig.anim != "plead")
+	g._clear_requests()
 	g.force_quests(["prayer"])
 	var prayer_v: Villager = g.requests[0].asker()
 	g.tap_villager(prayer_v)
@@ -2560,6 +2597,14 @@ func _visual_rendering_fixes() -> void:
 	g_rig.try_build("fire", Vector2i(16, 13))
 	check("building a second tower does not repeat the one-time sell-tower toast",
 		g_rig._toast.text != Game.SELL_TOWER_HINT)
+	g_rig.force_quests(["chimney"])
+	var oq: HelpRequest = g_rig.requests[0]
+	var outlined_before := oq.grab() and not oq._outlined.is_empty() and oq._outlined[0].material_overlay == HelpRequest._outline_mat
+	var first_outlined: MeshInstance3D = oq._outlined[0] if not oq._outlined.is_empty() else null
+	oq._finish()
+	var outlined_off := oq._outlined.is_empty() and (first_outlined == null or first_outlined.material_overlay == null)
+	check("quest item outline is on while an engaged quest is open and turns off when done", outlined_before and outlined_off)
+	g_rig._clear_requests()
 	g_rig.queue_free()
 	await process_frame
 
@@ -2750,6 +2795,19 @@ func _interactive_tutorial() -> void:
 	l._tutorial(0.05)
 	check("spinning the island advances to step 3 and ensures prayer quest is posted",
 		l._step == 3 and g.tutorial_spotlight == "board" and not g.requests.is_empty())
+	check("the tutorial text hangs on the HUD root, not on the board",
+		l._hint_root != null and l._hint_root.get_parent() == g.hud_root)
+	var hint_yaw0 := l._hint_root.global_transform.basis.get_euler().y
+	var hint_pos0 := l._hint_root.global_position
+	g.board.rotation.y += deg_to_rad(90.0)
+	g.board.global_position += Vector3(0.25, 0.0, 0.15)
+	g.update_hud_root()
+	check("turning and moving the table keeps tutorial text unrotated and moves it with the table",
+		is_equal_approx(l._hint_root.global_transform.basis.get_euler().y, hint_yaw0) \
+		and l._hint_root.global_position.distance_to(hint_pos0) > 0.2)
+	g.board.rotation.y -= deg_to_rad(90.0)
+	g.board.global_position -= Vector3(0.25, 0.0, 0.15)
+	g.update_hud_root()
 
 	var asker: Villager = null
 	if not g.requests.is_empty():
@@ -2759,6 +2817,44 @@ func _interactive_tutorial() -> void:
 	check("answering the first prayer increments _helped and advances to step 4",
 		g._helped > 0 and l._step == 4 and g.tutorial_spotlight == "board")
 
+	check("with no quest open, tutorial step 3 posts a fresh prayer rather than stalling",
+		l._open_quest() == null and l._ensure_open_quest() != null and l._open_quest().kind == "prayer")
+	g._clear_requests()
+	# Tutorial step 3 with another quest already open: prayer must still be posted and completing only prayer finishes step 3
+	g.force_quests(["chimney"])
+	var kite_q: HelpRequest = g.requests[0]
+	l._enter_step(3)
+	l._tutorial(0.05)
+	var step3_has_prayer := l._step3_quest != null and l._step3_quest.kind == "prayer" and g.requests.size() == 2
+	kite_q._finish()
+	g._pay_quest(kite_q)
+	l._tutorial(0.05)
+	var still_waiting_for_prayer := l._step == 3
+	if step3_has_prayer:
+		g.tap_villager(l._step3_quest.asker())
+	l._tutorial(0.05)
+	check("tutorial step 3 posts prayer even with another quest open and completes on the prayer",
+		step3_has_prayer and still_waiting_for_prayer and l._step == 4)
+	g._clear_requests()
+	# Tutorial step 3 when no VillageLife villager belongs to any house: stand-in asker spawns and can be tapped
+	var saved_homes := []
+	if g.life != null:
+		for v in g.life.villagers:
+			saved_homes.append([v, v.home])
+			v.home = 99
+	l._enter_step(3)
+	l._tutorial(0.05)
+	var standin: Node3D = l._step3_quest.asker() if l._step3_quest != null else null
+	var standin_ok := standin != null and standin.is_visible_in_tree() and l._step3_quest.kind == "prayer"
+	var found_standin := g._find_prayer_asker(standin.global_position + Vector3(0, 0.035, 0), Vector3.ZERO, 0.05) == standin if standin_ok else false
+	if standin_ok:
+		g.tap_villager(standin)
+	l._tutorial(0.05)
+	check("tutorial step 3 falls back to a tappable stand-in villager when a house has no villager",
+		standin_ok and found_standin and l._step == 4)
+	for pair in saved_homes:
+		pair[0].home = pair[1]
+	g._clear_requests()
 	if asker != null:
 		g.tap_villager(asker)
 	l._tutorial(0.05)

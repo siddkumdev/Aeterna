@@ -55,6 +55,8 @@ var _field: MeshInstance3D
 var _lamps: Array[Node3D] = []
 var _lit: Array[bool] = []
 var _ghost: Node3D
+var _outlined: Array[MeshInstance3D] = []
+static var _outline_mat: ShaderMaterial
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -109,11 +111,13 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 			_prop_mote.position = Vector3(0, ModelUtil.bounds(prop).end.y + 0.008, 0)
 	if game.life != null:
 		_helper = game.life.help_wanted(house, stand)  # one of the house's own people walks over and waves
-	else:
+	if _helper == null:
 		_villager = _stand_in_villager(house)
 		add_child(_villager)
 		_villager.position = stand
 		_villager.rotation.y = h.rotation.y
+	elif not _helper.visible or _helper.state == "inside" or _helper.state == "wait_out" or _helper.state == "enter":
+		_helper.put(stand, "wave", 3.0, problem_point())
 	_mote = _make_mote(0.008)
 	var who := asker()
 	if who:
@@ -123,6 +127,11 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 		add_child(_mote)
 		_mote.position = h.position + Vector3(0, ModelUtil.bounds(h.get_child(0)).end.y + 0.02, 0)
 	_say("before")
+	if _helper:  # it acts the request out: hops, waves both arms, turns to the problem and points, every couple of seconds
+		_helper.ask_face = problem_point()
+		if _helper.state == "stay" and _helper.rig and _helper.rig.anim == "wave":
+			_helper.wave_on(Vector3.INF)
+	_start_outline()
 	if game.with_rig and not shown_kinds.has(kind):
 		shown_kinds[kind] = true
 		_show_ghost()
@@ -130,6 +139,70 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 
 func asker() -> Node3D:
 	return _helper if _helper else _villager
+
+
+func problem_point() -> Vector3:
+	## Board-local spot the asker turns to and points at: the thing that needs doing.
+	match kind:
+		"warm":
+			return game.houses[house].position
+		"lights":
+			return _lamps[0].position if not _lamps.is_empty() else game.houses[house].position
+		"prayer":
+			return Vector3.ZERO  # the statue
+		_:
+			return prop.position if prop else game.houses[house].position
+
+
+func focus_point() -> Vector3:
+	## World spot to point the player at (the tutorial ring): the quest's item, the asker for a prayer.
+	var who := asker()
+	if kind == "prayer" and who:
+		return who.global_position
+	return game.board.to_global(problem_point())
+
+
+func engage() -> void:
+	## The player took the request on (grabbed, held a hand over it, lit a lantern): the asker stops acting it out.
+	if _helper:
+		_helper.stop_asking()
+
+
+func _start_outline() -> void:
+	## A warm pulsing outline on the quest's item (shader quest_outline: one extra pass per mesh) until it is done.
+	if not game.with_rig:
+		return
+	if _outline_mat == null:
+		_outline_mat = ShaderMaterial.new()
+		_outline_mat.shader = load("res://shaders/quest_outline.gdshader")
+	var roots: Array[Node] = []
+	match kind:
+		"warm":
+			roots.append(game.houses[house].get_child(0))
+		"lights":
+			roots.append_array(_lamps)
+		"prayer":
+			if asker():
+				roots.append(asker())
+		_:
+			if prop:
+				roots.append(prop)
+	for r in roots:
+		for n in ModelUtil.walk(r):
+			if n is MeshInstance3D and not (_mote and _mote.is_ancestor_of(n)) and not (_prop_mote and _prop_mote.is_ancestor_of(n)):
+				n.material_overlay = _outline_mat
+				_outlined.append(n)
+
+
+func _exit_tree() -> void:
+	_stop_outline()
+
+
+func _stop_outline() -> void:
+	for m in _outlined:
+		if is_instance_valid(m):
+			m.material_overlay = null
+	_outlined.clear()
 
 
 func payout() -> int:
@@ -160,6 +233,7 @@ func grab() -> bool:
 		return false
 	held = true
 	_drop_ghost()
+	engage()
 	return true
 
 
@@ -232,6 +306,7 @@ func warm_step(delta: float, hand_over: bool) -> bool:
 		_mote.scale = Vector3.ONE * (1.0 + 2.0 * progress / WARM_HOLD)
 	if hand_over:
 		_drop_ghost()
+		engage()
 	if progress < WARM_HOLD:
 		return false
 	_finish()
@@ -248,6 +323,7 @@ func touch(world: Vector3, reach: float) -> bool:
 			progress += 1.0
 			_dim(_lamps[i], false)
 			_drop_ghost()
+			engage()
 			if game.with_rig:
 				VfxKit.burst(game.shots_root, _lamps[i].global_position + Vector3(0, 0.015, 0), GLOW, Color("F6A45D"), 8, 0.03, 0.6, 0.004, 0.03)
 				game.snd("pinch")
@@ -288,6 +364,7 @@ func dodge(footprint: Array[Vector2i]) -> void:
 func _finish() -> void:
 	done = true
 	_drop_ghost()
+	_stop_outline()
 	for m in [_mote, _prop_mote]:
 		if m:
 			m.visible = false
@@ -407,13 +484,12 @@ static func _make_kite() -> Node3D:
 	## STAND-IN (to model later): a pink diamond kite with a red tail, from primitives, palette colours only.
 	var k := Node3D.new()
 	var diamond := MeshInstance3D.new()
-	var q := QuadMesh.new()
-	q.size = Vector2(0.016, 0.016)
+	var q := BoxMesh.new()  # a thin closed slab (a quad would be open: the quest outline hull needs a closed mesh)
+	q.size = Vector3(0.016, 0.016, 0.0012)
 	diamond.mesh = q
 	diamond.rotation.z = PI / 4.0
 	diamond.position.y = 0.012
 	var mat := ModelUtil.flat_material(Color("EE8FA8"))  # flower_pink
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	diamond.material_override = mat
 	k.add_child(diamond)
 	for i in 3:

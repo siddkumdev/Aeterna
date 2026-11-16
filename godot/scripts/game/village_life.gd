@@ -141,6 +141,7 @@ func help_wanted(house: int, at: Vector3) -> Villager:
 func clear_claims() -> void:
 	for v in villagers:
 		v.claim = Vector3.INF
+		v.ask_face = Vector3.INF
 
 
 # ---------------------------------------------------------------- jobs
