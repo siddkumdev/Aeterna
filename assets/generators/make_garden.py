@@ -196,6 +196,50 @@ def patch_D():   # round bed ringed with stones: wedge crops around a centre mar
 
 VARIANTS = {"A": (patch_A, weed_A), "B": (patch_B, weed_B), "C": (patch_C, weed_C), "D": (patch_D, weed_D)}
 
+WEED_SCALE = 1.6   # variant A weed 25 mm tall -> 40 mm: a pinchable handle next to the 100 mm bed
+
+
+def grow(parts, k):
+    for o in parts:
+        for v in o.data.vertices:
+            v.co *= k
+    qk.bpy.context.view_layer.update()   # refresh .dimensions for the bevel decision
+    return parts
+
+
+def build_final():
+    """Variant A. Two exports: ew_village_garden_v01 (raised bed, 2 x 2 cells, origin at its centre) and ew_village_garden_weed_v01
+    (one dandelion weed with root clump, origin at the base centre; Godot spawns several in the bed). garden.blend = bed root +
+    __weed part standing beside it, PREVIEW ONLY, not exported."""
+    bc = qk.bc
+    bc.clear_scene()
+    bed = bc.assemble("ew_village_garden_v01", [("", patch_A(), (0, 0, 0), None)])
+    bed["ew_footprint"], bed["ew_front"], bed["ew_place"] = "2x2", "-Y", "field_edge"
+    bc.save_blend(bed, "garden_bed")
+    print("EXPORT", bc.export_glb(bed, "village"), qk.tris(bed), "tris", ["%.1f" % (d * 1000) for d in bed.dimensions])
+    bc.clear_scene()
+    wd = bc.assemble("ew_village_garden_weed_v01", [("", grow(weed_A(0.0, 0.0), WEED_SCALE), (0, 0, 0), None)], bevel_min=0.0015)
+    wd["ew_footprint"], wd["ew_front"], wd["ew_place"] = "1x1", "-Y", "free"
+    bc.save_blend(wd, "garden_weed")
+    print("EXPORT", bc.export_glb(wd, "village"), qk.tris(wd), "tris", ["%.1f" % (d * 1000) for d in wd.dimensions])
+    bc.clear_scene()
+    wx = 0.075
+    root = bc.assemble("ew_village_garden_v01", [("", patch_A(), (0, 0, 0), None), ("weed", [o for o in move_x(grow(weed_A(0.0, 0.0), WEED_SCALE), wx)], (wx, 0, 0), "")])
+    root["ew_footprint"], root["ew_front"], root["ew_place"] = "2x2", "-Y", "field_edge"
+    print("PREVIEW", bc.save_blend(root, "garden"), sum(qk.tris(o) for o in [root] + list(root.children)))
+
+
+def move_x(parts, dx):
+    for o in parts:
+        for v in o.data.vertices:
+            v.co.x += dx
+    return parts
+
+
+if __name__ == "__main__" and "FINAL" in sys.argv:
+    build_final()
+    sys.exit(0)
+
 if __name__ == "__main__":
     qk.bc.clear_scene()
     L = qk.letter_arg()

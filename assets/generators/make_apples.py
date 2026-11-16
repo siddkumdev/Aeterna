@@ -138,10 +138,35 @@ def make(letter, y_off=0.0, ver="v01"):
     return bc.assemble(name, [("", ap, (0, y_off * K, 0), None), ("tree", tr, (TREE_X * K, y_off * K, 0), "")], bevel_min=0.0015)
 
 
+LOOSE_SCALE = 2.0   # Siddharth 2026-11-16, variant A: the loose apple must be pickable, so it is bigger than the ones on the tree (r 4.4 -> 8.8 mm)
+
+
+def build_final():
+    """Variant A. Two exports: ew_village_apple_v01 (the loose, pickable apple) and ew_village_apple_tree_v01 (round oak with 7 red apples,
+    origin at the trunk base). apples.blend = apple root + __tree part, PREVIEW ONLY, not exported."""
+    bc.clear_scene()
+    ap = bc.assemble("ew_village_apple_v01", [("", apple("A", 0.0, 0.0, 0.0, LOOSE_SCALE), (0, 0, 0), None)], bevel_min=0.0015)
+    ap["ew_footprint"], ap["ew_front"], ap["ew_place"] = "1x1", "-Y", "free"
+    bc.save_blend(ap, "apples_apple")
+    print("EXPORT", bc.export_glb(ap, "village"), tris(ap), "tris")
+    bc.clear_scene()
+    tr = bc.assemble("ew_village_apple_tree_v01", [("", tree_parts("A", 0.0, 0.0), (0, 0, 0), None)], bevel_min=0.0015)
+    tr["ew_footprint"], tr["ew_front"], tr["ew_place"] = "1x1", "-Y", "free"
+    bc.save_blend(tr, "apples_tree")
+    print("EXPORT", bc.export_glb(tr, "village"), tris(tr), "tris", ["%.1f" % (d * 1000) for d in tr.dimensions])
+    bc.clear_scene()
+    root = bc.assemble("ew_village_apple_v01", [("", apple("A", 0.0, 0.0, 0.0, LOOSE_SCALE), (0, 0, 0), None),
+                                                  ("tree", tree_parts("A", TREE_X, 0.0), (TREE_X * K, 0, 0), "")], bevel_min=0.0015)
+    root["ew_footprint"], root["ew_front"], root["ew_place"] = "1x1", "-Y", "free"
+    print("PREVIEW", bc.save_blend(root, "apples"))
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["A"]
     bc.clear_scene()
-    if args[0] == "SCALE":
+    if args[0] == "FINAL":
+        build_final()
+    elif args[0] == "SCALE":
         import prop_scale_ref as sr
         for i, L in enumerate(VARIANTS):   # the four loose apples in a row, tree A behind them, then the references
             bc.assemble("ew_village_apples_%s_v01" % L, [("", apple(L, i * 14.0, 0.0), (0, 0, 0), None)], bevel_min=0.0015)

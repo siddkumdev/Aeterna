@@ -214,7 +214,7 @@ def tris(o):
 
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["A"]
-    L = args[0] if args[0] in VARIANTS else "A"
+    L = "A" if args[0] == "FINAL" else (args[0] if args[0] in VARIANTS else "A")
     bc.clear_scene()
     groups = VARIANTS[L][1]()
     root = bc.assemble("ew_village_cat_v01", groups, bevel_min=0.004)
@@ -235,4 +235,8 @@ if __name__ == "__main__":
     for c in [root] + list(root.children):
         if c.type == "MESH":
             print("  %s: %d tris" % (c.name, tris(c)))
-    print("BLEND", bc.save_blend(root, "cat_" + L))
+    if "FINAL" in sys.argv:   # variant A as the real asset: blend `cat` (not cat_A), exported to assets/export/village
+        print("BLEND", bc.save_blend(root, "cat"))
+        print("EXPORT", bc.export_glb(root, "village"))
+    else:
+        print("BLEND", bc.save_blend(root, "cat_" + L))

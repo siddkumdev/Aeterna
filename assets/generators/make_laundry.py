@@ -210,10 +210,56 @@ def make(letter, x_off=0.0, y_off=0.0, ver="v01"):
     return root
 
 
+FINAL_SCALE = 2.4   # Siddharth 2026-11-16: variant A, garments looked small at board scale; x2.4 makes them about 1 cell (shirt 48 mm wide)
+FINAL = (("shirt", shirt_A, "shirt"), ("sock", sock_A, "sock"), ("towel", sheet_A, "towel"))
+
+
+def grow(parts, s):
+    for o in parts:
+        for v in o.data.vertices:
+            v.co *= s
+            v.co.z *= 1.3   # a little loft: edge-on read and a pinch handle (also passes the Godot min-height check)
+    bpy.context.view_layer.update()   # refresh .dimensions, which bevel_min reads
+    return parts
+
+
+def tag(root):
+    root["ew_footprint"], root["ew_front"], root["ew_place"] = "1x1", "-Y", "free"
+    return root
+
+
+def build_final():
+    """Variant A, three separate pickable assets (each its own glb, origin at the garment centre on the ground):
+    ew_village_laundry_shirt_v01, _sock_v01, _towel_v01. Also laundry.blend: all three in one scene (shirt root + __sock, __towel
+    parts), PREVIEW ONLY, not exported."""
+    out = {}
+    for key, fn, _ in FINAL:
+        bc.clear_scene()
+        root = tag(bc.assemble("ew_village_laundry_%s_v01" % key, [("", grow(fn(), FINAL_SCALE), (0, 0, 0), None)], bevel_min=0.00135 * FINAL_SCALE))
+        out[key] = tris(root)
+        bc.save_blend(root, "laundry_" + key)
+        print("EXPORT", bc.export_glb(root, "village"), tris(root), "tris", ["%.1f" % (d * 1000) for d in root.dimensions])
+    bc.clear_scene()
+    groups = []
+    for (key, fn, _), dx in zip(FINAL, LAYOUT):
+        dx *= 2.0   # mm between garment centres in the preview
+        parts = grow(fn(), FINAL_SCALE)
+        for o in parts:
+            for v in o.data.vertices:
+                v.co.x += dx * K
+        groups.append((key, parts, (dx * K, 0, 0)))
+    name = "ew_village_laundry_v01"
+    root = tag(bc.assemble(name, [("", groups[0][1], (0, 0, 0), None)] + [(g[0], g[1], g[2], "") for g in groups[1:]], bevel_min=0.00135 * FINAL_SCALE))
+    print("PREVIEW", bc.save_blend(root, "laundry"), sum(tris(o) for o in [root] + list(root.children)))
+    print("LAUNDRY FINAL tris", out)
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["A"]
     bc.clear_scene()
-    if args[0] == "SCALE":
+    if args[0] == "FINAL":
+        build_final()
+    elif args[0] == "SCALE":
         import prop_scale_ref as sr
         for i, L in enumerate(VARIANTS):
             make(L, x_off=0.0, y_off=-i * 24.0, ver="v%02d" % (i + 1)).name = "ew_village_laundry_%s_v01" % L
