@@ -99,6 +99,13 @@ Change column (what happened to the tracker item):
 | V17 | P0 | model | Trust token and collect animation | Heart or star flying into the meter. MODEL BUILT 2026-10-21: ew_village_trust_coin_v03 (164 tris, gold coin with blue heart), APPROVED by Siddharth 2026-10-21 (red heart v01 superseded); the collect animation is Godot work. | <200 | KEEP |
 | V18 | | ui | Dialogue bubble mesh | MERGED into U06. | | REMOVED |
 | V19 | P2 | ui | Emote set | Heart, ?, !, zzz. | | KEEP |
+| V20 | P1 | model | Help request: laundry line | Quest A (Siddharth 2026-11-16): pick 3 garments off the grass, pinch them back on the clothesline. Variant A picked. BUILT 2026-11-16: ew_village_laundry_shirt/sock/towel_v01 (220/176/176 tris), awaiting approval. | 800 | EDIT |
+| V21 | P1 | model | Help request: apple tree | Quest D: shake the tree, carry 3 apples to the basket. Variant A picked. BUILT 2026-11-16: ew_village_apple_tree_v01 (584) + ew_village_apple_v01 (112), awaiting approval. | 800 | EDIT |
+| V22 | P1 | model | Help request: sleepy cat | Quest E: pinch the cat off a roof, set it by its owner. Chunky ginger cat, variant A picked. BUILT 2026-11-16: ew_village_cat_v01 (788, parts head/tail/leg_l/leg_r), awaiting approval. Open: size (21 mm, under half a cell). | 800 | EDIT |
+| V23 | P1 | model | Help request: weed the garden | Quest F: pull 4 weeds from a vegetable patch. Variant A picked. BUILT 2026-11-16: ew_village_garden_v01 (580) + ew_village_garden_weed_v01 (118), awaiting approval. | 800 | EDIT |
+| V24 | P1 | model | Help request: supper bell | Quest G: pull the rope to ring 3 times. Variant C picked. BUILT 2026-11-16: ew_village_house_bell_v01 (340, parts bell/rope, __ring_anchor), awaiting approval. | 800 | EDIT |
+| V25 | P1 | model | Help request: firewood | Quest H: carry 3 logs from the woodpile to the house. Variant A picked. BUILT 2026-11-16: ew_village_firewood_v01 (408) + ew_village_firewood_log_v01 (44), awaiting approval. | 800 | EDIT |
+| V26 | P1 | model | Help request: lost letter | Quest I: catch a fluttering letter, drop it in the postbox. Wooden postbox, variant B picked. BUILT 2026-11-16: ew_village_postbox_v01 (200) + ew_village_letter_v01 (52), awaiting approval. | 800 | EDIT |
 
 ## D Defense: towers, huts, troops
 Roster changed: 4 towers plus the hut, no tiers.
