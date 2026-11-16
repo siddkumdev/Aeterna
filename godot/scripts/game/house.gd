@@ -22,6 +22,10 @@ var _smoke_at: Marker3D
 var _dust_at: Marker3D
 var _smoke_t := 0.0
 var _hurt_t := 0.0
+var _glow: MeshInstance3D
+var _glow_t := 0.0
+
+const GLOW_TIME := 0.7
 
 var _parts := {}  # part -> MeshInstance3D
 var _home := {}  # part -> Transform3D (standing pose)
@@ -73,7 +77,22 @@ func _build_bar(height: float) -> void:
 	_bar.visible = false
 
 
+func glow_pulse() -> void:
+	## A kill spark arrived: the house glows softly for a moment (looks only).
+	if _glow == null:
+		_glow = VfxKit.halo(self, 0.1, Color(VfxKit.FIRE_ORANGE, 0.0))
+		_glow.position = Vector3(0, 0.045, 0)
+	_glow.visible = true
+	_glow_t = GLOW_TIME
+
+
 func _process(delta: float) -> void:
+	if _glow_t > 0.0:
+		_glow_t = maxf(0.0, _glow_t - delta)
+		var a := sin(PI * (1.0 - _glow_t / GLOW_TIME))
+		VfxKit.set_halo(_glow, 0.1 + 0.03 * a, Color(VfxKit.FIRE_ORANGE, 0.45 * a))
+		if _glow_t <= 0.0:
+			_glow.visible = false
 	if not fx or is_shuttered:
 		return
 	_smoke_t -= delta

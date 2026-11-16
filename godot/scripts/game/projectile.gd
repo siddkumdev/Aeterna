@@ -156,7 +156,11 @@ func _hit_enemy(e: Enemy, mult := 1.0) -> void:
 	if mods.get("slow", false):
 		e.slow(0.7, 2.0)  # Heavy Bolts Legendary: 30% slower for 2 s
 	var was_alive: bool = e.alive
-	e.take_damage(dmg)
+	var weight := 0.0  # hit juice only (freeze, squash, push by tower): the damage above is unchanged
+	if is_instance_valid(source):
+		weight = Enemy.HIT_FREEZE.get(source.kind, 0.0)
+	var dir := _dir if kind == "pierce" else e.global_position - _from
+	e.take_damage(dmg, true, "", weight, dir)
 	if was_alive and not e.alive and is_instance_valid(source):
 		source.on_kill()
 

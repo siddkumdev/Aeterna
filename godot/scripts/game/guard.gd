@@ -76,7 +76,7 @@ func step(delta: float) -> void:
 					_cool = _cfg["attack_interval"]
 					var was_alive: bool = target.alive
 					var dmg: float = tower.guard_damage if is_instance_valid(tower) else _cfg["guard_damage"]
-					target.take_damage(dmg, true, "guard_hit")
+					target.take_damage(dmg, true, "guard_hit", Enemy.HIT_FREEZE["guard"], target.global_position - global_position)
 					if was_alive and not target.alive and is_instance_valid(tower):
 						tower.on_kill()
 					_crew.react(target.global_position)

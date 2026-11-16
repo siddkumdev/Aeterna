@@ -66,6 +66,7 @@ var towers: Array[Tower] = []
 var enemies: Array[Enemy] = []
 var shots: Array[Projectile] = []
 var shots_root: Node3D
+var kill_sparks: KillSparks  # a spark flies from each kill to the nearest house (looks only; with the rig only)
 var faith := GameConfig.START_FAITH
 var night := 0  # 0-based, within the loop; GameConfig.BOSS_NIGHT is the boss night
 var loop := 0  # 0-based; a run is GameConfig.LOOPS_PER_RUN loops
@@ -241,6 +242,10 @@ func _ready() -> void:
 	_towers_root = _child(board, "Towers")
 	_enemies_root = _child(board, "Enemies")
 	shots_root = _child(board, "Shots")
+	if with_rig:
+		kill_sparks = KillSparks.new()
+		kill_sparks.game = self
+		shots_root.add_child(kill_sparks)
 	_build_houses()
 	var dressing := VillageDresser.build(board, 11)
 	decor_cells = dressing["decor"]

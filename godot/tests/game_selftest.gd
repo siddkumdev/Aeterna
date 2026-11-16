@@ -46,6 +46,7 @@ func _initialize() -> void:
 	await _vfx()
 	await _village_life()
 	await _audio()
+	await _juice()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -2801,4 +2802,128 @@ func _interactive_tutorial() -> void:
 		built_guard and g.enemies.is_empty() and guards_idle and g.phase == Game.Phase.DAY)
 
 	l.queue_free()
+	await process_frame
+
+
+func _juice() -> void:
+	## Tower-to-enemy juice (2026-11-16): freeze, squash, push, kill spark, wind-up, hurt look. Looks only.
+	var g: Game = load("res://scripts/game/game.gd").new()
+	root.add_child(g)
+	await process_frame
+	g.faith = 900
+	g.cards = {}
+	g.start_night()
+	g._spawn_queue.clear()
+	var a := _still(g, "grunt", _at(8, 8))
+	var b := _still(g, "grunt", _at(8, 12))
+	a.take_damage(5.0)
+	b.take_damage(5.0, true, "", 0.09, Vector3(1, 0, 0))
+	check("juice: hit weight and direction change no damage", is_equal_approx(a.hp, b.hp) and a.hp < a.max_hp)
+	var pa := a.position
+	var pb := b.position
+	a.step(0.05)
+	b.step(0.05)
+	check("juice: the gameplay position is untouched by the push (same move as an un-juiced hit)",
+		(b.position - pb).is_equal_approx(a.position - pa) and b.stats["speed"] == a.stats["speed"])
+	check("juice: the body squashes and is nudged", b._body.scale.y < 1.0 and b._body.scale.x > 1.0 and b._body.position.length() > 0.0)
+	check("juice: a plain hit (spells) has no squash", a._body.scale == Vector3.ONE and a._body.position == Vector3.ZERO)
+	for _i in 4:
+		b.step(0.05)
+	check("juice: the squash springs back", b._body.scale.is_equal_approx(Vector3.ONE) and b._body.position.length() < 0.0001)
+	var e := _still(g, "grunt", _at(12, 6))
+	for _i in 6:
+		e.take_damage(1.0, true, "", 0.04, Vector3.RIGHT)
+	check("juice: a fast tower gets one freeze per 0.25 s per enemy", e.freezes == 1)
+	e._freeze_ms -= 300
+	e.take_damage(1.0, true, "", 0.04, Vector3.RIGHT)
+	check("juice: after the gap a new freeze starts", e.freezes == 2)
+	var boss := _still(g, "boss", _at(12, 16))
+	var grunt2 := _still(g, "grunt", _at(14, 16))
+	boss.take_damage(1.0, true, "", 0.06, Vector3.RIGHT)
+	grunt2.take_damage(1.0, true, "", 0.06, Vector3.RIGHT)
+	boss.step(0.01)
+	grunt2.step(0.01)
+	check("juice: a boss squashes less than a grunt but still freezes", absf(1.0 - boss._body.scale.y) < absf(1.0 - grunt2._body.scale.y) and boss.freezes == 1)
+	var hp_before := b.hp
+	var faith_before := g.faith
+	var rig := CharacterRig.new()
+	root.add_child(rig)
+	rig.setup("blightbark", "bark")
+	rig.anim = "walk"
+	rig.gait = 1.0
+	for _i in 5:
+		rig.tick(0.05)
+	rig.freeze(0.09)
+	var held := rig.model.rotation
+	rig.tick(0.03)
+	rig.tick(0.03)
+	check("juice: the rig holds its pose during a freeze", rig.model.rotation.is_equal_approx(held))
+	for _i in 4:
+		rig.tick(0.05)
+	check("juice: the rig moves again after the freeze", not rig.model.rotation.is_equal_approx(held))
+	rig.set_hurt(true)
+	check("juice: a hurt rig wears the crack overlay", rig._meshes.size() > 0 and rig._hurt_mat != null and rig._meshes[0].material_overlay == rig._hurt_mat)
+	rig.hit()
+	check("juice: the hit flash takes over the overlay", rig._meshes[0].material_overlay != rig._hurt_mat)
+	rig.tick(0.1)
+	check("juice: the hurt look returns after the flash", rig._meshes[0].material_overlay == rig._hurt_mat)
+	var h := _still(g, "grunt", _at(16, 6))
+	var spd = h.stats["speed"]
+	h.hp = h.max_hp * 0.4
+	h.step(0.05)
+	check("juice: below half HP the enemy is hurt, speed unchanged", h._hurt and h._rig != null and h._rig._hurt_on and h.stats["speed"] == spd)
+	h.hp = h.max_hp * 0.8
+	h.step(0.05)
+	check("juice: healed above half, the hurt look ends", not h._hurt)
+	# the spark pool: never more than MAX at once, and the house glows on arrival
+	var k: KillSparks = g.kill_sparks
+	check("juice: the game owns a spark pool with the rig", k != null)
+	var launched := 0
+	for _i in 20:
+		if k.spawn(_at(12, 12)):
+			launched += 1
+	check("juice: at most 8 sparks fly at once", launched == KillSparks.MAX and k.active == KillSparks.MAX)
+	var target_house := k.nearest_house(_at(12, 12))
+	k._process(KillSparks.FLIGHT * 0.5)
+	check("juice: a flying spark moves", k._spark[0].visible and k.active == KillSparks.MAX)
+	k._process(KillSparks.FLIGHT)
+	check("juice: all sparks land and the pool empties", k.active == 0 and not k._spark[0].visible)
+	check("juice: the house glows when a spark arrives", target_house._glow_t > 0.0)
+	check("juice: sparks change no faith or hp", g.faith == faith_before and b.hp == hp_before)
+	var victim := _still(g, "scout", _at(6, 6))
+	var before := k.active
+	victim.take_damage(9999.0, true, "", 0.04, Vector3.RIGHT)
+	check("juice: a kill launches a spark", k.active == before + 1)
+	rig.queue_free()
+	g.queue_free()
+	await process_frame
+	await _wind_up()
+
+
+func _wind_up() -> void:
+	## The wind-up never moves a shot: the shot count follows the cooldown rule exactly.
+	var g := await _make_game()
+	g.faith = 500
+	g.cards = {}
+	g.try_build("crossbow", Vector2i(11, 4))
+	var t: Tower = g.towers[0]
+	g.start_night()
+	g._spawn_queue.clear()
+	_still(g, "boss", _at(12, 8))
+	var cd := 0.0
+	var expect := 0
+	var crouched := false
+	var kicked := false
+	for _i in 120:
+		t.step(0.05)
+		cd = maxf(0.0, cd - 0.05)
+		if cd <= 0.0:
+			cd = t.interval
+			expect += 1
+			kicked = kicked or t._recoil > 0.0
+		if t._model.scale.y < 0.999:
+			crouched = true
+	check("wind-up: shots fire exactly on the cooldown rule", t.shots_fired == expect and expect > 3)
+	check("wind-up: the tower model crouches and kicks (visual only)", crouched and kicked)
+	g.queue_free()
 	await process_frame

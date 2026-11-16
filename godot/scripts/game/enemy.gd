@@ -30,6 +30,16 @@ const ELITE_SCALE := 0.3
 const BOSS_FORMS: Array[String] = ["eclipse_bloom_a", "eclipse_bloom_b", "eclipse_bloom_c", "eclipse_bloom_d"]  # one per Warden phase (the user, 2026-11-11: a -> b -> c -> d)
 const BOSS_SCALE := 0.6
 const MODEL_SCALE := 0.75
+# Tower-to-enemy juice (Siddharth 2026-11-16), looks only: the hit enemy's visual freezes for HIT_FREEZE[source] seconds,
+# its body squashes and is nudged away from the shot. No damage, speed or timing number is touched.
+const HIT_FREEZE := {"crossbow": 0.04, "guard": 0.04, "fire": 0.06, "airship": 0.09}
+const FREEZE_GAP_MS := 250  # one freeze per enemy per 0.25 s, so a fast tower cannot hold it still
+const SQUASH_TIME := 0.14
+const SQUASH_Y := 0.07      # per unit strength (strength = freeze / 0.06); the rig's own hit lean adds 0.1 on top
+const SQUASH_XZ := 0.05
+const PUSH := 0.003         # metres per unit strength
+const BOSS_JUICE := 0.4     # bosses are big: a smaller squash and push, the same freeze
+const HURT_BELOW := 0.5
 
 var game  # Game
 var kind := "grunt"
@@ -65,6 +75,13 @@ var _vfx: BossVfx  # the Warden's effects (scripts/vfx/boss_vfx.gd)
 var _rig: CharacterRig  # the real model and its animation (null when effects are off, or for the Warden and its crystals)
 var _mound: MeshInstance3D
 var _surface := Vector2i.ZERO  # where a Tunneler comes up
+var max_hp := 20.0
+var freezes := 0            # how many hit freezes were started (the self-test reads it)
+var _freeze_ms := -1000000
+var _jt := 0.0
+var _js := 0.0
+var _jdir := Vector3.ZERO
+var _hurt := false
 
 
 func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator) -> void:
@@ -80,6 +97,7 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 	hp = stats["hp"] * (1.0 + GameConfig.HP_RAMP_PER_NIGHT * night) * (1.0 + GameConfig.LOOP_HP_STEP * loop)
 	if stats.get("static", false):
 		hp = stats["hp"]  # crystals do not scale with the night or the loop
+	max_hp = hp
 	var s := GameConfig.SPREAD * GameConfig.CELL
 	offset = Vector3(rng.randf_range(-s, s), 0.0, rng.randf_range(-s, s))
 	match kind:
@@ -280,6 +298,9 @@ func _reroute() -> void:
 func step(delta: float) -> void:
 	if not alive:
 		return
+	if _jt > 0.0:
+		_tick_juice(delta)
+	_sync_hurt()
 	if _rig:
 		_rig.anim = "attack" if attacking or blocked_by != null else ("idle" if target_house == -1 else "walk")
 		_rig.gait = stats["speed"] * slow_factor
@@ -379,8 +400,10 @@ func _face(p: Vector3) -> void:
 		rotation.y = atan2(d.x, d.z)
 
 
-func take_damage(amount: float, flash := true, hit_sound := "") -> void:
+func take_damage(amount: float, flash := true, hit_sound := "", hit_weight := 0.0, hit_dir := Vector3.ZERO) -> void:
 	## hit_sound: the caller's own sound ("" = none): a hit sounds like the tower or spell that made it, not like the enemy.
+	## hit_weight (seconds of freeze, see HIT_FREEZE; 0 = none) and hit_dir (board-world direction of the shot) only drive the
+	## hit juice (freeze, squash, push); they never change the damage.
 	if not alive or shielded:
 		return
 	hp -= amount
@@ -393,6 +416,8 @@ func take_damage(amount: float, flash := true, hit_sound := "") -> void:
 		_flash = 0.08
 		if _rig:
 			_rig.hit()
+		if hit_weight > 0.0:
+			_juice(hit_weight, hit_dir)
 		if _vfx:
 			_vfx.hit_pulse()
 		if game != null and game.with_rig and is_inside_tree() and Time.get_ticks_msec() - _spark_ms >= 120:
@@ -404,12 +429,47 @@ func take_damage(amount: float, flash := true, hit_sound := "") -> void:
 		alive = false
 		if game != null and game.with_rig and is_inside_tree() and not is_boss and kind != "crystal":
 			VfxKit.enemy_death(get_parent(), global_position, kind, flying, height)
+			if game.kill_sparks != null:
+				game.kill_sparks.spawn(global_position + Vector3(0, height * 0.6, 0))
 		if _rig and is_inside_tree():  # the body stays behind a moment and topples
 			_rig.reparent(get_parent())
 			_rig.die()
 			_rig = null
 		died.emit(self)
 		queue_free()
+
+
+func _juice(weight: float, dir: Vector3) -> void:
+	_js = weight / 0.06 * (BOSS_JUICE if is_boss else 1.0)
+	_jt = SQUASH_TIME
+	_jdir = Vector3(dir.x, 0.0, dir.z).normalized()
+	var now := Time.get_ticks_msec()
+	if now - _freeze_ms >= FREEZE_GAP_MS:
+		_freeze_ms = now
+		freezes += 1
+		if _rig:
+			_rig.freeze(weight)
+
+
+func _tick_juice(delta: float) -> void:
+	## Squash and push on the body node (never the gameplay position), springing back over SQUASH_TIME.
+	_jt = maxf(0.0, _jt - delta)
+	var k := 0.0
+	if _jt > 0.0:
+		var u := 1.0 - _jt / SQUASH_TIME
+		k = (1.0 - u) * (1.0 - u)
+	_body.scale = Vector3(1.0 + SQUASH_XZ * _js * k, 1.0 - SQUASH_Y * _js * k, 1.0 + SQUASH_XZ * _js * k)
+	var push := _jdir * PUSH * _js * k
+	_body.position = global_transform.basis.inverse() * push if is_inside_tree() else push
+
+
+func _sync_hurt() -> void:
+	## Below half HP the enemy looks damaged (darker, cracked, limping); speed and path are unchanged.
+	var h: bool = hp > 0.0 and hp < max_hp * HURT_BELOW and not is_boss and not stats.get("static", false)
+	if h != _hurt:
+		_hurt = h
+		if _rig:
+			_rig.set_hurt(h)
 
 
 func set_form(i: int) -> void:

@@ -46,6 +46,17 @@ var last_from := Vector3.ZERO  # where the latest shot left the tower (world)
 var crew: CrewMember  # the villager manning it (a stand-in body, animated)
 var _tinted := {}  # sell mode: mesh -> its own material_override, to put back
 var aiming := false  # a target is in range this tick (the effects read it; nothing in the rules does)
+# Wind-up and recoil (Siddharth 2026-11-16), looks only: the model crouches a little as the shot comes due, then kicks back
+# away from the target and springs home. It only reads `cooldown`; fire timing is untouched.
+const WIND_TIME := 0.1
+const WIND_SQUASH := 0.04
+const WIND_PULL := 0.0015   # metres, away from the target
+const RECOIL_TIME := 0.14
+const RECOIL_PUSH := 0.004  # metres, away from the target
+const RECOIL_SQUASH := 0.03
+var _model: Node3D
+var _recoil := 0.0
+var _away := Vector3.ZERO   # board-world, flat, from the target towards this tower
 var fx: TowerFx  # this tower's visual effects, when it has them yet
 
 
@@ -98,6 +109,7 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 	position = NavGrid.footprint_centre(cell, GameConfig.TOWER_SIZE)
 	var model: Node3D = load(cfg["scene"]).instantiate()
 	add_child(model)
+	_model = model
 	_muzzle_h = ModelUtil.bounds(model).end.y * 0.8
 	var parts := ModelUtil.parts(model)
 	_turn = parts.get(cfg["turn_part"])
@@ -206,6 +218,7 @@ func step(delta: float) -> void:
 	cooldown = maxf(0.0, cooldown - delta * game.spells.haste_at(position))  # Rage rings speed it up
 	var target := _nearest([])
 	aiming = target != null
+	_tick_kick(delta, target)
 	if target == null:
 		return
 	if _turn:
@@ -214,6 +227,7 @@ func step(delta: float) -> void:
 		_turn.basis = Basis(Vector3.UP, a) * _turn_home
 	if cooldown <= 0.0:
 		cooldown = interval
+		_recoil = RECOIL_TIME
 		shots_fired += 1
 		var mods := shot_mods.duplicate()
 		mods["damage"] = damage
@@ -241,6 +255,32 @@ func step(delta: float) -> void:
 			shot.launch(from, e, cfg, reach, mods)
 			game.shots.append(shot)
 		game.snd(SHOT_SOUNDS.get(kind, ""), from)
+
+
+func _tick_kick(delta: float, target: Enemy) -> void:
+	## Wind-up (the last WIND_TIME of the cooldown) then recoil after the shot, on the model node only.
+	if _model == null:
+		return
+	if target != null:
+		var d := global_position - target.global_position
+		d.y = 0.0
+		if d.length() > 0.0001:
+			_away = d.normalized()
+	var push := 0.0
+	var squash := 0.0
+	if _recoil > 0.0:
+		_recoil = maxf(0.0, _recoil - delta)
+		var u := 1.0 - _recoil / RECOIL_TIME
+		var k := (1.0 - u) * (1.0 - u)
+		push = RECOIL_PUSH * k
+		squash = RECOIL_SQUASH * k
+	elif target != null and cooldown > 0.0 and cooldown < WIND_TIME:
+		var w := 1.0 - cooldown / WIND_TIME
+		w *= w
+		push = WIND_PULL * w
+		squash = WIND_SQUASH * w
+	_model.scale = Vector3(1.0 + squash * 0.6, 1.0 - squash, 1.0 + squash * 0.6)
+	_model.position = global_transform.basis.inverse() * (_away * push) if is_inside_tree() else _away * push
 
 
 func voice() -> String:

@@ -34,6 +34,10 @@ var _rise_rate := 0.0
 var _dying := -1.0
 var _flash := 0.0
 var _misty := false
+var _frozen := 0.0   # hit freeze: the pose is held for this many seconds (looks only)
+var _hurt_on := false
+var _hurt_mat: ShaderMaterial
+const HURT_SHADER := preload("res://shaders/enemy_hurt.gdshader")
 # this frame's pose
 var _al := Vector3.ZERO
 var _ar := Vector3.ZERO
@@ -102,6 +106,34 @@ func hit() -> void:
 	_overlay(_flash_material())
 
 
+func freeze(seconds: float) -> void:
+	## Hit freeze: holds the current pose for a few frames. The owner keeps moving; only this visual stops.
+	if _dying < 0.0:
+		_frozen = maxf(_frozen, seconds)
+
+
+func set_hurt(on: bool) -> void:
+	## Below half HP: a darker body with ink cracks and a limping gait. The overlay returns after each hit flash.
+	_hurt_on = on
+	if on and _hurt_mat == null:
+		_hurt_mat = ShaderMaterial.new()
+		_hurt_mat.shader = HURT_SHADER
+		var h := 0.06
+		if model != null:
+			h = maxf(ModelUtil.bounds(model).size.y, 0.01)
+		_hurt_mat.set_shader_parameter("freq", 8.0 / h)
+		if _misty:
+			_hurt_mat.next_pass = _mist_material()
+	if _flash <= 0.0 and _dying < 0.0:
+		_overlay(_rest_overlay())
+
+
+func _rest_overlay() -> Material:
+	if _hurt_on and _hurt_mat != null:
+		return _hurt_mat
+	return _mist_material() if _misty else null
+
+
 func set_misty() -> void:
 	## The Fog variant: the Grunt under a pale veil (decided: a tint, no model of its own).
 	_misty = true
@@ -122,6 +154,7 @@ func sink(seconds := 0.4) -> void:
 func die() -> void:
 	## Topples and shrinks away, then frees itself (Enemy hands it to the board first).
 	_dying = 0.0
+	_frozen = 0.0
 	_overlay(null if not _misty else _mist_material())
 
 
@@ -154,7 +187,10 @@ func tick(delta: float) -> void:
 	if _flash > 0.0:
 		_flash -= delta
 		if _flash <= 0.0:
-			_overlay(_mist_material() if _misty else null)
+			_overlay(_rest_overlay())
+	if _frozen > 0.0:
+		_frozen -= delta
+		return  # held: the pose of the last frame stays
 	_al = Vector3.ZERO
 	_ar = Vector3.ZERO
 	_ll = Vector3.ZERO
@@ -169,6 +205,12 @@ func tick(delta: float) -> void:
 		_person(delta)
 	else:
 		_creature(delta)
+	if _hurt_on and (anim == "walk" or gait > 0.0) and _dying < 0.0:
+		var hitch := maxf(0.0, sin(_phase))  # a limp: each step drops onto one side, drags the other leg and dips
+		_body.z += 0.16 * hitch
+		_sq -= 0.05 * hitch
+		_lift *= 1.0 - 0.5 * hitch
+		_lr.x *= 0.4
 	if _hit > 0.0:
 		_hit = maxf(0.0, _hit - delta)
 		var k := sin(PI * _hit / 0.16)
