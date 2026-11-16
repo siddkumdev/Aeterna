@@ -58,13 +58,13 @@ func _initialize() -> void:
 			var c := (lo + hi) * 0.5
 			var h: House = g.houses[r.house]
 			var out := Vector3(c.x - h.position.x, 0, c.z - h.position.z)
-			var up := 0.15
-			var dist := 0.2
+			var up := 0.3
+			var dist := 0.4
 			if r.kind == "cat":  # on the roof ridge: look down at her
 				c = r._items[0].position
 				out = h.basis.z
-				up = 0.1
-				dist = 0.12
+				up = 0.25
+				dist = 0.3
 			elif r.kind == "bell":
 				c = h.position + Vector3(0, 0.05, 0) + h.basis.z * 0.03
 				out = h.basis.z

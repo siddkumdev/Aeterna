@@ -395,13 +395,14 @@ func _ensure_open_quest() -> HelpRequest:
 	if game.phase != Game.Phase.DAY:
 		return null
 	game.quest_plan = game.quest_plan.filter(func(q): return q.get("kind", "") != "prayer")
+	var open_houses: Array = game.standing_houses().filter(func(h): return not game.requests.any(func(r): return is_instance_valid(r) and r.house == h))  # never a house that already has a quest
 	var home := -1
-	for h in game.standing_houses():  # prefer a house that has a free villager to ask
+	for h in open_houses:  # prefer a house that has a free villager to ask
 		if game.life != null and game.life.villagers.any(func(v): return v.home == h and v.claim == Vector3.INF):
 			home = h
 			break
-	if home < 0 and not game.standing_houses().is_empty():
-		home = game.standing_houses()[0]  # no free villager there: a stand-in kneels by the statue instead
+	if home < 0 and not open_houses.is_empty():
+		home = open_houses[0]  # no free villager there: a stand-in kneels by the statue instead
 	return game._post_quest("prayer", home) if home >= 0 else null
 
 

@@ -309,6 +309,7 @@ func _child(parent: Node, n: String) -> Node3D:
 func new_run(rng_seed: int) -> void:
 	run_serial += 1
 	run_seed = rng_seed
+	_quest_deck.clear()  # a new run deals its quests from a fresh deck
 	loop = 0
 	cards = {}
 	offers = []
@@ -696,6 +697,7 @@ func _post_quest(kind: String, house: int) -> HelpRequest:
 	_requests_root.add_child(r)
 	r.setup(kind, house, _lantern_spot(house, _quest_rng) if kind == "lantern" else Vector3.ZERO)
 	requests.append(r)
+	_refresh_clearings()
 	if with_rig and not asleep:
 		last_message = "New quest: %s" % GameConfig.REQUESTS[kind]["name"]
 		_refresh_ui()
@@ -795,12 +797,24 @@ func _lantern_spot(house: int, rng: RandomNumberGenerator) -> Vector3:
 	return centre + Vector3(0, 0, 3.0 * GameConfig.CELL)
 
 
+func _refresh_clearings() -> void:
+	## The grass is cleared round the new quests' scenery and loose items (cosmetic).
+	if grass == null:
+		return
+	var pts: Array[Vector3] = []
+	for r in requests:
+		if is_instance_valid(r) and not r.is_queued_for_deletion():
+			pts.append_array(r.clear_points())
+	grass.set_clearings(pts, HelpRequest.CLEAR_RADIUS)
+
+
 func _clear_requests() -> void:
 	_held_req = null
 	_held_req_hand = null
 	for r in requests:
 		r.queue_free()
 	requests.clear()
+	_refresh_clearings()
 	for h in houses:
 		h.chimney_blocked = false
 	if life:
@@ -1996,7 +2010,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				last_message = "Walking: %s (G switches)." % ("stepping legs" if CharacterRig.step_legs else "hopping")
 				_refresh_ui()
 	elif event is InputEventMouseMotion and _mouse_rim:
-		mouse_rim_drag(event.position.x)
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			mouse_rim_drag(event.position.x)
+		else:
+			_mouse_rim = false  # the button came up where we did not see it
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _mouse_hand:
 		_mouse_hand.release()
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN] and _mouse_hand:

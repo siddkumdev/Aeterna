@@ -38,6 +38,9 @@ const APPLES := 3
 const WEEDS := 4
 const RINGS := 3
 const LOGS := 3
+const CLEAR_RADIUS := 0.045  # m of grass cleared round quest scenery
+const SMALL_ITEM := 0.06  # m: items whose bounds are smaller than this get a thinner quest outline
+static var _thin_mats := {}
 const WIGGLE_NEED := 1.0  # cells of side movement while holding the apple tree
 const TASK_ID := {"chimney": "kite_in_oak", "bird": "lost_lamb", "lantern": "lost_lantern", "cart": "broken_plank",
 	"rain": "rain_for_field", "warm": "sick_child", "lights": "festival_lanterns", "prayer": "answer_prayer",
@@ -109,6 +112,7 @@ var _ref_y := 0.0  # bell: the hand height when the rope was pinched
 var _pull := 0.0
 var _flutter_c := Vector3.ZERO  # letter
 var _flutter: Tween
+var _tw := {}  # node -> a falling or returning tween, killed when the item is pinched again
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -156,7 +160,7 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 		"prayer":
 			stand = Vector3(0, 0, GameConfig.CELL * 1.7).rotated(Vector3.UP, house * 1.05)  # kneels by the statue
 		"laundry", "well", "apples", "cat", "weeds", "bell", "firewood", "letter":
-			_setup_new(h, socket)
+			_setup_new(h, socket, stand)
 	if prop and not NEW_KINDS.has(kind):
 		add_child(prop)
 		prop.position = _home
@@ -251,23 +255,53 @@ func _start_outline() -> void:
 		_outline_one(r)
 
 
+func _outline_mat_for(root: Node3D) -> ShaderMaterial:
+	## The new kinds' tiny items (apples, weeds, the letter, the cat) get a thinner outline, so it traces the prop
+	## instead of covering it; everything else keeps the one shared width.
+	if not NEW_KINDS.has(kind):
+		return _outline_mat
+	var size := ModelUtil.bounds(root).size.length()
+	if size >= SMALL_ITEM:
+		return _outline_mat
+	var width := 0.008 * clampf(size / SMALL_ITEM, 0.35, 1.0)
+	var key := roundi(width * 100000.0)
+	if not _thin_mats.has(key):
+		var m := _outline_mat.duplicate() as ShaderMaterial
+		m.set_shader_parameter("width", width)
+		_thin_mats[key] = m
+	return _thin_mats[key]
+
+
 func _outline_one(root: Node) -> void:
 	if not game.with_rig:
 		return
 	if _outline_mat == null:
 		_outline_mat = ShaderMaterial.new()
 		_outline_mat.shader = load("res://shaders/quest_outline.gdshader")
+	var mat := _outline_mat_for(root) if root is Node3D else _outline_mat
 	for n in ModelUtil.walk(root):
 		if n is MeshInstance3D and not (_mote and _mote.is_ancestor_of(n)) and not (_prop_mote and _prop_mote.is_ancestor_of(n)):
-			n.material_overlay = _outline_mat
+			var ov: Material = n.material_overlay
+			if ov is StandardMaterial3D:
+				ov.next_pass = mat  # an unlit lantern keeps its dark look; the outline is drawn after it
+			else:
+				n.material_overlay = mat
 			_outlined.append(n)
+
+
+func _drop_outline(n: MeshInstance3D) -> void:
+	var ov: Material = n.material_overlay
+	if ov is StandardMaterial3D:
+		ov.next_pass = null
+	else:
+		n.material_overlay = null
 
 
 func _unoutline(root: Node) -> void:
 	## One item is in place: its outline goes, the others keep theirs.
 	for n in ModelUtil.walk(root):
 		if n is MeshInstance3D and _outlined.has(n):
-			n.material_overlay = null
+			_drop_outline(n)
 			_outlined.erase(n)
 
 
@@ -278,7 +312,7 @@ func _exit_tree() -> void:
 func _stop_outline() -> void:
 	for m in _outlined:
 		if is_instance_valid(m):
-			m.material_overlay = null
+			_drop_outline(m)
 	_outlined.clear()
 
 
@@ -450,6 +484,9 @@ func hand_over_house(world: Vector3) -> bool:
 func dodge(footprint: Array[Vector2i]) -> void:
 	## A tower was just built: a lantern, cart or lamb on or right beside its cells (a tall tower hides what is
 	## next to it from the seat) is carried to the nearest open ground. Not while someone is holding it.
+	if NEW_KINDS.has(kind):
+		_dodge_new(footprint)
+		return
 	if done or held or (kind != "lantern" and kind != "cart" and kind != "bird"):
 		return
 	var c := NavGrid.local_to_cell(prop.position)
@@ -654,16 +691,36 @@ func _anchor(h: House, suffix: String) -> Vector3:
 	return h.position
 
 
-func _free_beside(h: House, not_front := false) -> Vector3:
+func _free_beside(h: House, not_front := false, stand := Vector3.INF) -> Vector3:
 	## The first side of the house (back, right, left, front) with open ground: no house, tower or forest
 	## within a cell of it. not_front leaves out the door side (where the villagers and the door are).
 	for dir in [-h.basis.z, h.basis.x, -h.basis.x, h.basis.z]:
 		if not_front and dir == h.basis.z:
 			continue
 		var p: Vector3 = h.position + dir * GameConfig.CELL * 2.3
-		if _clear3(p):
+		if _clear3(p) and not (not_front and _crowded(p, stand)):
 			return p
 	return h.position - h.basis.z * GameConfig.CELL * 2.3
+
+
+func _crowded(p: Vector3, stand: Vector3) -> bool:
+	## Scenery spot p is within 3 cells of where the asker stands, or on another quest's scenery or items.
+	if stand.is_finite() and _flat(p, stand) < 3.0 * GameConfig.CELL:
+		return true
+	for r in game.requests:
+		if r == self:
+			continue
+		var pts: Array[Vector3] = []
+		for n in r._extras:
+			pts.append(n.position)
+		for n in r._items:
+			pts.append(n.position)
+		if r.prop:
+			pts.append(r.prop.position)
+		for q in pts:
+			if _flat(p, q) < 0.14:
+				return true
+	return false
 
 
 func _clear3(p: Vector3) -> bool:
@@ -740,6 +797,40 @@ func _extra(n: Node3D, pos: Vector3) -> Node3D:
 	return n
 
 
+func _patch(pos: Vector3, radius: float) -> void:
+	## A patch of trodden ground under a piece of quest scenery, so its foot is not lost in the grass.
+	var m := MeshInstance3D.new()
+	var c := CylinderMesh.new()
+	c.top_radius = radius
+	c.bottom_radius = radius
+	c.height = 0.0012
+	c.radial_segments = 14
+	m.mesh = c
+	m.material_override = ModelUtil.flat_material(Color("A98A72"))  # dirt_light
+	add_child(m)
+	m.position = Vector3(pos.x, 0.0015, pos.z)
+
+
+func clear_points() -> Array[Vector3]:
+	## Board-local spots where the grass is cleared (radius CLEAR_RADIUS) so the scenery and loose items read.
+	var out: Array[Vector3] = []
+	if not NEW_KINDS.has(kind):
+		return out
+	for n in _extras:
+		out.append(n.position)
+	if kind == "laundry":
+		out.append(_line_a.lerp(_line_b, 0.5))
+		for i in _items.size():
+			out.append(_homes[i])
+	elif kind == "letter":
+		out.append(_flutter_c)
+	elif kind != "cat" and kind != "bell":
+		for i in _items.size():
+			if not _placed[i]:
+				out.append(_homes[i])
+	return out
+
+
 func _register(n: Node3D) -> void:
 	## An item that can be pinched. Its grab height is kept as metadata.
 	n.set_meta("gp_y", clampf(ModelUtil.bounds(n).get_center().y, 0.006, 0.03))
@@ -770,7 +861,7 @@ func _spot(cands: Array, avoid: Vector3, min_cells: float) -> Vector3:
 	return p
 
 
-func _setup_new(h: House, socket: Vector3) -> void:
+func _setup_new(h: House, socket: Vector3, stand: Vector3) -> void:
 	var C := GameConfig.CELL
 	_yaw = Basis(Vector3.UP, h.rotation.y)
 	var ax: Vector3 = h.basis.x
@@ -778,12 +869,13 @@ func _setup_new(h: House, socket: Vector3) -> void:
 	match kind:
 		"laundry":
 			## STAND-IN (to model later): two wooden posts and a thin cream line, 2.6 cells long.
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
 			_goal = p
 			var line_y := 0.045
 			_line_a = p - ax * 0.065 + Vector3(0, line_y, 0)
 			_line_b = p + ax * 0.065 + Vector3(0, line_y, 0)
 			for e in [_line_a, _line_b]:
+				_patch(Vector3(e.x, 0, e.z), 0.015)
 				_extra(_box(Vector3(0.003, line_y + 0.004, 0.003), Color("9A6538")), Vector3(e.x, (line_y + 0.004) * 0.5, e.z))  # wood_mid
 			_extra(_box(Vector3(0.13, 0.0012, 0.0012), Color("F4E4B8")), p + Vector3(0, line_y, 0))  # wall_cream
 			var names := ["laundry_shirt_v01", "laundry_sock_v01", "laundry_towel_v01"]
@@ -794,7 +886,8 @@ func _setup_new(h: House, socket: Vector3) -> void:
 				var zmax: float = ModelUtil.bounds(g).end.z
 				g.set_meta("hang", p + ax * float(slot[i]) + Vector3(0, line_y - zmax, 0))  # hung by its top edge
 		"well":
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
+			_patch(p, 0.032)
 			_extra(_model("well_v02"), Vector3(p.x, 0, p.z))
 			_goal = Vector3(p.x, 0, p.z)
 			var cands := []
@@ -803,7 +896,7 @@ func _setup_new(h: House, socket: Vector3) -> void:
 			var b := _loose_item("bucket_v02", _spot(cands, _goal, 2.2))
 			_mote_on(b)
 		"apples":
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
 			p = Vector3(p.x, 0, p.z)
 			_tree = _extra(_model("apple_tree_v01"), p)
 			_register(_tree)
@@ -813,11 +906,14 @@ func _setup_new(h: House, socket: Vector3) -> void:
 					cands.append(d)
 			_apple_dir = cands[0] if not cands.is_empty() else ax
 			_goal = p + _apple_dir * 0.1
-			_extra(_model("basket_v02"), _goal)
+			_patch(_goal, 0.03)
+			_extra(_model("basket_v02"), _goal).scale = Vector3.ONE * 1.6  # bigger, so it reads among the grass
 		"cat":
 			var c := _model("cat_v01")
 			add_child(c)
 			c.basis = _yaw
+			if socket.is_equal_approx(h.position):  # no rubble_anchor on this house: the top of the roof, like the cloud
+				socket = h.position + Vector3(0, ModelUtil.bounds(h.get_child(0)).end.y, 0)
 			c.position = socket
 			_register(c)
 			_goal = _beside_door(h, 1.0)
@@ -826,7 +922,7 @@ func _setup_new(h: House, socket: Vector3) -> void:
 			if game.with_rig:
 				_cat_idle(c)
 		"weeds":
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
 			p = Vector3(p.x, 0, p.z)
 			_extra(_model("garden_v01"), p)
 			for i in WEEDS:
@@ -840,20 +936,25 @@ func _setup_new(h: House, socket: Vector3) -> void:
 			_bell.position = h.position + az * (wall_z - 0.001) + ax * C * 0.8 + Vector3(0, 0.012, 0)
 			var parts := ModelUtil.parts(_bell)
 			_rope = parts.get("rope")
+			if _rope == null:  # a model without the rope part: an empty stand-in at the bell's foot
+				_rope = MeshInstance3D.new()
+				_bell.add_child(_rope)
 			_rope_home = _rope.position
 			_register(_bell)
 			_homes[0] = _bell.position
 		"firewood":
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
 			p = Vector3(p.x, 0, p.z)
+			_patch(p + az * 0.02, 0.04)
 			_extra(_model("firewood_v01"), p)
 			_goal = _beside_door(h, 1.1)
 			_goal.y = 0.0
 			for i in LOGS:
 				_loose_item("firewood_log_v01", p + ax * (i - 1) * 0.024 + az * 0.046)
 		"letter":
-			var p := _free_beside(h, true)
+			var p := _free_beside(h, true, stand)
 			p = Vector3(p.x, 0, p.z)
+			_patch(p, 0.03)
 			_extra(_model("postbox_v01"), p)
 			_goal = p
 			var cands := []
@@ -897,6 +998,8 @@ func _item_grab_point(i: int) -> Vector3:
 
 
 func _rope_center() -> Vector3:
+	if _rope.mesh == null:
+		return _rope.global_position + Vector3(0, 0.02, 0)
 	return _rope.global_transform * _rope.mesh.get_aabb().get_center()
 
 
@@ -914,6 +1017,9 @@ func _grab_new(world: Vector3) -> bool:
 	if best < 0:
 		return false
 	_select(best)
+	_kill_tw(prop)
+	if kind == "bell":
+		_kill_tw(_rope)
 	var hand: Vector3 = game.board.to_local(world) if world.is_finite() else Vector3.INF
 	_off = (prop.position - hand) if hand.is_finite() else Vector3.ZERO
 	if kind == "apples" and prop == _tree:
@@ -968,14 +1074,47 @@ func _drop_apples() -> void:
 		_outline_one(a)
 		if game.with_rig and is_inside_tree():
 			a.position.y = 0.07 + 0.01 * i
-			a.create_tween().tween_property(a, "position:y", 0.0, 0.35 + 0.08 * i).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+			var tw := a.create_tween()
+			tw.tween_property(a, "position:y", 0.0, 0.35 + 0.08 * i).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+			_tw[a] = tw
 		if game.with_rig and i == 0:
 			game.snd("grab")
 
 
+func _dodge_new(footprint: Array[Vector2i]) -> void:
+	## A tower was just built on or right beside a loose item of the new kinds: it is carried to open ground,
+	## and its home with it. The cat, the bell and the weeds (in their bed) stay put.
+	if done or held or kind == "cat" or kind == "bell" or kind == "weeds":
+		return
+	for i in _items.size():
+		if _placed[i] or _items[i] == _tree:
+			continue
+		var c := NavGrid.local_to_cell(_items[i].position)
+		for f in footprint:
+			if absi(f.x - c.x) <= 1 and absi(f.y - c.y) <= 1:
+				var spot: Vector3 = game.open_ground_near(_items[i].position)
+				var shift := Vector3(spot.x - _items[i].position.x, 0, spot.z - _items[i].position.z)
+				_items[i].position += shift
+				_homes[i] += shift
+				if kind == "letter":
+					_flutter_c += shift
+				break
+	var cur := _items.find(prop)
+	if cur >= 0:
+		_home = _homes[cur]
+
+
+func _kill_tw(n: Node) -> void:
+	## A pinch stops the item's fall or return, so the tween cannot pull it out of the hand.
+	if _tw.has(n):
+		if _tw[n] is Tween:
+			(_tw[n] as Tween).kill()
+		_tw.erase(n)
+
+
 func _flutter_pos(t: float) -> Vector3:
 	## The letter's small loop: about one cell across, low in the air.
-	return _flutter_c + Vector3(cos(t) * 0.02, 0.008 + 0.004 * sin(t * 2.0), sin(t) * 0.014)
+	return _flutter_c + Vector3(cos(t) * 0.02, 0.024 + 0.005 * sin(t * 2.0), sin(t) * 0.014)
 
 
 func _flutter_step(t: float) -> void:
@@ -1097,7 +1236,9 @@ func _release_new() -> bool:
 
 func _ring_back() -> void:
 	if game.with_rig and is_inside_tree():
-		create_tween().tween_property(_rope, "position", _rope_home, 0.25).set_trans(Tween.TRANS_SINE)
+		var tw := create_tween()
+		tw.tween_property(_rope, "position", _rope_home, 0.25).set_trans(Tween.TRANS_SINE)
+		_tw[_rope] = tw
 	else:
 		_rope.position = _rope_home
 

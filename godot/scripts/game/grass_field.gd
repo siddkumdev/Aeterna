@@ -17,6 +17,7 @@ var _mat: ShaderMaterial
 var _xf: Array[Transform3D] = []
 var _cell: Array[Vector2i] = []
 var flowers: FlowerField  # the meadow flowers and clover that ride along (they hide and bend with the grass)
+var _cleared: Dictionary = {}  # tuft indices hidden by set_clearings (quest scenery)
 var _hidden: Dictionary = {}  # cells whose tufts are currently scaled to nothing
 var _gusts: Array = [null, null, null, null]  # {"start": Vector2, "dir": Vector2, "len": float, "age": float}
 var _push_buf: PackedVector4Array = PackedVector4Array()
@@ -206,6 +207,25 @@ func refresh(nav: NavGrid) -> void:
 		if now.has(c) != _hidden.has(c):
 			_mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ZERO), _xf[i].origin) if now.has(c) else _xf[i])
 	_hidden = now
+
+
+func set_clearings(points: Array, radius: float) -> void:
+	## Hide the tufts within radius (m, board-local) of any point: the grass round quest scenery. Cosmetic.
+	var now := {}
+	if not points.is_empty():
+		for i in _xf.size():
+			var o := _xf[i].origin
+			for p in points:
+				if Vector2(o.x - p.x, o.z - p.z).length() < radius:
+					now[i] = true
+					break
+	for i in _cleared:
+		if not now.has(i) and not _hidden.has(_cell[i]):
+			_mm.set_instance_transform(i, _xf[i])
+	for i in now:
+		if not _cleared.has(i):
+			_mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ZERO), _xf[i].origin))
+	_cleared = now
 
 
 func set_pushers(world_points: Array) -> void:

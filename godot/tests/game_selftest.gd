@@ -3166,7 +3166,7 @@ func _new_quests() -> void:
 	var far := 0.0
 	for k in 40:
 		far = maxf(far, HelpRequest._flat(lt._flutter_pos(k * TAU / 40.0), lt._flutter_c))
-	check("letter: it drifts in a small loop, under a cell across, low in the air", far <= C and lt._flutter_pos(0.0) != lt._flutter_pos(1.5) and lt._flutter_pos(2.0).y < 0.02)
+	check("letter: it drifts in a small loop, under a cell across, low in the air", far <= C and lt._flutter_pos(0.0) != lt._flutter_pos(1.5) and lt._flutter_pos(2.0).y < 0.035 and lt._flutter_pos(2.0).y > 0.015)
 	check("letter: it starts more than a cell from the postbox", HelpRequest._flat(lt.prop.position, lt._goal) > C)
 	g.grab_request(lt)
 	lt.move_to(lt._goal + Vector3(3.0 * C, 0.02, 0))
@@ -3174,6 +3174,22 @@ func _new_quests() -> void:
 	g.grab_request(lt)
 	lt.move_to(lt._goal + Vector3(0.5 * C, 0.02, 0))
 	check("letter: released within a cell of the postbox -> done, +15", g.release_request() and lt.done and g.faith == t0 + 65)
+	g.queue_free()
+	await process_frame
+
+	# a tower built beside a loose item of the new kinds carries it (and its home) to open ground; a new run clears the deck
+	g = await _make_game()
+	g.force_quests(["well", "firewood", "letter", "laundry"])
+	g.faith = 1000
+	var bk: HelpRequest = g.requests[0]
+	var bcell := NavGrid.local_to_cell(bk.prop.position)
+	var before := bk.prop.position
+	bk.dodge([bcell] as Array[Vector2i])  # a tower's cell right on it
+	var ncell := NavGrid.local_to_cell(bk.prop.position)
+	check("well: a tower built on the bucket carries it to open ground, home included", bk.prop.position != before and (absi(ncell.x - bcell.x) > 1 or absi(ncell.y - bcell.y) > 1) and bk._home.is_equal_approx(bk._homes[0]) and bk._home.is_equal_approx(bk.prop.position))
+	g._quest_deck = ["x"]
+	g.new_run(7)
+	check("a new run starts with a fresh quest deck", not g._quest_deck.has("x"))
 	g.queue_free()
 	await process_frame
 
@@ -3198,13 +3214,13 @@ func _new_quests() -> void:
 		await process_frame
 	gr.force_quests(["laundry"])
 	var rq: HelpRequest = gr.requests[0]
-	var covered := rq._items.all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay == HelpRequest._outline_mat))
+	var covered := rq._items.all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay is ShaderMaterial))
 	gr.grab_request(rq)
 	var first := rq.prop
 	rq.move_to(rq._line_a.lerp(rq._line_b, 0.5) + Vector3(0, 0, 0.3 * C))
 	gr.release_request()
 	var dropped := ModelUtil.walk(first).all(func(m): return not (m is MeshInstance3D) or m.material_overlay == null)
-	var others := rq._items.filter(func(n): return n != first).all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay == HelpRequest._outline_mat))
+	var others := rq._items.filter(func(n): return n != first).all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay is ShaderMaterial))
 	check("laundry: the outline covers every garment, and a hung one loses it", covered and dropped and others)
 	gr._clear_requests()
 	gr.queue_free()
