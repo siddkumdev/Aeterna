@@ -69,11 +69,11 @@ def split_half_log(w, h, L, loc, bark="wood_dark", heart="wall_cream", rz=0.0):
 
 def variant_A():
     """Neat crisscross cordwood pyramid between dark upright end-stakes on low stone skids + knotted round log."""
-    p = [nb(box("skid_l", (0.006, 0.032, 0.003), (-0.018, 0, 0.0015), "stone_dark")),
-         nb(box("skid_r", (0.006, 0.032, 0.003), (0.018, 0, 0.0015), "stone_dark"))]
+    p = [nb(box("skid_f", (0.046, 0.006, 0.0038), (0, -0.012, 0.0019), "stone_dark")),
+         nb(box("skid_b", (0.046, 0.006, 0.0038), (0, 0.012, 0.0019), "stone_dark"))]
     for sx in (-1, 1):
         for sy in (-1, 1):
-            p.append(nb(box("stake", (0.004, 0.004, 0.034), (sx * 0.025, sy * 0.012, 0.017), "wood_dark")))
+            p.append(nb(box("stake", (0.0065, 0.0065, 0.040), (sx * 0.026, sy * 0.012, 0.020), "wood_dark")))
     # 3 stacked rows of Y-facing logs (cut ends clearly face camera -Y)
     rows = [(0.0080, (-0.016, -0.008, 0.0, 0.008, 0.016)),
             (0.0162, (-0.012, -0.004, 0.004, 0.012)),
@@ -82,8 +82,8 @@ def variant_A():
         for k, xx in enumerate(xs):
             p += log_y(0.0042, 0.034, (xx, 0, zc), "wood_mid" if k % 2 == 0 else "wood_dark", "wall_cream")
     lx, ly = LOG_AT
-    lg = log_y(0.0052, 0.044, (lx, ly, 0.0052), "wood_dark", "wall_cream", rz=14)
-    lg.append(nb(cyl("knot", 0.0022, 0.0045, (lx + 0.004, ly - 0.006, 0.0082), "wood_mid", 5)))
+    lg = log_y(0.0052, 0.044, (lx, ly, 0.0052), "wood_mid", "wall_cream", rz=14)
+    lg.append(nb(cyl("knot", 0.0032, 0.0050, (lx + 0.004, ly - 0.006, 0.0082), "wood_mid", 5)))
     return p, lg
 
 
@@ -158,8 +158,39 @@ def _ground_parts(parts):
     return parts
 
 
+def build_final():
+    """Pile -> ew_village_firewood_v01 (root). Loose log -> ew_village_firewood_log_v01 (own export, origin at its base
+    centre). In the .blend the log object sits at LOG_AT for the preview only; its export is moved to 0 first."""
+    pile, lg = variant_A()
+    _ground_parts(pile)
+    _ground_parts(lg)
+    lx, ly = LOG_AT
+    for o in lg:
+        for v in o.data.vertices:
+            v.co.x -= lx
+            v.co.y -= ly
+    root = bc.assemble("ew_village_firewood_v01", [("", pile, (0, 0, 0), None)])
+    root["ew_footprint"], root["ew_front"], root["ew_place"] = "2x1", "-Y", "near_house"
+    item = bc.assemble("ew_village_firewood_log_v01", [("", lg, (0, 0, 0), None)])
+    item["ew_footprint"], item["ew_front"], item["ew_place"] = "1x1", "-Y", "pickable"
+    return root, item
+
+
 if __name__ == "__main__":
     qk.bc.clear_scene()
+    if "--" not in sys.argv:
+        root, item = build_final()
+        for o in [root] + list(root.children_recursive) + [item] + list(item.children_recursive):
+            if o.type == "MESH":
+                print(o.name, qk.tris(o), "tris")
+        print("EXPORT", bc.export_glb(root, "village"))
+        print("EXPORT", bc.export_glb(item, "village"))
+        # preview blend only: the item hangs on the root at its resting spot (exports above were made at 0)
+        item.name = item.data.name = root.name + "__log"
+        item.parent = root
+        item.location = (LOG_AT[0], LOG_AT[1], 0.0)
+        print("BLEND", bc.save_blend(root, "firewood"))
+        sys.exit(0)
     L = qk.letter_arg()
     pile, single_log = VARIANTS[L][1]()
     _ground_parts(pile)

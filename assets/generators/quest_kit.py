@@ -66,7 +66,7 @@ def tris(obj):
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 
 
-def finish(letter, short, groups, foot, place, ver="v01"):
+def finish(letter, short, groups, foot, place, ver="v01", save=True):
     """groups: [("", root_parts, (0,0,0), None), ("weed", parts, pivot, ""), ...] -> assemble, tag, save, print."""
     name = "ew_village_%s_%s" % (short, ver)
     root = bc.assemble(name, groups)
@@ -80,7 +80,8 @@ def finish(letter, short, groups, foot, place, ver="v01"):
             print("  %s: %d tris, x %.1f..%.1f y %.1f..%.1f z %.1f..%.1f mm" % (
                 o.name.replace(name, "root"), tris(o), 1000 * min(w.x for w in ws), 1000 * max(w.x for w in ws),
                 1000 * min(w.y for w in ws), 1000 * max(w.y for w in ws), 1000 * min(w.z for w in ws), 1000 * max(w.z for w in ws)))
-    print("BLEND", bc.save_blend(root, "%s_%s" % (short, letter)))
+    if save:
+        print("BLEND", bc.save_blend(root, "%s_%s" % (short, letter)))
     return root
 
 

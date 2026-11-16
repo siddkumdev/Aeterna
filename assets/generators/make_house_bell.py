@@ -29,19 +29,17 @@ def bell_parts(col, cx=0.0, cy=YH, zrim=RIM, s=1.0, band=None):
     return p
 
 
-def rope_parts(top_z, bottom_z, handle, cy=YH, cx=0.0):
+def rope_parts(top_z, bottom_z, handle, cy=YH, cx=0.0, t=0.0024):
     """Rope from top_z down to the handle at bottom_z (+ handle height). Pivot = (cx, cy, top_z)."""
-    p = [rod((cx, cy, top_z), (cx, cy, bottom_z + 0.0062), 0.0024, "path_dirt"),
+    p = [rod((cx, cy, top_z), (cx, cy, bottom_z + 0.0062), t, "path_dirt"),
          lump(0.0026, (cx, cy, top_z - 0.0100), "path_dirt", (1, 1, 0.7)),
          lump(0.0026, (cx, cy, top_z - 0.0200), "path_dirt", (1, 1, 0.7))]
     if handle == "toggle":
         p.append(nb(cyl("toggle", 0.0030, 0.0070, (cx, cy, bottom_z), "wood_light", 6)))
     elif handle == "ball":
         p.append(lump(0.0042, (cx, cy, bottom_z + 0.0040), "wood_light", (1, 1, 1.1)))
-    elif handle == "ring":
-        p.append(nb(cyl("ring", 0.0040, 0.0020, (cx, cy, bottom_z + 0.0010), "stone_dark", 8)))
-        p.append(nb(cyl("ring_hole", 0.0024, 0.0022, (cx, cy, bottom_z + 0.0010), "wood_dark", 8)))
-        p.append(nb(cyl("grip", 0.0034, 0.0050, (cx, cy, bottom_z + 0.0030), "wood_light", 6)))
+    elif handle == "ring":   # solid chunky grip (no ring hole: too small to read)
+        p.append(nb(cyl("grip", 0.0050, 0.0090, (cx, cy, bottom_z), "wood_light", 6)))
     return p
 
 
@@ -80,9 +78,9 @@ def variant_C():   # ship's bell: squat round copper bell on an iron hook-shaped
     # curved iron arm: out, up and over (a shepherd's hook) built from rods
     pts = [(0, -0.0020, 0.0420), (0, -0.0055, 0.0520), (0, -0.0100, 0.0580), (0, -0.0150, 0.0600)]
     for a, b in zip(pts, pts[1:]):
-        root.append(rod(a, b, 0.0042, "stone_dark"))
-    root.append(lump(0.0036, (0, -0.0158, 0.0594), "stone_dark"))
-    root.append(nb(cyl("flange", 0.0070, 0.0014, (0, -0.0008, 0.0420), "stone_dark", 6)))
+        root.append(rod(a, b, 0.0034, "stone_dark"))
+    root.append(lump(0.0030, (0, -0.0158, 0.0594), "stone_dark"))
+    root.append(nb(qk.tcyl("flange", 0.0070, 0.0014, (0, -0.0047, 0.0420), "stone_dark", 6, 90, 0, 0)))
     k = 1.35
     r0 = ZH - 0.0176 * k   # rim height so the knob touches the hook
     p = [nb(cyl("lip", 0.0100 * k, 0.0016 * k, (0, YH, r0 + 0.0030 * k), "shell_copper", 8)),
@@ -93,7 +91,7 @@ def variant_C():   # ship's bell: squat round copper bell on an iron hook-shaped
          nb(cyl("belt", 0.0092 * k, 0.0014 * k, (0, YH, r0 + 0.0070 * k), "shell_gold", 8, 0.0088 * k)),
          nb(cyl("skirt", 0.0104 * k, 0.0014 * k, (0, YH, r0 + 0.0014 * k), "shell_gold", 8, 0.0100 * k))]
     bell = p
-    rope = rope_parts(r0 + 0.0030 * k - 0.0030, 0.0100, "ring")
+    rope = rope_parts(r0 + 0.0030 * k - 0.0030, 0.0100, "ring", t=0.0036)
     return root, bell, rope
 
 
@@ -122,7 +120,8 @@ VARIANTS = {"A": variant_A, "B": variant_B, "C": variant_C, "D": variant_D}
 
 if __name__ == "__main__":
     qk.bc.clear_scene()
-    L = qk.letter_arg()
+    L = qk.letter_arg() if "--" in sys.argv else "C"
+    FINAL = "--" not in sys.argv
     res = VARIANTS[L]()
     root, bell, rope = res[:3]
     hang = res[3] if len(res) > 3 else (0.0, YH, ZH)
@@ -130,4 +129,10 @@ if __name__ == "__main__":
     zs = [v.co.z for o in rope for v in o.data.vertices]
     ry = rope[0].data.vertices[0].co.y
     groups = [("", root, (0, 0, 0), None), ("bell", bell, hang, ""), ("rope", rope, (0.0, ry, max(zs) - 0.0004), "")]
-    r = qk.finish(L, "house_bell", groups, "1x1", "wall_side")
+    if FINAL:   # build_final: variant C as ew_village_house_bell_v01, exported
+        r = qk.finish("final", "house_bell", groups, "1x1", "wall_side", save=False)
+        qk.bc.anchor(r, "ring_anchor", (0.0, YH, ZH - 0.0176 * 1.35), "bell", size=0.008)
+        print("BLEND", qk.bc.save_blend(r, "house_bell"))
+        print("EXPORT", qk.bc.export_glb(r, "village"))
+    else:
+        r = qk.finish(L, "house_bell", groups, "1x1", "wall_side")

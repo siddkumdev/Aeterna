@@ -69,18 +69,18 @@ def variant_B():
     """Barrel-top arched wooden rural mailbox with dark iron straps, braced post, open drop flap."""
     p = [
         nb(box("foot_x", (0.026, 0.010, 0.006), (0, 0, 0.003), "wood_dark")),
-        nb(box("foot_y", (0.010, 0.026, 0.006), (0, 0, 0.003), "wood_dark")),
+        nb(box("foot_y", (0.010, 0.026, 0.0056), (0, 0, 0.0028), "wood_dark")),
         box("post", (0.0095, 0.0095, 0.072), (0, 0, 0.038), "wood_mid"),
         box("shelf", (0.028, 0.038, 0.004), (0, 0, 0.072), "wood_dark"),
         nb(box("lower", (0.026, 0.036, 0.016), (0, 0, 0.082), "wood_light")),
         # arched barrel roof lying along Y
         nb(vp.tcyl("barrel", 0.0135, 0.037, (0, 0, 0.090), "wood_mid", 6, rx=90)),
-        nb(vp.tcyl("strap_f", 0.0142, 0.003, (0, -0.011, 0.090), "stone_dark", 6, rx=90)),
-        nb(vp.tcyl("strap_b", 0.0142, 0.003, (0, 0.011, 0.090), "stone_dark", 6, rx=90)),
+        nb(vp.tcyl("strap_f", 0.0142, 0.004, (0, -0.011, 0.090), "stone_dark", 6, rx=90)),
+        nb(vp.tcyl("strap_b", 0.0142, 0.004, (0, 0.011, 0.090), "stone_dark", 6, rx=90)),
         nb(box("slot_frame", (0.022, 0.002, 0.012), (0, -0.0185, 0.085), "wood_dark")),
         nb(box("slot", (0.018, 0.0022, 0.0052), (0, -0.0196, 0.086), "ink")),
-        nb(vp.tbox("flap_lip", (0.020, 0.006, 0.0024), (0, -0.0215, 0.080), "wood_light", 22, 0, 0)),
-        nb(box("latch", (0.005, 0.003, 0.005), (0, -0.0195, 0.094), "shell_gold")),
+        nb(vp.tbox("flap_lip", (0.020, 0.006, 0.0040), (0, -0.0215, 0.080), "wood_light", 12, 0, 0)),
+        nb(box("latch", (0.006, 0.003, 0.006), (0, -0.0195, 0.094), "shell_gold")),
     ]
     return p, make_letter(*LETTER_AT, style="ribbon")
 
@@ -124,8 +124,37 @@ VARIANTS = {
     "D": ("Owl-cote postbox: teal roof, front letter ledge, lower parcel cubby + bound letter packet", variant_D),
 }
 
+def build_final():
+    """Postbox (variant B) -> ew_village_postbox_v01. Letter -> ew_village_letter_v01 (own export, origin at its base
+    centre; the .blend places it at LETTER_AT for the preview only)."""
+    box_parts, letter = variant_B()
+    lx, ly = LETTER_AT
+    for o in letter:
+        for v in o.data.vertices:
+            v.co.x -= lx
+            v.co.y -= ly
+    root = qk.bc.assemble("ew_village_postbox_v01", [("", box_parts, (0, 0, 0), None)])
+    root["ew_footprint"], root["ew_front"], root["ew_place"] = "1x1", "-Y", "lane_edge"
+    item = qk.bc.assemble("ew_village_letter_v01", [("", letter, (0, 0, 0), None)])
+    item["ew_footprint"], item["ew_front"], item["ew_place"] = "1x1", "-Y", "pickable"
+    return root, item
+
+
 if __name__ == "__main__":
     qk.bc.clear_scene()
+    if "--" not in sys.argv:
+        root, item = build_final()
+        for o in [root] + list(root.children_recursive) + [item] + list(item.children_recursive):
+            if o.type == "MESH":
+                print(o.name, qk.tris(o), "tris")
+        print("EXPORT", qk.bc.export_glb(root, "village"))
+        print("EXPORT", qk.bc.export_glb(item, "village"))
+        # preview blend only: the item hangs on the root at its resting spot (exports above were made at 0)
+        item.name = item.data.name = root.name + "__letter"
+        item.parent = root
+        item.location = (LETTER_AT[0], LETTER_AT[1], 0.0)
+        print("BLEND", qk.bc.save_blend(root, "postbox"))
+        sys.exit(0)
     L = qk.letter_arg()
     box_parts, letter_parts = VARIANTS[L][1]()
     groups = [("", box_parts, (0, 0, 0), None), ("letter", letter_parts, (LETTER_AT[0], LETTER_AT[1], 0.0), "")]
