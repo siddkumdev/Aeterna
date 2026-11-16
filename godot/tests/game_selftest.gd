@@ -32,6 +32,7 @@ func _initialize() -> void:
 	await _review_fixes()
 	await _day_clock()
 	await _quests()
+	await _new_quests()
 	await _ledger()
 	await _rim()
 	await _tray_rules()
@@ -2127,11 +2128,16 @@ func _quests() -> void:
 	g.start_night()
 	g._clear_night()
 	g._end_night()
-	var day2: Array = g.quest_plan.map(func(q): return q["kind"])
+	var days: Array = day1 + g.quest_plan.map(func(q): return q["kind"])
+	for d in 2:  # 16 kinds at 4 a day: four days make one cycle
+		g.start_night()
+		g._clear_night()
+		g._end_night()
+		days.append_array(g.quest_plan.map(func(q): return q["kind"]))
 	var seen := {}
-	for k in day1 + day2:
+	for k in days:
 		seen[k] = true
-	check("two days cycle through every kind once", seen.size() == GameConfig.REQUESTS.size())
+	check("four days cycle through every kind once, none twice", days.size() == 16 and seen.size() == 16 and GameConfig.REQUESTS.size() == 16)
 	for k: String in GameConfig.REQUESTS:
 		check("quest %s has its words and its how-to" % k, StoryText.task(HelpRequest.TASK_ID[k], "before") != "" and HelpRequest.HOW[k] != "")
 
@@ -3035,4 +3041,171 @@ func _wind_up() -> void:
 	g._clear_night()
 	check("wind-up: the end of the night rests every tower", t._model.scale == t._model_scale and t._model.position == t._model_pos)
 	g.queue_free()
+	await process_frame
+
+
+func _new_quests() -> void:
+	## 2026-11-16: the eight pinch-and-carry kinds (laundry, well, apples, cat, weeds, bell, firewood, letter).
+	var C := GameConfig.CELL
+	var g := await _make_game()
+	g.force_quests(["laundry", "well", "apples", "cat"])
+	var by := {}
+	for r in g.requests:
+		by[r.kind] = r
+	var t0 := g.faith
+
+	var ln: HelpRequest = by["laundry"]
+	check("laundry: three garments on the grass and a clothesline of two posts and a line", ln._items.size() == 3 and ln._extras.size() == 3 and ln._line_a.distance_to(ln._line_b) > 2.0 * C)
+	check("laundry: nothing is on the line yet and every garment is out of reach of it", ln._items.all(func(n): return HelpRequest._seg_dist(n.position, ln._line_a, ln._line_b) > 0.8 * C))
+	g.grab_request(ln)
+	ln.move_to(ln._goal + Vector3(4.0 * C, 0.02, 0))
+	check("laundry: dropped away from the line stays on the grass and can be pinched again", not g.release_request() and not ln.done and ln.progress == 0.0 and ln.prop.position.y == 0.0 and ln.grabbable())
+	var hung := 0
+	for i in 3:
+		g.grab_request(ln)
+		var it := ln.prop
+		ln.move_to(ln._line_a.lerp(ln._line_b, 0.5) + Vector3(0, 0.0, 0.5 * C))
+		var fin := g.release_request()
+		hung += 1 if it.position.is_equal_approx(it.get_meta("hang")) else 0
+		check("laundry: garment %d hangs, the request finishes only with the third" % (i + 1), fin == (i == 2) and ln.done == (i == 2))
+	check("laundry: all three hang on the line, +20 faith", hung == 3 and g.faith == t0 + 20 and not ln.grabbable())
+
+	var wl: HelpRequest = by["well"]
+	check("well: the bucket lies at least 2 cells from the well", HelpRequest._flat(wl.prop.position, wl._goal) >= 2.0 * C - 0.001)
+	g.grab_request(wl)
+	wl.move_to(wl._goal + Vector3(3.0 * C, 0.02, 0))
+	check("well: dropped away from the well stays on the grass, not done", not g.release_request() and not wl.done and wl.prop.position.y == 0.0)
+	g.grab_request(wl)
+	wl.move_to(wl._goal + Vector3(1.0 * C, 0.02, 0))
+	check("well: released within 1.5 cells of the well -> done, +15", g.release_request() and wl.done and g.faith == t0 + 35)
+
+	var ap: HelpRequest = by["apples"]
+	check("apples: just the tree to start", ap._items.size() == 1 and ap.prop == ap._tree and not ap._shaken)
+	var base: Vector3 = ap._tree.position
+	g.grab_request(ap)
+	ap.move_to(base + Vector3(0.4 * C, 0.02, 0))
+	ap.move_to(base + Vector3(0, 0.02, 0))
+	check("apples: a small wiggle drops nothing and the tree stays rooted", not ap._shaken and ap._tree.position == base)
+	ap.move_to(base + Vector3(0.5 * C, 0.02, 0))
+	check("apples: about a cell of wiggling drops 3 apples", ap._shaken and ap._items.size() == 3 and not ap.done)
+	check("apples: letting go of the tree finishes nothing", not g.release_request() and not ap.done)
+	for i in 3:
+		g.grab_request(ap)
+		var a := ap.prop
+		ap.move_to(ap._goal + Vector3(3.0 * C, 0.02, 0))
+		if i == 0:
+			check("apples: dropped away from the basket lies on the grass, not done", not g.release_request() and a.position.y == 0.0 and not ap.done)
+			g.grab_request(ap)
+		ap.move_to(ap._goal + Vector3(0.4 * C, 0.02, 0))
+		var fin := g.release_request()
+		check("apples: apple %d in the basket, the request finishes only with the third" % (i + 1), fin == (i == 2) and ap.done == (i == 2))
+	check("apples: +20 faith", g.faith == t0 + 55)
+
+	var cat: HelpRequest = by["cat"]
+	var roof := cat.prop.position
+	check("cat: she sits on the roof, high up, with her tail and head as parts", roof.y > 0.04 and ModelUtil.parts(cat.prop).has("tail") and ModelUtil.parts(cat.prop).has("head"))
+	g.grab_request(cat)
+	cat.move_to(cat._goal + Vector3(0.5 * C, 0.1, 0))
+	check("cat: let go in the air she goes back on the roof", not g.release_request() and not cat.done and cat.prop.position == roof)
+	g.grab_request(cat)
+	cat.move_to(cat._goal + Vector3(4.0 * C, 0.0, 0))
+	check("cat: let go on the ground far from the door she goes back on the roof", not g.release_request() and cat.prop.position == roof)
+	g.grab_request(cat)
+	cat.move_to(cat._goal + Vector3(1.5 * C, 0.01, 0))
+	check("cat: set down on the ground within 2 cells of the door -> done, +15", g.release_request() and cat.done and cat.prop.position.y == 0.0 and g.faith == t0 + 70)
+	g.queue_free()
+	await process_frame
+
+	g = await _make_game()
+	g.force_quests(["weeds", "bell", "firewood", "letter"])
+	by = {}
+	for r in g.requests:
+		by[r.kind] = r
+	t0 = g.faith
+	g.log_sounds = true
+
+	var wd: HelpRequest = by["weeds"]
+	check("weeds: four weeds in the garden bed", wd._items.size() == 4 and wd._extras.size() == 1)
+	g.grab_request(wd)
+	var wh := wd.prop.position
+	wd.move_to(wh + Vector3(0, 0.5 * C, 0))
+	check("weeds: a short tug leaves it rooted", not g.release_request() and wd.prop.position == wh and wd.progress == 0.0)
+	for i in 4:
+		g.grab_request(wd)
+		wd.move_to(wd.prop.position + Vector3(0, 1.5 * C, 0))
+		var fin := g.release_request()
+		check("weeds: pull %d, the request finishes only with the fourth" % (i + 1), fin == (i == 3) and wd.progress == float(i + 1))
+	check("weeds: +20 faith", wd.done and g.faith == t0 + 20)
+
+	var bl: HelpRequest = by["bell"]
+	g.grab_request(bl)
+	var rope_y: float = g.board.to_local(bl.grab_point()).y
+	check("bell: the rope is what is pinched", bl.held and bl._rope != null)
+	bl.move_to(Vector3(0, rope_y - 0.4 * C, 0))
+	check("bell: a short pull does not ring, the rope comes back", not g.release_request() and bl.progress == 0.0 and bl._rope.position == bl._rope_home and not g.sound_log.has("village_bell"))
+	for i in 3:
+		g.grab_request(bl)
+		bl.move_to(Vector3(0, rope_y - 1.2 * C, 0))
+		var fin := g.release_request()
+		check("bell: ring %d, the request finishes only with the third" % (i + 1), fin == (i == 2) and bl.progress == float(i + 1))
+	check("bell: three rings sounded the village bell, +10 faith", g.sound_log.count("village_bell") == 3 and bl.done and g.faith == t0 + 30)
+
+	var fw: HelpRequest = by["firewood"]
+	check("firewood: three logs lie more than 1.5 cells from the door", fw._items.size() == 3 and fw._items.all(func(n): return HelpRequest._flat(n.position, fw._goal) > 1.5 * C))
+	g.grab_request(fw)
+	fw.move_to(fw._goal + Vector3(3.0 * C, 0.02, 0))
+	check("firewood: dropped away from the door lies on the grass, not done", not g.release_request() and fw.prop.position.y == 0.0 and fw.progress == 0.0)
+	for i in 3:
+		g.grab_request(fw)
+		fw.move_to(fw._goal + Vector3(1.0 * C, 0.02, 0))
+		var fin := g.release_request()
+		check("firewood: log %d at the door, the request finishes only with the third" % (i + 1), fin == (i == 2) and fw.done == (i == 2))
+	check("firewood: +20 faith", g.faith == t0 + 50)
+
+	var lt: HelpRequest = by["letter"]
+	var far := 0.0
+	for k in 40:
+		far = maxf(far, HelpRequest._flat(lt._flutter_pos(k * TAU / 40.0), lt._flutter_c))
+	check("letter: it drifts in a small loop, under a cell across, low in the air", far <= C and lt._flutter_pos(0.0) != lt._flutter_pos(1.5) and lt._flutter_pos(2.0).y < 0.02)
+	check("letter: it starts more than a cell from the postbox", HelpRequest._flat(lt.prop.position, lt._goal) > C)
+	g.grab_request(lt)
+	lt.move_to(lt._goal + Vector3(3.0 * C, 0.02, 0))
+	check("letter: dropped away from the postbox lies on the grass, not done", not g.release_request() and lt.prop.position.y == 0.0 and not lt.done)
+	g.grab_request(lt)
+	lt.move_to(lt._goal + Vector3(0.5 * C, 0.02, 0))
+	check("letter: released within a cell of the postbox -> done, +15", g.release_request() and lt.done and g.faith == t0 + 65)
+	g.queue_free()
+	await process_frame
+
+	# the words: every kind has 4 asking lines and 3 thank-yous, never the same one twice in a row
+	for k: String in GameConfig.REQUESTS:
+		var id: String = HelpRequest.TASK_ID[k]
+		check("%s: 4 asking lines, 3 thank-yous, and a how-to" % k, StoryText.task_lines(id, "before").size() == 4 and StoryText.task_lines(id, "after").size() == 3 and HelpRequest.HOW[k] != "")
+		var repeat := false
+		var prev := ""
+		for n in 12:
+			var line := StoryText.task(id, "before")
+			repeat = repeat or line == prev or line == ""
+			prev = line
+		check("%s: the asking line never repeats the one before" % k, not repeat)
+
+	# with the rig: the outline covers every item still to do and drops each one when it is in place
+	var gr: Game = load("res://scripts/game/game.gd").new()
+	gr.with_rig = true
+	gr.with_life = false
+	root.add_child(gr)
+	for i in 3:
+		await process_frame
+	gr.force_quests(["laundry"])
+	var rq: HelpRequest = gr.requests[0]
+	var covered := rq._items.all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay == HelpRequest._outline_mat))
+	gr.grab_request(rq)
+	var first := rq.prop
+	rq.move_to(rq._line_a.lerp(rq._line_b, 0.5) + Vector3(0, 0, 0.3 * C))
+	gr.release_request()
+	var dropped := ModelUtil.walk(first).all(func(m): return not (m is MeshInstance3D) or m.material_overlay == null)
+	var others := rq._items.filter(func(n): return n != first).all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay == HelpRequest._outline_mat))
+	check("laundry: the outline covers every garment, and a hung one loses it", covered and dropped and others)
+	gr._clear_requests()
+	gr.queue_free()
 	await process_frame

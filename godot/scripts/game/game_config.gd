@@ -67,6 +67,16 @@ const REQUESTS := {
 	"warm": {"name": "The sick child", "reward": 15, "scene": ""},
 	"lights": {"name": "Festival lanterns", "reward": 20, "scene": "res://assets/village/ew_village_lantern_v01.glb"},
 	"prayer": {"name": "A small sign", "reward": 10, "scene": ""},
+	# 2026-11-16 (the user): eight more kinds (rewards are Claude's stand-ins in the same 10-25 range; the models are
+	# loaded by HelpRequest). 16 kinds at 4 a day cycle over 4 days.
+	"laundry": {"name": "Washing on the grass", "reward": 20, "scene": ""},
+	"well": {"name": "Bucket for the well", "reward": 15, "scene": ""},
+	"apples": {"name": "Apples for the basket", "reward": 20, "scene": ""},
+	"cat": {"name": "Cat on the roof", "reward": 15, "scene": ""},
+	"weeds": {"name": "Weeds in the garden", "reward": 20, "scene": ""},
+	"bell": {"name": "The supper bell", "reward": 10, "scene": ""},
+	"firewood": {"name": "Firewood for the fire", "reward": 20, "scene": ""},
+	"letter": {"name": "The runaway letter", "reward": 15, "scene": ""},
 }
 const QUEST_TIMES := [0.03, 0.25, 0.5, 0.72]  # the fraction of the day at which each of the day's quests is posted
 const REQUESTS_PER_DAY := 4

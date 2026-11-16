@@ -641,6 +641,9 @@ func _plan_quests() -> void:
 	var today: Array[String] = []
 	if loop == 0 and night == 0:
 		today.append("prayer")  # the very first quest is the smallest: Maren's prayer, answered with a tap
+		if _quest_deck.is_empty():  # fill the deck first, so the prayer is out of this cycle and nothing repeats in it
+			_quest_deck = GameConfig.REQUESTS.keys()
+			_shuffle(_quest_deck, _quest_rng)
 		_quest_deck.erase("prayer")
 	var guard := 0
 	while today.size() < GameConfig.REQUESTS_PER_DAY and guard < 64:
@@ -835,7 +838,7 @@ func request_near(world: Vector3) -> HelpRequest:
 	var best: HelpRequest = null
 	var best_d := reach(GameConfig.REQUEST_GRAB_REACH)
 	for r in requests:
-		var d := r.grab_point().distance_to(world)
+		var d := r.grab_dist(world)
 		if not r.done and d <= best_d:
 			best_d = d
 			best = r
@@ -843,7 +846,7 @@ func request_near(world: Vector3) -> HelpRequest:
 
 
 func grab_request(r: HelpRequest, hand: GameHand = null) -> bool:
-	if phase != Phase.DAY or r == null or _held_req != null or not r.grab():
+	if phase != Phase.DAY or r == null or _held_req != null or not r.grab(hand.global_position if hand else Vector3.INF):
 		return false
 	_held_req = r
 	_held_req_hand = hand
@@ -1745,7 +1748,7 @@ func tap_villager(v: Node) -> String:
 			if v is Villager:
 				(v as Villager).taps += 1
 			_pay_quest(r)
-			return StoryText.task("answer_prayer", "after")
+			return r.after_line
 	if not (v is Villager):
 		return ""
 	var vil := v as Villager

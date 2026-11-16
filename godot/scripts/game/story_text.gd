@@ -52,6 +52,28 @@ static func warden(kind: String, loop: int) -> String:
 	return str(data().get("warden", {}).get(kind, {}).get(str(clampi(loop, 0, 4) + 1), ""))
 
 
+static var _last_task := {}  # "id/which" -> the variant picked last, so the next pick is a different one
+
+
+static func task_lines(id: String, which: String) -> Array:
+	## Every variant of a kindness-task line; the first is the original. A plain string in the file is one variant.
+	var v: Variant = data().get("tasks", {}).get(id, {}).get(which, [])
+	if v is String:
+		return [v] if v != "" else []
+	return v if v is Array else []
+
+
 static func task(id: String, which: String) -> String:
-	## which = "before" or "after".
-	return str(data().get("tasks", {}).get(id, {}).get(which, ""))
+	## which = "before" (the request) or "after" (the thanks). A random variant that is never the one picked last
+	## for this task and kind of line ("" when there are none); callers that need to repeat the line keep it.
+	var lines := task_lines(id, which)
+	if lines.is_empty():
+		return ""
+	var key := id + "/" + which
+	var pick := 0
+	if lines.size() > 1:
+		pick = randi() % lines.size()
+		if _last_task.get(key, -1) == pick:
+			pick = (pick + 1 + randi() % (lines.size() - 1)) % lines.size()
+	_last_task[key] = pick
+	return str(lines[pick])
