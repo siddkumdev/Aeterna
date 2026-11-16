@@ -1098,6 +1098,9 @@ func _clear_night() -> void:
 			e.queue_free()
 	enemies.clear()
 	warden = null
+	for t in towers:
+		if is_instance_valid(t):
+			t.reset_kick()
 	for s in shots:
 		if is_instance_valid(s):
 			s.queue_free()

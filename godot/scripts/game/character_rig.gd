@@ -121,7 +121,7 @@ func set_hurt(on: bool) -> void:
 		var h := 0.06
 		if model != null:
 			h = maxf(ModelUtil.bounds(model).size.y, 0.01)
-		_hurt_mat.set_shader_parameter("freq", 8.0 / h)
+		_hurt_mat.set_shader_parameter("freq", 4.0 / h)
 		if _misty:
 			_hurt_mat.next_pass = _mist_material()
 	if _flash <= 0.0 and _dying < 0.0:

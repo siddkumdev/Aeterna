@@ -33,7 +33,7 @@ const MODEL_SCALE := 0.75
 # Tower-to-enemy juice (Siddharth 2026-11-16), looks only: the hit enemy's visual freezes for HIT_FREEZE[source] seconds,
 # its body squashes and is nudged away from the shot. No damage, speed or timing number is touched.
 const HIT_FREEZE := {"crossbow": 0.04, "guard": 0.04, "fire": 0.06, "airship": 0.09}
-const FREEZE_GAP_MS := 250  # one freeze per enemy per 0.25 s, so a fast tower cannot hold it still
+const FREEZE_GAP := 0.25    # seconds of game time: one freeze per enemy per 0.25 s, so a fast tower cannot hold it still
 const SQUASH_TIME := 0.14
 const SQUASH_Y := 0.07      # per unit strength (strength = freeze / 0.06); the rig's own hit lean adds 0.1 on top
 const SQUASH_XZ := 0.05
@@ -77,7 +77,8 @@ var _mound: MeshInstance3D
 var _surface := Vector2i.ZERO  # where a Tunneler comes up
 var max_hp := 20.0
 var freezes := 0            # how many hit freezes were started (the self-test reads it)
-var _freeze_ms := -1000000
+var _age := 0.0             # game time this enemy has been stepped (the freeze gap runs on it)
+var _freeze_at := -1000.0
 var _jt := 0.0
 var _js := 0.0
 var _jdir := Vector3.ZERO
@@ -157,6 +158,7 @@ func _use_model() -> void:
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
 	_rig.setup(MODELS[kind][0], MODELS[kind][1])
+	_rig.set_hurt(_hurt)
 	_rig.scale = Vector3.ONE * (BOSS_SCALE if is_boss else (ELITE_SCALE if stats.get("elite", false) else MODEL_SCALE))
 	if stats.get("elite", false):
 		var fire := _rig.marker("flame_anchor")
@@ -298,6 +300,7 @@ func _reroute() -> void:
 func step(delta: float) -> void:
 	if not alive:
 		return
+	_age += delta
 	if _jt > 0.0:
 		_tick_juice(delta)
 	_sync_hurt()
@@ -432,6 +435,8 @@ func take_damage(amount: float, flash := true, hit_sound := "", hit_weight := 0.
 			if game.kill_sparks != null:
 				game.kill_sparks.spawn(global_position + Vector3(0, height * 0.6, 0))
 		if _rig and is_inside_tree():  # the body stays behind a moment and topples
+			_body.scale = Vector3.ONE  # the dying body must not inherit a squash or push in progress
+			_body.position = Vector3.ZERO
 			_rig.reparent(get_parent())
 			_rig.die()
 			_rig = null
@@ -443,9 +448,8 @@ func _juice(weight: float, dir: Vector3) -> void:
 	_js = weight / 0.06 * (BOSS_JUICE if is_boss else 1.0)
 	_jt = SQUASH_TIME
 	_jdir = Vector3(dir.x, 0.0, dir.z).normalized()
-	var now := Time.get_ticks_msec()
-	if now - _freeze_ms >= FREEZE_GAP_MS:
-		_freeze_ms = now
+	if _age - _freeze_at >= FREEZE_GAP:
+		_freeze_at = _age
 		freezes += 1
 		if _rig:
 			_rig.freeze(weight)
@@ -480,6 +484,7 @@ func set_form(i: int) -> void:
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
 	_rig.setup(BOSS_FORMS[clampi(i, 0, BOSS_FORMS.size() - 1)], "bloom")
+	_rig.set_hurt(_hurt)
 	_rig.scale = Vector3.ONE * BOSS_SCALE
 	old.queue_free()
 	if _vfx == null:

@@ -4,12 +4,22 @@ extends SceneTree
 ## Rows: 1 a heavy hit (freeze, squash, push); 2 a healthy and a hurt grunt side by side (cracks, limp); 3 a kill and the spark
 ## flying to the nearest house; 4 a Wizard Tower's wind-up and recoil. Writes OUT_PREFIX_juice_strip.png.
 
-const COLS := 6
+const COLS := 8
+
+
+func _hide_text(n: Node) -> void:
+	## Speech bubbles and labels (thoughts, prayers, hints) would cover the effects.
+	if n is Label3D or n is Bubble:
+		n.visible = false
+	for c in n.get_children():
+		_hide_text(c)
 
 
 func _grab(frames: Array, cam: Camera3D, g: Game, focus: Vector3, off: Vector3) -> void:
 	cam.global_position = focus + off
 	cam.look_at(focus, Vector3.UP)
+	_hide_text(g)
+	await process_frame
 	frames.append(root.get_viewport().get_texture().get_image())
 
 
@@ -53,7 +63,6 @@ func _initialize() -> void:
 	var row: Array = []
 	for i in 3:
 		await process_frame
-	_grab(row, cam, g, focus, Vector3(0.0, 0.05, 0.13))
 	e.take_damage(2.0, true, "", 0.09, Vector3(1, 0, 0))
 	var t0 := Time.get_ticks_msec()
 	var next := 0.0
@@ -65,7 +74,7 @@ func _initialize() -> void:
 		last = now
 		if (now - t0) / 1000.0 >= next:
 			next += 0.03
-			_grab(row, cam, g, focus, Vector3(0.0, 0.05, 0.13))
+			await _grab(row, cam, g, focus, Vector3(0.0, 0.05, 0.13))
 	rows.append(row)
 	e.queue_free()
 	g.enemies.clear()
@@ -86,7 +95,7 @@ func _initialize() -> void:
 		if (now2 - t0) / 1000.0 >= next:
 			next += 0.12
 			focus = (a.global_position + b.global_position) * 0.5 + Vector3(0, 0.025, 0)
-			_grab(row, cam, g, focus, Vector3(0.0, 0.07, 0.17))
+			await _grab(row, cam, g, focus, Vector3(0.0, 0.07, 0.17))
 	rows.append(row)
 	for o in g.enemies.duplicate():
 		o.queue_free()
@@ -101,7 +110,7 @@ func _initialize() -> void:
 	focus = (k.global_position + h.global_position) * 0.5 + Vector3(0, 0.03, 0)
 	for i in 3:
 		await process_frame
-	_grab(row, cam, g, focus, Vector3(0.0, 0.2, 0.3))
+	await _grab(row, cam, g, focus, Vector3(0.0, 0.2, 0.3))
 	k.take_damage(9999.0, true, "", 0.04, Vector3(1, 0, 0))
 	t0 = Time.get_ticks_msec()
 	next = 0.0
@@ -112,16 +121,17 @@ func _initialize() -> void:
 		g.step(minf(0.05, (now3 - last) / 1000.0))
 		last = now3
 		if (now3 - t0) / 1000.0 >= next:
-			next += 0.11
-			_grab(row, cam, g, focus, Vector3(0.0, 0.2, 0.3))
+			next += 0.13
+			await _grab(row, cam, g, focus, Vector3(0.0, 0.2, 0.3))
 	rows.append(row)
-	# row 4: the Wizard Tower winds up and kicks back
+	# row 4: the Longbow Tower winds up and kicks back, seen from behind so its bolt flies away from the camera
 	row = []
-	var t: Tower = g.towers[0]
-	var tgt: Enemy = g._spawn(Vector2i(9, 12), "grunt", NavGrid.cell_centre(Vector2i(9, 12)))
+	g.try_build("crossbow", Vector2i(11, 4))
+	var t: Tower = g.towers[g.towers.size() - 1]
+	var tgt: Enemy = g._spawn(Vector2i(11, 10), "grunt", NavGrid.cell_centre(Vector2i(11, 10)))
 	tgt.slow(0.0001, 1000.0)
 	tgt.hp = 500.0
-	t.cooldown = 0.35
+	t.cooldown = 0.2
 	focus = t.global_position + Vector3(0, 0.05, 0)
 	t0 = Time.get_ticks_msec()
 	next = 0.0
@@ -132,8 +142,8 @@ func _initialize() -> void:
 		g.step(minf(0.05, (now4 - last) / 1000.0))
 		last = now4
 		if (now4 - t0) / 1000.0 >= next:
-			next += 0.09
-			_grab(row, cam, g, focus, Vector3(0.0, 0.07, 0.17))
+			next += 0.05
+			await _grab(row, cam, g, focus, Vector3(0.05, 0.08, -0.13))
 	rows.append(row)
 	var w: int = rows[0][0].get_width()
 	var ht: int = rows[0][0].get_height()

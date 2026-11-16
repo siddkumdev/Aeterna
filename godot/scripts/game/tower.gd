@@ -49,12 +49,14 @@ var aiming := false  # a target is in range this tick (the effects read it; noth
 # Wind-up and recoil (Siddharth 2026-11-16), looks only: the model crouches a little as the shot comes due, then kicks back
 # away from the target and springs home. It only reads `cooldown`; fire timing is untouched.
 const WIND_TIME := 0.1
-const WIND_SQUASH := 0.04
-const WIND_PULL := 0.0015   # metres, away from the target
+const WIND_SQUASH := 0.08
+const WIND_PULL := 0.003    # metres, away from the target
 const RECOIL_TIME := 0.14
-const RECOIL_PUSH := 0.004  # metres, away from the target
-const RECOIL_SQUASH := 0.03
+const RECOIL_PUSH := 0.008  # metres, away from the target
+const RECOIL_SQUASH := 0.06
 var _model: Node3D
+var _model_scale := Vector3.ONE  # as authored; the kick multiplies it
+var _model_pos := Vector3.ZERO
 var _recoil := 0.0
 var _away := Vector3.ZERO   # board-world, flat, from the target towards this tower
 var fx: TowerFx  # this tower's visual effects, when it has them yet
@@ -110,6 +112,8 @@ func setup(tower_kind: String, top_left: Vector2i) -> void:
 	var model: Node3D = load(cfg["scene"]).instantiate()
 	add_child(model)
 	_model = model
+	_model_scale = model.scale
+	_model_pos = model.position
 	_muzzle_h = ModelUtil.bounds(model).end.y * 0.8
 	var parts := ModelUtil.parts(model)
 	_turn = parts.get(cfg["turn_part"])
@@ -279,8 +283,16 @@ func _tick_kick(delta: float, target: Enemy) -> void:
 		w *= w
 		push = WIND_PULL * w
 		squash = WIND_SQUASH * w
-	_model.scale = Vector3(1.0 + squash * 0.6, 1.0 - squash, 1.0 + squash * 0.6)
-	_model.position = global_transform.basis.inverse() * (_away * push) if is_inside_tree() else _away * push
+	_model.scale = _model_scale * Vector3(1.0 + squash * 0.6, 1.0 - squash, 1.0 + squash * 0.6)
+	_model.position = _model_pos + (global_transform.basis.inverse() * (_away * push) if is_inside_tree() else _away * push)
+
+
+func reset_kick() -> void:
+	## Night is over (or the run reset): the tower rests exactly as authored, whatever the wind-up was doing.
+	_recoil = 0.0
+	if _model != null:
+		_model.scale = _model_scale
+		_model.position = _model_pos
 
 
 func voice() -> String:

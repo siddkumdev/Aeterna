@@ -2834,7 +2834,7 @@ func _juice() -> void:
 	for _i in 6:
 		e.take_damage(1.0, true, "", 0.04, Vector3.RIGHT)
 	check("juice: a fast tower gets one freeze per 0.25 s per enemy", e.freezes == 1)
-	e._freeze_ms -= 300
+	e._age += 0.3
 	e.take_damage(1.0, true, "", 0.04, Vector3.RIGHT)
 	check("juice: after the gap a new freeze starts", e.freezes == 2)
 	var boss := _still(g, "boss", _at(12, 16))
@@ -2892,7 +2892,11 @@ func _juice() -> void:
 	check("juice: sparks change no faith or hp", g.faith == faith_before and b.hp == hp_before)
 	var victim := _still(g, "scout", _at(6, 6))
 	var before := k.active
+	victim.take_damage(1.0, true, "", 0.09, Vector3.RIGHT)
+	victim.step(0.01)
+	var squashed: bool = victim._body.scale.y < 1.0
 	victim.take_damage(9999.0, true, "", 0.04, Vector3.RIGHT)
+	check("juice: a kill during the squash hands the dying rig an unsquashed body", squashed and victim._body.scale == Vector3.ONE and victim._body.position == Vector3.ZERO)
 	check("juice: a kill launches a spark", k.active == before + 1)
 	rig.queue_free()
 	g.queue_free()
@@ -2925,5 +2929,14 @@ func _wind_up() -> void:
 			crouched = true
 	check("wind-up: shots fire exactly on the cooldown rule", t.shots_fired == expect and expect > 3)
 	check("wind-up: the tower model crouches and kicks (visual only)", crouched and kicked)
+	t.cooldown = 0.05
+	t.step(0.01)
+	var mid: bool = t._model.scale.y < 1.0
+	t.reset_kick()
+	check("wind-up: reset_kick puts the model back exactly as authored", mid and t._model.scale == t._model_scale and t._model.position == t._model_pos and t._recoil == 0.0)
+	t.cooldown = 0.05
+	t.step(0.01)
+	g._clear_night()
+	check("wind-up: the end of the night rests every tower", t._model.scale == t._model_scale and t._model.position == t._model_pos)
 	g.queue_free()
 	await process_frame
