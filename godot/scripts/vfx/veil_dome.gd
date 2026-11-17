@@ -62,11 +62,11 @@ func snap(knit_to: float, crack_to: float) -> void:
 	crack_amount = crack_to
 
 
-func crack(seconds := 1.6) -> void:
+func crack(seconds := 1.6, to := 1.0) -> void:
 	## A purple crack runs down from the top.
 	_kill()
 	_tween = create_tween()
-	_tween.tween_property(self, "crack_amount", 1.0, seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_tween.tween_property(self, "crack_amount", to, seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_tween.tween_callback(func(): done.emit("crack"))
 
 

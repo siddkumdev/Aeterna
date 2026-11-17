@@ -28,6 +28,10 @@ const PRESETS := {
 	"dusk": {"key": Color("F29A9A"), "key_e": 0.7, "amb": Color("9C3EB0"), "amb_e": 1.0, "rim": Color("DA8990"),
 		"rim_e": 0.8, "fog": Color("9C6A9E"), "fog_d": 0.45, "sat": 1.0, "con": 1.04,
 		"exp": 0.95, "glow": 0.30, "thr": 0.95},
+	# the first-rewind cutscene (player-critic 2026-11-17): after the fall, darker, colder and greyer than any night
+	"fallen": {"key": Color("6F7F99"), "key_e": 0.16, "amb": Color("34426A"), "amb_e": 0.5, "rim": Color("3F5470"),
+		"rim_e": 0.25, "fog": Color("0C111F"), "fog_d": 0.6, "sat": 0.4, "con": 1.1,
+		"exp": 0.75, "glow": 0.35, "thr": 0.9, "moon": true},
 	"night": {"key": Color("8FB0D8"), "key_e": 0.4, "amb": Color("3A5A9A"), "amb_e": 0.75, "rim": Color("5A86B0"),
 		"rim_e": 0.6, "fog": Color("16203A"), "fog_d": 0.5, "sat": 0.75, "con": 1.08,
 		"exp": 0.8, "glow": 0.30, "thr": 0.95, "moon": true},

@@ -78,6 +78,10 @@ static func spell(id: String) -> Dictionary:
 
 static func ending(id: String) -> Dictionary:
 	## The two ways the story can end (docs/STORY.md section 8), as cards on the tray.
+	if id == "keep_looping":
+		return {"kind": "ending", "id": id, "title": "Keep looping", "family": "ivory", "rarity": 0, "seal": "On",
+			"stats": [["Ending", "Not yet"], ["", ""], ["", ""], ["", ""]],
+			"text": "Turn the hourglass again. The story waits; so does the offer.", "flavour": "One more morning."}
 	var let_go := id == "let_go"
 	return {
 		"kind": "ending", "id": id, "title": "Let go" if let_go else "Remember them", "family": "ivory", "rarity": 0,

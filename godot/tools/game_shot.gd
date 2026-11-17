@@ -106,7 +106,8 @@ func _initialize() -> void:
 		g.towers.erase(tw)
 	g.loop = 0
 	g._clear_night()
-	g.night = GameConfig.BOSS_NIGHT
+	g.loop_nights = 5
+	g.night = g.fall_night()
 	g.phase = Game.Phase.DAY
 	g.start_night()
 	t = 0.0

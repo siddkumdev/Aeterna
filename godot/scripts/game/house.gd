@@ -143,6 +143,40 @@ func damage(amount: float) -> void:
 		shuttered.emit(self)
 
 
+func force_dark() -> void:
+	## The fall: the house goes dark whatever ward or hold would save it (the doom, the first-rewind cutscene).
+	if is_shuttered:
+		return
+	ward = 0.0
+	hp = 0.0
+	_update_bar()
+	is_shuttered = true
+	_apply(true, true)
+	_break_fx()
+	shuttered.emit(self)
+
+
+func snuff() -> void:
+	## A short flicker of the lit windows, then the house goes fully dark.
+	if is_shuttered:
+		return
+	if not is_inside_tree() or _parts.is_empty():
+		force_dark()
+		return
+	var lamps := _parts.values().filter(func(n): return str(n.get_meta("ew_broken", "")) == "off")
+	var tw := create_tween()
+	for k in 3:
+		tw.tween_callback(func():
+			for n in lamps:
+				n.visible = false)
+		tw.tween_interval(0.09)
+		tw.tween_callback(func():
+			for n in lamps:
+				n.visible = true)
+		tw.tween_interval(0.11)
+	tw.tween_callback(force_dark)
+
+
 func heal(amount: float) -> void:
 	## Dawn repair: some HP back; a shuttered house that has HP again opens up.
 	hp = minf(max_hp, hp + amount)

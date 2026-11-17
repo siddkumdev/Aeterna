@@ -68,7 +68,7 @@ func _run(sd: int, faith_mult: float, active_play: bool) -> Dictionary:
 			var base_inc := g.standing_houses().size() * GameConfig.DAWN_FAITH_PER_HOUSE + GameConfig.NIGHT_CLEAR_FAITH_PER_NIGHT * (n + 1)
 			g.faith += roundi(base_inc * (faith_mult - 1.0) * (1.0 + GameConfig.LOOP_FAITH_STEP * lp))
 		if not (g.phase == Game.Phase.DAY and g.loop == lp):
-			if g.ending_choice or (g.loop_won and lp + 1 >= GameConfig.LOOPS_PER_RUN):
+			if g.ending_choice:  # loops are endless now: the sweep ends at the first ending offer (dawn of loop 3)
 				won = true
 				log.append("L%d WON" % (lp + 1))
 			else:

@@ -68,8 +68,12 @@ var shots: Array[Projectile] = []
 var shots_root: Node3D
 var kill_sparks: KillSparks  # a spark flies from each kill to the nearest house (looks only; with the rig only)
 var faith := GameConfig.START_FAITH
-var night := 0  # 0-based, within the loop; GameConfig.BOSS_NIGHT is the boss night
-var loop := 0  # 0-based; a run is GameConfig.LOOPS_PER_RUN loops
+var night := 0  # 0-based, within the loop; fall_night() is the last (unwinnable) night
+var loop := 0  # 0-based; loops are endless (no cap), see GameConfig.loop_nights
+var loop_nights := GameConfig.FIRST_LOOP_NIGHTS  # nights in this loop, rolled when it starts (Siddharth 2026-11-17)
+var carried_total := 0  # Faith carried over at every rewind so far this run (the ledger shows it; gates ending B)
+var _carry_in := 0  # what the last rewind carries into the loop being started
+var last_carry := 0  # the carry of the latest rewind (message / ledger)
 var cards := {}  # ability cards held: id -> rarity (0 Common, 1 Rare, 2 Legendary); kept through the loop
 var offers: Array[Dictionary] = []  # cards on the table during Phase.CARDS
 var ending_choice := false  # Phase.CARDS holds the two endings (let_go / remember), not ability cards
@@ -322,6 +326,15 @@ func new_run(rng_seed: int) -> void:
 	run_seed = rng_seed
 	_quest_deck.clear()  # a new run deals its quests from a fresh deck
 	loop = 0
+	carried_total = 0
+	_carry_in = 0
+	last_carry = 0
+	_cutscene = false
+	cutscene_count = 0
+	_dawn_pending = ""
+	if is_instance_valid(_cutscene_skotos):
+		_cutscene_skotos.queue_free()
+	_cutscene_skotos = null
 	cards = {}
 	offers = []
 	ending_choice = false  # a restart during the ending offer must not turn the next card offer into an ending
@@ -346,7 +359,7 @@ func new_run(rng_seed: int) -> void:
 	_start_loop("Day 1. Build before the sun sets.")
 
 
-func _start_loop(message: String) -> void:
+func _start_loop(message: String, prayer_delay := 0.0) -> void:
 	## Everything the time loop resets (spec 15): night counter, faith, towers, village damage.
 	set_tutorial_spotlight("")
 	for t in towers:
@@ -373,7 +386,9 @@ func _start_loop(message: String) -> void:
 		else:
 			h.repair()
 	var pockets := card("deep_pockets")
-	faith = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0)
+	faith = GameConfig.START_FAITH + (int(Cards.value("deep_pockets", pockets)) if pockets >= 0 else 0) + _carry_in
+	_carry_in = 0
+	loop_nights = GameConfig.loop_nights(run_seed, loop)  # rolled once, at the start of each loop
 	night = 0
 	closed_spawn = ""
 	_helped = 0
@@ -381,7 +396,13 @@ func _start_loop(message: String) -> void:
 	_update_shrine()
 	select("")  # a new run starts with nothing picked: no sell ring left on the empty ground
 	if with_rig:
-		say_at_shrine(StoryText.prayer(loop, 0))  # Maren's first prayer of the loop
+		if prayer_delay > 0.0 and is_inside_tree():  # after a rewind: once the hourglass is gone, never over it
+			var serial := _rewind_serial
+			get_tree().create_timer(prayer_delay).timeout.connect(func():
+				if serial == _rewind_serial:
+					say_at_shrine(StoryText.prayer(loop, 0)))
+		else:
+			say_at_shrine(StoryText.prayer(loop, 0))  # Maren's first prayer of the loop
 
 
 func card(id: String) -> int:
@@ -487,19 +508,32 @@ func _veil_for(was: int, p: int) -> void:
 	if veil == null:
 		return
 	if p == Phase.NIGHT and was != Phase.NIGHT:
-		veil.crack()
+		veil.crack(1.6, veil_crack_amount())
 		get_tree().create_timer(1.8).timeout.connect(func():
 			if is_instance_valid(veil) and phase == Phase.NIGHT:
 				veil.shatter())
 	elif p == Phase.DAY and was == Phase.NIGHT:
 		veil.knit()
+		veil.crack_amount = veil_crack_amount()  # the day before a later night already shows a little more crack
 	elif p != Phase.NIGHT:
-		veil.snap(1.0, 0.0)
+		veil.snap(1.0, veil_crack_amount())
+
+
+func fall_night() -> int:
+	## 0-based index of this loop's last night: the Warden's fall (3rd night in loop 1, 1-8 later, weighted).
+	return loop_nights - 1
 
 
 func is_doomed_night() -> bool:
-	## Night 5 of loops 1-4 is the Warden's fall: it cannot be won (see GameConfig.DOOM_AT and docs/STORY.md).
-	return night == GameConfig.BOSS_NIGHT and loop < GameConfig.LOOPS_PER_RUN - 1
+	## The fall night can never be won, in any loop (see GameConfig.DOOM_AT and docs/STORY.md).
+	return night == fall_night()
+
+
+func veil_crack_amount(n := -1) -> float:
+	## Warning sign: the Veil's crack grows a little every night of the loop, never reaches its maximum and does not
+	## depend on the fall night (so it cannot give the fall away). Stand-in curve, Siddharth 2026-11-17.
+	var i := night if n < 0 else n
+	return minf(0.75, 0.1 * i + 0.05)
 
 
 func _doom_step(delta: float) -> void:
@@ -517,7 +551,7 @@ func _doom_step(delta: float) -> void:
 		_doom_timer = 0.0
 		for h in houses:
 			if not h.is_shuttered:
-				h.damage(h.max_hp * 2.0)  # a house goes dark; the third one ends the night (_on_house_shuttered)
+				h.force_dark()  # a house goes dark whatever holds it; the third one ends the night (_on_house_shuttered)
 				break
 
 
@@ -549,11 +583,13 @@ func start_night() -> bool:
 			i += n
 			t += GameConfig.CLUSTER_GAP
 	_spawn_queue.sort_custom(func(a, b): return a["t"] < b["t"])
-	if night == GameConfig.BOSS_NIGHT:
-		_set_phase(Phase.NIGHT, "Boss night. The Warden comes.")
+	if night == fall_night():
+		_set_phase(Phase.NIGHT, "Night %d. The Warden comes." % (night + 1))
+		snd("boss_roar")
 		_skotos_says(StoryText.warden("night5", loop))
 	else:
 		_set_phase(Phase.NIGHT, "Night %d. They come from the forest." % (night + 1))
+		snd("boss_roar")  # Skotos's horn sounds at EVERY dusk (Siddharth 2026-11-17: a fall-only horn would give it away)
 		if night == 0:
 			_skotos_says(StoryText.warden("dusk_day1", loop))  # the curse, spoken at the first dusk of each loop
 	return true
@@ -563,11 +599,11 @@ func night_plan() -> Array[Dictionary]:
 	## The coming night's groups (WavePlan), with a Foresight rewrite applied (a closed spawn's groups come
 	## from the next edge instead) and, on the boss night, the boss as its own group. What Foresight reveals.
 	var plan := WavePlan.groups_for(night, run_seed, loop)
-	if night >= GameConfig.ELITE_FROM_NIGHT and night < GameConfig.BOSS_NIGHT:
+	if maxi(night, mini(loop * 2, GameConfig.ELITE_FROM_NIGHT)) >= GameConfig.ELITE_FROM_NIGHT and night < fall_night():  # later loops: elites even in a short loop
 		var es: Array = GameConfig.SPAWNS.keys()
 		plan.append({"time": GameConfig.ELITE_DELAY, "spawn": es[(run_seed + loop + night) % es.size()],
 			"enemies": [GameConfig.ELITES[(run_seed + loop * 2 + night) % GameConfig.ELITES.size()]]})
-	if night == GameConfig.BOSS_NIGHT:
+	if night == fall_night():
 		var edges: Array = GameConfig.SPAWNS.keys()
 		var r := RandomNumberGenerator.new()
 		r.seed = run_seed * 131 + loop * 7 + night
@@ -874,7 +910,7 @@ func request_near(world: Vector3) -> HelpRequest:
 
 
 func grab_request(r: HelpRequest, hand: GameHand = null) -> bool:
-	if phase != Phase.DAY or r == null or _held_req != null or not r.grab(hand.global_position if hand else Vector3.INF):
+	if _cutscene or phase != Phase.DAY or r == null or _held_req != null or not r.grab(hand.global_position if hand else Vector3.INF):
 		return false
 	_held_req = r
 	_held_req_hand = hand
@@ -992,53 +1028,90 @@ func _end_night() -> void:
 		if t.cfg["kind"] == "spawner":
 			t.refill()  # stand-in: the Guards are all back, at full health, by morning
 	_clear_night()
-	if night == GameConfig.BOSS_NIGHT:
-		_end_loop(true)
+	if night == fall_night():
+		_end_loop(false)  # the fall is never won (Siddharth 2026-11-17); only reachable if the Warden were gone
 		return
 	night += 1
 	closed_spawn = ""
-	var next :="Boss night next." if night == GameConfig.BOSS_NIGHT else "Day %d." % (night + 1)
-	_set_phase(Phase.DAY, "Dawn. %d houses stood: +%d faith. %s" % [standing, income, next])
+	var next := "The fall night next." if night == fall_night() else "Day %d." % (night + 1)
+	var dawn := "Dawn. %d houses stood: +%d faith. %s" % [standing, income, next]
+	if ending_available():
+		_offer_ending(dawn)  # from loop 3 on the statue offers an ending each dawn; the player may keep looping
+		return
+	_begin_day(dawn)
+
+
+func _begin_day(message: String) -> void:
+	_set_phase(Phase.DAY, message)
 	if with_rig:
 		say_at_shrine(StoryText.prayer(loop, night))  # Maren's dawn prayer for this day
 
 
-func _end_loop(won: bool) -> void:
-	## Beat the boss: 3 cards, keep 1. Lost a night: 1 Common card. The last loop of the run offers none.
-	loop_won = won
+func ending_available() -> bool:
+	## The ending choice is offered from loop 3 on (0-based loop 2), at every dawn.
+	return loop >= GameConfig.ENDING_FROM_LOOP
+
+
+func ending_b_open() -> bool:
+	## "Remember them" needs the Faith carried across loops to reach the stand-in total; "Let go" is always open.
+	return carried_total >= GameConfig.ENDING_B_CARRIED
+
+
+func _offer_ending(dawn_message: String) -> void:
+	ending_choice = true
+	_dawn_pending = dawn_message
+	offers = [{"id": "let_go", "rarity": 0}]
+	if ending_b_open():
+		offers.append({"id": "remember", "rarity": 0})
+	offers.append({"id": "keep_looping", "rarity": 0})
+	_set_phase(Phase.CARDS, "Dawn. The statue waits: choose an ending, or keep looping.")
+	if lighting:  # hold the dawn light while the choice waits, so the dawn plays once (Keep looping carries it on to day)
+		lighting.stop_sequence()
+		lighting.set_mood("dawn")
+
+
+func villagers_alive() -> int:
+	## Nobody dies in the village; the fall only darkens the houses, so every villager counts (houses when no village).
+	return life.villagers.size() if life != null else houses.size()
+
+
+func carry_amount() -> int:
+	## Faith the coming rewind carries into the next loop (stand-in numbers, GameConfig): a share of the Faith held at
+	## the fall, a bonus per villager alive and one per kindness task done this loop.
+	return roundi(faith * GameConfig.CARRY_FAITH_SHARE) + GameConfig.CARRY_PER_VILLAGER * villagers_alive() 		+ GameConfig.CARRY_PER_KINDNESS * _helped
+
+
+func _end_loop(_won := false) -> void:
+	## The loop is over (the fall, or a lost night): the Warden is never beaten, loops are endless. Fall night: 3 cards,
+	## keep 1. A night lost earlier: 1 Common card.
+	loop_won = false
 	var boss_p2 := warden != null and warden.phase >= 2
 	_clear_night()
-	if loop + 1 >= GameConfig.LOOPS_PER_RUN and won:
-		# the last loop, the Warden's end: the player chooses how the story ends (docs/STORY.md section 8)
-		ending_choice = true
-		offers = [{"id": "let_go", "rarity": 0}, {"id": "remember", "rarity": 0}]
-		_set_phase(Phase.CARDS, "Skotos kneels. Maren: \"You've carried us. Let us carry you.\" Choose how this ends.")
-		return
-	if loop + 1 >= GameConfig.LOOPS_PER_RUN:
-		var how := "The Warden falls. Run complete!" if won else "Night %d of loop %d lost. Run over." % [night + 1, loop + 1]
-		_set_phase(Phase.DONE, how + " New run = R or the sign.")
-		return
 	_rng.seed = run_seed * 977 + loop
-	var earned_full_draft := won or night >= GameConfig.BOSS_NIGHT or boss_p2
+	var earned_full_draft := night >= fall_night() or boss_p2
 	offers = Cards.offers(cards, 3 if earned_full_draft else 1, _rng, not earned_full_draft, loop)
 	if offers.is_empty():
-		_rewind()
+		_begin_rewind()
 		return
-	var head := "The Warden falls! Choose 1 card to keep." if won else ("Night %d falls. Choose 1 of 3 cards to carry back." % (night + 1) if earned_full_draft else "Night %d lost. The hourglass gives you a card." % (night + 1))
+	var head := ("Night %d falls. Choose 1 of 3 cards to carry back." % (night + 1) if earned_full_draft else "Night %d lost. The hourglass gives you a card." % (night + 1))
 	_set_phase(Phase.CARDS, head)
 
 
 func choose_card(i: int) -> bool:
-	if phase != Phase.CARDS or i < 0 or i >= offers.size():
+	if _cutscene or phase != Phase.CARDS or i < 0 or i >= offers.size():
 		return false
 	var o: Dictionary = offers[i]
 	if ending_choice:
+		if o["id"] == "keep_looping":
+			ending_choice = false
+			offers = []
+			_begin_day(_dawn_pending)
+			return true
 		return _finish_story(o["id"])
 	cards[o["id"]] = o["rarity"]  # a duplicate is only offered at a higher rarity, so this upgrades it
 	snd(RARITY_SOUNDS[clampi(int(o["rarity"]), 0, 2)])
-	snd("rewind_whoosh")
 	offers = []
-	_rewind()
+	_begin_rewind()
 	return true
 
 
@@ -1059,37 +1132,142 @@ func _finish_story(id: String) -> bool:
 	return true
 
 
-## Spoken over the island the first time time runs back (moved here from the opening, the user 2026-11-14).
-const FIRST_REWIND_LINES := [[0.2, "But you are a god."], [3.6, "You turn the hourglass, and time runs back."],
-	[7.2, "The Veil knits itself together. The village wakes again. Only you remember."]]
+## The first rewind (end of loop 1 only) is a short cutscene on the table first. DRAFT lines live in
+## godot/data/thoughts.json under "cutscene" (Claude, Siddharth to approve). Times in seconds from its start.
+const CUTSCENE_T := {"skotos1": 1.2, "dark": 4.6}  # the rest follows from how many houses are still lit
+const FALL_CAPTION := preload("res://scripts/ui/fall_caption.gd")  # no class_name: it needs no editor import
+const CUTSCENE_HOUSE_GAP := 1.5  # s between one house going dark and the next
+const CUTSCENE_GLASS := 3.2  # s the hourglass rises and turns before the day returns
+const CUTSCENE_SKOTOS_SCALE := 3.0  # the display Skotos: about three houses tall (the new boss model will set this)
+const CUTSCENE_SKOTOS_TURN := 0.0  # yaw so he faces the player
+var _cutscene := false  # the player cannot act while it plays
+var cutscene_count := 0  # how many times it has played this run (only ever the end of loop 1)
+var _cutscene_skotos: Enemy
+var _dawn_pending := ""  # the dawn message waiting while the ending choice is on the tray
 
 
-func _rewind() -> void:
+func is_cutscene() -> bool:
+	return _cutscene
+
+
+func _begin_rewind() -> void:
+	## After the fall: the end of loop 1 plays the explanation first, every later loop goes straight to the rewind.
+	if loop != 0:
+		_rewind()
+		return
+	cutscene_count += 1
+	if not (with_rig and is_inside_tree() and board != null):
+		_rewind()  # no table to play it on (headless checks): it still counts, and still ends in the rewind
+		return
+	_cutscene = true
+	last_message = "The village falls dark."
+	if lighting:  # still the fall night, darker and colder than any night: held until the glass turns
+		lighting.stop_sequence()
+		lighting.set_mood("fallen", 1.5)
+	for old in get_tree().get_nodes_in_group(Bubble.ACTIVE_GROUP):  # no villager line left hanging over the scene
+		old.queue_free()
+	if veil:
+		veil.shatter(0.8)  # the Veil has fallen anyway: its grid is gone for the scene
+	_refresh_ui()
+	var serial := _rewind_serial
+	var at := func(t: float, f: Callable):
+		get_tree().create_timer(t).timeout.connect(func():
+			if serial == _rewind_serial and _cutscene:
+				f.call())
+	var lit := houses.filter(func(h): return is_instance_valid(h) and not h.is_shuttered)
+	var t_dark: float = CUTSCENE_T["dark"]
+	var t_maren: float = t_dark + maxi(lit.size(), 1) * CUTSCENE_HOUSE_GAP + 1.0
+	var t_s2: float = t_maren + 3.8
+	var t_n0: float = t_s2 + 5.6
+	var t_end: float = t_n0 + 3.4 * 3.0
+	at.call(0.3, func(): _cutscene_show_skotos())
+	at.call(CUTSCENE_T["skotos1"], func(): _cutscene_line("Skotos", StoryText.cutscene("skotos_1"), SKOTOS.darkened(0.2), 3.2))
+	for k in lit.size():  # the houses go dark one by one, a flicker and then out
+		at.call(t_dark + k * CUTSCENE_HOUSE_GAP, func():
+			if is_instance_valid(lit[k]) and not lit[k].is_shuttered:
+				snd("shutter_close", lit[k].global_position)
+				lit[k].snuff())
+	at.call(t_dark + lit.size() * CUTSCENE_HOUSE_GAP - 0.4, func(): _cutscene_dim_statue())  # the statue's glow goes last
+	at.call(t_maren, func(): _cutscene_line("Maren", StoryText.cutscene("maren"), Color("7A4A1E"), 3.2))  # still praying
+	at.call(t_s2, func(): _cutscene_line("Skotos", StoryText.cutscene("skotos_2"), SKOTOS.darkened(0.2), 5.0))
+	var lines := StoryText.cutscene_narration()
+	for k in lines.size():
+		at.call(t_n0 + 3.4 * k, func(): _cutscene_line("", lines[k], Color.BLACK, 3.0))  # parchment narration
+	at.call(t_end, func():  # the hourglass rises and turns in the dark; the day comes only when it has turned
+		_play_hourglass()
+		get_tree().create_timer(CUTSCENE_GLASS).timeout.connect(func():
+			if serial == _rewind_serial:
+				_cutscene = false
+				if is_instance_valid(_cutscene_skotos):
+					_cutscene_skotos.queue_free()
+				_cutscene_skotos = null
+				_rewind(true)))
+
+
+func _cutscene_show_skotos() -> void:
+	## The Warden's own model, for show only (not in the enemy list, never fights): a god-sized figure at the board's
+	## back edge in clear view, facing the player. A new boss model is coming; its size is CUTSCENE_SKOTOS_SCALE.
+	if is_instance_valid(_cutscene_skotos):
+		_cutscene_skotos.queue_free()
+	var e := Enemy.new()
+	e.game = self
+	e.setup("boss", night, loop, _rng)
+	_enemies_root.add_child(e)
+	var gap: Array = GameConfig.SPAWNS[GameConfig.SPAWNS.keys()[0]]
+	e.spawn_at(gap[gap.size() / 2])
+	e.position = Vector3(0.0, 0.0, -0.32)
+	e.scale = Vector3.ONE * CUTSCENE_SKOTOS_SCALE
+	e.rotation.y = CUTSCENE_SKOTOS_TURN
+	var glow := OmniLight3D.new()  # a purple light on him, so he reads in the dark (the only glow besides fire and embers)
+	glow.light_color = SKOTOS
+	glow.light_energy = 1.2
+	glow.omni_range = 0.5
+	glow.position = Vector3(0, 0.12, 0.05)
+	e.add_child(glow)
+	_cutscene_skotos = e
+
+
+func _cutscene_line(speaker: String, line: String, name_colour: Color, seconds: float) -> void:
+	if line == "" or board == null:
+		return
+	FALL_CAPTION.say(board, speaker, line, name_colour, seconds)
+	last_message = ("%s: %s" % [speaker, line]) if speaker != "" else line
+	_refresh_ui()
+
+
+func _cutscene_dim_statue() -> void:
+	## The statue's glow dims last: its candle light and flame sink to a faint ember.
+	if _shrine_light:
+		create_tween().tween_property(_shrine_light, "light_energy", 0.03, 1.0)
+	if _shrine_flame:
+		create_tween().tween_property(_shrine_flame, "scale", Vector3.ONE * 0.25, 1.0)
+
+
+func _rewind(glass_played := false) -> void:
+	last_carry = carry_amount()  # Faith carried over: a share of what is held at the fall, per villager, per kindness
+	carried_total += last_carry
+	_carry_in = last_carry
 	loop += 1
-	_play_hourglass()
+	if not glass_played:
+		_play_hourglass()
 	var kept := ", ".join(cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]))
-	_start_loop("The hourglass turns. Loop %d: enemies are tougher. Cards kept: %s" % [loop + 1, kept if kept != "" else "none"])
+	_start_loop("The hourglass turns. Loop %d: enemies are tougher. +%d faith carried. Cards kept: %s" % [loop + 1, last_carry, kept if kept != "" else "none"], 4.8)
 	if with_rig and is_inside_tree():
 		_toast_last = last_message  # the gilded words say it; no small line as well
 		var serial := _rewind_serial
-		var first := loop == 1  # the first time back is the reveal (the user, 2026-11-14): the opening never shows the loop
-		if first:
-			for beat in FIRST_REWIND_LINES:
-				get_tree().create_timer(beat[0]).timeout.connect(func():
-					if serial == _rewind_serial:
-						say_at_shrine(beat[1], Bubble.INK))
-		get_tree().create_timer(11.0 if first else 3.4).timeout.connect(func():  # once the hourglass has turned
+		get_tree().create_timer(3.4).timeout.connect(func():  # once the hourglass has turned
 			if serial == _rewind_serial:  # not if a new run started meanwhile
 				show_rewind_words())
 
 
 func show_rewind_words() -> TitleCard:
 	## After the hourglass (the user, 2026-11-11): gilded words over the island, naming the loop.
-	return TitleCard.show_over(board, Vector3(0, 0.36, 0.05), "TIME HAS BEEN REWOUND", "Loop %s" % LedgerPage.ROMAN[clampi(loop, 0, LedgerPage.ROMAN.size() - 1)])
+	return TitleCard.show_over(board, Vector3(0, 0.36, 0.05), "TIME HAS BEEN REWOUND", "Loop %s" % LedgerPage.roman(loop + 1))
 
 
 func _play_hourglass() -> void:
 	## STAND-IN for the rewind effect (VFX come later): the hourglass model rises over the board, turns, hides.
+	snd("rewind_whoosh")  # as the glass rises (not when the card is picked: the first rewind plays a cutscene between)
 	if _hourglass == null or not is_inside_tree():
 		return
 	_hourglass.visible = true
@@ -1769,7 +1947,7 @@ func _find_prayer_asker(origin: Vector3, dir := Vector3.ZERO, radius := 0.025) -
 
 func tap_villager(v: Node) -> String:
 	## Tap a villager: a bubble with their next thought for this loop; they turn to look at you.
-	if v == null:
+	if v == null or _cutscene:
 		return ""
 	for r in requests:
 		if r.answer(v):  # the one who prays was heard
@@ -1869,13 +2047,15 @@ func _skotos_says(line: String) -> void:
 				_msg.modulate = Color.WHITE)
 
 
-func say_at_shrine(line: String, colour := Bubble.INK) -> void:
+func say_at_shrine(line: String, colour := Bubble.INK, seconds := 6.0) -> void:
 	## A line from the shrine (Maren's dawn prayer, Skotos's words). TODO: the shrine model's __candle_anchor.
 	if board and line != "":
-		Bubble.say(board, Vector3(0, 0.13, 0), line, 6.0, colour)
+		Bubble.say(board, Vector3(0, 0.13, 0), line, seconds, colour)
 
 
 func _press(origin: Vector3, dir: Vector3) -> void:
+	if _cutscene:
+		return
 	if press_override.is_valid() and press_override.call(origin, origin, dir):
 		return
 	if asleep:
@@ -1983,7 +2163,7 @@ func _press_button(id: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not with_rig:
+	if not with_rig or _cutscene:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
@@ -2237,7 +2417,7 @@ func ledger_data() -> Dictionary:
 				folk.append({"name": StoryText.villager_name(v.voice), "role": StoryText.villager_role(v.voice), "said": v.said})
 	var left := int(ceil(day_left()))
 	return {
-		"loop": loop, "night": night, "days": GameConfig.NIGHTS_PER_LOOP, "faith": faith,
+		"loop": loop, "night": night, "days": loop_nights, "faith": faith, "carried": carried_total,
 		"houses": standing_houses().size(), "houses_total": houses.size(), "foresight": foresight_tier(),
 		"time_left": "%d:%02d" % [left / 60, left % 60] if phase == Phase.DAY else "night",
 		"gifts": cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]),
@@ -2251,7 +2431,7 @@ func ledger_data() -> Dictionary:
 
 func toggle_ledger() -> void:
 	## A button or a key: opens it in front of you and keeps it there until pressed again.
-	if ledger == null or asleep:
+	if ledger == null or asleep or _cutscene:
 		return
 	_ledger_latched = not ledger.open
 	if _ledger_latched:
@@ -2782,6 +2962,8 @@ func lens_grip_position() -> Vector3:
 
 
 func hand_pressed(h: GameHand) -> void:
+	if _cutscene:
+		return  # the first-rewind cutscene: nothing can be pressed, grabbed, poked or turned until the glass turns
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
 	if press_override.is_valid() and press_override.call(h.touch_point(), h.ray_origin(), h.ray_dir()):
@@ -3526,7 +3708,7 @@ func _refresh_hud() -> void:
 	if _hud == null:
 		return
 	var phase_name: String = ["Day", "Night", "Cards", "Run over"][phase]
-	var n := "Boss night" if night == GameConfig.BOSS_NIGHT else "%s %d" % [phase_name, night + 1]
+	var n := "Fall night" if night == fall_night() else "%s %d" % [phase_name, night + 1]
 	if phase == Phase.CARDS or phase == Phase.DONE:
 		n = phase_name
 	var t := "Loop %d   |   %s   |   Faith %d   |   Houses %d/%d" % [loop + 1, n, faith, standing_houses().size(), houses.size()]

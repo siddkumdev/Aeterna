@@ -93,7 +93,18 @@
 "3": "Strong towers. Warm light. And still, here we are.",
 "4": "Listen to them. They remember. How cruel of you, to let them.",
 "5": "You would give all that, for them. ...Then perhaps I'll listen."}},
-"tasks": {
+"cutscene": {
+    "_status": "DRAFT (Claude, 2026-11-17), Siddharth to approve. Played once, at the end of loop 1 only.",
+    "skotos_1": "They are lovely. Aren't they. It is a pity.",
+    "skotos_2": "Don't look so stricken, little god. You did nothing wrong. My curse is older than your Veil, and it always finds the night.",
+    "maren": "...Keep them. Whatever happens to me, keep them.",
+    "narration": [
+      "The dark cannot be held back forever.",
+      "But the god of this island keeps the sand of its first morning.",
+      "Turn the glass. They will forget. You will remember."
+    ]
+  },
+  "tasks": {
 "kite_in_oak": {"before": ["Oh no! My kite's stuck in the old oak. Biscuit's up there!", "Little god, my kite flew off and the roof ate it. Could you fish it out?", "A gust took my kite. It's sitting on the roof looking very pleased with itself.", "My kite is on the roof again. I'm too short for the ladder and too wise for the chimney."], "after": ["Biscuit's free! Thank you, little god! I'm bringing you honeycake!", "Down it comes! You're better than a ladder, little god.", "Not a single tear in it. I'll fly it extra high for you."]},
 "lost_lamb": {"before": ["One lamb's missing from the flock. She was by the fence a moment ago.", "Little god, a lamb wandered off again. She thinks the fence is a suggestion.", "Count the flock, count it again, still one short. Could you lead her back?", "She's out on the grass somewhere, being very brave about it."], "after": ["There she is, safe! Thank you, little god. The flock's whole again.", "Baa! There she is. Thank you, little god, the flock's whole again.", "Safe and a bit smug about it. Thank you, little god."]},
 "lost_lantern": {"before": ["My lantern's gone walking. It was on its hook last night, I swear it.", "The porch is dark and my lantern is somewhere out in the grass. Little god, can you carry it home?", "Lanterns don't wander off by themselves. Mine did. It's out there on the grass.", "I can see it from here, my lantern, lying in the grass like it's having a nap."], "after": ["Back on its hook! Thank you, little god. The door feels like home again.", "Back on its hook! Thank you, little god. The door feels like home again.", "Look at that glow by the door. Welcome home, old lantern."]},

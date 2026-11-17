@@ -19,6 +19,17 @@ const EMBER := Color("9C3420")  # the red-brown rubric ink
 const GREEN := Color("5D8548")  # leaf_green
 const QUIT_RECT := Rect2(140, SIZE.y - 112, SIZE.x - 280, 46)
 const ROMAN: Array[String] = ["I", "II", "III", "IV", "V", "VI", "VII"]
+
+
+static func roman(n: int) -> String:
+	## Roman numerals for any positive number (loops are endless).
+	var out := ""
+	var left := maxi(n, 1)
+	for pair in [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]:
+		while left >= pair[0]:
+			out += pair[1]
+			left -= pair[0]
+	return out
 const TITLES: Array[String] = ["The God", "The Village", "Towers", "Spells", "Quests", "How to Play"]
 const HOW: Array[String] = [
 	"Pick a card up from the tray, set it on the grass and let go.",
@@ -66,17 +77,19 @@ func _draw() -> void:
 func _page_god() -> void:
 	var y := 160.0
 	var night: int = data.get("night", 0)
-	var days: int = data.get("days", 5)
+	var days: int = data.get("days", 3)
 	_left("Day", Vector2(50, y), 28, OAK_LIGHT)
+	var step := minf(70.0, (SIZE.x - 220.0) / maxf(days, 1))  # up to 8 nights must fit the page
+	var rad := clampf(step * 0.34, 12.0, 24.0)
 	for i in days:
-		var c := Vector2(170 + i * 70, y - 10)
-		draw_circle(c, 24, GOLD_DARK)
-		draw_circle(c, 20, GOLD if i <= night else PARCH_SHADE)
+		var c := Vector2(170 + i * step, y - 10)
+		draw_circle(c, rad + 4.0, GOLD_DARK)
+		draw_circle(c, rad, GOLD if i <= night else PARCH_SHADE)
 		if i == night:
-			draw_arc(c, 28, 0, TAU, 32, EMBER, 3.0)
+			draw_arc(c, rad + 8.0, 0, TAU, 32, EMBER, 3.0)
 	y += 76
 	_left("Loop", Vector2(50, y), 28, OAK_LIGHT)
-	_left(ROMAN[clampi(data.get("loop", 0), 0, ROMAN.size() - 1)], Vector2(170, y), 38, INK)
+	_left(roman(int(data.get("loop", 0)) + 1), Vector2(170, y), 38, INK)
 	_left("Dusk in", Vector2(290, y), 28, OAK_LIGHT)
 	_left(String(data.get("time_left", "")), Vector2(420, y), 36, INK)
 	y += 84
@@ -96,6 +109,7 @@ func _page_god() -> void:
 		draw_rect(b.grow(-3), GOLD if i < up else Color("6B4228"))
 		draw_colored_polygon(PackedVector2Array([b.position + Vector2(-5, 0), b.position + Vector2(22, -20), b.position + Vector2(49, 0)]), EMBER if i < up else Color("6B4228"))
 	_left("%d of %d standing" % [up, total], Vector2(150, y + 34), 22, OAK_LIGHT)
+	_left("Faith carried over the loops: %d" % int(data.get("carried", 0)), Vector2(50, y + 66), 22, OAK_LIGHT)
 	y += 100
 	draw_line(Vector2(50, y - 30), Vector2(SIZE.x - 50, y - 30), GOLD_DARK, 2.0)
 	_left("Gifts you carry", Vector2(50, y + 4), 28, OAK_LIGHT)

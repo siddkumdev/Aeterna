@@ -12,7 +12,8 @@ extends RefCounted
 ##   - Each loop after the first adds one more extra group per night (spec 16 for loop 2; loop 5 has 4), each
 ##     worth a third of the budget, from the edges in turn starting with the one that had the smallest group.
 ##     The new-type guard only applies in loop 1 (by loop 2 the player knows every type).
-##   - The boss night (GameConfig.BOSS_NIGHT) is escort groups only; Game adds the boss itself.
+##   - The fall night (Game.fall_night(), the last of a loop) also gets the Warden, added by Game. Night indexes past
+##     GameConfig.NIGHT_BUDGETS clamp to its last entry.
 
 
 static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary]:
@@ -23,9 +24,15 @@ static func groups_for(night: int, rng_seed: int, loop := 0) -> Array[Dictionary
 	rng.seed = rng_seed + night * 7919 + loop * 104729
 	var unlocked: Array[String] = []
 	var fresh: Array[String] = []  # types that unlock tonight, each opens the night alone (loop 1 only)
+	# Short loops must not freeze the enemy roster: from loop 2 on the unlocks also follow the loop number (the tier of
+	# unlocks is max(night, min(2 x loop, last unlock night)), so a 1-2 night loop still fields the later types).
+	var last_unlock := 0
+	for k in GameConfig.WAVE_TYPES:
+		last_unlock = maxi(last_unlock, int(GameConfig.ENEMIES[k]["unlock"]) - 1)
+	var tier := maxi(night, mini(loop * 2, last_unlock))
 	for k in GameConfig.WAVE_TYPES:
 		var u: int = GameConfig.ENEMIES[k]["unlock"]
-		if u <= night + 1 and loop >= GameConfig.ENEMIES[k].get("unlock_loop", 0):
+		if u <= tier + 1 and loop >= GameConfig.ENEMIES[k].get("unlock_loop", 0):
 			unlocked.append(k)
 			if u == night + 1 and u > 1 and loop == 0:
 				fresh.append(k)

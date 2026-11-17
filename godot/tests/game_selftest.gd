@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await _elites()
 	await _doom()
 	await _endings()
+	await _loops()
 	await _review_fixes()
 	await _day_clock()
 	await _quests()
@@ -78,7 +79,7 @@ func _waves() -> void:
 			check("night %d: new type %s opens alone in group %d" % [n + 1, k, i + 1], not g[i]["enemies"].is_empty() and g[i]["enemies"].all(func(e): return e == k))
 		print("      night %d: %s" % [n + 1, str(g.map(func(x): return "%s %s" % [x["spawn"], _count(x["enemies"])]))])
 	check("same seed, same plan", str(WavePlan.groups_for(2, 5)) == str(WavePlan.groups_for(2, 5)))
-	for lp in range(2, GameConfig.LOOPS_PER_RUN):
+	for lp in range(2, 5):  # loops are endless; spot-check the first few
 		var gl := WavePlan.groups_for(3, 1, lp)
 		check("loop %d: %d groups (3 + %d extra)" % [lp + 1, gl.size(), lp], gl.size() == 3 + lp)
 	# flyers never more than a third of a night; Tunnelers and the Fog variant only in loop 2, from their night
@@ -87,7 +88,7 @@ func _waves() -> void:
 	var seen := {}
 	for sd in range(1, 41):
 		for lp in range(2):
-			for n in range(GameConfig.NIGHTS_PER_LOOP):
+			for n in range(GameConfig.LOOP_NIGHTS_MAX):
 				var all_threat := 0
 				var air := 0
 				for x in WavePlan.groups_for(n, sd, lp):
@@ -104,7 +105,12 @@ func _waves() -> void:
 	check("flyers never more than a third of a night's threat (40 seeds, both loops)", air_bad == 0)
 	check("no Tunneler or Fog variant in loop 1", loop1_bad == 0)
 	check("Wisps from night 2", seen.get("wisp L0", 0) == 2)
-	check("loop 2: Tunnelers from night 2, Fog from night 3", seen.get("tunneler L1", 0) == 2 and seen.get("fog L1", 0) == 3)
+	check("loop 2: the unlocks follow the loop too, so Tunnelers and Fog are in from night 1 (a short loop still fields them)", seen.get("tunneler L1", 0) == 1 and seen.get("fog L1", 0) == 1)
+	var short_types := {}
+	for x in WavePlan.groups_for(0, 3, 3):
+		for k in x["enemies"]:
+			short_types[k] = true
+	check("a 1-night loop 4 fields later enemy types, not only Grunts", short_types.size() > 1)
 	# loop 2: one extra group, a third more threat, and still no edge with more than half of it
 	for n in range(5):
 		var g2 := WavePlan.groups_for(n, 1, 1)
@@ -201,7 +207,7 @@ func _nights() -> void:
 	g.queue_free()
 	await process_frame
 	var run := await _run_bot(true, true)
-	check("a full run ends (run complete or run over)", run["phase"] == Game.Phase.DONE)
+	check("a full run ends in an ending, taken when the statue offers it", run["phase"] == Game.Phase.DONE and run.get("ending", false))
 	check("the run went through the hourglass into loop 2", run["loops"] >= 2)
 	print("      full run: %s" % str(run["log"]))
 
@@ -246,10 +252,15 @@ func _run_bot(keep_building: bool, whole_run: bool) -> Dictionary:
 		Vector2i(14, 5), Vector2i(8, 5), Vector2i(5, 15), Vector2i(17, 15), Vector2i(5, 7), Vector2i(17, 7), Vector2i(14, 17)]
 	var order := ["fire", "crossbow", "guard", "airship"]
 	var out := {"lost_on": 7, "loops": 1, "log": []}
-	while g.phase != Game.Phase.DONE:
+	while g.phase != Game.Phase.DONE and g.loop < 8:  # endless loops: the bot also stops after 8 loops
 		if g.phase == Game.Phase.CARDS:
 			if not whole_run:
 				break
+			if g.ending_choice:  # loops are endless: the bot takes the first ending offered (loop 3 on)
+				out["log"].append("ending offered at loop %d" % (g.loop + 1))
+				out["ending"] = true
+				g.choose_card(0)
+				continue
 			out["log"].append("card %s" % Cards.describe(g.offers[0]["id"], g.offers[0]["rarity"]).split("\n")[0])
 			g.choose_card(0)
 			out["loops"] = g.loop + 1
@@ -315,7 +326,8 @@ func _cards() -> void:
 	for sd_i in range(1, 31):
 		dg.run_seed = sd_i
 		dg.loop = sd_i % 2
-		dg.night = GameConfig.BOSS_NIGHT
+		dg.loop_nights = 5
+		dg.night = 4  # the fall night of a 5-night loop
 		dg._end_loop(false)
 		draft_three = draft_three and dg.offers.size() == 3
 		for o in dg.offers:
@@ -733,12 +745,13 @@ func _step2() -> void:
 
 func _foresight() -> void:
 	var g := await _make_game()
-	check("a run is 3 loops", GameConfig.LOOPS_PER_RUN == 3)
 	var tiers := []
-	for lp in range(GameConfig.LOOPS_PER_RUN):
+	for lp in range(3):  # the 3 tiers; later loops stay on the top tier (loops are endless)
 		g.loop = lp
 		tiers.append(g.foresight_tier())
 	check("Foresight: 3 tiers over loops 1 / 2 / 3", tiers == [1, 2, 3])
+	g.loop = 9
+	check("Foresight: loop 10 keeps the top tier", g.foresight_tier() == 3)
 
 	# what each tier reveals, on loop 2's night 3 (Fog variants can come) of several seeds
 	var fog_seen := 0
@@ -1287,8 +1300,9 @@ func _mouse_hand_rules() -> void:
 
 func _warden() -> void:
 	var g := await _make_game()
-	g.loop = GameConfig.LOOPS_PER_RUN - 1  # the last loop: the Warden can die (loops 1-4 are the doomed fall, tested in _doom)
-	g.night = GameConfig.BOSS_NIGHT
+	g.loop = 3  # the fall night in any loop (Siddharth 2026-11-17: the Warden is never killable)
+	g.loop_nights = 5
+	g.night = 4
 	g.start_night()
 	g._spawn_queue.clear()
 	var boss: Enemy = g._spawn(Vector2i(12, 3), "boss", _at(12, 3))
@@ -1342,7 +1356,7 @@ func _warden() -> void:
 	check("Warden phase 4: no healing once the vines are down", is_equal_approx(boss.hp, hp_no_vines))
 	boss.take_damage(boss.hp + 1.0)
 	_run(g, 0.1)
-	check("Warden: empty phase-4 HP kills it", not boss.alive and g.warden == null)
+	check("Warden: empty phase-4 HP does not kill it (never killable on a fall night)", boss.alive and boss.hp > 0.0 and g.warden != null)
 	g.queue_free()
 
 
@@ -1350,7 +1364,8 @@ func _elites() -> void:
 	## 2026-11-11 (the user): the three scary bosses walk as elite enemies, one a night from the third night, never on the boss night.
 	var g := await _make_game()
 	var seen := {}
-	for n in GameConfig.NIGHTS_PER_LOOP:
+	g.loop_nights = 5
+	for n in 5:
 		g.night = n
 		var elites := 0
 		for grp in g.night_plan():
@@ -1358,7 +1373,7 @@ func _elites() -> void:
 				if GameConfig.ELITES.has(k):
 					elites += 1
 					seen[k] = true
-		check("night %d plans %d elite(s)" % [n + 1, elites], elites == (1 if n >= GameConfig.ELITE_FROM_NIGHT and n < GameConfig.BOSS_NIGHT else 0))
+		check("night %d plans %d elite(s)" % [n + 1, elites], elites == (1 if n >= GameConfig.ELITE_FROM_NIGHT and n < g.fall_night() else 0))
 	g.queue_free()
 	await process_frame
 
@@ -1366,8 +1381,8 @@ func _elites() -> void:
 func _doom() -> void:
 	## Night 5 of loops 1-4 always falls: the Warden cannot die, and DOOM_AT seconds in the houses go dark.
 	var g := await _make_game()
-	check("a loop is 5 nights and night 5 is the boss night", GameConfig.NIGHTS_PER_LOOP == 5 and GameConfig.BOSS_NIGHT == 4)
-	g.night = GameConfig.BOSS_NIGHT
+	g.loop_nights = 5
+	g.night = g.fall_night()
 	g.start_night()
 	g._spawn_queue.clear()
 	var boss: Enemy = g._spawn(Vector2i(12, 3), "boss", _at(12, 3))
@@ -1391,18 +1406,20 @@ func _doom() -> void:
 	check("the village falls and the loop is lost", g.phase != Game.Phase.NIGHT and not g.loop_won)
 	g.queue_free()
 	var f := await _make_game()
-	f.loop = GameConfig.LOOPS_PER_RUN - 1
-	f.night = GameConfig.BOSS_NIGHT
-	check("the last loop is not doomed", not f.is_doomed_night())
+	f.loop = 7
+	f.loop_nights = 4
+	f.night = f.fall_night()
+	check("a late loop's fall night is doomed too (no killable last loop)", f.is_doomed_night())
 	f.queue_free()
 
 
 func _endings() -> void:
 	var g := await _make_game()
-	g.loop = GameConfig.LOOPS_PER_RUN - 1
-	g.night = GameConfig.BOSS_NIGHT
-	g._end_loop(true)
-	check("beating the Warden in the last loop offers the two endings", g.phase == Game.Phase.CARDS and g.ending_choice and g.offers.size() == 2)
+	g.loop = 2
+	g.loop_nights = 4
+	g.carried_total = GameConfig.ENDING_B_CARRIED
+	g._offer_ending("Dawn.")
+	check("from loop 3 the dawn offers both endings and keep looping", g.phase == Game.Phase.CARDS and g.ending_choice and g.offers.size() == 3)
 	check("choosing an ending finishes the run with its words", g.choose_card(1) and g.phase == Game.Phase.DONE and g.last_message.contains("Skotos"))
 	g.queue_free()
 
@@ -1489,9 +1506,10 @@ func _review_fixes() -> void:
 	await process_frame
 	# 2: a restart during the ending offer clears it
 	g = await _make_game()
-	g.loop = GameConfig.LOOPS_PER_RUN - 1
-	g.night = GameConfig.BOSS_NIGHT
-	g._end_loop(true)
+	g.loop = 2
+	g.loop_nights = 5
+	g.night = 4
+	g._offer_ending("Dawn.")
 	g.new_run(7)
 	check("a new run clears the ending offer", not g.ending_choice)
 	g._end_loop(false)
@@ -2119,6 +2137,7 @@ func _day_clock() -> void:
 func _quests() -> void:
 	## 2026-11-11 (the user): quests, at most 4 a day, posted one by one, cycling through every kind.
 	var g := await _make_game()
+	g.loop_nights = 6  # the day-cycle check below plays 3 nights without the fall
 	check("day 1 plans 4 quests and posts none at once", g.quest_plan.size() == 4 and g.requests.is_empty())
 	check("the very first quest is the prayer", g.quest_plan[0]["kind"] == "prayer")
 	var day1: Array = g.quest_plan.map(func(q): return q["kind"])
@@ -3380,3 +3399,165 @@ func _quest_guidance() -> void:
 	check("slip: hidden again when no quest is open", not gr._slip.visible)
 	gr.queue_free()
 	await process_frame
+
+
+func _fall_and_rewind(g: Game) -> void:
+	## Play one loop's end: the fall night is lost, the first card is taken, the rewind runs.
+	g.night = g.fall_night()
+	g._end_loop(false)
+	if g.phase == Game.Phase.CARDS:
+		g.choose_card(0)
+
+
+func _loops() -> void:
+	## 2026-11-17 (Siddharth): loop 1 = 3 nights, later loops 1-8 nights, endless; warning signs; Faith carry-over;
+	## endings from loop 3 on; the first rewind cutscene.
+	check("loop 1 is 3 nights, the fall is night 3", GameConfig.loop_nights(1, 0) == 3 and GameConfig.loop_nights(99, 0) == 3)
+	var lens := {}
+	var in_range := true
+	var det := true
+	for sd in range(1, 101):
+		for lp in range(1, 9):
+			var n := GameConfig.loop_nights(sd, lp)
+			in_range = in_range and n >= 1 and n <= 8
+			det = det and n == GameConfig.loop_nights(sd, lp)
+			lens[n] = true
+	check("later loops last 1..8 nights", in_range)
+	check("a loop's length is deterministic per run seed", det)
+	check("every length 1 to 8 occurs across seeds", lens.size() == 8)
+	var hist := [0, 0, 0, 0, 0, 0, 0, 0, 0]
+	for k in 10000:
+		hist[GameConfig.loop_nights(k, 1 + k % 7)] += 1
+	check("loop length is weighted: the middle (4-5) beats the extremes (1 and 8), 3 and 6 beat 2 and 7",
+		hist[4] > hist[2] and hist[5] > hist[2] and hist[4] > hist[1] * 3 and hist[5] > hist[8] * 3 and hist[3] > hist[2] and hist[6] > hist[7] and hist[2] > hist[1] and hist[7] > hist[8])
+	check("the weights add up to 100", GameConfig.LOOP_NIGHT_WEIGHTS.reduce(func(a, b): return a + b, 0) == 100)
+	var g := await _make_game()
+	g.new_run(11)
+	check("a new run starts loop 1 with 3 nights and the fall on night 3", g.loop_nights == 3 and g.fall_night() == 2 and not g.is_doomed_night())
+	g.night = 2
+	check("loop 1 falls on night 3", g.is_doomed_night())
+	var lengths_ok := true
+	for i in 6:  # loops are endless: loops 1 to 6 all continue
+		var before := g.loop
+		_fall_and_rewind(g)
+		lengths_ok = lengths_ok and g.loop == before + 1 and g.phase == Game.Phase.DAY and g.loop_nights == GameConfig.loop_nights(11, g.loop)
+	check("loops are endless: six rewinds in a row, each loop's length rolled from the run seed", lengths_ok and g.loop == 6)
+	check("the run never ends by a loop count", g.phase != Game.Phase.DONE)
+	g.queue_free()
+
+	# the first rewind cutscene: only after loop 1, and it ends in the rewind
+	var c := await _make_game()
+	c.new_run(5)
+	check("no cutscene yet", c.cutscene_count == 0 and not c.is_cutscene())
+	_fall_and_rewind(c)
+	check("the cutscene plays after loop 1 and ends in the rewind", c.cutscene_count == 1 and c.loop == 1 and not c.is_cutscene())
+	_fall_and_rewind(c)
+	_fall_and_rewind(c)
+	check("later loops do not play it again", c.cutscene_count == 1 and c.loop == 3)
+	check("the cutscene lines are in thoughts.json (DRAFT)", StoryText.cutscene("skotos_1").contains("lovely") and StoryText.cutscene("skotos_2").contains("curse") and StoryText.cutscene("maren").contains("Keep them")
+		and StoryText.cutscene_narration().size() == 3)
+	c.queue_free()
+
+	# warning signs: the Veil's crack grows each night and is largest on the fall night; the dusk horn is for the fall only
+	var w := await _make_game()
+	w.new_run(3)
+	w.loop = 1
+	w.loop_nights = 5
+	var grows := true
+	var prev := -1.0
+	for n in 6:
+		var a := w.veil_crack_amount(n)
+		grows = grows and (a > prev or a == 0.75)
+		prev = a
+	check("the Veil crack grows a little every night of the loop", grows and w.veil_crack_amount(1) > w.veil_crack_amount(0))
+	check("the crack never reaches its maximum", w.veil_crack_amount(30) < 1.0)
+	w.loop_nights = 5
+	var same := true
+	for n in 5:
+		var before := w.veil_crack_amount(n)
+		w.loop_nights = 2 + n
+		same = same and is_equal_approx(before, w.veil_crack_amount(n))
+	check("the crack does not depend on the fall night, so it cannot give it away", same)
+	w.log_sounds = true
+	w.night = 1
+	w.sound_log.clear()
+	w.start_night()
+	var horn_other := w.sound_log.count("boss_roar")
+	w.loop_nights = 5
+	w._clear_night()
+	w.phase = Game.Phase.DAY
+	w.night = 4
+	w.sound_log.clear()
+	w.start_night()
+	check("the horn sounds at every dusk, fall night or not", horn_other == 1 and w.sound_log.count("boss_roar") == 1)
+	w.queue_free()
+
+	# Faith carries over at each rewind
+	var f := await _make_game()
+	f.new_run(8)
+	f.faith = 400
+	f._helped = 2
+	var expect := roundi(400 * GameConfig.CARRY_FAITH_SHARE) + GameConfig.CARRY_PER_VILLAGER * f.villagers_alive() + GameConfig.CARRY_PER_KINDNESS * 2
+	check("carry amount = 15% of Faith + 10 per villager + 5 per kindness", f.carry_amount() == expect)
+	_fall_and_rewind(f)
+	check("the next loop starts with the usual Faith plus the carry", f.faith == GameConfig.START_FAITH + expect and f.carried_total == expect)
+	f.faith = 100
+	f._helped = 0
+	var second := f.carry_amount()
+	_fall_and_rewind(f)
+	check("the carried total accumulates across the run", f.carried_total == expect + second and f.last_carry == second)
+	check("the ledger data carries the total", f.ledger_data().get("carried", -1) == f.carried_total)
+	f.queue_free()
+
+	# endings: only from loop 3 on; B only when the carried total reaches the stand-in
+	var e := await _make_game()
+	e.new_run(2)
+	e.loop_nights = 4
+	e.loop = 1
+	e.night = 0
+	e.phase = Game.Phase.NIGHT
+	e._end_night()
+	check("no ending offer at a dawn of loop 2", e.phase == Game.Phase.DAY and not e.ending_choice)
+	e.loop = 2
+	e.night = 0
+	e.phase = Game.Phase.NIGHT
+	e.carried_total = GameConfig.ENDING_B_CARRIED - 1
+	e._end_night()
+	check("loop 3's dawn offers the ending (A and keep looping, B is closed below the total)",
+		e.phase == Game.Phase.CARDS and e.ending_choice and e.offers.map(func(o): return o["id"]) == ["let_go", "keep_looping"])
+	check("keep looping goes on to the day", e.choose_card(1) and e.phase == Game.Phase.DAY and not e.ending_choice and e.night == 1)
+	e.phase = Game.Phase.NIGHT
+	e.carried_total = GameConfig.ENDING_B_CARRIED
+	e._end_night()
+	check("ending B opens at the carried total", e.offers.map(func(o): return o["id"]) == ["let_go", "remember", "keep_looping"])
+	e.queue_free()
+
+	# the cutscene's input lock, the roman numerals, the force-dark house
+	check("roman numerals for any loop number", LedgerPage.roman(9) == "IX" and LedgerPage.roman(14) == "XIV" and LedgerPage.roman(1) == "I")
+	var k := await _make_game()
+	var hand := GameHand.new()
+	root.add_child(hand)
+	await process_frame
+	k.hand_pressed(hand)
+	var free_press := k._active_hand == hand
+	k.hand_released(hand)
+	k._active_hand = null
+	k._cutscene = true
+	k.hand_pressed(hand)
+	check("during the cutscene a pinch is ignored (and a free pinch is not)", free_press and k._active_hand == null)
+	var spare := Node3D.new()
+	var spare_req := HelpRequest.new()
+	check("during the cutscene nothing can be tapped, grabbed or chosen",
+		k.tap_villager(spare) == "" and not k.grab_request(spare_req) and not k.choose_card(0))
+	spare.free()
+	spare_req.free()
+	k._cutscene = false
+	hand.queue_free()
+	var hh: House = k.houses[0]
+	hh.hold_check = func(_h): return true  # a card that holds the house at 1 HP
+	hh.damage(hh.max_hp * 2.0)
+	var held := not hh.is_shuttered
+	hh.force_dark()
+	check("force_dark shutters a house that a hold would keep lit", held and hh.is_shuttered)
+	k.queue_free()
+

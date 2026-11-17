@@ -52,6 +52,19 @@ static func warden(kind: String, loop: int) -> String:
 	return str(data().get("warden", {}).get(kind, {}).get(str(clampi(loop, 0, 4) + 1), ""))
 
 
+static func cutscene(key: String) -> String:
+	## One DRAFT line of the first rewind cutscene ("skotos_1", "skotos_2"); see thoughts.json "cutscene".
+	return str(data().get("cutscene", {}).get(key, ""))
+
+
+static func cutscene_narration() -> Array[String]:
+	## The parchment narration of the first rewind cutscene, one string per caption.
+	var out: Array[String] = []
+	for l in data().get("cutscene", {}).get("narration", []):
+		out.append(str(l))
+	return out
+
+
 static var _last_task := {}  # "id/which" -> the variant picked last, so the next pick is a different one
 
 

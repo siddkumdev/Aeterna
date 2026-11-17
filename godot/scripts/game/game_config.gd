@@ -10,18 +10,46 @@ const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 
 # Economy (spec 5)
 const START_FAITH := 200  # 2026-10-22 (Siddharth): 100 was too low; 200 = three towers before night 1
 const DAWN_FAITH_PER_HOUSE := 5
-# Clearing a night pays 10 x the night number on top of dawn income (Siddharth 2026-10-22): night 1 = 10 ... boss night = 60
+# Clearing a night pays 10 x the night number on top of dawn income (Siddharth 2026-10-22): night 1 = 10 ... night 8 = 80
 const NIGHT_CLEAR_FAITH_PER_NIGHT := 10
 
-# Time loop (spec 6 + 15). A loop = 5 nights + the boss night; a run = loop 1 + loop 2, then it ends.
-const NIGHTS_PER_LOOP := 5  # 2026-11-10 (the user): every loop is 5 days; night 5 is the Warden's (docs/STORY.md)
-const BOSS_NIGHT := 4  # 0-based: the 5th night
-# Night 5 always falls in loops 1-4 (the player is never told): the Warden cannot be killed, and DOOM_AT seconds
-# into the night their horn sounds and a house is shuttered every DOOM_STEP seconds until the village is lost.
-# The last loop of a run is not doomed (the ending is the user's to choose, see docs/STORY.md).
+# Time loop (Siddharth 2026-11-17, replaces the fixed 5 nights x 3 loops). Loop 1 = 3 nights: night 1 the tutorial,
+# night 2 alone, night 3 the fall night. Every later loop lasts a random 1-8 nights, weighted toward the middle (seeded
+# from the run seed, rolled when the loop starts, see loop_nights), the last of which is the fall night. Loops are endless.
+const FIRST_LOOP_NIGHTS := 3
+const LOOP_NIGHTS_MIN := 1
+const LOOP_NIGHTS_MAX := 8
+# percent for 1..8 nights (stand-in, Siddharth 2026-11-17: extremes rarer than the middle)
+const LOOP_NIGHT_WEIGHTS: Array[int] = [4, 9, 15, 22, 22, 15, 9, 4]
+# The fall night is never won: the Warden comes, DOOM_AT seconds into the night their horn sounds and a house is
+# shuttered every DOOM_STEP seconds until the village is lost. The Warden is never killable (no last-loop exception).
 const DOOM_AT := 70.0
 const DOOM_STEP := 1.1
-const LOOPS_PER_RUN := 3  # 2026-11-15 (Siddharth): tightened from 5 loops to 3
+# The ending choice is offered at the statue each dawn from loop 3 on (0-based loop 2); the player may keep looping.
+const ENDING_FROM_LOOP := 2
+# Faith carries over at each rewind (stand-in, Siddharth 2026-11-17): next loop's start Faith = START_FAITH
+# + 15% of the Faith held at the fall + 10 per villager alive + 5 per kindness task done that loop.
+const CARRY_FAITH_SHARE := 0.15  # stand-in, Siddharth 2026-11-17
+const CARRY_PER_VILLAGER := 10  # stand-in, Siddharth 2026-11-17
+const CARRY_PER_KINDNESS := 5  # stand-in, Siddharth 2026-11-17
+const ENDING_B_CARRIED := 300  # stand-in, Siddharth 2026-11-17: "Remember them" needs this much carried in total
+
+
+static func loop_nights(run_seed: int, loop_index: int) -> int:
+	## How many nights loop `loop_index` (0-based) lasts, the last being the fall night. Deterministic per run seed.
+	if loop_index <= 0:
+		return FIRST_LOOP_NIGHTS
+	var r := RandomNumberGenerator.new()
+	r.seed = run_seed * 7919 + loop_index * 104729 + 17
+	var roll := r.randi_range(1, 100)
+	var acc := 0
+	for i in LOOP_NIGHT_WEIGHTS.size():
+		acc += LOOP_NIGHT_WEIGHTS[i]
+		if roll <= acc:
+			return LOOP_NIGHTS_MIN + i
+	return LOOP_NIGHTS_MAX
+
+
 # Each loop after the first (spec 16 for loop 2: +40% enemy HP and one extra group per night; Claude's stand-in
 # for loops 3-5: the same step again each loop). Loop n (0-based) = HP x(1 + 0.4 n), n extra groups per night.
 const LOOP_HP_STEP := 0.22
@@ -156,7 +184,7 @@ const HP_RAMP_PER_NIGHT := 0.20
 
 # Waves (spec 6a; 2026-10-22: harder, budgets ramp up). Threat budget per night, 3 groups (one per spawn),
 # a new group every 12 s. Each group leaves the forest in clusters of 2-3 that come out together.
-const NIGHT_BUDGETS: Array[int] = [8, 14, 22, 32, 44, 30]  # the 6th = the boss night's escort groups
+const NIGHT_BUDGETS: Array[int] = [8, 14, 22, 32, 44, 58, 74, 92]  # 8 entries = the longest loop (8 nights), +2 growth per step (6, 8 ... 18); past the list it clamps to the last
 const GROUP_INTERVAL := 12.0
 const FIRST_GROUP_DELAY := 3.0
 const CLUSTER_SIZE := Vector2i(2, 3)
