@@ -1016,7 +1016,7 @@ func _build_wood() -> void:
 	var oaks: Array = []
 	for p in [Vector3(-14, 0, -9), Vector3(13, 0, -27), Vector3(-9, 0, -31), Vector3(16, 0, -6)]:
 		oaks.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.9, 1.2)), Vector3(p.x, height(p.x, p.z) - 0.1, p.z)))
-	_scatter(_glb_mesh("res://assets/world/ew_world_tree_oak_round_v01.glb"), _life_size(oaks), "Oaks", true, GAME_MAT)  # the game's oak
+	_scatter(_glb_mesh("res://assets/world/ew_world_tree_oak_round_v01.glb"), _life_size(oaks), "Oaks", false, GAME_MAT)  # the game's oak; no shadows at life size (Quest shadow pass)
 
 
 func _build_ruin() -> void:
