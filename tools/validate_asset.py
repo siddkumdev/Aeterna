@@ -23,7 +23,11 @@ BUDGET_OVERRIDES = {"ew_world_story_ground": 16000,  # sykeriin 2026-11-17: life
                     "ew_world_island_underside": 8500,  # was stuck inside the comment above (code-critic 2026-11-17); same as check_assets.gd
                     # creature bosses (Durva 2026-11-02: "extreme detail", try a bigger budget): 20000 until tested on a Quest
                     "ew_boss_lich_wyrm": 20000, "ew_boss_calavera_lich": 20000, "ew_boss_deathhead_moth": 20000, "ew_boss_cinder_mammoth": 20000, "ew_boss_gravemaw_bear": 20000, "ew_boss_furnace_orc": 20000,
-                    "ew_boss_eclipse_bloom_a": 20000, "ew_boss_eclipse_bloom_b": 20000, "ew_boss_eclipse_bloom_c": 20000, "ew_boss_eclipse_bloom_d": 20000}  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
+                    "ew_boss_eclipse_bloom_a": 20000, "ew_boss_eclipse_bloom_b": 20000, "ew_boss_eclipse_bloom_c": 20000, "ew_boss_eclipse_bloom_d": 20000,
+                    "ew_boss_skotos": 12000, "ew_boss_skotos_e": 12000, "ew_boss_skotos_f": 12000, "ew_boss_skotos_g": 12000, "ew_boss_skotos_h": 12000,
+                    "ew_boss_skotos_i": 12000, "ew_boss_skotos_j": 12000, "ew_boss_skotos_k": 12000, "ew_boss_skotos_l": 12000,
+                    "ew_boss_skotos_m": 12000, "ew_boss_skotos_n": 12000, "ew_boss_skotos_o": 12000, "ew_boss_skotos_p": 12000,
+                    "ew_boss_skotos_q": 12000, "ew_boss_skotos_r": 12000, "ew_boss_skotos_s": 12000, "ew_boss_skotos_t": 12000}  # Skotos round 2: boss rules lifted (Siddharth 2026-11-17)  # lush grass (Siddharth 2026-10-20) needs ~3.5k; whole-board budget is 150k
 NAME = re.compile(r"^ew_(world|village|defense|enemy|boss|portal|vr|foresight|ui|vfx)_[a-z0-9_]+_v\d{2}$")
 
 INNER = r'''
