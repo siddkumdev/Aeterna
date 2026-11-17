@@ -3627,9 +3627,9 @@ static func configure_xr_viewport(vp: Viewport, xr: Object = null) -> void:
 	## Enable XR rendering and explicit OpenXR foveated VRS on the active viewport.
 	if vp:
 		vp.use_xr = true
-		vp.vrs_mode = Viewport.VRS_XR
-		if "vrs_update_mode" in vp:
-			vp.vrs_update_mode = Viewport.VRS_UPDATE_ONCE
+		# No Godot-made VRS map: on the Quest it came out inverted (sharp edges, blocky centre; the user, 2026-11-17: headache).
+		# The runtime's own foveation below keeps the centre sharp.
+		vp.vrs_mode = Viewport.VRS_DISABLED
 	if xr != null and "foveation_level" in xr:  # the Quest renders the edges of each eye cheaper (the user: it lags a lot)
 		xr.set("foveation_level", XR_FOVEATION_LEVEL)
 		xr.set("foveation_dynamic", true)

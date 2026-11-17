@@ -163,10 +163,11 @@ func _process(delta: float) -> void:
 	if _state != "playing":
 		_place_xr_rig()
 	if _state != "playing":
-		for id in _plaques:
-			var p: Plaque = _plaques[id]
-			if not is_instance_valid(p):
+		for id in _plaques.keys():
+			if not is_instance_valid(_plaques[id]):  # check before the typed assign: a freed plaque errored every frame on the Quest
+				_plaques.erase(id)
 				continue
+			var p: Plaque = _plaques[id]
 			var hot := false
 			for h in game._hands:
 				hot = hot or p.hit_point(h.touch_point(), maxf(0.02, _touch_pad())) or p.hit_ray(h.ray_origin(), h.ray_dir())
@@ -192,13 +193,15 @@ func _on_press(world: Vector3, origin: Vector3, dir: Vector3) -> bool:
 	var touched := ""  # a fingertip on a plaque beats the ray; the nearest plaque wins when the pads overlap
 	var best := INF
 	for id in _plaques:
+		if not is_instance_valid(_plaques[id]):
+			continue
 		var p: Plaque = _plaques[id]
 		if p.hit_point(world, _touch_pad()) and p.global_position.distance_to(world) < best:
 			best = p.global_position.distance_to(world)
 			touched = id
 	if touched == "":
 		for id in _plaques:
-			if (_plaques[id] as Plaque).hit_ray(origin, dir):
+			if is_instance_valid(_plaques[id]) and (_plaques[id] as Plaque).hit_ray(origin, dir):
 				touched = id
 				break
 	if touched != "":
@@ -232,8 +235,9 @@ func _wake(story := true) -> void:
 	_skip = false
 	_title.visible = false
 	if _xr_rig:
-		_xr_rig.queue_free()
+		_xr_rig.queue_free()  # the title plaques live on this rig in VR: forget them with it
 		_xr_rig = null
+		_plaques.clear()
 	var v: VeilDome = game.veil
 	game.board.visible = false
 	if v:
