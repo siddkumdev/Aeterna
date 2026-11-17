@@ -2786,14 +2786,16 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if h != _mouse_hand and not placing():
 		for o in _free_pinch:
-			if is_instance_valid(o) and o != h and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
+			if is_instance_valid(o) and o != h and not o.is_lost() and o.is_pressing() and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
 				_zoom_hands = [o, h]
 				_zoom_d0 = o.touch_point().distance_to(h.touch_point())
 				_zoom_start = board.global_transform
 				_free_pinch.clear()
+				_active_hand = null  # the first hand now belongs to the zoom, not to a ray drag
 				snd("grab")
 				return
-		_free_pinch.append(h)
+		if _board_cell_at(h.ray_origin(), h.ray_dir()).x < 0:
+			_free_pinch.append(h)  # only a pinch aimed off the island can become a zoom, so it never also builds or casts
 	_active_hand = h
 	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())
@@ -2986,6 +2988,7 @@ func _tick_rim(delta := 0.0) -> void:
 
 
 func hand_released(h: GameHand, cancelled := false) -> void:
+	_free_pinch.erase(h)
 	## cancelled: the hand lost tracking mid-pinch (GameHand.cancelled). Nothing is built, cast, delivered or moved.
 	if h == _mouse_hand and _mouse_rim:
 		_mouse_rim = false
@@ -2999,7 +3002,6 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		if not cancelled:
 			cycle_board_scale()
 		return
-	_free_pinch.erase(h)
 	if _zoom_hands.has(h):
 		_zoom_hands.clear()  # the table stays where the zoom left it, also when tracking was lost
 		snd("release")
@@ -3193,6 +3195,14 @@ static func tray_start_transform(board_xf: Transform3D, head: Vector3) -> Transf
 	return Transform3D(Basis(Vector3.UP, atan2(n.x, n.z)) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
 
 
+static func flat_yaw(b: Basis) -> float:
+	## Heading of a hand on the floor plane (its pointing axis, or its side axis when pointing straight up/down): no gimbal flip.
+	var f := -b.z
+	if Vector2(f.x, f.z).length() < 0.3:
+		f = b.x.rotated(Vector3.UP, PI / 2.0)
+	return atan2(-f.x, -f.z)
+
+
 static func tray_turned_transform(start: Transform3D, pos: Vector3, turn: float) -> Transform3D:
 	## The tray while a hand holds it by a handle (sykeriin, 2026-11-17: "same as the island"): it follows the hand and
 	## turns by as much as the hand has turned since the grab, keeping its tilt; it stays put when let go.
@@ -3276,7 +3286,7 @@ func _update_tray() -> void:
 		if not is_instance_valid(_tray_hand):
 			_tray_hand = null
 		else:
-			var turn := wrapf(_tray_hand.global_transform.basis.get_euler().y - _tray_hand_yaw0, -PI, PI)
+			var turn := wrapf(flat_yaw(_tray_hand.global_transform.basis) - _tray_hand_yaw0, -PI, PI)
 			var t := tray_turned_transform(_tray_start, _tray_hand.touch_point() + _tray_off, turn)
 			t.origin = tray_clamp(t.origin, board.global_transform)
 			_tray.global_transform = t
@@ -3350,7 +3360,7 @@ func _tray_grab(h: GameHand) -> void:
 	_tray_hand = h
 	_tray_start = _tray.global_transform
 	_tray_off = _tray.global_position - h.touch_point()
-	_tray_hand_yaw0 = h.global_transform.basis.get_euler().y
+	_tray_hand_yaw0 = flat_yaw(h.global_transform.basis)
 	snd("grab")
 
 
