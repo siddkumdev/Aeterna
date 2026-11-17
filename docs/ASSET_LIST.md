@@ -76,6 +76,7 @@ Change column (what happened to the tracker item):
 | W22 | P0 | model | Forest ring backdrop | Dense low-detail treeline at the island edge. This is where enemies come from. BUILT as 3 tree-line clumps (2 x 1 cells; mix, dark, low; 520-1176 tris), placed procedurally in Godot (APPROVED by Siddharth 2026-10-21). GODOT NOTE: generate the ring so the forest looks natural, not fake: irregular spacing, random rotation and scale, mixed clump variants, density thinning toward the village, no visible repeats. | ~1k | KEEP |
 | W23 | P1 | vfx | Forest spawn marker | NEW: subtle glow or disturbed trees at each of the 3 spawn points (replaces the portals). 1 x 1. | <200 | NEW |
 | W24 | P1 | model | Village bell post | NEW: pinch to end the day early. 1 x 1. | 200-400 | NEW |
+| W25 | P0 | model | Story ground (life-size) | NEW (sykeriin 2026-11-17): the land for the live story built from game models: 250 m across, flat where you stand and in the village 28 m ahead, rolling hills, cliff at the edge; flat-shaded patches, chunky grass clumps, dirt path in the mesh, boulders. Variant D (rocky highland) picked. BUILT v01 (15,702 tris). | 16k | NEW |
 
 ## V Village and villagers
 | ID | Pri | Kind | Asset | Notes | Budget | Change |

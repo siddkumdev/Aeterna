@@ -187,6 +187,18 @@ def tuft(m, cols, size=1.0):
     return f
 
 
+def clump(m, cols):
+    """Final tuft (sykeriin 2026-11-17: fewer, chunkier tufts): five wide blades fanned out from one base,
+    so it reads as one clump at 72 fps instead of thin shimmering spikes."""
+    def f(bx, by, z, rnd):
+        a0 = rnd.uniform(0, 6.3)
+        for k in range(5):
+            a = a0 + k * 1.2566 + rnd.uniform(-0.3, 0.3)
+            m.blade(bx + math.cos(a) * 0.05, by + math.sin(a) * 0.05, z, 0.075,
+                    rnd.uniform(0.3, 0.5), rnd.uniform(0.12, 0.2), a, rnd.choice(cols))
+    return f
+
+
 def draped(px, pz, lift):
     """Height for an overlay vertex: the highest ground within 1.8 m, so terrain bulging between the overlay's
     vertices cannot poke through (critic v02 saw holes on slopes)."""
@@ -316,8 +328,9 @@ def variant_c():
     return m.finish("ew_world_story_ground_v01")
 
 
-def variant_d():
-    """Rocky highland: grass darker in the hollows and lighter on the crests, boulders, earth-then-stone cliff."""
+def variant_d(final=False):
+    """Rocky highland: grass darker in the hollows and lighter on the crests, boulders, earth-then-stone cliff.
+    Picked by sykeriin 2026-11-17 (final: chunkier tufts, budget 16k)."""
     m, rnd = Mesh(), random.Random(14)
 
     def col(x, z, h, r, s):
@@ -331,7 +344,10 @@ def variant_d():
     hollow = lambda x, z: height(x, z) / (1.0 + math.hypot(x, z) * 0.025) < 0.5 and math.hypot(x, z) > 30.0
     scatter_patches(m, rnd, 30, (4.0, 10.0), ("leaf_light", "grass"), crest)
     scatter_patches(m, rnd, 10, (3.0, 7.0), ("leaf_dark",), hollow, layer=1)
-    scatter(m, rnd, 140, 14.0, tuft(m, ("leaf_green", "leaf_dark"), 1.2))
+    if final:
+        scatter(m, rnd, 120, 14.0, clump(m, ("leaf_green", "leaf_dark", "grass")))
+    else:
+        scatter(m, rnd, 140, 14.0, tuft(m, ("leaf_green", "leaf_dark"), 1.2))
     scatter(m, rnd, 16, 40.0, lambda bx, by, z, r: m.rock(bx, by, z, r.uniform(0.7, 1.4), r.choice(("stone", "stone_dark")), r))
     return m.finish("ew_world_story_ground_v01")
 
@@ -342,5 +358,10 @@ if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     v = args[0] if args else "A"
     bc.clear_scene()
-    obj = VARIANTS[v]()
-    print("BLEND", bc.save_blend(obj, "story_ground_" + v))
+    if "final" in args:  # the chosen design (D, sykeriin 2026-11-17), exported as the real asset
+        obj = variant_d(final=True)
+        print("BLEND", bc.save_blend(obj, "story_ground"))
+        print("GLB", bc.export_glb(obj, "world"))
+    else:
+        obj = VARIANTS[v]()
+        print("BLEND", bc.save_blend(obj, "story_ground_" + v))
