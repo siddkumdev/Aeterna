@@ -1,0 +1,53 @@
+Applications Memory Usage (in Kilobytes):
+Uptime: 15023780 Realtime: 15807712
+
+** MEMINFO in pid 3838 [com.aeterna.game] **
+                   Pss  Private  Private     Swap      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap   732314   731464        0        0   734852   735396   731131     4264
+  Dalvik Heap     4700     2668        0        0    10736     5797     2899     2898
+ Dalvik Other     4978     1920        0        0     8316                           
+        Stack     1549     1548        0        0     1552                           
+       Ashmem      232        0        0        0     1204                           
+      Gfx dev   157124   156100     1024        0   157128                           
+    Other dev       38        0       36        0      428                           
+     .so mmap    19129     2160     9904        0    76436                           
+    .jar mmap     4260        0     2120        0    38812                           
+    .apk mmap    56974     2432    52992        0    63292                           
+    .ttf mmap       32        0        0        0      164                           
+    .dex mmap       93       16       52        0      896                           
+    .oat mmap       74        0       20        0     1304                           
+    .art mmap    13535     8832        0        0    27768                           
+   Other mmap     1684        4      580        0     4616                           
+   EGL mtrack    34668    34668        0        0    34668                           
+    GL mtrack   390572   390572        0        0   390572                           
+      Unknown     4088     3788       88        0     4720                           
+        TOTAL  1426044  1336172    66816        0  1557464   741193   734030     7162
+ 
+ App Summary for pid : 3838, and process : com.aeterna.game
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:    11500                          38504
+         Native Heap:   731464                         734852
+                Code:    69736                         186792
+               Stack:     1548                           1552
+            Graphics:   582364                         582368
+       Private Other:     6376
+              System:    23056
+             Unknown:                                   13396
+ 
+           TOTAL PSS:  1426044            TOTAL RSS:  1557464      TOTAL SWAP (KB):        0
+ 
+ Objects
+               Views:        8         ViewRootImpl:        1
+         AppContexts:       10           Activities:        1
+              Assets:        9        AssetManagers:        0
+       Local Binders:       18        Proxy Binders:       43
+       Parcel memory:        7         Parcel count:       31
+    Death Recipients:        0             WebViews:        0
+ 
+ SQL
+         MEMORY_USED:        0
+  PAGECACHE_OVERFLOW:        0          MALLOC_SIZE:        0
+ 

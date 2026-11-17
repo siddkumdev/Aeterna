@@ -8,12 +8,13 @@ extends Node
 ##   rec/<stamp>_events.jsonl one JSON object per line: pinch press/release, controller buttons, hand radii, marks
 ## Poses are in raw XR tracking space (the same space XRServer reports), so a replay can feed them back as trackers.
 ##
-## Cost: one frame = 404 float32 (1.6 KB) at RATE Hz, appended to a byte buffer and written every FLUSH_S seconds.
+## Cost: one frame = FRAME_FLOATS (414) float32 (1.6 KB) at RATE Hz, appended to a byte buffer and written every FLUSH_S seconds.
 
 const RATE := 36.0  # half the 72 Hz display: smooth enough to replay, half the writes
 const FLUSH_S := 2.0
 const MAGIC := "AETREC01"
 const HANDS := ["left", "right"]
+const BUTTONS: Array[StringName] = [&"trigger_click", &"grip_click", &"ax_button", &"by_button", &"menu_button", &"select_button"]
 const JOINTS := 26  # XRHandTracker.HAND_JOINT_MAX
 # per frame: t, head pos3+quat4, then per hand: aim ok + pos3 + quat4, grip ok + pos3 + quat4,
 # trigger, grip, trigger_click, grip_click, hand_tracked, then JOINTS x (pos3 + quat4)
@@ -124,7 +125,8 @@ func _frame() -> void:
 
 func _xf(b: PackedFloat32Array, x: Transform3D) -> void:
 	var q := x.basis.get_rotation_quaternion()
-	b.append_array([x.origin.x, x.origin.y, x.origin.z, q.x, q.y, q.z, q.w])
+	b.append(x.origin.x); b.append(x.origin.y); b.append(x.origin.z)
+	b.append(q.x); b.append(q.y); b.append(q.z); b.append(q.w)
 
 
 func _poll_buttons() -> void:
@@ -132,12 +134,14 @@ func _poll_buttons() -> void:
 		var ct := XRServer.get_tracker(StringName(h + "_hand")) as XRPositionalTracker
 		if ct == null:
 			continue
-		for inp in [&"trigger_click", &"grip_click", &"ax_button", &"by_button", &"menu_button", &"select_button"]:
+		var state: Array = _buttons.get(h, [false, false, false, false, false, false])
+		for i in BUTTONS.size():
+			var inp := BUTTONS[i]
 			var v: Variant = ct.get_input(inp)
 			var on: bool = v is bool and v
-			var key: String = h + ":" + inp
-			if on != _buttons.get(key, false):
-				_buttons[key] = on
+			if on != state[i]:
+				state[i] = on
+				_buttons[h] = state
 				mark("press" if on else "release", {"hand": h, "input": String(inp)})
 
 
@@ -158,6 +162,7 @@ func _exit_tree() -> void:
 		_f.close()
 		_ev.close()
 		_f = null
+		_ev = null
 
 
 func _notification(what: int) -> void:
