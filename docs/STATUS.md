@@ -12,6 +12,7 @@ Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.g
 - OVR Metrics Tool: not installed. The user downloads it (needs a Meta sign-in) and gives the file name; it goes on with the next game install.
 
 ## Done (in `main`)
+- 2026-11-17 (sykeriin) LAST Quest 3 session (no headset after this). Saved in `quest_data/`: device facts (two captures), a 20.6 min input recording (`recordings/2026-11-17_19-10-07.bin.gz`, story + 5 nights + 15 towers; read with `tools/rec_read.py`), perf logs (`perf/`). Short perf run 19:32: the story at about 66-67 fps, GPU 99-100% (GPU-bound, app ~13.2 ms), headset unplugged after ~30 s. Not built yet: the desktop replay driver that feeds recordings into the game as XR trackers. Palette atlas `.import` must stay lossless (the 19:04 build had the editor's compressed version).
 - 2026-11-17 (sykeriin) live story in the game's look (`411e025`): game pines/oak/enemies (Veilrunner, Blightbark, Lantern spirit) at life size in the game material, flat palette-grass ground (procedural; the story ground GLB v02 has ~8.6k flipped faces, unused), no grass blades/flowers/bushes, Skotos x0.9 with a tree-free lane so he fits in view, headset story MSAA off / scale 0.8 / far 160 m. Shots `godot/tools/story_live_shot.gd`. Not yet on the headset; sheep work stopped (old procedural sheep stay).
 - Quest export and install pipeline (`docs/QUEST_BUILD.md`, skill `quest-build`).
 - Story: Skotos, 12 villagers, five loops of lines, dawn prayers, two endings as a choice (`docs/STORY.md`, `godot/data/thoughts.json`).
