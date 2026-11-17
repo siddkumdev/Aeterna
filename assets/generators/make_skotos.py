@@ -1039,6 +1039,7 @@ def rFAN(cx, y, cz, a0, a1, n, r0, L, W, cols, layers=2, shrink=0.72):
 
 
 TIER_LOBES = 14
+BAND_COL = "warden_deep"
 
 
 def rTIER(z0, h, rb, rt, col, band=True, lobes=None):
@@ -1050,7 +1051,7 @@ def rTIER(z0, h, rb, rt, col, band=True, lobes=None):
     if band:  # dark socket groove (the glow band anchor sits here)
         t = 0.62
         r = rb + (rt - rb) * t + 0.25
-        P.append(C(r, r, 1.5, z0 + h * t, "warden_deep", segs=14))
+        P.append(C(r, r, 1.5, z0 + h * t, BAND_COL, segs=14))
     return P
 
 
@@ -1438,7 +1439,7 @@ def _tilted_ellipsoid(loc, r, sq, roll_deg, col, sub=2):
     return o
 
 
-def rFACE_final(cx, y, z, w, tilt=-12):
+def rFACE_final(cx, y, z, w, tilt=-12, cracks=False):
     """ONE carved pale face plate: heavy brow bar, two deep almond sockets cut into the plate (inner ends low), small nose ridge, thin mouth line."""
     yf = y - w * 0.16
     P = [B(w * 0.5, (cx, y, z), "bone", 2, (1.0, 0.32, 1.1)),
@@ -1447,6 +1448,9 @@ def rFACE_final(cx, y, z, w, tilt=-12):
         P.append(_tilted_ellipsoid((cx + sx * w * 0.235, yf - w * 0.045, z + w * 0.075), w * 0.19, (1.5, 0.55, 0.78), -sx * 20, "ink"))  # almond socket
     P.append(B(w * 0.085, (cx, yf - w * 0.03, z - w * 0.07), "wood_light", 1, (0.7, 0.7, 1.7)))  # nose ridge
     P.append(B(w * 0.10, (cx, yf - w * 0.012, z - w * 0.33), "ink", 1, (2.4, 0.4, 0.12)))  # thin mouth line
+    if cracks:  # P3: the mask is cracked (still readable): two dark fissures across the plate
+        P.append(_tilted_ellipsoid((cx + w * 0.07, yf - w * 0.06, z + w * 0.12), w * 0.30, (0.035, 0.12, 1.0), 18, 'ink', 1))
+        P.append(_tilted_ellipsoid((cx - w * 0.22, yf - w * 0.06, z - w * 0.22), w * 0.20, (0.04, 0.12, 1.0), -35, 'ink', 1))
     m = tilt_parts(P, (cx, y, z), tilt)
     e = m @ V(pv((cx + w * 0.235, yf - w * 0.10, z + w * 0.075)))
     return P, (e.x / K - cx, e.y / K, e.z / K)
@@ -1514,13 +1518,209 @@ def build_final():
     return obj
 
 
+# ================================================================ PHASES (E08/E09): P2 shed, P3 skeletal dead tree, heartwood knot shield piece. Same parts/pivots/anchor names as v01.
+import bmesh  # noqa: E402
+
+
+def rSECTOR(rb, rt, h, z0, a0, a1, col, inner=0.55):
+    """Partial tier: an arc of a hollow frustum (outer wall, top, inner wall, bottom, end caps), for cracked / fallen-away tiers."""
+    n = max(3, int(abs(a1 - a0) / 14))
+    bm = bmesh.new()
+    rows = []
+    for j in range(n + 1):
+        a = math.radians(a0 + (a1 - a0) * j / n)
+        c, s_ = math.cos(a), math.sin(a)
+        rows.append([bm.verts.new(pv(p)) for p in ((c * rb, s_ * rb, z0), (c * rt, s_ * rt, z0 + h), (c * rt * inner, s_ * rt * inner, z0 + h), (c * rb * inner, s_ * rb * inner, z0))])
+    for j in range(n):
+        A, Bq = rows[j], rows[j + 1]
+        for k in range(4):
+            k2 = (k + 1) % 4
+            bm.faces.new((A[k], Bq[k], Bq[k2], A[k2]))
+    bm.faces.new(rows[0][::-1])
+    bm.faces.new(rows[n])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    o = bc._new_obj("sector", bm)
+    bc.paint(o, col)
+    o["no_bevel"] = True
+    return o
+
+
+def _bez(p0, p1, p2, p3, n=9):
+    out = []
+    for i in range(n):
+        t = i / (n - 1)
+        u = 1 - t
+        out.append(tuple(u ** 3 * p0[k] + 3 * u * u * t * p1[k] + 3 * u * t * t * p2[k] + t ** 3 * p3[k] for k in range(3)))
+    return out
+
+
+def bare_fan(n, reach, thick, hz, twist, a_span=150, y=5.2, forks=True, col=None):
+    """Fan of a few bare, thick, smoothly curving limbs radiating behind the head (rounded ends, no leaves, no spikes)."""
+    P = []
+    for i in range(n):
+        t = (i + 0.5) / n
+        ang = math.radians(-a_span + 2 * a_span * t)
+        d = V((math.sin(ang), 0, math.cos(ang)))
+        pr = V((math.cos(ang), 0, -math.sin(ang)))
+        sg = 1 if i % 2 else -1
+        c0 = V((0, y, hz))
+        p0 = c0 + d * 4.5
+        p1 = c0 + d * (4.5 + reach * 0.33) + pr * (sg * twist)
+        p2 = c0 + d * (4.5 + reach * 0.70) - pr * (sg * twist * 0.7)
+        p3 = c0 + d * (4.5 + reach) + pr * (sg * twist * 0.4)
+        pts = _bez(tuple(p0), tuple(p1), tuple(p2), tuple(p3))
+        c = col or ("wood_dark" if i % 2 else "ink")
+        P += rCH(pts, [thick * (1.0 - 0.28 * k / 8) for k in range(9)], c, 9)
+        if forks and i % 2 == 0:
+            a2 = ang + math.radians(26 * (1 if (i // 2) % 2 else -1))
+            d2 = V((math.sin(a2), 0, math.cos(a2)))
+            f0 = V(pts[4])
+            f1 = c0 + d2 * (4.5 + reach * 0.9)
+            P += rCH(_bez(tuple(f0), tuple(f0 + (f1 - f0) * 0.35 + pr * sg * 1.5), tuple(f0 + (f1 - f0) * 0.7), tuple(f1), 6), [thick * 0.7 - 0.05 * k for k in range(6)], c, 8)
+    return P
+
+
+def ground_leaves(n, r0, r1, seed=3):
+    P = []
+    cols = ("leaf_green", "leaf_dark", "leaf_green", "leaf_light")
+    for i in range(n):
+        ang = i * 360.0 / n + 30
+        a = math.radians(ang)
+        r = r0 + (r1 - r0) * (0.5 + 0.5 * math.sin(i * 2.9))
+        o = blob(1.0, (0, 0, 0), cols[i % 4], 2, (4.6 * K, 6.6 * K, 0.6 * K))
+        bc.rotate(o, (0, 0, ang + 60 * math.sin(i)))
+        o.location = (math.cos(a) * r * K, math.sin(a) * r * K, 0.65 * K)
+        bc.apply_transforms(o)
+        P.append(o)
+    return P
+
+
+def arch_roots(n, r0, span, peak, thick, phase=0.0):
+    """Big rounded roots arcing out of the ground in a wide ring (P3)."""
+    P = []
+    for i in range(n):
+        if abs(((i * 360.0 / n + phase) - 270 + 180) % 360 - 180) < 40:
+            continue  # keep the front open so the heartwood core shows
+        a = math.radians(i * 360.0 / n + phase)
+        c, s_ = math.cos(a), math.sin(a)
+        tg = V((-s_, c, 0))
+        big = 1.0 + 0.25 * math.sin(i * 2.1)
+        r_a, r_b = r0, r0 + span * big
+        pk = peak * big
+        pts = [V((c * r_a, s_ * r_a, thick * 1.05)) - tg * 0.0,
+               V((c * (r_a + span * 0.3 * big), s_ * (r_a + span * 0.3 * big), pk * 0.75)) + tg * 1.5,
+               V((c * (r_a + span * 0.6 * big), s_ * (r_a + span * 0.6 * big), pk)) + tg * 2.5,
+               V((c * r_b, s_ * r_b, max(pk * 0.35, thick * 1.1))) + tg * 3.5,
+               V((c * (r_b + 2.0), s_ * (r_b + 2.0), thick * 0.9)) + tg * 4.0]
+        P += rCH([tuple(p) for p in pts], [thick, thick * 0.95, thick * 0.85, thick * 0.78, thick * 0.7], ("wood_dark", "stone_dark")[i % 2], 10)
+    return P
+
+
+def build_phase(phase):
+    global K, TIER_LOBES, BAND_COL
+    K = 0.0112 if phase == 2 else 0.0105
+    TIER_LOBES = 0
+    BAND_COL = "crystal_purple" if phase == 2 else "warden_deep"
+    spec = [(0.0, 6.5, 10.0, 8.2, "warden_dark"), (6.5, 6.5, 8.2, 6.6, "ink"), (13.0, 6.0, 6.6, 5.2, "warden_dark"), (19.0, 5.0, 5.2, 4.0, "ink")]
+    hz = 27.0
+    if phase == 2:
+        body = tiers(spec)
+        for z0, h, rb, rt, col in spec:
+            body.append(C(rb + 0.25, rb + 0.25, 1.0, z0 + 0.1, "wood_mid", segs=14))
+        for i in range(6):
+            ar = math.radians(i * 60 + 30)
+            ca, sa = math.cos(ar), math.sin(ar)
+            body += rCH([(ca * 6.0, sa * 6.0, 4.6), (ca * 11.0, sa * 11.0, 3.7), (ca * 16.5, sa * 16.5, 2.2)], [4.4, 3.5, 2.1], RB[i % 2], 10)
+        body += [B(1.7, (0, -6.7, 15.5), "ink", 1, (1.0, 0.35, 1.2))]
+        body += ground_leaves(5, 15.0, 17.0)
+        bf = [rPL(-90, 6.4, 14.5, 4.8, 5.4, 1.3, "wood_dark")]
+        fan = bare_fan(7, 17.0, 2.8, hz, 2.6, 140, 5.2, True, "wood_dark")
+    else:
+        body = [C(10.0, 8.2, 6.5, 0.0, "warden_dark", segs=14), C(10.25, 10.25, 1.0, 0.1, "wood_mid", segs=14), C(8.45, 8.45, 1.5, 4.0, BAND_COL, segs=14)]
+        for k, (z0, h, rb, rt, col) in enumerate(spec[1:]):  # tiers cracked: arcs only, a wide gap at the front (angle 270) and one at the back
+            arcs = (((-40, 100), (125, 215)), ((-10, 150), (190, 250)), ((30, 200), (230, 262)))[k]
+            for a0, a1 in arcs:
+                body.append(rSECTOR(rb, rt, h, z0, a0, a1, col, 0.5))
+                body.append(rSECTOR(rb + 0.25, rb + 0.25 + (rt - rb) * 0.2, 1.0, z0 + 0.1, a0, a1, "wood_mid", 0.8))
+                body.append(rSECTOR(rb + (rt - rb) * 0.62 + 0.25, rb + (rt - rb) * 0.62 + 0.25, 1.5, z0 + h * 0.62, a0, a1, BAND_COL, 0.9))
+        body.append(C(4.2, 3.6, 22.0, 3.0, "stone_dark", segs=12))  # inner heartwood column
+        for sk in range(3):  # gnarled inner wood twisting up the column
+            pts = []
+            for j in range(9):
+                u = j / 8
+                ang = math.radians(sk * 120 + u * 420)
+                pts.append((math.cos(ang) * 3.7, math.sin(ang) * 3.7, 4.0 + u * 21.0))
+            body += rCH(pts, [2.0] * 9, ("wood_dark", "wood_mid", "stone_dark")[sk], 8)
+        body += [B(5.2, (0, -4.6, 15.6), "wood_mid", 2, (1.0, 0.42, 1.9)), B(3.8, (0, -6.3, 15.6), "ink", 2, (0.85, 0.45, 1.9))]  # open dark heartwood core in a bark lip
+        body += arch_roots(11, 11.0, 7.0, 7.0, 2.8, 10) + buttress_roots(2, 8.0, 10.0, 3.0, 2.6, 90)
+        bf = [rPL(-90 - 22, 7.2, 14.5, 4.0, 6.2, 1.4, "wood_dark", 0, 0), rPL(-90 + 22, 7.2, 14.5, 4.0, 6.2, 1.4, "wood_dark", 0, 0)]
+        fan = bare_fan(6, 21.0, 3.2, hz, 4.6, 145, 7.6, True, "ink")
+    head = [B(5.4, (0, 1.4, hz), "ink", 2, (1.1, 0.95, 1.2))]
+    for sx in (-1, 1):
+        head.append(rPL(-90 + sx * 82, 7.0, hz - 1.5, 4.0, 6.5, 3.0, "wood_dark"))
+    face, ey = rFACE_final(0, -2.4, hz, 13.4, cracks=(phase == 3))
+    head += face
+    mantle = [B(4.4, (sx * 5.6, 0.0, 21.5), "ink", 2, (1.25, 1.0, 0.8)) for sx in (-1, 1)]
+    groups = [("", body, (0, 0, 0), ""), ("bark_front", bf, pv((0, -6.4, 14.5)), ""), ("head", head, pv((0, 0, 23.5)), ""),
+              ("fan", fan, pv((0, 5.2, hz)), "head"), ("mantle", mantle, pv((0, 0, 21.5)), "")]
+    hp = {}
+    z0 = 21.0
+    for nm, sx in (("arm_l", 1), ("arm_r", -1)):
+        pts = [(sx * 5.4, 0.0, z0), (sx * 9.2, -1.6, z0 - 1.8), (sx * 11.0, -3.6, z0 - 4.8), (sx * 10.6, -5.6, z0 - 7.2)]
+        groups.append((nm, rLIMB(pts, [2.4, 2.2, 2.1, 2.0], "warden_dark") + rFIST_final((sx * 10.4, -6.4, z0 - 8.6), 2.9), pv((sx * 5.4, 0.0, z0)), ""))
+        hp[nm] = (sx * 10.4, -8.6, z0 - 8.6)
+    obj = bc.assemble("ew_boss_skotos_p%d_v01" % phase, groups)
+    ranchors(obj, ey, (hp["arm_l"], hp["arm_r"]), (0, -7.4 if phase == 2 else -7.1, 15.5), 9.0 if phase == 2 else 14.0)
+    for i, z in enumerate((4.0, 10.5, 16.4, 21.8)):
+        bc.anchor(obj, "band_%d_anchor" % (i + 1), pv((0, -(9.4 - i * 1.7), z)), "", 2.0 * K)
+    bc.anchor(obj, "fan_anchor", pv((0, 5.2, hz)), "head", 4.0 * K)
+    return obj
+
+
+def build_p2():
+    return build_phase(2)
+
+
+def build_p3():
+    return build_phase(3)
+
+
+def build_knot():
+    """Heartwood knot: phase-2 shield piece. ~1 x 1 cell, ~1.5 cells tall, swirled bark, dark open socket core, 3 rounded root stubs. No spikes."""
+    global K
+    K = 0.005
+    body = [C(5.4, 4.3, 4.5, 0.0, "warden_dark", segs=8), B(4.8, (0, 0, 7.6), "ink", 2, (1.0, 1.0, 1.15)), B(3.0, (1.6, 0.9, 11.6), "ink", 2, (1.0, 1.0, 0.9))]
+    pts = []
+    for j in range(9):  # one swirled bark ridge spiralling up
+        u = j / 8
+        ang = math.radians(300 + u * 520)
+        r = 4.3 - u * 0.9
+        pts.append((math.cos(ang) * r, math.sin(ang) * r, 3.0 + u * 8.8))
+    body += chain("swirl", [V(pv(p)) for p in pts], [1.35 * K] * 9, "wood_dark", 6, ball_tip=(1.35 * K, "wood_dark"))
+    body += [B(3.0, (0, -3.5, 8.0), "warden_deep", 2, (1.0, 0.4, 1.3)), B(2.1, (0, -4.2, 8.0), "ink", 2, (1.0, 0.5, 1.3))]  # open dark socket core in a carved rim
+    for i, ang in enumerate((30, 150, 270)):  # three short rounded root stubs
+        a = math.radians(ang)
+        o = blob(1.0, (0, 0, 0), "ink" if i % 2 else "stone_dark", 2, (3.0 * K, 1.8 * K, 1.7 * K))
+        bc.rotate(o, (0, 0, ang))
+        o.location = (math.cos(a) * 5.3 * K, math.sin(a) * 5.3 * K, 1.8 * K)
+        bc.apply_transforms(o)
+        body.append(o)
+    obj = bc.assemble("ew_boss_heartwood_knot_v01", [("", body, (0, 0, 0), "")])
+    bc.anchor(obj, "core_anchor", pv((0, -4.8, 8.0)), "", 2.2 * K)
+    for i, ang in enumerate((30, 150, 270)):
+        a = math.radians(ang)
+        bc.anchor(obj, "vein_%d_anchor" % (i + 1), pv((math.cos(a) * 8.0, math.sin(a) * 8.0, 1.5)), "", 1.2 * K)
+    return obj
+
+
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d, "E": variant_e, "F": variant_f, "G": variant_g, "H": variant_h, "I": variant_i, "J": variant_j, "K": variant_k, "L": variant_l, "M": variant_m, "N": variant_n, "O": variant_o, "P": variant_p, "Q": variant_q, "R": variant_r, "S": variant_s, "T": variant_t}
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     key = (argv[0] if argv else "A").upper()
     bc.clear_scene()
-    obj = build_final() if key == "FINAL" else VARIANTS[key]()
+    BUILD = {"FINAL": build_final, "P2": build_p2, "P3": build_p3, "KNOT": build_knot}
+    obj = BUILD[key]() if key in BUILD else VARIANTS[key]()
     mc.smooth(obj)
     print("TRIS", key, mc.tri_count(obj))
     import mathutils
@@ -1528,6 +1728,6 @@ if __name__ == "__main__":
     bpy.context.view_layer.update()
     cs = [o.matrix_world @ mathutils.Vector(c) for o in [obj] + list(obj.children_recursive) if o.type == "MESH" for c in o.bound_box]
     print("BBOX min", [round(min(c[i] for c in cs), 4) for i in range(3)], "max", [round(max(c[i] for c in cs), 4) for i in range(3)])
-    bc.save_blend(obj, "skotos" if key == "FINAL" else "skotos_%s" % key.lower())
-    if key == "FINAL":
+    bc.save_blend(obj, {"FINAL": "skotos", "P2": "skotos_p2", "P3": "skotos_p3", "KNOT": "heartwood_knot"}.get(key, "skotos_%s" % key.lower()))
+    if key in BUILD:
         print("EXPORT", bc.export_glb(obj, "boss"))
