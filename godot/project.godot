@@ -1,16 +1,29 @@
 ; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
 
 config/name="Aeterna"
 run/main_scene="res://scenes/launcher.tscn"
-config/icon="res://icon.png"
 config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.png"
 
 [display]
 
 window/vsync/vsync_mode=0
+
+[importer_defaults]
+
+wav={
+"compress/mode": 0
+}
 
 [rendering]
 
@@ -22,13 +35,7 @@ textures/vram_compression/import_etc2_astc=true
 openxr/enabled=true
 openxr/extensions/hand_tracking=true
 openxr/extensions/hand_interaction_profile=true
+shaders/enabled=true
 openxr/extensions/meta/passthrough=true
 openxr/extensions/meta/hand_tracking_aim=true
 openxr/extensions/meta/hand_tracking_capsules=true
-shaders/enabled=true
-
-[importer_defaults]
-
-wav={
-"compress/mode": 0
-}
