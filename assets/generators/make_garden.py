@@ -102,6 +102,29 @@ def weed_D(wx, wy):   # broadleaf: round dark leaves on stalks, tiny cream flowe
     return p
 
 
+def weed_V2(wx, wy):   # 2026-11-18 (fix F): scraggly rosette of chunky dark-green and yellow-brown blades, 3 crooked stalks with dandelion heads (critic: no hair-thin parts)
+    p = roots(wx, wy, crown=0.0110, n=5)
+    cols = ["leaf_dark", "leaf_yellow", "leaf_dark", "path_dirt", "leaf_dark", "leaf_yellow", "leaf_dark"]
+    for k, c in enumerate(cols):   # 7 ragged blades, uneven lengths and heights, splayed wide
+        a = math.radians(k * 51 + 14 * (k % 3))
+        r = 0.0085 + 0.0040 * (k % 3)
+        p.append(spike((wx, wy, 0.0112), (wx + r * math.cos(a), wy + r * math.sin(a), 0.0125 + 0.0055 * (k % 3)), 0.0034, c, 4))
+    for (ax, ay, h, kind) in ((-0.0100, 0.0030, 0.0290, "yellow"), (0.0095, -0.0050, 0.0350, "seed"), (0.0010, 0.0100, 0.0230, "bud")):
+        top = (wx + ax, wy + ay, h)
+        mid = (wx + ax * 0.35 + 0.0020, wy + ay * 0.35, h * 0.55)   # a kink in the stalk
+        p.append(rod((wx, wy, 0.0112), mid, 0.0020, "leaf_dark"))
+        p.append(rod(mid, top, 0.0020, "leaf_dark"))
+        if kind == "yellow":
+            p.append(lump(0.0070, (top[0], top[1], top[2] + 0.0020), "fire_yellow", (1, 1, 0.85)))
+            p.append(lump(0.0036, (top[0], top[1], top[2] + 0.0050), "flower_yellow"))
+        elif kind == "seed":
+            p.append(lump(0.0066, (top[0], top[1], top[2] + 0.0020), "wall_cream"))
+            p.append(lump(0.0034, (top[0] + 0.0016, top[1], top[2] + 0.0050), "bone"))
+        else:
+            p.append(lump(0.0034, (top[0], top[1], top[2] + 0.0010), "wood_dark", (1, 1, 1.3)))
+    return p
+
+
 # ----------------------------------------------------------------- patches
 def patch_A():   # raised wooden bed: cabbages, carrots, tomato stakes
     p = [box("plank", (0.0920, 0.0060, 0.0120), (0, -0.0430, 0.0060), "wood_light"),
@@ -235,6 +258,14 @@ def move_x(parts, dx):
             v.co.x += dx
     return parts
 
+
+if __name__ == "__main__" and "V02" in sys.argv:   # new weed only: ew_village_garden_weed_v02
+    qk.bc.clear_scene()
+    wd = qk.bc.assemble("ew_village_garden_weed_v02", [("", grow(weed_V2(0.0, 0.0), 1.3), (0, 0, 0), None)], bevel_min=0.0015)
+    wd["ew_footprint"], wd["ew_front"], wd["ew_place"] = "1x1", "-Y", "free"
+    qk.bc.save_blend(wd, "garden_weed_v02")
+    print("EXPORT", qk.bc.export_glb(wd, "village"), qk.tris(wd), "tris", ["%.1f" % (d * 1000) for d in wd.dimensions])
+    sys.exit(0)
 
 if __name__ == "__main__" and "FINAL" in sys.argv:
     build_final()

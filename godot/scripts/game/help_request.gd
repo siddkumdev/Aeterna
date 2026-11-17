@@ -1195,7 +1195,7 @@ func _setup_new(h: House, socket: Vector3, stand: Vector3) -> void:
 				_patch(Vector3(e.x, 0, e.z), 0.015)
 				_extra(_box(Vector3(0.003, line_y + 0.004, 0.003), Color("9A6538")), Vector3(e.x, (line_y + 0.004) * 0.5, e.z))  # wood_mid
 			_extra(_box(Vector3(0.13, 0.0012, 0.0012), Color("F4E4B8")), p + Vector3(0, line_y, 0))  # wall_cream
-			var names := ["laundry_shirt_v01", "laundry_sock_v01", "laundry_towel_v01"]
+			var names := ["laundry_shirt_v02", "laundry_sock_v02", "laundry_towel_v02"]
 			var lay := [-0.045, 0.0, 0.04]
 			var slot := [-0.034, 0.006, 0.036]
 			for i in 3:
@@ -1227,9 +1227,9 @@ func _setup_new(h: House, socket: Vector3, stand: Vector3) -> void:
 			_apple_dir = cands[0] if not cands.is_empty() else ax
 			_goal = p + _apple_dir * 0.1
 			_patch(_goal, 0.03)
-			_extra(_model("basket_v02"), _goal).scale = Vector3.ONE * 1.6  # bigger, so it reads among the grass
+			_extra(_model("basket_v03"), _goal)  # v03 is already 2x bigger than v02
 		"cat":
-			var c := _model("cat_v01")
+			var c := _model("cat_v02")
 			add_child(c)
 			c.basis = _yaw
 			if socket.is_equal_approx(h.position):  # no rubble_anchor on this house: the top of the roof, like the cloud
@@ -1247,9 +1247,9 @@ func _setup_new(h: House, socket: Vector3, stand: Vector3) -> void:
 			_extra(_model("garden_v01"), p)
 			for i in WEEDS:
 				var o := ax * (0.021 if i % 2 == 0 else -0.021) + az * (0.021 if i < 2 else -0.021)
-				_loose_item("garden_weed_v01", p + o)
+				_loose_item("garden_weed_v02", p + o)
 		"bell":
-			_bell = _model("house_bell_v01")
+			_bell = _model("house_bell_v02")
 			add_child(_bell)
 			_bell.basis = _yaw
 			var wall_z: float = ModelUtil.bounds(h.get_child(0)).end.z

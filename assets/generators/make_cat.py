@@ -217,7 +217,9 @@ if __name__ == "__main__":
     L = "A" if args[0] == "FINAL" else (args[0] if args[0] in VARIANTS else "A")
     bc.clear_scene()
     groups = VARIANTS[L][1]()
-    root = bc.assemble("ew_village_cat_v01", groups, bevel_min=0.004)
+    V2 = "V02" in sys.argv   # 2026-11-18 fix G: same design x1.7 (hard to see and pinch at 21 mm)
+    VER = "v02" if V2 else "v01"
+    root = bc.assemble("ew_village_cat_" + VER, groups, bevel_min=0.004)
     root["ew_footprint"], root["ew_front"], root["ew_place"] = "1x1", "-Y", "roof"
     bpy.context.view_layer.update()
     # verify whole assembly min z = 0 across true world vertices
@@ -230,13 +232,22 @@ if __name__ == "__main__":
         for c in root.children:
             c.location.z -= shift
         bpy.context.view_layer.update()
+    if V2:
+        S = 1.7
+        for o in objs:
+            if o.type == "MESH":
+                for v in o.data.vertices:
+                    v.co *= S
+            if o is not root:
+                o.location *= S
+        bpy.context.view_layer.update()
     total = sum(tris(o) for o in objs if o.type == "MESH")
     print("CAT %s: %d tris total, %.1f x %.1f x %.1f mm" % (L, total, *(d * 1000 for d in root.dimensions)))
     for c in [root] + list(root.children):
         if c.type == "MESH":
             print("  %s: %d tris" % (c.name, tris(c)))
     if "FINAL" in sys.argv:   # variant A as the real asset: blend `cat` (not cat_A), exported to assets/export/village
-        print("BLEND", bc.save_blend(root, "cat"))
+        print("BLEND", bc.save_blend(root, "cat_v02" if V2 else "cat"))
         print("EXPORT", bc.export_glb(root, "village"))
     else:
         print("BLEND", bc.save_blend(root, "cat_" + L))

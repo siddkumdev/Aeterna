@@ -29,17 +29,17 @@ def bell_parts(col, cx=0.0, cy=YH, zrim=RIM, s=1.0, band=None):
     return p
 
 
-def rope_parts(top_z, bottom_z, handle, cy=YH, cx=0.0, t=0.0024):
+def rope_parts(top_z, bottom_z, handle, cy=YH, cx=0.0, t=0.0024, col="path_dirt", grip="wood_light"):
     """Rope from top_z down to the handle at bottom_z (+ handle height). Pivot = (cx, cy, top_z)."""
-    p = [rod((cx, cy, top_z), (cx, cy, bottom_z + 0.0062), t, "path_dirt"),
-         lump(0.0026, (cx, cy, top_z - 0.0100), "path_dirt", (1, 1, 0.7)),
-         lump(0.0026, (cx, cy, top_z - 0.0200), "path_dirt", (1, 1, 0.7))]
+    p = [rod((cx, cy, top_z), (cx, cy, bottom_z + 0.0062), t, col),
+         lump(0.0026, (cx, cy, top_z - 0.0100), col, (1, 1, 0.7)),
+         lump(0.0026, (cx, cy, top_z - 0.0200), col, (1, 1, 0.7))]
     if handle == "toggle":
-        p.append(nb(cyl("toggle", 0.0030, 0.0070, (cx, cy, bottom_z), "wood_light", 6)))
+        p.append(nb(cyl("toggle", 0.0030, 0.0070, (cx, cy, bottom_z), grip, 6)))
     elif handle == "ball":
-        p.append(lump(0.0042, (cx, cy, bottom_z + 0.0040), "wood_light", (1, 1, 1.1)))
+        p.append(lump(0.0042, (cx, cy, bottom_z + 0.0040), grip, (1, 1, 1.1)))
     elif handle == "ring":   # solid chunky grip (no ring hole: too small to read)
-        p.append(nb(cyl("grip", 0.0050, 0.0090, (cx, cy, bottom_z), "wood_light", 6)))
+        p.append(nb(cyl("grip", 0.0050, 0.0090, (cx, cy, bottom_z), grip, 6)))
     return p
 
 
@@ -116,10 +116,34 @@ def qk_tcyl_x(r, h, loc, col):
     return nb(qk.tcyl("wheel", r, h, loc, col, 8, 0, 90, 0))
 
 
+
+# 2026-11-18 (fix F): v02 = brass bell about 1.9x bigger, bright rope, small hood (hard to see in v01)
+ZH2, YH2, S2 = 0.0860, -0.0230, 1.75
+
+
+def build_v02():
+    root = plate(0.0980, 0.0240, "wood_mid") + [
+        box("arm", (0.0056, 0.0300, 0.0050), (0, -0.0150, ZH2 + 0.0025), "wood_dark"),
+        rod((0, -0.0030, 0.0640), (0, -0.0240, ZH2 + 0.0004), 0.0044, "wood_dark"),
+        qk.bc.gable("hood", 0.0480, 0.0420, 0.0125, (0, YH2 + 0.0010, ZH2 + 0.0050), "roof_terracotta")]
+    zrim = ZH2 - 0.0203 * S2
+    bell = bell_parts("shell_gold", cy=YH2, zrim=zrim, s=S2, band="wall_cream")
+    rope = rope_parts(zrim - 0.0040, 0.0130, "ball", cy=YH2, t=0.0034, col="fire_red", grip="fire_yellow")
+    return root, bell, rope, zrim
+
 VARIANTS = {"A": variant_A, "B": variant_B, "C": variant_C, "D": variant_D}
 
 if __name__ == "__main__":
     qk.bc.clear_scene()
+    if "V02" in sys.argv:
+        root, bell, rope, zrim = build_v02()
+        zs = [v.co.z for o in rope for v in o.data.vertices]
+        groups = [("", [o for o in root], (0, 0, 0), None), ("bell", bell, (0.0, YH2, ZH2), ""), ("rope", rope, (0.0, YH2, max(zs) - 0.0004), "")]
+        r = qk.finish("v02", "house_bell", groups, "1x1", "wall_side", ver="v02", save=False)
+        qk.bc.anchor(r, "ring_anchor", (0.0, YH2, zrim), "bell", size=0.010)
+        print("BLEND", qk.bc.save_blend(r, "house_bell_v02"))
+        print("EXPORT", qk.bc.export_glb(r, "village"))
+        sys.exit(0)
     L = qk.letter_arg() if "--" in sys.argv else "C"
     FINAL = "--" not in sys.argv
     res = VARIANTS[L]()

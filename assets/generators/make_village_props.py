@@ -362,6 +362,22 @@ def basket():
     return p
 
 
+def basket_v03():
+    """Quest basket (2026-11-18, fix F): x2 bigger than v02, lighter wicker (wood_light body, bone weave rings, wood_mid rim and handle)."""
+    S = 2.0
+    p = [nb(cyl("basket", 0.0064 * S, 0.0075 * S, (0, 0, 0), "wood_light", 8, 0.0078 * S))]
+    for z in (0.0016, 0.0036, 0.0056):   # weave rings, slightly wider than the body at that height
+        w = 0.0064 + (0.0078 - 0.0064) * z / 0.0075
+        p.append(nb(cyl("weave", (w + 0.0004) * S, 0.0011 * S, (0, 0, z * S), "bone", 8)))
+    p.append(nb(cyl("basket_lip", 0.0082 * S, 0.0014 * S, (0, 0, 0.0066 * S), "wood_mid", 8)))
+    p.append(box("handle", (0.0024 * S, 0.0130 * S, 0.0024 * S), (0.0, 0.0, 0.0158 * S), "wood_mid"))
+    p.append(box("handle", (0.0024 * S, 0.0024 * S, 0.0090 * S), (0.0, -0.0058 * S, 0.0116 * S), "wood_mid"))
+    p.append(box("handle", (0.0024 * S, 0.0024 * S, 0.0090 * S), (0.0, 0.0058 * S, 0.0116 * S), "wood_mid"))
+    for (x, y, col) in ((-0.0020, 0.0010, "leaf_green"), (0.0025, -0.0015, "roof_terracotta"), (0.0005, 0.0030, "leaf_light")):
+        p.append(sack_blob("fruit", 0.0036 * S, (x * S, y * S, 0.0092 * S), col, (1, 1, 0.95)))
+    return p
+
+
 def tools_leaning():
     p = [tbox("shovel_handle", (0.0034, 0.0034, 0.0300), (-0.0060, 0.0, 0.0171), "wood_light", 0, 12, 0),
          tbox("shovel_blade", (0.0092, 0.0024, 0.0110), (-0.0098, 0.0, 0.0051), "stone_dark", 0, 12, 0),
@@ -404,6 +420,8 @@ PROPS = {
 
 def build(name, version="v01"):
     fn, foot, front, hint = PROPS[name]
+    if name == "basket" and version == "v03":
+        fn = basket_v03
     if name == "well" and version not in ("v01", "v02"):
         obj = bc.assemble("ew_village_%s_%s" % (name, version),
                           [("", well(False), (0, 0, 0), None), ("bucket", well_bucket(), (0, 0, 0.0407), "")])

@@ -191,6 +191,39 @@ VARIANTS = {
 LAYOUT = (-22.0, 0.0, 22.0)  # x of shirt, sock, sheet (mm)
 
 
+# ------------------------------------------------------------------ V2 (2026-11-18, fix F): bright, saturated, clear stripes (low contrast on grass in v01)
+def shirt_V2():
+    t = 1.8
+    p = [bx("shirt", (9.0, 11.0, t), (0, 0, t / 2), "fire_red"),
+         bx("sleeve", (5.8, 4.0, t), (-6.9, 4.0, t / 2), "fire_red", 0, 0, 38),
+         bx("sleeve", (5.8, 4.0, t), (6.9, 4.0, t / 2), "fire_red", 0, 0, -38),
+         bx("cuff", (2.0, 4.1, t + 0.4), (-8.6, 2.4, (t + 0.4) / 2), "wall_cream", 0, 0, 38),
+         bx("cuff", (2.0, 4.1, t + 0.4), (8.6, 2.4, (t + 0.4) / 2), "wall_cream", 0, 0, -38),
+         bx("stripe", (9.0, 2.2, t + 0.45), (0, 0.4, (t + 0.45) / 2), "wall_cream"),
+         bx("neck", (3.6, 2.0, t + 0.6), (0, 5.0, (t + 0.6) / 2), "ink"),
+         bx("hem", (9.0, 1.5, t + 0.35), (0, -4.7, (t + 0.35) / 2), "wall_cream")]
+    return p
+
+
+def sock_V2():
+    t = 1.8
+    return [bx("sock", (4.8, 9.5, t), (0, 2.0, t / 2), "wall_cream"),
+            bx("sock", (8.6, 4.8, t), (1.9, -3.6, t / 2), "wall_cream"),
+            bx("band", (4.8, 2.0, t + 0.4), (0, 2.8, (t + 0.4) / 2), "fire_red"),
+            bx("band", (4.8, 2.0, t + 0.4), (0, -0.8, (t + 0.4) / 2), "fire_red"),
+            bx("cuff", (4.8, 2.2, t + 0.6), (0, 5.5, (t + 0.6) / 2), "ink"),
+            bx("toe", (2.6, 4.8, t + 0.6), (5.2, -3.6, (t + 0.6) / 2), "ink")]
+
+
+def towel_V2():
+    t = 1.6
+    return [bx("towel", (15.0, 12.0, t), (0, 0, t / 2), "fire_yellow"),
+            bx("stripe", (15.0, 2.6, t + 0.45), (0, 2.4, (t + 0.45) / 2), "ink"),
+            bx("stripe", (15.0, 1.4, t + 0.45), (0, -2.0, (t + 0.45) / 2), "fire_red"),
+            bx("fringe", (15.0, 1.0, t * 0.8), (0, 6.5, t * 0.4), "wall_cream"),
+            bx("fringe", (15.0, 1.0, t * 0.8), (0, -6.5, t * 0.4), "wall_cream")]
+
+
 def tris(o):
     return sum(len(p.vertices) - 2 for p in o.data.polygons)
 
@@ -212,6 +245,7 @@ def make(letter, x_off=0.0, y_off=0.0, ver="v01"):
 
 FINAL_SCALE = 2.4   # Siddharth 2026-11-16: variant A, garments looked small at board scale; x2.4 makes them about 1 cell (shirt 48 mm wide)
 FINAL = (("shirt", shirt_A, "shirt"), ("sock", sock_A, "sock"), ("towel", sheet_A, "towel"))
+FINAL_V2 = (("shirt", shirt_V2, "shirt"), ("sock", sock_V2, "sock"), ("towel", towel_V2, "towel"))
 
 
 def grow(parts, s):
@@ -228,29 +262,29 @@ def tag(root):
     return root
 
 
-def build_final():
+def build_final(ver="v01", final=FINAL):
     """Variant A, three separate pickable assets (each its own glb, origin at the garment centre on the ground):
     ew_village_laundry_shirt_v01, _sock_v01, _towel_v01. Also laundry.blend: all three in one scene (shirt root + __sock, __towel
     parts), PREVIEW ONLY, not exported."""
     out = {}
-    for key, fn, _ in FINAL:
+    for key, fn, _ in final:
         bc.clear_scene()
-        root = tag(bc.assemble("ew_village_laundry_%s_v01" % key, [("", grow(fn(), FINAL_SCALE), (0, 0, 0), None)], bevel_min=0.00135 * FINAL_SCALE))
+        root = tag(bc.assemble("ew_village_laundry_%s_%s" % (key, ver), [("", grow(fn(), FINAL_SCALE), (0, 0, 0), None)], bevel_min=0.00135 * FINAL_SCALE))
         out[key] = tris(root)
-        bc.save_blend(root, "laundry_" + key)
+        bc.save_blend(root, "laundry_" + key + ("" if ver == "v01" else "_" + ver))
         print("EXPORT", bc.export_glb(root, "village"), tris(root), "tris", ["%.1f" % (d * 1000) for d in root.dimensions])
     bc.clear_scene()
     groups = []
-    for (key, fn, _), dx in zip(FINAL, LAYOUT):
+    for (key, fn, _), dx in zip(final, LAYOUT):
         dx *= 2.0   # mm between garment centres in the preview
         parts = grow(fn(), FINAL_SCALE)
         for o in parts:
             for v in o.data.vertices:
                 v.co.x += dx * K
         groups.append((key, parts, (dx * K, 0, 0)))
-    name = "ew_village_laundry_v01"
+    name = "ew_village_laundry_" + ver
     root = tag(bc.assemble(name, [("", groups[0][1], (0, 0, 0), None)] + [(g[0], g[1], g[2], "") for g in groups[1:]], bevel_min=0.00135 * FINAL_SCALE))
-    print("PREVIEW", bc.save_blend(root, "laundry"), sum(tris(o) for o in [root] + list(root.children)))
+    print("PREVIEW", bc.save_blend(root, "laundry" + ("" if ver == "v01" else "_" + ver)), sum(tris(o) for o in [root] + list(root.children)))
     print("LAUNDRY FINAL tris", out)
 
 
@@ -259,6 +293,8 @@ if __name__ == "__main__":
     bc.clear_scene()
     if args[0] == "FINAL":
         build_final()
+    elif args[0] == "V02":
+        build_final("v02", FINAL_V2)
     elif args[0] == "SCALE":
         import prop_scale_ref as sr
         for i, L in enumerate(VARIANTS):

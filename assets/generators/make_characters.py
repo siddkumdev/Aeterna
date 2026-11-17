@@ -765,7 +765,21 @@ def build(name, key):
     if c["hands_energy"] if "hands_energy" in c else False:
         bc.anchor(obj, "energy_anchor", (hpos["l"][0], 0, hpos["l"][1]), "arm_l", 0.003)
     smooth(obj)
+    _ground(obj)
     return obj
+
+
+def _ground(root, tol=0.0015):
+    """Origin on the lowest point of the feet (2026-11-18, fix D): if the lowest geometry (all parts, world space)
+    is more than tol off y=0, raise or lower the whole character so the feet sit exactly on the ground. The shape is unchanged."""
+    bpy.context.view_layer.update()
+    lo = min((o.matrix_world @ v.co).z for o in [root] + list(root.children_recursive) if o.type == "MESH" for v in o.data.vertices)
+    if abs(lo) <= tol:
+        return
+    root.data.transform(mathutils.Matrix.Translation((0, 0, -lo)))
+    for ch in root.children:
+        ch.location.z -= lo
+    bpy.context.view_layer.update()
 
 
 ITEM_TILT = {"staff": (18, -24, 0), "spear": (8, -14, 0), "bow": (0, -12, 0), "club": (24, -34, 0), "dipper": (14, -22, 0), "pitchfork": (10, -16, 0), "hammer": (14, -22, 0), "scroll": (0, 0, 0), "rolling_pin": (0, 0, 0), "needle": (12, -18, 0), "ribbon": (0, 0, 0), "cane": (6, -12, 0), "carrot": (10, -18, 0), "yarn_staff": (18, -24, 0), "sprig": (12, -20, 0)}
