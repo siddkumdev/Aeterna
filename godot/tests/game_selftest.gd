@@ -2876,13 +2876,33 @@ func _interactive_tutorial() -> void:
 
 	g.set_lens(true)
 	l._tutorial(0.05)
-	check("peeking through Crystal Lens advances to step 6 (hourglass)",
-		l._step == 6 and g.tutorial_spotlight == "hourglass")
+	check("peeking through Crystal Lens advances to step 6 (tray handles)",
+		l._step == 6 and g.tutorial_spotlight == "tray")
+	g._xr = true  # the hand steps only gate in XR; mouse play skips them
+	g.toggle_fast()
+	check("the hourglass stays locked during the tray step", not g.day_fast)
+	l._tutorial(0.05)
+	check("the tray step waits for a real grab", l._step == 6)
+	g._tray_hand = g._mouse_hand
+	l._tutorial(0.05)
+	g._tray_hand = null
+	check("grabbing a tray handle advances to step 7 (zoom)", l._step == 7 and g.tutorial_spotlight == "zoom")
+	g._zoom_hands = [g._mouse_hand, g._mouse_hand]
+	g._zoom_d0 = 0.1
+	g._zoom_d = 0.2
+	l._tutorial(0.05)
+	g._zoom_hands = []
+	check("a zoom advances to step 8 (ledger)", l._step == 8 and g.tutorial_spotlight == "ledger")
+	g.ledger.set_open(true)
+	l._tutorial(0.05)
+	g.ledger.set_open(false)
+	g._xr = false
+	check("opening the ledger advances to step 9 (hourglass, 2x)", l._step == 9 and g.tutorial_spotlight == "hourglass")
 
 	g.start_night()
 	l._tutorial(0.05)
-	check("starting Night 1 advances to step 7 (God Spell finale)",
-		l._step == 7 and g.tutorial_spotlight == "spells" and g.phase == Game.Phase.NIGHT)
+	check("starting Night 1 advances to step 10 (God Spell finale)",
+		l._step == 10 and g.tutorial_spotlight == "spells" and g.phase == Game.Phase.NIGHT)
 
 	var casted := g.cast_spell("fire_orb", NavGrid.footprint_centre(build_cell, GameConfig.TOWER_SIZE))
 	l._tutorial(0.05)

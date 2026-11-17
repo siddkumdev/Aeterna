@@ -19,7 +19,10 @@ const HINTS := [
 	"Someone is praying! Tap the villager under the golden mote.",
 	"Tap a villager walking the path to hear their thoughts.",
 	"Lift the mirror on your tray and look at the dark trees.",
-	"Hold the hourglass on your tray to call Night 1.",
+	"Grab a brass handle at either end of your card tray to move and turn it.",
+	"Zoom: pinch both hands in the air beside the island, then spread them apart. Close them to push it away.",
+	"Turn your left palm up to open your ledger: quests, cards and how to play.",
+	"Hold the hourglass to call Night 1. At night, tap it again for 2x speed.",
 	"Night 1! Pinch Fire Orb or Boulder and drop it on the shades!",
 ]
 
@@ -44,6 +47,7 @@ var _ring_mat: StandardMaterial3D
 var _ring_scale := 1.0
 var _ghost_timer := 0.0
 var _active_ghost: GhostHand
+var _extra_ghosts: Array[GhostHand] = []  # the zoom step's second hand
 var _start_board_yaw := 0.0
 var _start_board_pos := Vector3.ZERO
 var _taps_at_step := 0
@@ -337,6 +341,10 @@ func _clear_ghost() -> void:
 	if is_instance_valid(_active_ghost):
 		_active_ghost.queue_free()
 	_active_ghost = null
+	for g in _extra_ghosts:
+		if is_instance_valid(g):
+			g.queue_free()
+	_extra_ghosts.clear()
 
 
 func _total_villager_taps() -> int:
@@ -443,10 +451,20 @@ func _ring_target_for_step() -> Array:
 				return [Vector3.ZERO, 0.55, false]
 			return [l_pos + Vector3(0, 0.018, 0), 0.55, true]
 		6:
+			if game._tray == null or game._tray.handles.is_empty() or not is_instance_valid(game._tray.handles[1]):
+				return [Vector3.ZERO, 0.55, false]
+			return [game._tray.handles[1].global_position + Vector3(0, 0.02, 0), 0.55, true]
+		7:
+			return [game.board.to_global(Vector3(0, 0.12, Game.HALF + 0.12)), 0.8, true]
+		8:
+			if game.ledger != null and game.ledger.open:
+				return [Vector3.ZERO, 0.55, false]
+			return [game._eye() + Vector3(game.board.global_position.x - game._eye().x, 0, game.board.global_position.z - game._eye().z).normalized() * 0.3 + Vector3(-0.12, -0.3, 0), 0.6, true]
+		9:
 			if game._fast_glass == null or not is_instance_valid(game._fast_glass):
 				return [Vector3.ZERO, 0.55, false]
 			return [game._fast_glass.global_position + Vector3(0, 0.022, 0), 0.55, true]
-		7:
+		10:
 			for e in game.enemies:
 				if is_instance_valid(e) and e.alive:
 					return [e.global_position + Vector3(0, 0.02, 0), 1.0, true]
@@ -515,8 +533,18 @@ func _spawn_step_ghost() -> void:
 		5:
 			_active_ghost = GhostHand.carry(_cue_root, target, target + Vector3(0, 0.14, -0.05))
 		6:
-			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.02, 0))
+			var side := game._tray.global_transform.basis.x.normalized()
+			_active_ghost = GhostHand.carry(_cue_root, target + Vector3(0, 0.01, 0), target + side * 0.06 + Vector3(0, 0.01, -0.04))
 		7:
+			var across := game.board.global_transform.basis.x.normalized()
+			_active_ghost = GhostHand.carry(_cue_root, target - across * 0.05, target - across * 0.2)
+			var pair := GhostHand.carry(_cue_root, target + across * 0.05, target + across * 0.2)
+			_extra_ghosts.append(pair)
+		8:
+			_active_ghost = GhostHand.hover(_cue_root, target)
+		9:
+			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.02, 0))
+		10:
 			var from_at := game._tray.cards[0].global_position + Vector3(0, 0.02, 0) if game._tray and not game._tray.cards.is_empty() and is_instance_valid(game._tray.cards[0]) \
 				else target + Vector3(0, 0.08, 0.08)
 			_active_ghost = GhostHand.carry(_cue_root, from_at, target + Vector3(0, 0.03, 0))
@@ -524,8 +552,13 @@ func _spawn_step_ghost() -> void:
 		if _active_ghost._mat:
 			_active_ghost._mat.albedo_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.85 if _step == 0 else 0.68)
 			_active_ghost._mat.emission_enabled = false
-		if _step != 6:
+		if _step != 9:
 			_active_ghost.scale = Vector3.ONE * 1.4
+		for g in _extra_ghosts:
+			if is_instance_valid(g) and g._mat:
+				g._mat.albedo_color = _active_ghost._mat.albedo_color if _active_ghost._mat else GOLD
+				g._mat.emission_enabled = false
+				g.scale = Vector3.ONE * 1.4
 
 
 func _enter_step(idx: int) -> void:
@@ -543,7 +576,7 @@ func _enter_step(idx: int) -> void:
 	else:
 		_step3_quest = null
 	_hint(_step_line(_step))
-	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "hourglass", "spells"]
+	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "hourglass", "spells"]
 	game.set_tutorial_spotlight(spotlights[_step])
 	match _step:
 		2:
@@ -573,8 +606,8 @@ func _tutorial(delta: float) -> void:
 		return
 	if _step_entered != _step:
 		_enter_step(_step)
-	if game.phase == Game.Phase.NIGHT and _step < 7:
-		_enter_step(7)
+	if game.phase == Game.Phase.NIGHT and _step < 10:
+		_enter_step(10)
 		return
 	_step_time += delta
 	_ghost_timer -= delta
@@ -608,8 +641,14 @@ func _tutorial(delta: float) -> void:
 		5:
 			done = game.foresight.showing or game.phase != Game.Phase.DAY
 		6:
-			done = game.phase == Game.Phase.NIGHT
+			done = game._tray_hand != null or not game._xr  # mouse play has no hands to grab or zoom with
 		7:
+			done = (not game._zoom_hands.is_empty() and absf(game._zoom_d - game._zoom_d0) > GameConfig.ZOOM_DEADZONE) or not game._xr
+		8:
+			done = (game.ledger != null and game.ledger.open) or not game._xr
+		9:
+			done = game.phase == Game.Phase.NIGHT
+		10:
 			done = game.spells.cooldown.values().any(func(cd): return cd > 0.0) or game.phase != Game.Phase.NIGHT
 	if done:
 		if _step + 1 >= HINTS.size():

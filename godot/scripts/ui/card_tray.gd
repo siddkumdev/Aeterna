@@ -14,6 +14,7 @@ const OAK_DARK := Color("5B2920")  # wood_dark
 
 var cards: Array[Card3D] = []
 var _base: MeshInstance3D
+var handles: Array[Node3D] = []  # the two brass end rails (tutorial points at them)
 var _face_shader: Shader
 
 
@@ -67,6 +68,7 @@ func _build_base(width: float) -> void:
 		rail.position = Vector3(sx * (width / 2.0 + HANDLE_OUT), 0.006, 0)
 		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_base.add_child(rail)
+		handles.append(rail)
 
 
 func set_cards(list: Array[Dictionary]) -> void:

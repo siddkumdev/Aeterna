@@ -145,6 +145,8 @@ var _tray_hand_yaw0 := 0.0  # the holding hand's yaw at the grab: turning the ha
 var _zoom_hands: Array[GameHand] = []  # both hands pinched close together in empty air, then spread: the table comes closer
 var _zoom_d0 := 0.0
 var _zoom_start := Transform3D.IDENTITY
+var _zoom_head := Vector3.ZERO  # eye at zoom start: the push/pull direction stays fixed while the head moves
+var _zoom_d := 0.0  # smoothed hand spread
 var _free_pinch: Array[GameHand] = []  # hands whose current pinch landed on nothing in particular
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
@@ -194,7 +196,7 @@ var hud_root: Node3D  # day clock + tutorial text: follows the table's position,
 const LEDGER_INWARD_SHIFT := 0.14
 const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
 const TUTORIAL_SHADE_REWARD := 15
-var tutorial_spotlight := ""  # "", "cards", "rim", "board", "lens", "hourglass", "spells"
+var tutorial_spotlight := ""  # "", "cards", "rim", "board", "lens", "tray", "zoom", "ledger", "hourglass", "spells"
 var run_serial := 0
 var _sell_hint_shown := false
 var quit_requested := false
@@ -1161,7 +1163,7 @@ func set_speed(s: float) -> void:
 func toggle_fast() -> void:
 	## The tray hourglass (the user, 2026-11-11). By day it hurries the day on; at night it reads "2x" and runs
 	## GameConfig.NIGHT_FAST (4) times as fast.
-	if phase == Phase.DAY and tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+	if phase == Phase.DAY and tutorial_spotlight in ["cards", "rim", "board", "lens", "tray", "zoom", "ledger"]:
 		return
 	if phase == Phase.DAY:
 		day_fast = not day_fast
@@ -1939,7 +1941,7 @@ func _press_button(id: String) -> void:
 		return
 	match id:
 		"fast":
-			if tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+			if tutorial_spotlight in ["cards", "rim", "board", "lens", "tray", "zoom", "ledger"]:
 				_show_toast("Finish the current tutorial step first.")
 				return
 			if _xr:
@@ -2730,7 +2732,7 @@ func hand_pressed(h: GameHand) -> void:
 			_held_spell_hand = h
 			return
 	if _on_tray_hourglass(tp):
-		if tutorial_spotlight in ["cards", "rim", "board", "lens"]:
+		if tutorial_spotlight in ["cards", "rim", "board", "lens", "tray", "zoom", "ledger"]:
 			_show_toast("Finish the current tutorial step first.")
 			return
 		if h == _mouse_hand:
@@ -2790,7 +2792,10 @@ func hand_pressed(h: GameHand) -> void:
 				_zoom_hands = [o, h]
 				_zoom_d0 = o.touch_point().distance_to(h.touch_point())
 				_zoom_start = board.global_transform
+				_zoom_head = _eye()
+				_zoom_d = _zoom_d0
 				_free_pinch.clear()
+				_show_toast("Zoom: spread your hands to bring the island closer, close them to push it away.")
 				_active_hand = null  # the first hand now belongs to the zoom, not to a ray drag
 				snd("grab")
 				return
@@ -2972,9 +2977,12 @@ func _tick_rim(delta := 0.0) -> void:
 			var rim_pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
 			rmat.emission_energy_multiplier = 0.75 if grabbed else (0.42 if hovered else (rim_pulse if tutorial_spotlight == "rim" else 0.18))
 	if _zoom_hands.size() == 2 and is_instance_valid(_zoom_hands[0]) and is_instance_valid(_zoom_hands[1]):
-		var zd := _zoom_hands[0].touch_point().distance_to(_zoom_hands[1].touch_point())
-		var zx := zoom_board_transform(_zoom_start, _eye(), _zoom_d0, zd)
-		board.global_transform = board_clamp(zx, _eye()) if _xr else zx
+		if not _zoom_hands[0].is_lost() and not _zoom_hands[1].is_lost():  # a hand the tracker lost holds the island still
+			var raw := _zoom_hands[0].touch_point().distance_to(_zoom_hands[1].touch_point())
+			raw = _zoom_d0 + signf(raw - _zoom_d0) * maxf(absf(raw - _zoom_d0) - GameConfig.ZOOM_DEADZONE, 0.0)
+			_zoom_d = lerpf(_zoom_d, raw, 1.0 - exp(-GameConfig.ZOOM_SMOOTH * get_process_delta_time()))
+			var zx := zoom_board_transform(_zoom_start, _zoom_head, _zoom_d0, _zoom_d)
+			board.global_transform = board_clamp(zx, _eye()) if _xr else zx
 	if _rim_hands.is_empty():
 		return
 	var p: Array[Vector3] = []
@@ -3577,7 +3585,7 @@ func set_tutorial_spotlight(mode: String) -> void:
 
 func _refresh_card_availability() -> void:
 	## Cheap state-only update used every night tick; does not rebuild card data or allocate tray lists.
-	if tutorial_spotlight in ["rim", "board", "lens", "hourglass"]:
+	if tutorial_spotlight in ["rim", "board", "lens", "tray", "zoom", "ledger", "hourglass"]:
 		for c in _tray.cards:
 			c.set_glow(false)
 		return
