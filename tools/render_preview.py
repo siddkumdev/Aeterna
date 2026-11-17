@@ -46,6 +46,9 @@ sh.background_type = "WORLD"
 cam_data = bpy.data.cameras.new("cam")
 cam_data.type = "ORTHO"
 cam_data.ortho_scale = radius * 2.3
+# the camera sits radius*4 away: for table-sized models (~6 cm) that is inside Blender's default 0.1 m near clip,
+# which sliced the front off (sheep sheet 2026-11-17). Scale the clip range with the model.
+cam_data.clip_start, cam_data.clip_end = radius * 0.01, radius * 20
 cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
 scene.camera = cam
