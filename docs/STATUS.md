@@ -8,7 +8,7 @@ Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.g
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
 
 ## On the headset
-- Installed build: 2026-11-11, 16:10 (commit 13ebb56: foveation, hand and fps logs). Everything listed under "Untested on the Quest" is newer than it.
+- Installed build: 2026-11-17, 15:16 IST (commit c9d819e: village quest kinds, well v03, opening story). Everything listed under "Untested on the Quest" up to that commit is now on the headset, still to be tried.
 - OVR Metrics Tool: not installed. The user downloads it (needs a Meta sign-in) and gives the file name; it goes on with the next game install.
 
 ## Done (in `main`)
