@@ -121,7 +121,7 @@ def terrain(m, colour_of):
         for i in range(SEGS):
             a, b = pts[j][i], pts[j][(i + 1) % SEGS]
             c, d = pts[j + 1][(i + 1) % SEGS], pts[j + 1][i]
-            for tri in ((a, b, c), (a, c, d)):
+            for tri in (((a, c, d),) if j == 0 else ((a, b, c), (a, c, d))):  # ring 0 is one point: no zero-area tris
                 cx = sum(p[0] for p in tri) / 3
                 cy = sum(p[1] for p in tri) / 3
                 cz = sum(p[2] for p in tri) / 3
@@ -167,6 +167,9 @@ def scatter(m, rnd, n, near, fn):
     """n points within `near` m of you or the path, not on the path itself; fn(bx, by, z, rnd)."""
     k = 0
     while k < n:
+        # the box reaches further behind you (Godot z = -by) than ahead, but the near-circle clip below makes the
+        # result even (measured 2026-11-17: 47% ahead, out to 14 m, the village's ground starts at 15 m). Kept so the
+        # approved v01 layout does not reshuffle.
         bx, by = rnd.uniform(-near, near), rnd.uniform(-near * 2.2, near)
         x, z = gz(bx, by)
         r = math.hypot(x, z)
@@ -203,7 +206,7 @@ def draped(px, pz, lift):
     """Height for an overlay vertex: the highest ground within 1.8 m, so terrain bulging between the overlay's
     vertices cannot poke through (critic v02 saw holes on slopes)."""
     h = max(height(px + dx, pz + dz) for dx, dz in ((0, 0), (1.8, 0), (-1.8, 0), (0, 1.8), (0, -1.8)))
-    return h + lift
+    return h + lift + 0.004 * math.hypot(px, pz)  # far terrain triangles are 4-8 m and can bulge above the true height
 
 
 def _clear_of_path(x, z, rad):
@@ -344,12 +347,12 @@ def variant_d(final=False):
     hollow = lambda x, z: height(x, z) / (1.0 + math.hypot(x, z) * 0.025) < 0.5 and math.hypot(x, z) > 30.0
     scatter_patches(m, rnd, 30, (4.0, 10.0), ("leaf_light", "grass"), crest)
     scatter_patches(m, rnd, 10, (3.0, 7.0), ("leaf_dark",), hollow, layer=1)
-    if final:
+    if final:  # v02: same layout as the approved v01; no zero-area centre tris, far overlays lifted with distance
         scatter(m, rnd, 120, 14.0, clump(m, ("leaf_green", "leaf_dark", "grass")))
     else:
         scatter(m, rnd, 140, 14.0, tuft(m, ("leaf_green", "leaf_dark"), 1.2))
     scatter(m, rnd, 16, 40.0, lambda bx, by, z, r: m.rock(bx, by, z, r.uniform(0.7, 1.4), r.choice(("stone", "stone_dark")), r))
-    return m.finish("ew_world_story_ground_v01")
+    return m.finish("ew_world_story_ground_v02" if final else "ew_world_story_ground_v01")
 
 
 VARIANTS = {"A": variant_a, "B": variant_b, "C": variant_c, "D": variant_d}
