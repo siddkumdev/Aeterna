@@ -3561,3 +3561,31 @@ func _loops() -> void:
 	check("force_dark shutters a house that a hold would keep lit", held and hh.is_shuttered)
 	k.queue_free()
 
+	# the cutscene with the whole rig, cut short by a new run: nothing of it may linger
+	var rg: Game = load("res://scripts/game/game.gd").new()
+	root.add_child(rg)
+	for i in 20:
+		await process_frame
+	if rg.with_rig and rg.board != null:
+		rg.new_run(4)
+		rg.night = rg.fall_night()
+		rg.phase = Game.Phase.NIGHT
+		rg._end_loop(false)
+		rg.choose_card(0)
+		for i in 6:
+			await process_frame
+		check("rig: the cutscene is running and locks the input", rg.is_cutscene())
+		rg._cutscene_show_skotos()
+		rg._cutscene_dim_statue()
+		await create_timer(1.2).timeout
+		rg.new_run(9)
+		for i in 3:
+			await process_frame
+		var lit := rg.houses.all(func(h): return not h.is_shuttered)
+		var flame_ok: bool = rg._shrine_flame == null or rg._shrine_flame.scale.is_equal_approx(Vector3.ONE)
+		check("rig: a new run mid-cutscene clears it (unlocked, flame back, houses lit, no display Skotos)",
+			not rg.is_cutscene() and lit and flame_ok and not is_instance_valid(rg._cutscene_skotos))
+	else:
+		print("      (no rig in this run: the rig cutscene test was skipped)")
+	rg.queue_free()
+

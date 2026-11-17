@@ -24,6 +24,7 @@ var _smoke_t := 0.0
 var _hurt_t := 0.0
 var _glow: MeshInstance3D
 var _glow_t := 0.0
+var _snuff_tween: Tween
 
 const GLOW_TIME := 0.9
 
@@ -164,7 +165,10 @@ func snuff() -> void:
 		force_dark()
 		return
 	var lamps := _parts.values().filter(func(n): return str(n.get_meta("ew_broken", "")) == "off")
+	if _snuff_tween and _snuff_tween.is_valid():
+		_snuff_tween.kill()
 	var tw := create_tween()
+	_snuff_tween = tw  # repair() kills it, so a new run never sees a late force_dark
 	for k in 3:
 		tw.tween_callback(func():
 			for n in lamps:
@@ -188,6 +192,12 @@ func heal(amount: float) -> void:
 
 
 func repair() -> void:
+	if _snuff_tween and _snuff_tween.is_valid():
+		_snuff_tween.kill()
+		for p in _parts:  # a flicker cut short must not leave the lamps off
+			var node: MeshInstance3D = _parts[p]
+			if str(node.get_meta("ew_broken", "")) == "off":
+				node.visible = true
 	hp = max_hp
 	_update_bar()
 	if is_shuttered:

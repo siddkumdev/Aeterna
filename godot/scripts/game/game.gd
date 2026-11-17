@@ -330,6 +330,7 @@ func new_run(rng_seed: int) -> void:
 	_carry_in = 0
 	last_carry = 0
 	_cutscene = false
+	_kill_statue_tweens()
 	cutscene_count = 0
 	_dawn_pending = ""
 	if is_instance_valid(_cutscene_skotos):
@@ -1137,12 +1138,16 @@ func _finish_story(id: String) -> bool:
 const CUTSCENE_T := {"skotos1": 1.2, "dark": 4.6}  # the rest follows from how many houses are still lit
 const FALL_CAPTION := preload("res://scripts/ui/fall_caption.gd")  # no class_name: it needs no editor import
 const CUTSCENE_HOUSE_GAP := 1.5  # s between one house going dark and the next
-const CUTSCENE_GLASS := 3.2  # s the hourglass rises and turns before the day returns
+const GLASS_RISE := 0.8  # the rewind hourglass: rises, flips, the sand runs (seconds), then its burst
+const GLASS_FLIP := 0.9
+const GLASS_SAND := 1.3
+const CUTSCENE_GLASS := GLASS_RISE + GLASS_FLIP + GLASS_SAND + 0.3  # the day returns only once it has turned
 const CUTSCENE_SKOTOS_SCALE := 3.0  # the display Skotos: about three houses tall (the new boss model will set this)
 const CUTSCENE_SKOTOS_TURN := 0.0  # yaw so he faces the player
 var _cutscene := false  # the player cannot act while it plays
 var cutscene_count := 0  # how many times it has played this run (only ever the end of loop 1)
 var _cutscene_skotos: Enemy
+var _statue_tweens: Array[Tween] = []
 var _dawn_pending := ""  # the dawn message waiting while the ending choice is on the tray
 
 
@@ -1159,6 +1164,9 @@ func _begin_rewind() -> void:
 	if not (with_rig and is_inside_tree() and board != null):
 		_rewind()  # no table to play it on (headless checks): it still counts, and still ends in the rewind
 		return
+	if ledger and ledger.open:  # a book latched open would stay over the whole scene
+		ledger.set_open(false)
+	_ledger_latched = false
 	_cutscene = true
 	last_message = "The village falls dark."
 	if lighting:  # still the fall night, darker and colder than any night: held until the glass turns
@@ -1179,7 +1187,7 @@ func _begin_rewind() -> void:
 	var t_maren: float = t_dark + maxi(lit.size(), 1) * CUTSCENE_HOUSE_GAP + 1.0
 	var t_s2: float = t_maren + 3.8
 	var t_n0: float = t_s2 + 5.6
-	var t_end: float = t_n0 + 3.4 * 3.0
+	var t_end: float = t_n0 + 3.4 * StoryText.cutscene_narration().size()
 	at.call(0.3, func(): _cutscene_show_skotos())
 	at.call(CUTSCENE_T["skotos1"], func(): _cutscene_line("Skotos", StoryText.cutscene("skotos_1"), SKOTOS.darkened(0.2), 3.2))
 	for k in lit.size():  # the houses go dark one by one, a flicker and then out
@@ -1237,10 +1245,20 @@ func _cutscene_line(speaker: String, line: String, name_colour: Color, seconds: 
 
 func _cutscene_dim_statue() -> void:
 	## The statue's glow dims last: its candle light and flame sink to a faint ember.
+	_kill_statue_tweens()
 	if _shrine_light:
-		create_tween().tween_property(_shrine_light, "light_energy", 0.03, 1.0)
+		_statue_tweens.append(create_tween())
+		_statue_tweens[-1].tween_property(_shrine_light, "light_energy", 0.03, 1.0)
 	if _shrine_flame:
-		create_tween().tween_property(_shrine_flame, "scale", Vector3.ONE * 0.25, 1.0)
+		_statue_tweens.append(create_tween())
+		_statue_tweens[-1].tween_property(_shrine_flame, "scale", Vector3.ONE * 0.25, 1.0)
+
+
+func _kill_statue_tweens() -> void:
+	for tw in _statue_tweens:
+		if tw and tw.is_valid():
+			tw.kill()
+	_statue_tweens.clear()
 
 
 func _rewind(glass_played := false) -> void:
@@ -1251,11 +1269,11 @@ func _rewind(glass_played := false) -> void:
 	if not glass_played:
 		_play_hourglass()
 	var kept := ", ".join(cards.keys().map(func(k): return "%s (%s)" % [Cards.POOL[k]["name"], Cards.RARITY_NAMES[cards[k]]]))
-	_start_loop("The hourglass turns. Loop %d: enemies are tougher. +%d faith carried. Cards kept: %s" % [loop + 1, last_carry, kept if kept != "" else "none"], 4.8)
+	_start_loop("The hourglass turns. Loop %d: enemies are tougher. +%d faith carried. Cards kept: %s" % [loop + 1, last_carry, kept if kept != "" else "none"], 5.4 if glass_played else 4.8)
 	if with_rig and is_inside_tree():
 		_toast_last = last_message  # the gilded words say it; no small line as well
 		var serial := _rewind_serial
-		get_tree().create_timer(3.4).timeout.connect(func():  # once the hourglass has turned
+		get_tree().create_timer(1.0 if glass_played else 3.4).timeout.connect(func():  # once the hourglass has turned (already, after the cutscene)
 			if serial == _rewind_serial:  # not if a new run started meanwhile
 				show_rewind_words())
 
@@ -1286,11 +1304,11 @@ func _play_hourglass() -> void:
 		_rewind_tween.kill()
 	var tw := create_tween()
 	_rewind_tween = tw  # new_run kills it
-	tw.tween_property(_hourglass, "position:y", 0.3, 0.8).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(_hourglass, "rotation:z", PI, 0.9).set_trans(Tween.TRANS_BACK)
+	tw.tween_property(_hourglass, "position:y", 0.3, GLASS_RISE).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_hourglass, "rotation:z", PI, GLASS_FLIP).set_trans(Tween.TRANS_BACK)
 	if top and bottom:  # once flipped, the sand runs upward: the "top" bulb (now below) empties into the other
-		tw.tween_property(top, "scale:y", 0.08, 1.3)
-		tw.parallel().tween_property(bottom, "scale:y", 1.0, 1.3)
+		tw.tween_property(top, "scale:y", 0.08, GLASS_SAND)
+		tw.parallel().tween_property(bottom, "scale:y", 1.0, GLASS_SAND)
 	tw.tween_callback(func():
 		VfxKit.burst(shots_root, _hourglass.global_position, gold, amber, 48, 0.16, 1.4, 0.007, 0.05)  # a warm burst as the day returns
 		var flash := OmniLight3D.new()  # a warm white flash over the island, gone in a moment
@@ -2014,6 +2032,8 @@ func _update_shrine() -> void:
 		_shrine_cracks.visible = loop >= 1
 	if _shrine_light:
 		_shrine_light.light_energy = 0.15 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.35
+	if _shrine_flame:
+		_shrine_flame.scale = Vector3.ONE  # the cutscene had dimmed it
 	var want := mini(_helped, 6)
 	var bowl: Node3D = shrine.find_child("*__offering_anchor", true, false)
 	if bowl == null:
@@ -2163,8 +2183,10 @@ func _press_button(id: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not with_rig or _cutscene:
+	if not with_rig:
 		return
+	if _cutscene and not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R):
+		return  # the cutscene locks the input; only the restart key gets through
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_5:
@@ -3733,7 +3755,7 @@ func _refresh_hud() -> void:
 	if _msg_serial != _hud_toast_serial and not asleep:
 		_hud_toast_serial = _msg_serial
 		_show_toast(last_message)
-	if _shrine_light:
+	if _shrine_light and not _cutscene:  # the cutscene dims the statue's light itself
 		_shrine_light.light_energy = 0.15 + clampf(float(faith) / 400.0, 0.0, 1.0) * 0.35
 
 
