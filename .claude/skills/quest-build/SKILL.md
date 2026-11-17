@@ -12,6 +12,8 @@ Full setup (templates, the vendors plugin, the Android build template) is in `do
 2. Everything committed and pushed.
 
 ## 2. Export: the user runs it
+The user double-clicks `quest_build.bat` in the repo root (sykeriin, 2026-11-17: one file, no copy-paste). It exports, installs, and records the headset log to `_work/quest_log.txt`; then read that file with grep. The manual steps below are the fallback.
+
 Claude Code's shell gets killed by the low-memory reaper during the Gradle step, so hand the user this for their own PowerShell and wait for `[ DONE ] export`:
 
 ```powershell
