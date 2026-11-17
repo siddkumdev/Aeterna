@@ -84,7 +84,7 @@ static func govern(delta: float, vp: Viewport, sun: DirectionalLight3D, xr: Obje
 				vp.msaa_3d = Viewport.MSAA_DISABLED
 		2:
 			if vp:
-				vp.scaling_3d_scale = minf(vp.scaling_3d_scale, 0.9)
+				vp.scaling_3d_scale = minf(vp.scaling_3d_scale, 0.9) if vp.scaling_3d_scale > 0.9 else 0.85
 		3:
 			if vp:
 				vp.scaling_3d_scale = maxf(0.75, vp.scaling_3d_scale - 0.12)
