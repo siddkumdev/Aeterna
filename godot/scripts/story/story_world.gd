@@ -1142,11 +1142,12 @@ func _build_flock() -> void:
 	wr.seed = 31
 	# the fleece: a core of wool under lumpy curls
 	ball(st, 1.0, Transform3D(Basis.from_scale(Vector3(0.4, 0.36, 0.55)), Vector3(0, 0.8, 0)), K.CLOTH, wool * 0.92, 14)
-	for i in 140:
+	# fewer, bigger curls (sykeriin, 2026-11-17: the sheep looked pixelated on the Quest; 140 tiny curls shimmered and cost ~100k tris)
+	for i in 34:
 		var u := wr.randf_range(0, TAU)
 		var v := wr.randf_range(-0.35, 1.0)
 		var n := Vector3(cos(u) * sqrt(1.0 - v * v), v, sin(u) * sqrt(1.0 - v * v))
-		ball(st, wr.randf_range(0.07, 0.1), at(Vector3(n.x * 0.37, 0.8 + n.y * 0.33, n.z * 0.52)), K.CLOTH, wool * wr.randf_range(0.88, 1.04), 7)
+		ball(st, wr.randf_range(0.12, 0.16), at(Vector3(n.x * 0.33, 0.8 + n.y * 0.29, n.z * 0.47)), K.CLOTH, wool * wr.randf_range(0.92, 1.02), 7)
 	ball(st, 0.1, at(Vector3(0, 0.88, -0.6)), K.CLOTH, wool, 7)  # tail
 	# neck and head: a long dark face, a muzzle, eyes, drooping ears, a woolly topknot
 	seg(st, Vector3(0, 0.95, 0.42), Vector3(0, 1.02, 0.62), 0.17, 0.12, K.CLOTH, wool * 0.95, 9)

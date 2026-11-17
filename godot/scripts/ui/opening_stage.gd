@@ -1,7 +1,7 @@
 class_name OpeningStage
 extends Node3D
 ## Measurement build (the user, 2026-11-17): log what each part of the story costs on the Quest. Turn off afterwards.
-const PERF_SWEEP := true
+const PERF_SWEEP := false  # measured 2026-11-17: the ground alone cost 24 ms; switched off so the story plays whole
 static var sweeping := false
 ## The opening (sykeriin, 2026-11-14: "an immersive experience... cover the player's 360 view... as realistic as you
 ## can get it"; replaces the 2026-11-11 puppet theatre). You stand INSIDE the island at human scale, in a world built

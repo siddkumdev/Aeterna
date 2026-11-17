@@ -84,7 +84,7 @@ void fragment() {
 		rough = 0.95;
 		back = col * 0.15;
 	} else if (kind == 5.0) {  // skin: warm, blotchy, light passes through the edges
-		float b = fbm3(lp * 30.0, 3);
+		float b = mix(0.5, fbm3(lp * 30.0, 2), keep(30.0, px));  // fades out before it can alias
 		col = tint * (0.95 + 0.06 * b);  // even skin: a faint grain, no blotches
 		col = mix(col, col * vec3(1.05, 0.92, 0.9), smoothstep(0.45, 0.7, fbm3(lp * 6.0, 2)) * 0.25);
 		rough = 0.6;
