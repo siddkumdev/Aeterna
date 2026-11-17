@@ -61,14 +61,17 @@ def main():
         for line in p.stdout:
             raw.write(line)
             sec = int(time.time() - t0)
-            m = VRAPI.search(line) if "FPS=" in line else None
-            if m:
-                put(sec, fps=int(m.group(1)), stale=int(m.group(3)), cpu_lvl=int(m.group(4)), gpu_lvl=int(m.group(5)),
-                    app_ms=float(m.group(6)) if m.group(6) else "")
+            if "FPS=" in line:
+                def f(rx):
+                    m = re.search(rx, line)
+                    return float(m.group(1)) if m else ""
+                put(sec, fps=f(r"FPS=(\d+)/"), stale=f(r"Stale=(\d+)"), cpu_lvl=f(r"CPU\d*/GPU=(\d+)/"),
+                    gpu_lvl=f(r"CPU\d*/GPU=\d+/(\d+)"), app_ms=f(r"App=([\d.]+)ms"))
             elif "godot" in line.lower():
                 msg = line.split(":", 3)[-1].strip()[:80]
                 with lock:
-                    rows.setdefault(sec, {})["note"] = (rows[sec].get("note", "") + " | " + msg).strip(" |")[:200]
+                    r = rows.setdefault(sec, {})
+                    r["note"] = (r.get("note", "") + " | " + msg).strip(" |")[:200]
             if time.time() - t0 > args.seconds:
                 p.kill()
                 return
@@ -116,7 +119,7 @@ def main():
         pass
     for p in procs:
         p.kill()
-    adb("shell", "pkill", "-f", "ovrgpuprofiler")
+    adb("shell", "pkill", "-f", "ovrgpuprofiler")  # adb side; the PC side has no pkill
     cols = ["t", "fps", "stale", "app_ms", "cpu_lvl", "gpu_lvl", *GPU_METRICS.values(), "threads", "note"]
     csv = os.path.join(out_dir, stamp + ".csv")
     with open(csv, "w", encoding="utf-8") as f:
