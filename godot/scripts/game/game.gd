@@ -2080,7 +2080,8 @@ func _process(delta: float) -> void:
 	_tick_rim(delta)
 	update_hud_root()
 	if _xr and not asleep:
-		PerfTier.govern(delta, get_viewport(), lighting.sun, XRServer.find_interface("OpenXR"))
+		if not OpeningStage.sweeping:  # the story's measuring pass needs steady quality settings
+			PerfTier.govern(delta, get_viewport(), lighting.sun, XRServer.find_interface("OpenXR"))
 	if _xr and (GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose()):
 		_perf_log_t -= delta
 		if _perf_log_t <= 0.0:

@@ -1,5 +1,8 @@
 class_name OpeningStage
 extends Node3D
+## Measurement build (the user, 2026-11-17): log what each part of the story costs on the Quest. Turn off afterwards.
+const PERF_SWEEP := true
+static var sweeping := false
 ## The opening (sykeriin, 2026-11-14: "an immersive experience... cover the player's 360 view... as realistic as you
 ## can get it"; replaces the 2026-11-11 puppet theatre). You stand INSIDE the island at human scale, in a world built
 ## from code (scripts/story/story_world.gd): a meadow at dawn, the village ahead, the Dark Wood all round, the island's
@@ -137,6 +140,11 @@ func _enter() -> void:
 	world.name = "World"
 	add_child(world)
 	world.apply_perf_tier(PerfTier.detect())
+	if PERF_SWEEP and OS.has_feature("android"):
+		var sw := StoryPerfSweep.new()
+		sw.world = world
+		add_child(sw)
+		sweeping = true
 	if game:
 		_saved["board"] = game.board.visible if game.board else false
 		if game.board:
@@ -185,6 +193,7 @@ func _enter() -> void:
 
 
 func _leave() -> void:
+	sweeping = false
 	_drop_fade()
 	for id in _loops:
 		(_loops[id] as AudioStreamPlayer).stop()
