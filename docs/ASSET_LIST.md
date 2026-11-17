@@ -145,7 +145,7 @@ Types and sizes: Grunt, Scout, Tunneler, Splitter, Wisp (the only flyer), Fog va
 | E05 | P1 | model | Tunneler and burrow mound | 1 cell. Pops up mid-village. | 1-2k | KEEP |
 | E06 | P1 | model | Splitter and mini splits | Mushroom-shaped (#15). 1 cell plus 2 small spawn pieces. | 1-2k | KEEP |
 | E07 | P1 | model | Fog variant | Loop 2. Ghostly Grunt; mostly a shader variant of E01. Hides from Foresight. | 1-2k | EDIT |
-| E08 | P1 | model | Boss: the Warden | 3 x 3, height 5. Phases 1-3 (+ phase 4 in loop 2), enrage state, death. | 4-6k | EDIT |
+| E08 | P1 | model | Boss: Skotos (the Warden) | BUILT v01 phase 1 (variant S, approved by Siddharth 2026-11-18): tiered tree god, ~9.6 cells tall, rules lifted. Shed-and-grow forms P2 (bare branches), P3 (skeletal dead tree, roots), P4 "The Grove Awakens"; heartwood knots shield. | 12k | EDIT |
 | E09 | P1 | model | Warden crystal shield (x3) | Replaces generic phase attachments. Idle shimmer, hit, shatter. | +500 each | CHANGED |
 | E10 | P1 | vfx | Boss attack telegraphs | Ground rings and beams. | | KEEP |
 | E11 | P0 | model | Boss placeholder | Scaled Grunt so the loop is testable. | reuse | KEEP |

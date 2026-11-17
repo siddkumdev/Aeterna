@@ -10,7 +10,7 @@
     "V03": "done",
     "W01": "done",
     "W04": "done",
-    "W13": "done",
+    "W13": "review",
     "W10": "done",
     "W14": "done",
     "W05": "review",
@@ -42,7 +42,9 @@
     "V23": "done",
     "V24": "done",
     "V25": "done",
-    "V26": "done"
+    "V26": "done",
+    "W25": "review",
+    "E08": "done"
   },
   "rank": {
     "todo": 0,
