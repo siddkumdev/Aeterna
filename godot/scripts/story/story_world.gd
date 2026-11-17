@@ -513,6 +513,9 @@ func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
 
 const STATUE_AT := VILLAGE + Vector3(0, 0, -5.0)
 const STATUE_SCALE := 48.0  # about 7.5 m tall on its plinth (the user, 2026-11-14: 70x was too big): the shrine is the heart of the square (the user, 2026-11-14: "much bigger")
+const GAME_MAT := preload("res://assets/palette/ew_palette.tres")  # the game models' own shared material
+const REALISTIC_GRASS := false
+const TREE_SCALE := 50.0  # game trees at the houses' life scale
 const HOUSE_SCALE := 50.0  # the game's 2 x 2-cell houses (0.1 m) at life size: about 5 m across
 const HOUSE_MODELS := ["cottage_v05", "townhouse_v05", "cabin_v05"]
 
@@ -530,7 +533,7 @@ func _prop(key: String, p: Vector3, yaw: float, s: float, shadow := false) -> No
 		for k in mi.mesh.get_surface_count():
 			var m := mi.get_active_material(k)
 			if m != null and not m.resource_name.contains("glow"):
-				mi.set_surface_override_material(k, palette_mat)
+				continue  # the game's own material: the story looks like the game (the user, 2026-11-17)
 			elif m is BaseMaterial3D:  # lit windows and lanterns: a shared copy the story can dim
 				if not _glow_copies.has(m):
 					var g: BaseMaterial3D = m.duplicate()
@@ -677,6 +680,8 @@ func _build_grass() -> void:
 	grass_mat = ShaderMaterial.new()
 	grass_mat.shader = GRASS
 	grass_mat.set_shader_parameter("village", Vector2(VILLAGE.x, VILLAGE.z))
+	if not REALISTIC_GRASS:
+		return  # the board has no grass blades or flowers: the story matches the game (the user, 2026-11-17)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
@@ -912,7 +917,24 @@ func _pine_far(seed_: int) -> ArrayMesh:
 	return st.commit()
 
 
-func _scatter(mesh: Mesh, xfs: Array, name_: String, shadows := true) -> void:
+func _glb_mesh(path: String) -> ArrayMesh:
+	## One of the game's models merged into a single mesh (all its parts, in place) for a MultiMesh forest.
+	var n: Node3D = load(path).instantiate()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		var xf := Transform3D.IDENTITY
+		var c: Node = mi
+		while c != n:
+			xf = (c as Node3D).transform * xf
+			c = c.get_parent()
+		for k in mi.mesh.get_surface_count():
+			st.append_from(mi.mesh, k, xf)
+	n.free()
+	return st.commit()
+
+
+func _scatter(mesh: Mesh, xfs: Array, name_: String, shadows := true, mat: Material = null) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -922,13 +944,15 @@ func _scatter(mesh: Mesh, xfs: Array, name_: String, shadows := true) -> void:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.name = name_
 	mmi.multimesh = mm
-	if mesh.get_surface_count() == 1:
+	if mat != null:
+		mmi.material_override = mat
+	elif mesh.get_surface_count() == 1:
 		mmi.material_override = surf
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
 
 
-func _scatter_wedges(mesh: Mesh, xfs: Array, prefix: String, wedges := 12, shadows := false) -> void:
+func _scatter_wedges(mesh: Mesh, xfs: Array, prefix: String, wedges := 12, shadows := false, mat: Material = null) -> void:
 	## Bucket instances into angular wedges round the origin so off-camera arcs frustum-cull cleanly.
 	var buckets: Array = []
 	for w in wedges:
@@ -939,7 +963,22 @@ func _scatter_wedges(mesh: Mesh, xfs: Array, prefix: String, wedges := 12, shado
 	for w in wedges:
 		var b: Array = buckets[w]
 		if not b.is_empty():
-			_scatter(mesh, b, "%s_%d" % [prefix, w], shadows)
+			_scatter(mesh, b, "%s_%d" % [prefix, w], shadows, mat)
+
+
+func _life_size(xfs: Array) -> Array:
+	## The scatter's transforms (sized for the old life-size trees) scaled up by the board-to-story factor.
+	var out: Array = []
+	for xf: Transform3D in xfs:
+		out.append(Transform3D(xf.basis.scaled(Vector3.ONE * TREE_SCALE), xf.origin))
+	return out
+
+
+func _in_skotos_lane(p: Vector2) -> bool:
+	## The open lane from where you stand to Skotos (and a little past him), so no pine hides him.
+	var b := Vector2(SKOTOS_AT.x, SKOTOS_AT.z) * 1.25
+	var t := clampf(p.dot(b) / b.dot(b), 0.0, 1.0)
+	return (p - b * t).length() < 7.0 + 9.0 * t
 
 
 func _build_wood() -> void:
@@ -955,7 +994,7 @@ func _build_wood() -> void:
 		var r := _rng.randf_range(r0, 104.0)
 		var x := cos(a) * r
 		var z := sin(a) * r
-		if Vector2(x - VILLAGE.x, z - VILLAGE.z).length() < 24.0 or Vector2(x - SKOTOS_AT.x, z - SKOTOS_AT.z).length() < 9.0:
+		if Vector2(x - VILLAGE.x, z - VILLAGE.z).length() < 24.0 or Vector2(x - SKOTOS_AT.x, z - SKOTOS_AT.z).length() < 16.0 or _in_skotos_lane(Vector2(x, z)):
 			continue
 		var s := _rng.randf_range(0.8, 1.45)
 		var xf := Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z))
@@ -966,24 +1005,18 @@ func _build_wood() -> void:
 			far_sets[i % 2].append(xf)
 		continue
 		sets[i % 3].append(Transform3D(Basis(Vector3.UP, _rng.randf_range(0, TAU)).scaled(Vector3(s, s * _rng.randf_range(0.9, 1.2), s)), Vector3(x, height(x, z) - 0.2, z)))
+	# The game's own approved pines (make_trees.py FINAL, approved by Siddharth 2026-10-21) at life size: the board's
+	# trees stand beside its houses, so they take the houses' scale (the user, 2026-11-17: the story from game models).
+	var near_keys := ["tree_pine_v03", "tree_pine_layered_v02", "tree_pine_tall_v02"]
+	var far_keys := ["tree_pine_young_v02", "tree_pine_v03"]
 	for k in 3:
-		_scatter_wedges(_pine(11 + k * 7), sets[k], "Pines%d" % k, 12, false)  # the wood starts 22 m out: its shadows cost a fifth of the frame for little
+		_scatter_wedges(_glb_mesh("res://assets/world/ew_world_%s.glb" % near_keys[k]), _life_size(sets[k]), "Pines%d" % k, 12, false, GAME_MAT)  # no shadows: the wood starts 22 m out
 	for k in 2:
-		_scatter_wedges(_pine_far(40 + k), far_sets[k], "FarPines%d" % k, 12, false)
+		_scatter_wedges(_glb_mesh("res://assets/world/ew_world_%s.glb" % far_keys[k]), _life_size(far_sets[k]), "FarPines%d" % k, 12, false, GAME_MAT)
 	var oaks: Array = []
 	for p in [Vector3(-14, 0, -9), Vector3(13, 0, -27), Vector3(-9, 0, -31), Vector3(16, 0, -6)]:
 		oaks.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.9, 1.2)), Vector3(p.x, height(p.x, p.z) - 0.1, p.z)))
-	_scatter(_oak(3), oaks, "Oaks")
-	var bushes: Array = []
-	for i in 110:
-		var a := _rng.randf_range(0, TAU)
-		var r := _rng.randf_range(16.0, 34.0)
-		var x := cos(a) * r
-		var z := sin(a) * r
-		if _path_dist(Vector2(x, z)) < 2.0 or Vector2(x - VILLAGE.x, z - VILLAGE.z).length() < 13.0:
-			continue
-		bushes.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.6, 1.5)), Vector3(x, height(x, z) - 0.1, z)))
-	_scatter_wedges(_bush(), bushes, "Bushes", 12, false)
+	_scatter(_glb_mesh("res://assets/world/ew_world_tree_oak_round_v01.glb"), _life_size(oaks), "Oaks", true, GAME_MAT)  # the game's oak
 
 
 func _build_ruin() -> void:
@@ -1459,6 +1492,10 @@ func _build_veil() -> void:
 
 
 # ------------------------------------------------------------------ Skotos
+const SKOTOS_SCALE := 0.9  # about 35 m tall at 44 m (head ~36 deg up): the whole of him fits in the headset's view (the user, 2026-11-17:
+	# at x1.7, 66 m, half of him was out of sight even looking up); a lane is cleared through the wood so he stands clear
+
+
 func _build_skotos() -> void:
 	## A god the world forgot, risen out of the Dark Wood behind you: a hooded shape of smoke some 30 m tall, two
 	## ember eyes, arms that reach over the trees. Warden purple rims the smoke; no blue.
@@ -1466,7 +1503,7 @@ func _build_skotos() -> void:
 	skotos.name = "Skotos"
 	skotos.position = SKOTOS_AT + Vector3(0, -45, 0)
 	skotos.rotation.y = atan2(-SKOTOS_AT.x, -SKOTOS_AT.z)  # faces the village and you
-	skotos.scale = Vector3.ONE * 1.7  # the hood must clear the pines from where you stand
+	skotos.scale = Vector3.ONE * SKOTOS_SCALE
 	add_child(skotos)
 	skotos_mat = ShaderMaterial.new()
 	skotos_mat.shader = SMOKE
@@ -1569,88 +1606,30 @@ func _build_skotos() -> void:
 
 
 # ------------------------------------------------------------------ the dark that comes out of the wood
+const BEAST_KINDS := [["veilrunner", "veil"], ["blightbark", "bark"], ["lantern_spirit", "lantern"]]
+const BEAST_SCALE := 40.0  # the board's enemies (0.75) beside the villagers (0.7, x30 in the story): a little taller than them
+
+
 func _build_beasts() -> void:
-	## The dark's creatures, as in the game (art bible 7: ink bodies, bone, a bright core): a lean, hunched hound of
-	## ink with a bone skull and spine, ribs over an ember heart, jointed legs. Shades of smoke trail off them.
-	beast_mat = ShaderMaterial.new()  # kept for the clock loop; the wisps use it
+	## The dark's creatures are the game's own enemies at life size (the user, 2026-11-17: the story from game models):
+	## Veilrunners, Blightbarks and Lantern spirits, moved by the game's CharacterRig like on the board.
+	beast_mat = ShaderMaterial.new()  # kept for the clock loop
 	beast_mat.shader = SMOKE
 	beast_mat.set_shader_parameter("billboard", true)
 	beast_mat.set_shader_parameter("smoke_col", Color(0.03, 0.02, 0.02))
 	beast_mat.set_shader_parameter("density", 0.55)
 	beast_mat.set_shader_parameter("rim", 0.0)
-	var ink := Color(0.035, 0.03, 0.035)
-	var bone := Color(0.86, 0.8, 0.66)
-	var body_st := new_st()
-	# torso: deep chest, tucked waist, hunched shoulders
-	lathe(body_st, PackedVector2Array([Vector2(0.0, -0.75), Vector2(0.17, -0.62), Vector2(0.2, -0.2), Vector2(0.3, 0.2), Vector2(0.33, 0.5), Vector2(0.24, 0.72), Vector2(0.0, 0.8)]),
-		Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 1.0, 0.0)), K.INK, ink, 12, 0.12)
-	lathe(body_st, PackedVector2Array([Vector2(0.0, 0.0), Vector2(0.14, 0.1), Vector2(0.11, 0.45), Vector2(0.0, 0.55)]),
-		Transform3D(Basis(Vector3.RIGHT, 0.9), Vector3(0, 1.12, 0.62)), K.INK, ink, 9, 0.1)  # neck
-	# the ember heart, seen between the ribs
-	ball(body_st, 0.1, at(Vector3(0, 0.98, 0.32)), K.EMBER, Color(0.95, 0.22, 0.05), 8)
-	# spine plates and ribs
-	for k in 9:
-		var z := lerpf(-0.65, 0.6, k / 8.0)
-		var y := 1.2 + 0.08 * sin(k / 8.0 * PI) + (0.06 if z > 0.2 else 0.0)
-		prism(body_st, Vector3(0.06, 0.12 - absf(z) * 0.05, 0.1), at(Vector3(0, y + 0.05, z)), K.BONE, bone * 0.9)
-	for k in 5:
-		var z := 0.05 + k * 0.13
-		for sx in [-1.0, 1.0]:
-			var p0 := Vector3(0, 1.22, z)
-			var p1 := Vector3(sx * 0.3, 1.08, z + 0.03)
-			var p2 := Vector3(sx * 0.31, 0.85, z + 0.05)
-			var p3 := Vector3(sx * 0.12, 0.7, z + 0.08)
-			seg(body_st, p0, p1, 0.022, 0.02, K.BONE, bone, 5)
-			seg(body_st, p1, p2, 0.02, 0.018, K.BONE, bone, 5)
-			seg(body_st, p2, p3, 0.018, 0.012, K.BONE, bone * 0.85, 5)
-	# skull: a long snout, brow ridges, a hanging jaw with teeth, sockets with ember eyes
-	var hx := Transform3D(Basis(Vector3.RIGHT, 0.25), Vector3(0, 1.38, 1.05))
-	ball(body_st, 0.14, hx * Transform3D(Basis.from_scale(Vector3(0.9, 0.78, 1.05)), Vector3.ZERO), K.BONE, bone, 12)
-	lathe(body_st, PackedVector2Array([Vector2(0.11, 0.0), Vector2(0.085, 0.15), Vector2(0.05, 0.3), Vector2(0.0, 0.33)]), hx * Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, -0.03, 0.08)), K.BONE, bone * 0.95, 9)
-	lathe(body_st, PackedVector2Array([Vector2(0.08, 0.0), Vector2(0.06, 0.15), Vector2(0.03, 0.28), Vector2(0.0, 0.3)]), hx * Transform3D(Basis(Vector3.RIGHT, PI / 2.0 + 0.35), Vector3(0, -0.11, 0.05)), K.BONE, bone * 0.8, 8)
-	for sx in [-1.0, 1.0]:
-		ball(body_st, 0.05, hx * at(Vector3(sx * 0.075, 0.05, 0.12)), K.INK, ink, 6)  # socket
-		ball(body_st, 0.026, hx * at(Vector3(sx * 0.075, 0.05, 0.145)), K.EMBER, Color(1.0, 0.45, 0.12), 6)
-		prism(body_st, Vector3(0.05, 0.03, 0.09), hx * at(Vector3(sx * 0.08, 0.11, 0.1), 0.0, Vector3(0, 0, sx * 0.3)), K.BONE, bone)  # brow
-		for t in 3:
-			prism(body_st, Vector3(0.015, 0.04, 0.015), hx * Transform3D(Basis(Vector3.RIGHT, PI), Vector3(sx * (0.035 + t * 0.012), -0.08, 0.3 - t * 0.06)), K.BONE, Color(0.95, 0.92, 0.82))
-		seg(body_st, hx * Vector3(sx * 0.1, 0.12, -0.05), hx * Vector3(sx * 0.18, 0.28, -0.22), 0.03, 0.006, K.BONE, bone * 0.8, 5)  # swept horns
-	# tail
-	var tp := Vector3(0, 1.1, -0.72)
-	for k in 5:
-		var nx := tp + Vector3(0.0, -0.1 + k * 0.02, -0.18)
-		seg(body_st, tp, nx, 0.05 - k * 0.008, 0.042 - k * 0.008, K.INK, ink, 6)
-		tp = nx
-	var body_mesh := body_st.commit()
-	var leg_meshes: Array = []
-	for front in [true, false]:
-		var ls := new_st()
-		var knee := Vector3(0, -0.42, 0.12 if front else -0.16)
-		var foot := Vector3(0, -0.88, 0.02)
-		seg(ls, Vector3.ZERO, knee, 0.085, 0.05, K.INK, ink, 7)
-		seg(ls, knee, foot, 0.045, 0.03, K.INK, ink, 6)
-		ball(ls, 0.045, at(knee), K.BONE, bone * 0.85, 6)
-		for t in 3:  # claws
-			seg(ls, foot, foot + Vector3((t - 1) * 0.035, -0.04, 0.09), 0.014, 0.003, K.BONE, Color(0.9, 0.86, 0.74), 4)
-		leg_meshes.append(ls.commit())
 	for i in 9:
 		var b := Node3D.new()
 		b.name = "Beast%d" % i
-		var body := MeshInstance3D.new()
-		body.mesh = body_mesh
-		body.material_override = surf
-		b.add_child(body)
-		var legs: Array = []
-		for k in 4:
-			var leg := Node3D.new()
-			leg.position = Vector3(0.2 * (1 if k % 2 else -1), 0.92, 0.48 if k < 2 else -0.5)
-			var lm := MeshInstance3D.new()
-			lm.mesh = leg_meshes[0 if k < 2 else 1]
-			lm.material_override = surf
-			leg.add_child(lm)
-			b.add_child(leg)
-			legs.append(leg)
-		b.scale = Vector3.ONE * _rng.randf_range(1.2, 1.5)
+		var rig := CharacterRig.new()
+		rig.name = "Rig"
+		b.add_child(rig)
+		var kind: Array = BEAST_KINDS[i % BEAST_KINDS.size()]
+		rig.setup(kind[0], kind[1])
+		rig.scale = Vector3.ONE * BEAST_SCALE * _rng.randf_range(0.9, 1.1)
+		rig.set_cast_shadows(false)
+		rig.anim = "walk"
 		var side := -1.0 if i % 2 == 0 else 1.0
 		var a := side * (1.35 + (i / 2) * 0.16 + _rng.randf_range(-0.05, 0.05))  # out of the wood on both flanks of the village
 		var dir := Vector3(sin(a), 0, -cos(a))
@@ -1659,7 +1638,7 @@ func _build_beasts() -> void:
 		b.visible = false
 		add_child(b)
 		var round_ := VILLAGE + Vector3(side * 25.0, 0, 15.0)  # outside the ring of houses (r 16 plus their size), never through them
-		beasts.append({"node": b, "legs": legs, "from": from, "round": round_, "to": to, "path": [round_, to], "i": 0, "delay": _rng.randf_range(0.0, 1.5),
+		beasts.append({"node": b, "rig": rig, "from": from, "round": round_, "to": to, "path": [round_, to], "i": 0, "delay": _rng.randf_range(0.0, 1.5),
 			"speed": _rng.randf_range(4.0, 5.5), "wait": 0.0, "back": false, "side": side})
 
 
@@ -1717,9 +1696,9 @@ func _tick_beasts(delta: float) -> void:
 				b["i"] = 0
 				b["speed"] = randf_range(1.2, 2.2)
 		n.position.y = height(n.position.x, n.position.z)
-		var ph := clock * (9.0 if b["speed"] > 3.0 else 5.0) + n.get_index()
-		for j in 4:
-			(b["legs"][j] as Node3D).rotation.x = sin(ph + (PI if j in [1, 2] else 0.0)) * 0.7 * maxf(moving, 0.1)
+		var rig: CharacterRig = b["rig"]
+		rig.anim = "walk" if moving > 0.0 else "idle"
+		rig.gait = minf(b["speed"], CharacterRig.RUN_SPEED) if moving > 0.0 else 0.0
 
 
 # ------------------------------------------------------------------ the hourglass

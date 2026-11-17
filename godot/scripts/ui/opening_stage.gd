@@ -14,6 +14,8 @@ static var sweeping := false
 signal finished
 
 const SKIP_HOLD := 1.5
+const STORY_FAR := 160.0
+const STORY_RENDER_SCALE := 0.8
 const EYE := 1.25  # m, seated eye height fallback
 const CAPTION_DIST := 1.5
 const WORD_GAP := 0.24  # s between typed words
@@ -168,6 +170,16 @@ func _enter() -> void:
 	var vp := get_viewport()
 	_saved["transparent"] = vp.transparent_bg
 	vp.transparent_bg = false
+	if PerfTier.detect() != PerfTier.DESKTOP:
+		# The headset story (the user, 2026-11-17: it lagged and hurt): no MSAA and a lighter render scale while the
+		# story runs, and a far plane that still reaches the edge of the 125 m ground from the flying shot.
+		_saved["msaa"] = vp.msaa_3d
+		_saved["scale3d"] = vp.scaling_3d_scale
+		vp.msaa_3d = Viewport.MSAA_DISABLED
+		vp.scaling_3d_scale = minf(vp.scaling_3d_scale, STORY_RENDER_SCALE)
+		if _xr():
+			_saved["far"] = game._xr_cam.far
+			game._xr_cam.far = STORY_FAR
 	var xr := XRServer.find_interface("OpenXR")
 	if xr and xr.is_initialized():
 		_saved["blend"] = xr.environment_blend_mode
@@ -199,6 +211,11 @@ func _leave() -> void:
 		(_loops[id] as AudioStreamPlayer).stop()
 	var vp := get_viewport()
 	vp.transparent_bg = _saved.get("transparent", vp.transparent_bg)
+	if _saved.has("msaa"):
+		vp.msaa_3d = _saved["msaa"]
+		vp.scaling_3d_scale = _saved["scale3d"]
+	if _saved.has("far") and _xr():
+		game._xr_cam.far = _saved["far"]
 	var xr := XRServer.find_interface("OpenXR")
 	if xr and xr.is_initialized():
 		if _saved.has("blend"):
