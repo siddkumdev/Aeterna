@@ -2472,11 +2472,11 @@ func _perf_fixes() -> void:
 	rig_chk.queue_free()
 	var sw := StoryWorld.new()
 	root.add_child(sw)
-	check("StoryWorld splits Pines, FarPines, Flowers, and Bushes into frustum-culled wedges",
+	check("StoryWorld splits Pines and FarPines into frustum-culled wedges (no flowers/bushes: game look, 2026-11-17)",
 		sw.find_child("Pines0_*", false, false) != null
 		and sw.find_child("FarPines0_*", false, false) != null
-		and sw.find_child("Flowers_*", false, false) != null
-		and sw.find_child("Bushes_*", false, false) != null)
+		and sw.find_child("Flowers_*", false, false) == null
+		and sw.find_child("Bushes_*", false, false) == null)
 	sw.apply_perf_tier(PerfTier.HIGH)
 	check("StoryWorld.apply_perf_tier(HIGH) disables mobile bloom and sets orthogonal sun shadows",
 		not sw.env.glow_enabled and not sw.env.adjustment_enabled
