@@ -308,3 +308,39 @@ func quit_hit_ray(origin: Vector3, dir: Vector3) -> bool:
 	if t < 0.0:
 		return false
 	return _on_quit_button(o + d * t)
+
+
+func _quest_row(p: Vector3) -> int:
+	## Which quest entry of the quests page (left page of the last-but-one spread) a book-local point is on; -1 none.
+	## Only the seal column of an entry counts, so the rest of the page still turns it back.
+	if p.x > 0.0 or p.x < -PW:
+		return -1
+	var px := (p.x + PW) / PW * LedgerPage.SIZE.x
+	var py := (PH / 2.0 - p.y) / PH * LedgerPage.SIZE.y
+	var dones := []
+	if game:
+		for q in game.requests:
+			dones.append(q.done)
+	return LedgerPage.quest_row_at(Vector2(px, py), dones)
+
+
+func quest_hit_point(world: Vector3, reach: float) -> int:
+	if not open or _turning or spread * 2 != 4:
+		return -1
+	var p := _local(world)
+	if absf(p.z) > reach / maxf(scale.x, 0.01):
+		return -1
+	return _quest_row(p)
+
+
+func quest_hit_ray(origin: Vector3, dir: Vector3) -> int:
+	if not open or _turning or spread * 2 != 4:
+		return -1
+	var o := _local(origin)
+	var d := _book.global_transform.affine_inverse().basis * dir
+	if absf(d.z) < 0.00001:
+		return -1
+	var t := -o.z / d.z
+	if t < 0.0:
+		return -1
+	return _quest_row(o + d * t)

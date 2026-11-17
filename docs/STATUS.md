@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
+Last updated: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
@@ -25,6 +25,7 @@ Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.g
 - Wizard sounds (Siddharth).
 
 ## Untested on the Quest
+- 2026-11-17 (Siddharth brief, after his Quest play): quest tracking: parchment slip on the card tray (`ui/quest_slip.gd`: active quest, next step, where, ticks, other quests as seals; touch = point the way), house glow + thin gold ring for 4 s (`HelpRequest.point_the_way`), ledger Quests page with step/where/ticks and a 'show me' poke, dotted gold trail item->goal with a goal ring from open to done, ghost hand only after 8 s stuck (`GHOST_IDLE`). 742 checks pass; code-critic PASS, player-critic defects fixed over 3 rounds; shots `_work/tracking_shots/` (`godot/tools/tracking_shot.gd`). Story perf on Quest tiers (`920d72b`): fewer noise octaves, particles cut, story scale 0.7, props merged; foveation untouched. No headset: none of this measured or felt on the Quest.
 - 2026-11-16 (Siddharth): Quest clarity & HUD (`Game.hud_root` keeping Day Clock & tutorial hint behind the table without rotating; reliable Tutorial Step 3 prayer posting & stand-in fallback; `"plead"` villager quest act-out until engaged; warm pulsing `quest_outline.gdshader` overlay on quest items from open until done; smooth desktop mouse rim drag). `608` checks pass, shots in `_work/quest_shots/`; Quest 3 playtest pending.
 - 2026-11-16 (Claude draft, user brief): 8 new quest kinds (laundry, well, apples, cat, weeds, bell, firewood, letter; 16 kinds now = 4-day deck), pinch-and-carry items in `help_request.gd` (`NEW_KINDS`), 4 request + 3 thank-you lines per kind in `thoughts.json` (random, never the previous one; Durva owns dialogue, this is a draft). `695` checks pass; shots `_work/quest_shots2/` via `godot/tools/quest_new_shot.gd`; Quest 3 playtest pending.
 - 2026-11-16 (Claude, user brief): 8 new quest kinds (laundry, well, apples, cat, weeds, bell, firewood, letter) with `well_v03`, `GrassField.set_clearings` (grass cleared round quest scenery) and a thinner outline for tiny items; `700` checks pass; Quest 3 playtest pending.

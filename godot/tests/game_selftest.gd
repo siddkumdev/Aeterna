@@ -33,6 +33,7 @@ func _initialize() -> void:
 	await _day_clock()
 	await _quests()
 	await _new_quests()
+	await _quest_guidance()
 	await _ledger()
 	await _rim()
 	await _tray_rules()
@@ -3275,5 +3276,107 @@ func _new_quests() -> void:
 	var others := rq._items.filter(func(n): return n != first).all(func(n): return ModelUtil.walk(n).any(func(m): return m is MeshInstance3D and m.material_overlay is ShaderMaterial))
 	check("laundry: the outline covers every garment, and a hung one loses it", covered and dropped and others)
 	gr._clear_requests()
+	gr.queue_free()
+	await process_frame
+
+
+func _quest_guidance() -> void:
+	## 2026-11-17: the pinned quest slip, point-the-way, the dotted trail, and the stuck-only ghost hand.
+	var C := GameConfig.CELL
+	var gr: Game = load("res://scripts/game/game.gd").new()
+	gr.with_rig = true
+	gr.with_life = false
+	root.add_child(gr)
+	for i in 4:
+		await process_frame
+	gr.update_slip()
+	check("slip: hidden while no quest is open", gr._slip != null and not gr._slip.visible and gr.slip_data().is_empty())
+	gr.force_quests(["laundry", "well", "weeds"])
+	gr.update_slip()
+	var ln: HelpRequest = gr.requests[0]
+	var wl: HelpRequest = gr.requests[1]
+	var wd: HelpRequest = gr.requests[2]
+	var d := gr.slip_data()
+	check("slip: shows the oldest open quest when none was touched, with its step, where and 0/3 ticks", gr.active_request() == ln and d["name"] == "Washing on the grass" and d["step"] == "Hang the next garment on the line." and d["ticks"] == 3 and d["ticks_done"] == 0 and d["others"] == 2 and (d["where"].begins_with("at the ") or d["where"] == "by the shrine"))
+	check("slip: visible by day with an open quest and shows the data", gr._slip.visible and gr._slip.shown.get("name", "") == "Washing on the grass")
+	check("slip: it hangs in front of the tray lip, not over the cards", gr._slip.position.z > 0.05 and gr._slip.get_parent() == gr._tray)
+	gr.grab_request(wd)
+	gr.release_request()
+	check("slip: the quest the player last engaged becomes the active one", gr.active_request() == wd)
+	gr.update_slip()
+	check("slip: it now names the weeds, 4 ticks", gr._slip.shown.get("name", "") == "Weeds in the garden" and gr._slip.shown.get("ticks", 0) == 4)
+	gr.grab_request(ln)
+	ln.move_to(ln._line_a.lerp(ln._line_b, 0.5) + Vector3(0, 0, 0.3 * C))
+	gr.release_request()
+	gr.update_slip()
+	check("slip: one garment hung -> 1/3, and laundry is active again", gr.active_request() == ln and gr._slip.shown.get("ticks_done", 0) == 1)
+	check("ledger info carries the step, where and ticks", ln.info()["ticks_done"] == 1 and ln.info()["ticks"] == 3 and ln.info()["step"] != "" and ln.info()["where"] != "")
+	check("where: the far edge is north, +X east, the middle is the shrine", HelpRequest.where_phrase(Vector3(0, 0, -0.4)) == "at the north house" and HelpRequest.where_phrase(Vector3(0.4, 0, 0)) == "at the east house" and HelpRequest.where_phrase(Vector3(0.3, 0, -0.3)) == "at the north-east house" and HelpRequest.where_phrase(Vector3(0.01, 0, 0.01)) == "by the shrine")
+	check("ledger page: a poke on a quest row's seal column picks that row, the text column does not", LedgerPage.quest_row_at(Vector2(480, 124 + 146 + 40), [false, false, false]) == 1 and LedgerPage.quest_row_at(Vector2(200, 124 + 40), [false, false, false]) == -1 and LedgerPage.quest_row_at(Vector2(480, 124 + 146 * 3 + 40), [false, false, false]) == -1 and LedgerPage.quest_row_at(Vector2(480, 124 + 146 + 40), [false, true, false]) == -1)
+	check("point: touching the slip makes the asker's house glow", gr.point_active_quest() and ln.point_left > 3.9 and not ln._point_saved.is_empty())
+	var house_mesh: MeshInstance3D = ln._point_saved[0][0]
+	check("point: the house meshes carry the glow overlay", house_mesh.material_overlay is ShaderMaterial)
+	ln.tick(2.0, true)
+	check("point: still glowing after 2 s", ln.point_left > 1.5 and house_mesh.material_overlay is ShaderMaterial)
+	ln.tick(2.5, true)
+	check("point: gone after the few seconds, the previous overlay restored", ln.point_left <= 0.0 and ln._point_saved.is_empty() and house_mesh.material_overlay != HelpRequest._point_mat)
+	var wl_before := wl.point_left
+	wl.point_the_way()
+	check("point: the ledger can point at any quest", wl.point_left > wl_before)
+	check("point: _point_request refuses a bad index", not gr._point_request(-1) and not gr._point_request(99))
+	wl.tick(HelpRequest.POINT_HOLD + 0.1, false)
+	check("trail: every open quest has dots from the moment it opens", [ln, wl, wd].all(func(r): return r.trail_dots() > 0))
+	var dots0 := wl.trail_dots()
+	gr.grab_request(wl)
+	wl.move_to(wl._goal + Vector3(3.0 * C, 0.02, 0))
+	wl.tick(0.1, true)
+	var dots1 := wl.trail_dots()
+	wl.move_to(wl._goal + Vector3(1.2 * C, 0.02, 0))
+	wl.tick(0.1, true)
+	check("trail: it follows the held item and shortens as the goal nears", dots1 > 0 and wl.trail_dots() < dots1 and dots0 >= dots1)
+	var tr_mm: MultiMesh = wl._trail.multimesh
+	check("trail: it runs from the item to the goal", wl._trail_from.distance_to(wl.prop.position) < 0.001 and wl._trail_to.distance_to(wl._goal) < 0.001)
+	check("trail: one MultiMesh per quest (a single draw)", wl._trail is MultiMeshInstance3D and tr_mm.instance_count == HelpRequest.TRAIL_MAX)
+	gr.release_request()
+	check("trail: the well quest finishes -> the trail goes, and so does its goal ring", wl.done and wl.trail_dots() == 0 and not wl._goal_ring.visible)
+	var before_pl := wl.point_left
+	wl.point_the_way()
+	check("point: a finished quest cannot be pointed at (ledger poke on a done row)", wl.point_left == before_pl and wl._point_saved.is_empty() and not gr._point_request(1))
+	check("trail: the goal ring is a gold ring at the goal while the quest is open", ln._goal_ring != null and (ln._goal_ring.visible or ln.trail_ends()[1].y >= 0.05))
+	var cards_ok := true
+	gr._slip.visible = true
+	for c in gr._tray.cards:
+		var at: Vector3 = c.global_position
+		cards_ok = cards_ok and gr._tray.card_near(at, gr.card_reach()) == c and not gr._slip_takes(at)
+	check("slip: a pinch on a tray card still takes the card, never the slip", cards_ok and not gr._tray.cards.is_empty())
+	check("slip: a fingertip on the slip's face (clear of the cards) takes it", gr._slip_takes(gr._slip._body.global_position))
+	check("ghost: nothing plays when a quest opens", ln._ghost == null and wd._ghost == null and ln.ghost_plays == 0)
+	ln.idle = 0.0
+	ln.tick(HelpRequest.GHOST_IDLE - 1.0, true)
+	check("ghost: not before the stuck delay", ln.ghost_plays == 0 and (ln._ghost == null or not is_instance_valid(ln._ghost)))
+	ln.tick(1.2, true)
+	check("ghost: after the delay of no progress it plays at the item", ln.ghost_plays == 1 and is_instance_valid(ln._ghost) and ln._ghost is GhostHand)
+	gr.grab_request(ln)
+	ln.tick(0.1, true)
+	await process_frame
+	check("ghost: grabbing the item stops it", ln._ghost == null)
+	ln.tick(HelpRequest.GHOST_IDLE + 1.0, true)
+	check("ghost: no replay while the item is held", ln.ghost_plays == 1 and ln._ghost == null)
+	ln.move_to(ln._line_a.lerp(ln._line_b, 0.5) + Vector3(0, 0, 0.3 * C))
+	gr.release_request()
+	ln.tick(0.1, true)
+	check("ghost: progress resets the stuck timer", ln.idle < 0.5 and ln.progress == 2.0)
+	ln.tick(HelpRequest.GHOST_IDLE + 0.5, true)
+	check("ghost: it can recur once the player is stuck again", ln.ghost_plays == 2)
+	var inactive_plays := wd.ghost_plays
+	wd.tick(HelpRequest.GHOST_IDLE + 5.0, false)
+	check("ghost: a quest that is not the active one never replays", wd.ghost_plays == inactive_plays)
+	gr.phase = Game.Phase.NIGHT
+	gr.update_slip()
+	check("slip: hidden during the night", not gr._slip.visible)
+	gr.phase = Game.Phase.DAY
+	gr._clear_requests()
+	gr.update_slip()
+	check("slip: hidden again when no quest is open", not gr._slip.visible)
 	gr.queue_free()
 	await process_frame

@@ -142,25 +142,49 @@ func _page_quests() -> void:
 		var done: bool = q.get("done", false)
 		_rule(r)
 		_fit(String(q.get("name", "")), r.position + Vector2(14, 30), 24, OAK, r.size.x - 120)
-		_fit("asked by %s" % q.get("who", ""), r.position + Vector2(14, 54), 17, OAK_LIGHT, r.size.x - 120)
+		var asked := "asked by %s" % q.get("who", "")
+		if String(q.get("where", "")) != "":
+			asked += ", " + String(q.get("where", ""))
+		_fit(asked, r.position + Vector2(14, 54), 17, OAK_LIGHT, r.size.x - 120)
 		_fit("\"%s\"" % q.get("ask", ""), r.position + Vector2(14, 84), 17, INK, r.size.x - 120)
-		_fit(String(q.get("how", "")), r.position + Vector2(14, 116), 17, GREEN if done else EMBER, r.size.x - 120)
+		_fit(String(q.get("step", q.get("how", ""))), r.position + Vector2(14, 116), 17, GREEN if done else EMBER, r.size.x - 120)
 		var seal := r.position + Vector2(r.size.x - 48, 50)
 		draw_circle(seal, 32, Color("7A2318") if not done else GREEN.darkened(0.3))
 		draw_circle(seal, 27, EMBER if not done else GREEN)
 		_center("done" if done else "+%d" % q.get("reward", 0), seal + Vector2(0, 8), 20, PARCHMENT)
+		if not done:
+			_center("show me", seal + Vector2(0, 52), 16, OAK_LIGHT)
+		var n: int = mini(int(q.get("ticks", 0)), 6)
+		var got: int = int(q.get("ticks_done", 0))
+		for t in n:  # progress ticks, right-aligned under the seal
+			var c := Vector2(r.end.x - 14 - (n - 1 - t) * 20, r.position.y + 122)
+			draw_circle(c, 8, GOLD_DARK)
+			draw_circle(c, 6, GREEN if t < got else PARCH_SHADE)
 		y += 146
 	var more: int = data.get("quests_to_come", 0)
 	if more > 0:
 		_center("%d more will come before dusk." % more, Vector2(SIZE.x / 2.0, minf(y + 24, SIZE.y - 70)), 20, OAK_LIGHT)
 
 
+static func quest_row_at(px: Vector2, dones: Array) -> int:
+	## Which quest entry's "show me" column (the right 124 px of the row) a page point is on; -1 none. Mirrors _page_quests.
+	if px.x < SIZE.x - 36.0 - 124.0 or px.x > SIZE.x - 36.0:
+		return -1
+	for i in dones.size():
+		if dones[i]:
+			continue  # a finished quest has nothing to point at
+		var top := 124.0 + i * 146.0
+		if px.y >= top and px.y <= top + 138.0:
+			return i
+	return -1
+
+
 func _page_how() -> void:
 	var y := 122.0
 	for line in HOW:
 		draw_circle(Vector2(56, y + 14), 3.5, INK)
-		_wrap_left(line, Rect2(76, y, SIZE.x - 120, 78), 20, INK)
-		y += 78
+		_wrap_left(line, Rect2(76, y, SIZE.x - 120, 66), 20, INK)
+		y += 66
 	_center("Watch over them.", Vector2(SIZE.x / 2.0, SIZE.y - 134), 24, EMBER)
 	draw_rect(QUIT_RECT, Color(EMBER, 0.12))
 	draw_rect(QUIT_RECT, EMBER, false, 2.0)

@@ -190,6 +190,9 @@ var _compass_pending := {}  # hand -> seconds held on the compass (tap cycles sc
 var _toast: Label3D  # newest short message line above the tray
 var _toast_stack: Array[Label3D] = []  # older still-visible toasts stacked above _toast
 var _toast_last := ""
+const QuestSlipScript := preload("res://scripts/ui/quest_slip.gd")
+var _slip: QuestSlipScript  # the pinned quest slip on the tray's front lip (active quest, next step, progress)
+var _slip_t := 0.0
 const HUD_GAP := 0.08  # m (board scale 1) between the table's far edge and the day clock / tutorial text
 const DAY_CLOCK_POS := Vector3(0, 0.42, 0)  # local to the HUD root (see update_hud_root)
 var hud_root: Node3D  # day clock + tutorial text: follows the table's position, never its turn (Siddharth 2026-11-16)
@@ -706,7 +709,8 @@ func _post_quest(kind: String, house: int) -> HelpRequest:
 	r.setup(kind, house, _lantern_spot(house, _quest_rng) if kind == "lantern" else Vector3.ZERO)
 	requests.append(r)
 	_refresh_clearings()
-	if with_rig and not asleep:
+	if with_rig and not asleep and (_slip == null or _tray == null or not _tray.visible or phase != Phase.DAY or requests.size() > 1):
+		# the first open quest appears on the slip, so it gets no toast too (one message at a time)
 		last_message = "New quest: %s" % GameConfig.REQUESTS[kind]["name"]
 		_refresh_ui()
 	return r
@@ -734,9 +738,11 @@ func _tick_quests(delta: float) -> void:
 			points.append(h.touch_point())  # the drawn fingers in the headset (the node's position otherwise)
 	if _mouse_hand:
 		points.append(_mouse_hand.global_position)
+	var active := active_request()
 	for r in requests:
 		if r.done:
 			continue
+		r.tick(delta, r == active)
 		if r.kind == "warm":
 			if r.warm_step(delta, points.any(func(p): return r.hand_over_house(p))):
 				_pay_quest(r)
@@ -1878,6 +1884,9 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 		if ledger.quit_hit_ray(origin, dir):
 			quit_game()
 			return
+		var ql0 := ledger.quest_hit_ray(origin, dir)
+		if _point_request(ql0):
+			return
 		var side := ledger.page_hit_ray(origin, dir)
 		if side != 0:
 			ledger.turn(side)  # the right page turns forward, the left back; the press is used up either way
@@ -1885,6 +1894,8 @@ func _press(origin: Vector3, dir: Vector3) -> void:
 	var b := _button_at(origin, dir)
 	if b != "":
 		_press_button(b)
+		return
+	if _slip != null and _slip.hit_ray(origin, dir) and not _card_on_ray(origin, dir) and point_active_quest():
 		return
 	if not placing():
 		var vt := villager_at(origin, dir)
@@ -2446,6 +2457,11 @@ func _build_tray_bits() -> void:
 	for i in range(TOAST_STACK_MAX - 1):
 		var stacked := _make_toast_label("ToastStack%d" % (i + 1), TOAST_POS + Vector3(0, TOAST_STACK_STEP * (i + 1), 0))
 		_toast_stack.append(stacked)
+	_slip = QuestSlipScript.new()
+	_slip.name = "QuestSlip"
+	_tray.add_child(_slip)
+	_slip.position = Vector3(0, 0.001, 0.056)  # its top edge on the tray's front lip
+	_slip.visible = false
 	_sun = MeshInstance3D.new()
 	_sun.name = "Sun"
 	var sm := SphereMesh.new()
@@ -2559,8 +2575,90 @@ func _tick_toast_label(l: Label3D, delta: float) -> void:
 	_set_toast_alpha(l, clampf(left / 0.6, 0.0, 1.0))
 
 
+func active_request() -> HelpRequest:
+	## The quest the slip shows: the open one the player last engaged, else the oldest open one.
+	var best: HelpRequest = null
+	for r in requests:
+		if r.done or not is_instance_valid(r):
+			continue
+		if best == null or (r.engaged_seq > best.engaged_seq):
+			best = r
+	return best
+
+
+func slip_data() -> Dictionary:
+	## What the slip shows now; {} when no quest is open.
+	var a := active_request()
+	if a == null:
+		return {}
+	var others := 0
+	for r in requests:
+		if r != a and not r.done and is_instance_valid(r):
+			others += 1
+	return {"name": GameConfig.REQUESTS[a.kind]["name"], "step": a.step_line(), "where": a.where_text(),
+		"ticks": a.ticks_total(), "ticks_done": a.ticks_done(), "others": others}
+
+
+func update_slip() -> void:
+	## Shows or hides the slip (by day, with an open quest) and redraws it when its quest changed.
+	if _slip == null:
+		return
+	var d := slip_data() if phase == Phase.DAY and not asleep else {}
+	_slip.visible = not d.is_empty() and _tray != null and _tray.visible
+	if not d.is_empty():
+		_slip.set_data(d)
+
+
+func _point_request(i: int) -> bool:
+	## A ledger poke on entry i: that quest's house glows. false for a bad index or a finished quest.
+	if i < 0 or i >= requests.size() or not is_instance_valid(requests[i]) or requests[i].done:
+		return false
+	requests[i].point_the_way()
+	_show_toast("Look for the glowing house.")
+	return true
+
+
+func _card_on_ray(origin: Vector3, dir: Vector3) -> bool:
+	## A tray card lies on the pointer ray (its press belongs to the card, not the slip).
+	if _tray == null:
+		return false
+	for c in _tray.cards:
+		if is_instance_valid(c) and not c.lifted:
+			var q := Geometry3D.get_closest_point_to_segment_uncapped(c.global_position, origin, origin + dir * 2.0)
+			if q.distance_to(c.global_position) <= Card3D.H / 2.0:
+				return true
+	return false
+
+
+func _slip_takes(tp: Vector3) -> bool:
+	## A fingertip belongs to the slip only when it is on the slip and no tray card is within reach (the card wins).
+	if _slip == null or not _slip.hit_point(tp, reach(0.02)):
+		return false
+	return _tray == null or _tray.card_near(tp, card_reach()) == null
+
+
+func point_active_quest() -> bool:
+	## The slip was touched: the asker's house glows for a few seconds.
+	var a := active_request()
+	if a == null:
+		return false
+	a.point_the_way()
+	if with_rig:
+		snd("pinch")
+	_show_toast("Look for the glowing house.")
+	return true
+
+
+func _tick_slip(delta: float) -> void:
+	_slip_t += delta
+	if _slip_t >= 0.25:
+		_slip_t = 0.0
+		update_slip()
+
+
 func _tick_tray_bits(delta: float) -> void:
 	_tick_clock()
+	_tick_slip(delta)
 	if _compass_label and board and not is_equal_approx(_compass_scale, board.scale.x):
 		_update_compass_label()
 	if _fast_glass:
@@ -2695,12 +2793,17 @@ func hand_pressed(h: GameHand) -> void:
 		if ledger.quit_hit_point(tp, 0.05):
 			quit_game()
 			return
+		var qp := ledger.quest_hit_point(tp, 0.05)
+		if _point_request(qp):
+			return
 		var side := ledger.page_hit_point(tp, 0.05)
 		if side != 0:
 			ledger.turn(side)
 			return
 		if ledger.near_open_book(tp, 0.08):
 			return  # a tap on the spine or during turn cooldown must not fall through to a ray press on the other page
+	if _slip_takes(tp) and point_active_quest():
+		return
 	var glass_d := tp.distance_to(_fast_glass.global_position + Vector3(0, 0.03, 0)) if _fast_glass != null and _fast_glass.is_visible_in_tree() else INF
 	var compass_d := tp.distance_to(_board_compass.global_position) if _board_compass != null and _board_compass.is_visible_in_tree() else INF
 	var lens_d := _lens_grab_distance(h)

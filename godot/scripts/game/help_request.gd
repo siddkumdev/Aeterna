@@ -65,7 +65,66 @@ const HOW := {
 	"letter": "Catch the letter and carry it to the postbox.",
 }
 
-static var shown_kinds := {}  # the ghost hand plays once per kind per session
+static var shown_kinds := {}  # retired 2026-11-17: the ghost hand now replays when the player is stuck (GHOST_IDLE); kept so old tools still run
+static var engage_counter := 0  # ticks up on every engage(): the quest with the highest engaged_seq is the one the player last worked on
+const GHOST_IDLE := 8.0  # s without progress before the ghost hand replays the gesture over the active quest
+const POINT_HOLD := 4.0  # s the asker's house glows after "show me"
+const TICKS := {"laundry": 3, "apples": APPLES, "weeds": WEEDS, "bell": RINGS, "firewood": LOGS, "lights": LIGHTS}  # progress ticks of the multi-step quests
+const STEP := {
+	"chimney": "Lift the kite off the roof.", "bird": "Lead the lamb away along the grass.",
+	"lantern": "Carry the lantern back to its house.", "cart": "Push the cart out of the rut.",
+	"rain": "Carry the cloud over the dry field.", "warm": "Hold your open hand over the house.",
+	"lights": "Touch the next lantern.", "prayer": "Tap the one who is praying.",
+	"laundry": "Hang the next garment on the line.", "well": "Carry the bucket to the well.",
+	"apples": "Carry an apple to the basket.", "cat": "Set the cat down by the door.",
+	"weeds": "Pull the next weed up.", "bell": "Pull the bell rope down.",
+	"firewood": "Carry the next log to the door.", "letter": "Catch the letter, take it to the postbox.",
+}
+const TRAIL_MAX := 24
+const TRAIL_STEP := 0.017  # m between trail dots
+const TRAIL_SHADER := """shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled;
+// Quest trail dots (2026-11-17): billboard discs, gold to orange, a pulse running along the path toward the goal.
+// INSTANCE_CUSTOM.x is the dot's place along the path (0 start, 1 goal). No per-frame CPU work.
+varying float v_t;
+void vertex() {
+	v_t = INSTANCE_CUSTOM.x;
+	float wave = 0.5 + 0.5 * sin(TIME * 5.0 - v_t * 9.0);
+	float k = mix(0.7, 1.2, wave) * mix(0.65, 1.5, v_t);  // pulses, and grows toward the goal
+	float board_scale = length(MODEL_MATRIX[0].xyz);
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	VERTEX.xy *= k * board_scale;
+}
+void fragment() {
+	float wave = 0.5 + 0.5 * sin(TIME * 5.0 - v_t * 9.0);
+	float d = length(UV - vec2(0.5)) * 2.0;
+	float a = smoothstep(1.0, 0.86, d);
+	vec3 core = pow(mix(vec3(1.0, 0.8, 0.12), vec3(1.0, 0.5, 0.1), v_t), vec3(2.2));  // palette sRGB to linear
+	vec3 rim = pow(vec3(0.357, 0.161, 0.125), vec3(2.2));  // wood_dark ring: the dot reads against green grass and yellow light alike
+	ALBEDO = mix(core, rim, smoothstep(0.55, 0.75, d));
+	ALPHA = a * (0.8 + 0.2 * wave);
+}
+"""
+static var _trail_mesh: QuadMesh
+static var _trail_mat: ShaderMaterial
+static var _point_mat: ShaderMaterial
+static var _ring_mesh: QuadMesh
+const RING_SHADER := """shader_type spatial;
+render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled, cull_disabled, shadows_disabled;
+// A gold ring lying on the ground (the quest's goal, and the pulse round a house that was pointed at).
+uniform float speed = 3.0;
+uniform float breathe = 0.12;
+uniform float thick = 0.07;
+void fragment() {
+	float d = length(UV - vec2(0.5)) * 2.0;
+	float r = 0.8 + breathe * sin(TIME * speed);
+	float ring = smoothstep(0.03, 0.0, abs(d - r) - thick);
+	ALBEDO = pow(vec3(1.0, 0.72, 0.1), vec3(2.2));
+	ALPHA = ring * 0.9;
+}
+"""
+static var _ring_mat: ShaderMaterial
+static var _ring_big_mat: ShaderMaterial
 
 var game  # Game
 var kind := ""
@@ -114,6 +173,19 @@ var _flutter_c := Vector3.ZERO  # letter
 var _flutter: Tween
 var _tw := {}  # node -> a falling or returning tween, killed when the item is pinched again
 var _well_bucket: Node3D  # the well's own hanging bucket (hidden while the quest runs)
+var engaged_seq := 0  # engage_counter at the last engage(); 0 = never touched
+var idle := 0.0  # s since the player last made progress on this quest
+var ghost_plays := 0  # how many times the stuck-replay has fired
+var point_left := 0.0  # s of "show me" glow left on the asker's house
+var _idle_sig := -1.0
+var _point_saved: Array = []  # [mesh, its overlay before the glow]
+var _trail: MultiMeshInstance3D
+var _trail_from := Vector3.INF
+var _trail_to := Vector3.INF
+var _trail_t := 0.0
+var _trail_held := false
+var _goal_ring: MeshInstance3D
+var _point_ring: MeshInstance3D
 
 
 func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -> void:
@@ -193,9 +265,7 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 		if _helper.state == "stay" and _helper.rig and _helper.rig.anim == "wave":
 			_helper.wave_on(Vector3.INF)
 	_start_outline()
-	if game.with_rig and not shown_kinds.has(kind):
-		shown_kinds[kind] = true
-		_show_ghost()
+	_build_trail()
 
 
 func asker() -> Node3D:
@@ -225,6 +295,9 @@ func focus_point() -> Vector3:
 
 func engage() -> void:
 	## The player took the request on (grabbed, held a hand over it, lit a lantern): the asker stops acting it out.
+	engage_counter += 1
+	engaged_seq = engage_counter
+	idle = 0.0
 	if _helper:
 		_helper.stop_asking()
 
@@ -307,6 +380,7 @@ func _unoutline(root: Node) -> void:
 
 
 func _exit_tree() -> void:
+	_end_point()
 	_stop_outline()
 
 
@@ -326,7 +400,234 @@ func info() -> Dictionary:
 	## For the ledger's quest page.
 	var who := StoryText.villager_name(_helper.voice) if _helper and _helper.voice != "" else "A villager"
 	return {"kind": kind, "name": GameConfig.REQUESTS[kind]["name"], "who": who, "ask": ask_line,
-		"how": HOW.get(kind, ""), "reward": payout(), "done": done}
+		"how": HOW.get(kind, ""), "reward": payout(), "done": done, "step": step_line(), "where": where_text(),
+		"ticks": ticks_total(), "ticks_done": ticks_done()}
+
+
+func ticks_total() -> int:
+	return TICKS.get(kind, 0)
+
+
+func ticks_done() -> int:
+	return clampi(int(progress), 0, ticks_total())
+
+
+func step_line() -> String:
+	## The one thing to do next, for the slip and the ledger.
+	if done:
+		return "Done. Thank you!"
+	if kind == "apples" and not _shaken:
+		return "Wiggle the apple tree until the apples fall."
+	return STEP.get(kind, HOW.get(kind, ""))
+
+
+static func where_phrase(local: Vector3) -> String:
+	## A board position in words, on the island's own compass: the far edge (-Z) is north, +X east.
+	var d := Vector2(local.x, local.z)
+	if d.length() < 4.0 * GameConfig.CELL:
+		return "by the shrine"
+	var names := ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"]
+	var idx := posmod(roundi(atan2(d.x, -d.y) / (PI / 4.0)), 8)
+	return "at the %s house" % names[idx]
+
+
+func where_text() -> String:
+	if kind == "prayer":
+		return "by the statue"
+	if game == null or house < 0 or house >= game.houses.size():
+		return ""
+	return where_phrase(game.houses[house].position)
+
+
+func point_the_way() -> void:
+	## "Show me": the asker's house glows warm for POINT_HOLD seconds, with a gold ring pulsing on the ground round it.
+	if done:
+		return
+	point_left = POINT_HOLD
+	if game == null or not game.with_rig or not is_inside_tree() or not _point_saved.is_empty():
+		return
+	if _point_mat == null:
+		_point_mat = ShaderMaterial.new()
+		_point_mat.shader = load("res://shaders/quest_outline.gdshader")
+		_point_mat.set_shader_parameter("width", 0.038)
+		_point_mat.set_shader_parameter("speed", 9.0)
+	for n in ModelUtil.walk(game.houses[house].get_child(0)):
+		if n is MeshInstance3D:
+			var prev: Material = n.material_overlay
+			_point_saved.append([n, null if prev == _point_mat else prev])  # another quest's glow on the same house: restore to nothing
+			n.material_overlay = _point_mat
+	if _point_ring == null:
+		_point_ring = _make_ring(0.17, true)
+	var hb := ModelUtil.bounds(game.houses[house].get_child(0))
+	var rr := maxf(hb.size.x, hb.size.z) * 0.5 + 0.025  # outside the house footprint, so the door stays clear
+	_point_ring.scale = Vector3(rr * 2.0 / 0.8, rr * 2.0 / 0.8, 1.0)
+	_point_ring.position = Vector3(game.houses[house].position.x, 0.003, game.houses[house].position.z)
+	_point_ring.visible = true
+
+
+func _make_ring(size: float, big: bool) -> MeshInstance3D:
+	if _ring_mesh == null:
+		_ring_mesh = QuadMesh.new()
+		_ring_mat = ShaderMaterial.new()
+		_ring_mat.shader = Shader.new()
+		_ring_mat.shader.code = RING_SHADER
+		_ring_big_mat = _ring_mat.duplicate() as ShaderMaterial
+		_ring_big_mat.set_shader_parameter("speed", 8.0)
+		_ring_big_mat.set_shader_parameter("breathe", 0.05)
+		_ring_big_mat.set_shader_parameter("thick", 0.035)
+	var m := MeshInstance3D.new()
+	m.mesh = _ring_mesh
+	m.material_override = _ring_big_mat if big else _ring_mat
+	m.scale = Vector3(size, size, 1.0)
+	m.rotation_degrees.x = -90.0
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m.visible = false
+	add_child(m)
+	return m
+
+
+func _end_point() -> void:
+	point_left = 0.0
+	for e in _point_saved:
+		if is_instance_valid(e[0]):
+			e[0].material_overlay = e[1]
+	_point_saved.clear()
+	if _point_ring:
+		_point_ring.visible = false
+
+
+func tick(delta: float, active := true) -> void:
+	## Once per frame while the day runs: the show-me glow, the stuck-replay of the ghost hand, the trail.
+	if done:
+		return
+	if point_left > 0.0:
+		point_left -= delta
+		if point_left <= 0.0:
+			_end_point()
+	var sig := progress + (1000.0 if held else 0.0) + (0.5 if _shaken else 0.0)
+	if not is_equal_approx(sig, _idle_sig):
+		_idle_sig = sig
+		idle = 0.0
+		_drop_ghost()
+	elif held or not active:
+		idle = 0.0
+	elif _ghost == null or not is_instance_valid(_ghost):
+		idle += delta
+		if idle >= GHOST_IDLE:
+			idle = 0.0
+			ghost_plays += 1
+			if game.with_rig:
+				_show_ghost()
+	_trail_t += delta
+	if _trail_t >= 0.1:  # the trail follows the item at 10 Hz, not every frame
+		_trail_t = 0.0
+		_update_trail()
+
+
+func trail_ends() -> PackedVector3Array:
+	## Where the dotted trail runs (self space): from the item to its goal. Empty = no trail for this kind or state.
+	var C := GameConfig.CELL
+	var out := PackedVector3Array()
+	if done:
+		return out
+	match kind:
+		"chimney":
+			out = PackedVector3Array([prop.position, _home + Vector3(0, 0.1, 0.03)])
+		"bird", "cart":
+			out = PackedVector3Array([prop.position, _home + game.houses[house].basis.x * C * 2.5])
+		"lantern":
+			out = PackedVector3Array([prop.position, _goal])
+		"rain":
+			out = PackedVector3Array([prop.position, _goal + Vector3(0, 0.03, 0)])
+		"laundry":
+			out = PackedVector3Array([prop.position, _line_a.lerp(_line_b, 0.5)])
+		"well", "cat", "firewood", "letter":
+			out = PackedVector3Array([prop.position, _goal])
+		"apples":
+			out = PackedVector3Array([prop.position, _goal])
+		"weeds":
+			out = PackedVector3Array([prop.position, _home + Vector3(0, C * 1.3, 0)])
+		"bell":
+			var rp := to_local(_rope_center())
+			out = PackedVector3Array([rp, rp - Vector3(0, C * 1.5, 0)])
+	return out
+
+
+func trail_dots() -> int:
+	return _trail.multimesh.visible_instance_count if _trail and _trail.visible else 0
+
+
+func _build_trail() -> void:
+	if not game.with_rig:
+		return
+	if _trail_mesh == null:
+		_trail_mesh = QuadMesh.new()
+		_trail_mesh.size = Vector2(0.013, 0.013)
+		_trail_mat = ShaderMaterial.new()
+		_trail_mat.shader = Shader.new()
+		_trail_mat.shader.code = TRAIL_SHADER
+		_trail_mesh.material = _trail_mat
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = _trail_mesh
+	mm.instance_count = TRAIL_MAX
+	mm.visible_instance_count = 0
+	mm.custom_aabb = AABB(Vector3(-1, -1, -1), Vector3(2, 2, 2))
+	_trail = MultiMeshInstance3D.new()
+	_trail.name = "QuestTrail"
+	_trail.multimesh = mm
+	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_trail)
+	_update_trail()
+
+
+func _update_trail() -> void:
+	## Rebuilds the dots only when the item (or the goal) has moved.
+	if _trail == null:
+		return
+	var e := trail_ends() if prop != null or kind == "bell" else PackedVector3Array()
+	if e.is_empty():
+		_trail.visible = false
+		_trail_from = Vector3.INF
+		if _goal_ring:
+			_goal_ring.visible = false
+		return
+	if _trail.visible and held == _trail_held and e[0].distance_to(_trail_from) < 0.0004 and e[1].distance_to(_trail_to) < 0.0004:
+		return
+	_trail_held = held
+	_trail_from = e[0]
+	_trail_to = e[1]
+	if _goal_ring == null:
+		_goal_ring = _make_ring(0.05, false)
+	_goal_ring.visible = true  # a ring on the ground under where it must end up (the line, the weed's lift, the door)
+	_goal_ring.position = Vector3(e[1].x, 0.003, e[1].z)
+	var lift := Vector3(0, 0.02, 0)
+	var a := e[0] + lift
+	var b := e[1] + lift
+	var along := b - a
+	var len := along.length()
+	var skip := 0.02 if held else 0.012
+	var span := len - skip - 0.01
+	var n := 0
+	var step := TRAIL_STEP
+	if span > 0.0:
+		step = maxf(TRAIL_STEP, span / float(TRAIL_MAX))
+		if span < 4.0 * step:  # a short trail still gets a few dots, closer together
+			step = maxf(span / 4.0, 0.008)
+		n = mini(TRAIL_MAX, int(span / step) + 1)
+	var dir := along / len if len > 0.0001 else Vector3.UP
+	var flat := Vector2(along.x, along.z).length() > 0.03
+	var mm := _trail.multimesh
+	for i in n:
+		var t := float(i) / maxf(1.0, float(n - 1))
+		var p := a + dir * (skip + step * i)
+		if flat:
+			p.y += 0.008 * sin(PI * clampf(t, 0.0, 1.0))
+		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, p))
+		mm.set_instance_custom_data(i, Color(t, 0, 0, 0))
+	mm.visible_instance_count = n
+	_trail.visible = n > 0
 
 
 func grabbable() -> bool:
@@ -503,6 +804,11 @@ func dodge(footprint: Array[Vector2i]) -> void:
 func _finish() -> void:
 	done = true
 	_drop_ghost()
+	_end_point()
+	if _trail:
+		_trail.visible = false
+	if _goal_ring:
+		_goal_ring.visible = false
 	_stop_outline()
 	for m in [_mote, _prop_mote]:
 		if m:
@@ -565,9 +871,10 @@ func _say(which: String) -> void:
 
 
 func _show_ghost() -> void:
-	## The first time a kind of quest appears, a golden ghost hand plays the gesture over it.
-	if not is_inside_tree():
+	## A golden ghost hand plays the gesture over the quest: only when the player has been stuck for GHOST_IDLE (see tick).
+	if not is_inside_tree() or done or (prop == null and kind != "bell"):
 		return
+	_drop_ghost()
 	match kind:
 		"chimney":
 			_ghost = GhostHand.carry(self, _home, _home + Vector3(0, 0.1, 0.03))
@@ -585,15 +892,18 @@ func _show_ghost() -> void:
 			var who := asker()
 			if who:
 				_ghost = GhostHand.tap(self, who.position + Vector3(0, 0.05, 0))
-		"laundry":  # the nearest existing ghost: carry one garment to the line
-			_ghost = GhostHand.carry(self, _homes[0] + Vector3(0, 0.02, 0), _line_a.lerp(_line_b, 0.3))
+		"laundry":  # one garment to the line
+			_ghost = GhostHand.carry(self, prop.position + Vector3(0, 0.02, 0), _line_a.lerp(_line_b, 0.3))
 		"well", "cat", "firewood", "letter":
-			_ghost = GhostHand.carry(self, _homes[0] + Vector3(0, 0.02, 0), _goal + Vector3(0, 0.03, 0))
-		"apples":  # a wiggle across the tree
-			var at := _tree.position + Vector3(0, 0.03, 0)
-			_ghost = GhostHand.carry(self, at - _apple_dir * GameConfig.CELL * 0.5, at + _apple_dir * GameConfig.CELL * 0.5)
+			_ghost = GhostHand.carry(self, prop.position + Vector3(0, 0.02, 0), _goal + Vector3(0, 0.03, 0))
+		"apples":
+			if not _shaken:  # a wiggle across the tree
+				var at := _tree.position + Vector3(0, 0.03, 0)
+				_ghost = GhostHand.carry(self, at - _apple_dir * GameConfig.CELL * 0.5, at + _apple_dir * GameConfig.CELL * 0.5)
+			else:  # an apple to the basket
+				_ghost = GhostHand.carry(self, prop.position + Vector3(0, 0.02, 0), _goal + Vector3(0, 0.03, 0))
 		"weeds":
-			_ghost = GhostHand.carry(self, _homes[0] + Vector3(0, 0.02, 0), _homes[0] + Vector3(0, 0.1, 0))
+			_ghost = GhostHand.carry(self, prop.position + Vector3(0, 0.02, 0), prop.position + Vector3(0, 0.1, 0))
 		"bell":
 			var rp := to_local(_rope_center())
 			_ghost = GhostHand.carry(self, rp, rp - Vector3(0, GameConfig.CELL * 1.5, 0))
