@@ -12,6 +12,7 @@ Last updated: 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.g
 - OVR Metrics Tool: not installed. The user downloads it (needs a Meta sign-in) and gives the file name; it goes on with the next game install.
 
 ## Done (in `main`)
+- 2026-11-17 (sykeriin) live story in the game's look (`411e025`): game pines/oak/enemies (Veilrunner, Blightbark, Lantern spirit) at life size in the game material, flat palette-grass ground (procedural; the story ground GLB v02 has ~8.6k flipped faces, unused), no grass blades/flowers/bushes, Skotos x0.9 with a tree-free lane so he fits in view, headset story MSAA off / scale 0.8 / far 160 m. Shots `godot/tools/story_live_shot.gd`. Not yet on the headset; sheep work stopped (old procedural sheep stay).
 - Quest export and install pipeline (`docs/QUEST_BUILD.md`, skill `quest-build`).
 - Story: Skotos, 12 villagers, five loops of lines, dawn prayers, two endings as a choice (`docs/STORY.md`, `godot/data/thoughts.json`).
 - Rules: Faith (was Trust), 5 days per loop, night 5 always falls.
