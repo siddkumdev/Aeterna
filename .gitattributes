@@ -10,3 +10,4 @@
 # Windows scripts keep CRLF; everything else is normalised text
 *.ps1 text eol=crlf
 *.sh text eol=lf
+quest_data/recordings/*.bin.gz filter=lfs diff=lfs merge=lfs -text

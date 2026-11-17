@@ -206,6 +206,8 @@ func _enter() -> void:
 
 func _leave() -> void:
 	sweeping = false
+	if game and "recorder" in game and game.recorder:
+		game.recorder.mark("story_end", {"chapter": _chapter})
 	_drop_fade()
 	for id in _loops:
 		(_loops[id] as AudioStreamPlayer).stop()
@@ -467,6 +469,8 @@ func _fade_to(a: float, seconds: float) -> Tween:
 
 func _start_chapter(i: int) -> void:
 	_chapter = i
+	if game and "recorder" in game and game.recorder:
+		game.recorder.mark("story_chapter", {"chapter": i})
 	_t = 0.0
 	_lines_done = 0
 	_cued.clear()

@@ -225,6 +225,7 @@ var _msg: Label3D
 var lighting: Lighting  # the four moods, tonemap, bloom and fog (scripts/vfx/lighting.gd)
 var _camera: Camera3D
 var _hands: Array[GameHand] = []
+var recorder: InputRecorder  # VR runs only: head + hands + buttons to user://rec (GameConfig.RECORD_INPUT)
 var _active_hand: GameHand
 var _xr := false
 var log_sounds := false  # tests: record every sound asked for (headless has no audio rig)
@@ -3751,3 +3752,9 @@ func _build_rig() -> void:
 			c.make_bubble(reach(GameConfig.REQUEST_GRAB_REACH))
 		_hands.append(c)
 	_active_hand = _hands[1]
+	if GameConfig.RECORD_INPUT:
+		recorder = InputRecorder.new()
+		recorder.name = "InputRecorder"
+		add_child(recorder)
+		phase_changed.connect(func(ph: int): recorder.mark("phase", {"phase": ph}))
+		tower_placed.connect(func(kind: String, at: Vector3): recorder.mark("tower", {"kind": kind, "at": [at.x, at.y, at.z]}))

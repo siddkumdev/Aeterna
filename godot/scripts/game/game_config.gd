@@ -4,6 +4,7 @@ extends RefCounted
 ## decisions of 2026-10-22 in art/decisions.md. Distances and speeds are in CELLS (1 cell = 0.05 m).
 
 const CELL := 0.05
+const RECORD_INPUT := true  # sykeriin 2026-11-17: record every VR run (InputRecorder) for headset-free replays
 const SIZE := 24  # 2026-10-22 (Siddharth): board 24 x 24 cells = 1.2 m (was 12 x 12)
 
 # Economy (spec 5)
