@@ -4,6 +4,10 @@ The handoff file. Read this first after a break or a compaction (skill `lean-con
 
 Last updated: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
+## Plan to the deadline (Siddharth, 2026-11-18)
+- Deadline 2026-11-18 12:00 PM PT = 2026-11-19 01:30 IST. Submission work (APK on the Competition channel, video, Devpost, licence proof) is the LAST job, done before 8 PM IST on 2026-11-18.
+- Before that: Skotos in game (phases, glow, wood-growth attacks), then fixes A god hands, B pinch debounce (from the 11-17 recording), C ledger palm direction, D villager origins below ground, E story sky/veil look check, F quest-prop readability (weeds, laundry, bell, basket), G bigger cat, H balance pass. Queued after: phase 4, giant story Skotos, quest-item remakes.
+
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
 
