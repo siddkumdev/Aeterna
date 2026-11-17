@@ -45,7 +45,7 @@ const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "sto
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
-const XR_FOVEATION_LEVEL := 2
+const XR_FOVEATION_LEVEL := 0  # off (the user, 2026-11-17: level 2 broke the view; off until measured)
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
@@ -3627,12 +3627,11 @@ static func configure_xr_viewport(vp: Viewport, xr: Object = null) -> void:
 	## Enable XR rendering and explicit OpenXR foveated VRS on the active viewport.
 	if vp:
 		vp.use_xr = true
-		# No Godot-made VRS map: on the Quest it came out inverted (sharp edges, blocky centre; the user, 2026-11-17: headache).
-		# The runtime's own foveation below keeps the centre sharp.
+		# Foveation fully off (the user, 2026-11-17): no VRS map and runtime level 0.
 		vp.vrs_mode = Viewport.VRS_DISABLED
 	if xr != null and "foveation_level" in xr:  # the Quest renders the edges of each eye cheaper (the user: it lags a lot)
 		xr.set("foveation_level", XR_FOVEATION_LEVEL)
-		xr.set("foveation_dynamic", true)
+		xr.set("foveation_dynamic", false)
 
 
 func _init_xr() -> bool:

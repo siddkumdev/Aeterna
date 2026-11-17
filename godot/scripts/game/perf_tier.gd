@@ -59,7 +59,7 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 		vp.msaa_3d = Viewport.MSAA_2X if tier == HIGH else Viewport.MSAA_DISABLED
 		vp.scaling_3d_scale = 1.0 if tier == HIGH else 0.9
 	if xr != null and "foveation_level" in xr:
-		xr.set("foveation_level", 2)  # never 3: the blocky edges gave the user a headache
+		xr.set("foveation_level", Game.XR_FOVEATION_LEVEL)  # foveation off; the user, 2026-11-17
 
 
 static func govern(delta: float, vp: Viewport, sun: DirectionalLight3D, xr: Object) -> void:

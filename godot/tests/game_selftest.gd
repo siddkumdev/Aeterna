@@ -2406,7 +2406,7 @@ func _perf_fixes() -> void:
 	var vp := SubViewport.new()
 	root.add_child(vp)
 	Game.configure_xr_viewport(vp)
-	check("XR viewport leaves foveation to the runtime (own VRS map came out inverted on the Quest)", vp.use_xr and vp.vrs_mode == Viewport.VRS_DISABLED)
+	check("XR viewport has foveation fully off (no VRS map)", vp.use_xr and vp.vrs_mode == Viewport.VRS_DISABLED)
 	vp.queue_free()
 	var g := Game.new()
 	g.with_rig = false

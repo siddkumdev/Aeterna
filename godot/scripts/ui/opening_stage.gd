@@ -115,6 +115,18 @@ func _xr() -> bool:
 	return game != null and game._xr and game._xr_cam != null
 
 
+func _drop_fade() -> void:
+	## In VR the black fade sphere hangs on the headset camera, outside this stage, so freeing the stage does not take it
+	## with it: the game stayed black after the story on the Quest (the user, 2026-11-17).
+	if _fade and is_instance_valid(_fade):
+		_fade.queue_free()
+	_fade = null
+
+
+func _exit_tree() -> void:
+	_drop_fade()
+
+
 func _view_cam() -> Camera3D:
 	return game._xr_cam if _xr() else _cam
 
@@ -173,6 +185,7 @@ func _enter() -> void:
 
 
 func _leave() -> void:
+	_drop_fade()
 	for id in _loops:
 		(_loops[id] as AudioStreamPlayer).stop()
 	var vp := get_viewport()
