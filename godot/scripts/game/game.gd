@@ -140,7 +140,12 @@ var _ui_yaw := 0.0
 var _tray_placed := false  # the tray has been put at its start pose (once per app start; the player's spot is kept after that)
 var _tray_hand: GameHand  # the hand moving the tray
 var _tray_off := Vector3.ZERO  # tray origin minus the hand's touch point when it was grabbed
-var _tray_start := Transform3D.IDENTITY  # where the grab began (a lost hand snaps it back here)
+var _tray_start := Transform3D.IDENTITY
+var _tray_hand_yaw0 := 0.0  # the holding hand's yaw at the grab: turning the hand turns the tray (like the island)
+var _zoom_hands: Array[GameHand] = []  # both hands pinched close together in empty air, then spread: the table comes closer
+var _zoom_d0 := 0.0
+var _zoom_start := Transform3D.IDENTITY
+var _free_pinch: Array[GameHand] = []  # hands whose current pinch landed on nothing in particular
 var _tray: CardTray  # the physical cards (with the rig only): towers by day, spells at night, ability offers after a loop
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the tower card in a hand (or on the mouse hand)
@@ -2779,6 +2784,16 @@ func hand_pressed(h: GameHand) -> void:
 			_rim_pending[h] = 0.0
 			snd("pinch")
 		return
+	if h != _mouse_hand and not placing():
+		for o in _free_pinch:
+			if is_instance_valid(o) and o != h and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
+				_zoom_hands = [o, h]
+				_zoom_d0 = o.touch_point().distance_to(h.touch_point())
+				_zoom_start = board.global_transform
+				_free_pinch.clear()
+				snd("grab")
+				return
+		_free_pinch.append(h)
 	_active_hand = h
 	snd("pinch")
 	_press(h.ray_origin(), h.ray_dir())
@@ -2954,6 +2969,10 @@ func _tick_rim(delta := 0.0) -> void:
 		if rmat:
 			var rim_pulse := 0.55 + 0.25 * sin(Time.get_ticks_msec() * 0.006)
 			rmat.emission_energy_multiplier = 0.75 if grabbed else (0.42 if hovered else (rim_pulse if tutorial_spotlight == "rim" else 0.18))
+	if _zoom_hands.size() == 2 and is_instance_valid(_zoom_hands[0]) and is_instance_valid(_zoom_hands[1]):
+		var zd := _zoom_hands[0].touch_point().distance_to(_zoom_hands[1].touch_point())
+		var zx := zoom_board_transform(_zoom_start, _eye(), _zoom_d0, zd)
+		board.global_transform = board_clamp(zx, _eye()) if _xr else zx
 	if _rim_hands.is_empty():
 		return
 	var p: Array[Vector3] = []
@@ -2980,19 +2999,21 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		if not cancelled:
 			cycle_board_scale()
 		return
+	_free_pinch.erase(h)
+	if _zoom_hands.has(h):
+		_zoom_hands.clear()  # the table stays where the zoom left it, also when tracking was lost
+		snd("release")
+		return
 	if _rim_pending.has(h):
 		_rim_pending.erase(h)
 		return
 	if _tray_hand == h:
-		if cancelled:
-			_tray.global_transform = _tray_start  # the hand was lost mid-move: back to where the grab began
+		# tracking lost mid-move (sykeriin, 2026-11-17: hand loss "isn't handled well"): the tray stays where it was, no snap back
 		_tray_hand = null
 		snd("release")
 		return
 	if _rim_hands.has(h):
-		if cancelled:
-			board.global_transform = _rim_start  # undo this grip's move/turn
-		_rim_hands.erase(h)
+		_rim_hands.erase(h)  # tracking lost mid-move: the island stays where it was, no snap back (sykeriin, 2026-11-17)
 		_rim_anchor()
 		_update_compass_label()
 		snd("release")
@@ -3172,6 +3193,23 @@ static func tray_start_transform(board_xf: Transform3D, head: Vector3) -> Transf
 	return Transform3D(Basis(Vector3.UP, atan2(n.x, n.z)) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
 
 
+static func tray_turned_transform(start: Transform3D, pos: Vector3, turn: float) -> Transform3D:
+	## The tray while a hand holds it by a handle (sykeriin, 2026-11-17: "same as the island"): it follows the hand and
+	## turns by as much as the hand has turned since the grab, keeping its tilt; it stays put when let go.
+	return Transform3D(Basis(Vector3.UP, start.basis.get_euler().y + turn) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+
+
+static func zoom_board_transform(start: Transform3D, head: Vector3, d0: float, d: float) -> Transform3D:
+	## Two-hand zoom (sykeriin, 2026-11-17): spreading the hands brings the table closer, bringing them together pushes
+	## it away; same size, same turn. ZOOM_GAIN metres of table travel per metre of change in hand spacing.
+	var flat := Vector3(head.x - start.origin.x, 0.0, head.z - start.origin.z)
+	if flat.length() < 0.001:
+		return start
+	var out := start
+	out.origin += flat.normalized() * (d - d0) * GameConfig.ZOOM_GAIN
+	return out
+
+
 static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, head: Vector3, from_yaw := NAN, weight := 1.0) -> Transform3D:
 	## The tray while a hand holds it: it follows the touch point, keeps its tilt and yaws (eased, `weight` of the way
 	## per call, no snap) to face the headset.
@@ -3238,8 +3276,8 @@ func _update_tray() -> void:
 		if not is_instance_valid(_tray_hand):
 			_tray_hand = null
 		else:
-			var cur := _tray.global_transform
-			var t := tray_held_transform(_tray_start, _tray_hand.touch_point(), _tray_off, _eye(), cur.basis.get_euler().y, 1.0 - exp(-GameConfig.TRAY_YAW_EASE * get_process_delta_time()))
+			var turn := wrapf(_tray_hand.global_transform.basis.get_euler().y - _tray_hand_yaw0, -PI, PI)
+			var t := tray_turned_transform(_tray_start, _tray_hand.touch_point() + _tray_off, turn)
 			t.origin = tray_clamp(t.origin, board.global_transform)
 			_tray.global_transform = t
 
@@ -3295,6 +3333,7 @@ func recenter_seated_board() -> void:
 	_rim_hands.clear()
 	_rim_p0.clear()
 	_rim_pending.clear()
+	_zoom_hands.clear()
 	_tray_hand = null
 	var fwd := -_xr_cam.global_transform.basis.z if _xr_cam else Vector3(0.0, 0.0, -1.0)
 	board.global_transform = seated_board_transform(_eye(), fwd)
@@ -3311,6 +3350,7 @@ func _tray_grab(h: GameHand) -> void:
 	_tray_hand = h
 	_tray_start = _tray.global_transform
 	_tray_off = _tray.global_position - h.touch_point()
+	_tray_hand_yaw0 = h.global_transform.basis.get_euler().y
 	snd("grab")
 
 

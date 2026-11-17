@@ -252,6 +252,8 @@ const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 const RIM_WIDTH := 0.065  # m outside the island's edge that counts as the rim (plus visible handles)
 const FAST_HOLD := 1.0  # s a pinch must stay on the tray hourglass to hurry the day (the user: it triggered by itself)
 const RIM_HOLD := 0.0  # s a pinch must be held on the rim before the island follows the hand (0 = instant grab)
+const ZOOM_START_GAP := 0.25  # m: both hands pinch in empty air this close together to start a zoom
+const ZOOM_GAIN := 1.5  # m the table moves per metre the hands spread (+) or close (-)
 const BOARD_SCALE := Vector2(0.6, 2.0)
 const SEATED_BOARD_SCALE := 0.8
 const SEATED_BOARD_DROP := 0.42  # m below seated headset eye height

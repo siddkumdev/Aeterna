@@ -1456,7 +1456,8 @@ func _review_fixes() -> void:
 	g._rim_anchor()
 	g.board.global_transform = start.translated(Vector3(0.1, 0, 0))
 	g.hand_released(hand, true)
-	check("tracking lost while moving the island: the move is undone", g._rim_hands.is_empty() and g.board.global_transform.is_equal_approx(start))
+	check("tracking lost while moving the island: it stays where it was, no snap back", g._rim_hands.is_empty() and g.board.global_transform.is_equal_approx(start.translated(Vector3(0.1, 0, 0))))
+	g.board.global_transform = start
 	g.force_quests(["chimney"])
 	var ch: HelpRequest = g.requests.filter(func(r): return r.kind == "chimney")[0]
 	hand.global_position = ch.grab_point()
@@ -2313,7 +2314,13 @@ func _tray_rules() -> void:
 	hand.global_position += Vector3(-0.3, 0, 0.2)
 	await process_frame
 	g.hand_released(hand, true)
-	check("a hand lost mid-move snaps the tray back to where the grab began", g._tray_hand == null and tray.global_transform.is_equal_approx(dropped))
+	check("a hand lost mid-move leaves the tray where it was, no snap back", g._tray_hand == null and not tray.global_transform.is_equal_approx(dropped))
+	dropped = tray.global_transform
+	var zs := Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.8), Vector3(0, 0.8, -0.8))
+	var zin := Game.zoom_board_transform(zs, Vector3(0, 1.3, 0), 0.1, 0.4)
+	var zout := Game.zoom_board_transform(zs, Vector3(0, 1.3, 0), 0.4, 0.1)
+	check("two-hand spread brings the table closer at the same size; closing pushes it away", zin.origin.z > zs.origin.z and zout.origin.z < zs.origin.z and zin.basis.is_equal_approx(zs.basis) and is_equal_approx(zin.origin.y, zs.origin.y))
+	check("a turned hand turns the held tray", absf(Game.tray_turned_transform(dropped, Vector3.ZERO, 0.5).basis.get_euler().y - wrapf(dropped.basis.get_euler().y + 0.5, -PI, PI)) < 0.01)
 	var card: Card3D = tray.cards[0]
 	hand.global_position = card.global_position
 	g.hand_pressed(hand)
