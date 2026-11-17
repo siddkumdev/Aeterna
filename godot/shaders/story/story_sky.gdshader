@@ -27,7 +27,7 @@ vec3 clouds(vec3 d, vec3 base, float up) {
 	vec2 uv = d.xz / max(abs(d.y), 0.035) * (up > 0.0 ? 0.55 : 0.9);
 	vec2 drift = vec2(clock * 0.012, clock * 0.004) * flow;
 	float n = fbm2(uv + drift, AT_CUBEMAP_PASS ? 3 : 5);
-	float wisps = fbm2(uv * 3.1 - drift * 1.7, 3);
+	float wisps = noise_lod > 0 ? n * 0.8 : fbm2(uv * 3.1 - drift * 1.7, 3);  // Quest: no second cloud pass
 	float c = smoothstep(1.0 - cover - 0.15, 1.0 - cover + 0.3, n * 0.8 + wisps * 0.35);
 	float lit = clamp(dot(normalize(vec3(d.x, 0.0, d.z) + 0.001), normalize(vec3(sun_dir.x, 0.0, sun_dir.z) + 0.001)) * 0.5 + 0.5, 0.0, 1.0);
 	float thick = smoothstep(0.3, 1.0, n);
@@ -70,7 +70,7 @@ void sky() {
 	if (moon > 0.0) {
 		float md = dot(d, normalize(moon_dir));
 		float disc = smoothstep(0.99955, 0.9997, md);
-		float mare = fbm3(d * 60.0, 3);
+		float mare = disc > 0.0 ? fbm3(d * 60.0, 3) : 0.5;  // only inside the disc
 		col += vec3(0.95, 0.9, 0.82) * disc * (0.8 + 0.4 * mare) * 2.5 * moon + vec3(0.6, 0.55, 0.6) * pow(max(md, 0.0), 300.0) * 0.4 * moon;
 	}
 	if (curse > 0.0 && h > 0.0) {

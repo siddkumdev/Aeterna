@@ -1,3 +1,6 @@
+// Quest tiers set noise_lod (1 = Quest 3, 2 = older Quest): fewer fbm octaves per pixel, mean brightness kept. 0 = desktop, unchanged.
+uniform int noise_lod = 0;
+
 // Shared procedural noise for the story (no textures: everything is computed, see scripts/story/story_world.gd).
 float h31(vec3 p) {
 	p = fract(p * 0.1031);
@@ -33,25 +36,27 @@ float vnoise2(vec2 p) {
 }
 
 float fbm3(vec3 p, int oct) {
+	int n = max(oct - noise_lod, 1);
 	float a = 0.5;
 	float s = 0.0;
-	for (int i = 0; i < oct; i++) {
+	for (int i = 0; i < n; i++) {
 		s += a * vnoise3(p);
 		p = p * 2.03 + vec3(1.7, 9.2, 3.1);
 		a *= 0.5;
 	}
-	return s;
+	return n == oct ? s : s * ((1.0 - exp2(-float(oct))) / (1.0 - exp2(-float(n))));
 }
 
 float fbm2(vec2 p, int oct) {
+	int n = max(oct - noise_lod, 1);
 	float a = 0.5;
 	float s = 0.0;
-	for (int i = 0; i < oct; i++) {
+	for (int i = 0; i < n; i++) {
 		s += a * vnoise2(p);
 		p = mat2(vec2(1.6, 1.2), vec2(-1.2, 1.6)) * p + vec2(3.1, 1.7);
 		a *= 0.5;
 	}
-	return s;
+	return n == oct ? s : s * ((1.0 - exp2(-float(oct))) / (1.0 - exp2(-float(n))));
 }
 
 // x = distance to the nearest cell centre, y = distance to the cell edge, z = the cell's own random value
@@ -77,3 +82,6 @@ vec3 voronoi2(vec2 p) {
 	}
 	return vec3(d1, d2 - d1, id);
 }
+
+// Fine detail that fades out with distance (f = 0): skip the noise when it would be multiplied by nothing.
+#define DETAIL(expr, f) ((f) > 0.0 ? mix(0.5, (expr), (f)) : 0.5)

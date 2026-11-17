@@ -5,8 +5,12 @@ extends SceneTree
 
 
 func _initialize() -> void:
+	if OS.get_environment("STORY_TIER") != "":
+		StoryWorld.force_tier = int(OS.get_environment("STORY_TIER"))  # 1 = low Quest, 2 = Quest 3 (PerfTier enum)
 	var w := StoryWorld.new()
 	root.add_child(w)
+	if StoryWorld.force_tier >= 0:
+		w.apply_perf_tier(StoryWorld.force_tier)  # as OpeningStage does after _ready (materials exist now)
 	var cam := Camera3D.new()
 	cam.fov = 90.0
 	root.add_child(cam)

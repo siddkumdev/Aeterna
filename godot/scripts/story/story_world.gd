@@ -104,6 +104,9 @@ var _noise := FastNoiseLite.new()
 var _arrays := {}
 var _fx_mats: Array[ShaderMaterial] = []
 var _tier := PerfTier.DESKTOP
+static var force_tier := -1  # tools only: build as another tier (-1 = this device's)
+var _props_root: Node3D  # the game's village models, merged into a few draws once built
+var _props_shadow_root: Node3D
 
 
 # ------------------------------------------------------------------ the land
@@ -376,12 +379,13 @@ func _build_env() -> void:
 	sun.directional_shadow_max_distance = 45.0
 	sun.shadow_blur = 1.5
 	add_child(sun)
-	apply_perf_tier(PerfTier.detect())
+	apply_perf_tier(force_tier if force_tier >= 0 else PerfTier.detect())
 
 
 func apply_perf_tier(tier: int) -> void:
 	## Match Quest TBDR / fill limits without stripping visual mood on desktop.
 	_tier = tier
+	_apply_lod()
 	if env == null or sun == null:
 		return
 	if tier != PerfTier.DESKTOP:
@@ -402,6 +406,16 @@ func apply_perf_tier(tier: int) -> void:
 		sun.shadow_blur = 1.5
 	if not _mood.is_empty():
 		_apply_mood()
+
+
+func _apply_lod() -> void:
+	## Quest tiers: fewer noise octaves per pixel in the story shaders (0 = desktop, unchanged).
+	var lod := 0 if _tier == PerfTier.DESKTOP else (1 if _tier == PerfTier.HIGH else 2)
+	var mats: Array = [sky_mat, surf, veil_mat, skotos_mat, beast_mat, palette_mat, grass_mat, foliage_mat, glass_mat]
+	mats.append_array(_fx_mats)
+	for m in mats:
+		if m != null:
+			(m as ShaderMaterial).set_shader_parameter("noise_lod", lod)
 
 
 func _build_ground() -> void:
@@ -492,6 +506,9 @@ func _build_village() -> void:
 		var s := _rng.randf_range(0.3, 1.4)
 		_rock(st, p, s)
 	bake(st, surf, "Village")
+	# the game's models (about forty separate meshes) become a draw per material: one set casting shadows, one not
+	ModelUtil.merge_static_meshes(_props_shadow_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "PropsShadowMerged")
+	ModelUtil.merge_static_meshes(_props_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "PropsMerged")
 
 
 func _rock(st: SurfaceTool, p: Vector3, s: float) -> void:
@@ -524,7 +541,14 @@ func _prop(key: String, p: Vector3, yaw: float, s: float, shadow := false) -> No
 	## One of the game's own village models, on the ground at life scale, in the realistic palette material (the
 	## board's toon one looked flat here). Lit windows keep the game's glow material.
 	var n: Node3D = load("res://assets/village/ew_village_%s.glb" % key).instantiate()
-	add_child(n)
+	if _props_root == null:
+		_props_root = Node3D.new()
+		_props_root.name = "Props"
+		add_child(_props_root)
+		_props_shadow_root = Node3D.new()
+		_props_shadow_root.name = "PropsShadow"
+		add_child(_props_shadow_root)
+	(_props_shadow_root if shadow else _props_root).add_child(n)
 	n.position = Vector3(p.x, height(p.x, p.z), p.z)
 	n.rotation.y = yaw
 	n.scale = Vector3.ONE * s
@@ -688,7 +712,7 @@ func _build_grass() -> void:
 	mm.mesh = _grass()
 	var xfs: Array = []
 	var tries := 0
-	var want: int = {PerfTier.DESKTOP: 8000, PerfTier.HIGH: 6000, PerfTier.LOW: 4000}[PerfTier.detect()]
+	var want: int = {PerfTier.DESKTOP: 8000, PerfTier.HIGH: 6000, PerfTier.LOW: 4000}[_tier]
 	while xfs.size() < want and tries < want * 5:
 		tries += 1
 		var r := 24.0 * _rng.randf() + 0.5  # uniform in radius = densest round your feet, where you look closest
@@ -985,7 +1009,7 @@ func _build_wood() -> void:
 	foliage_mat = ShaderMaterial.new()
 	foliage_mat.shader = FOLIAGE
 	var sets: Array = [[], [], []]
-	var tier := PerfTier.detect()
+	var tier := _tier
 	var far_sets: Array = [[], []]
 	for i in 420:
 		var a := _rng.randf_range(0, TAU)
@@ -1263,6 +1287,11 @@ func reset_flock() -> void:
 func _particles(name_: String, amount: int, life: float, mesh_size: float, mat: Material, pm: ParticleProcessMaterial, p: Vector3) -> GPUParticles3D:
 	var g := GPUParticles3D.new()
 	g.name = name_
+	if _tier != PerfTier.DESKTOP:  # Quest: the additive/alpha quads are the overdraw; thin them (fill-bound headset)
+		var keep := 0.6 if name_.begins_with("Shards") or name_.begins_with("Unshards") else 0.5
+		if name_ == "Flame":
+			keep = 0.7
+		amount = maxi(4, int(amount * keep))
 	g.amount = amount
 	g.lifetime = life
 	g.process_material = pm
@@ -1321,6 +1350,8 @@ static func curve(points: Array) -> CurveTexture:
 func flame_mat(mode: int, energy: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = FLAME
+	m.set_shader_parameter("noise_lod", 0 if _tier == PerfTier.DESKTOP else (1 if _tier == PerfTier.HIGH else 2))
+
 	m.set_shader_parameter("mode", mode)
 	m.set_shader_parameter("energy", energy)
 	_fx_mats.append(m)
@@ -1330,6 +1361,8 @@ func flame_mat(mode: int, energy: float) -> ShaderMaterial:
 func smoke_mat(col: Color, density: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = SMOKE
+	m.set_shader_parameter("noise_lod", 0 if _tier == PerfTier.DESKTOP else (1 if _tier == PerfTier.HIGH else 2))
+
 	m.set_shader_parameter("smoke_col", col)
 	m.set_shader_parameter("density", density)
 	_fx_mats.append(m)

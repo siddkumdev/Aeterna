@@ -32,7 +32,7 @@ void fragment() {
 	float rise = pow(abs(sin(lat * 30.0 - clock * 0.6 + warp * 3.0)), 30.0);
 	float f = 1.0 - abs(dot(NORMAL, VIEW));
 	float body = (t1 + t2) * 0.35 + rise * 0.25 + pow(f, 3.0) * 0.6 + 0.04;
-	body *= 0.6 + 0.6 * fbm2(vec2(lon * 6.0, lat * 6.0 + clock * 0.3), 3);
+	body *= noise_lod > 0 ? 0.9 : 0.6 + 0.6 * fbm2(vec2(lon * 6.0, lat * 6.0 + clock * 0.3), 3);  // Quest: no shimmer pass
 	// soft from inside: you stand under it, it must read as a glow in the air, not a cage
 	vec3 c = gold * body * 0.32 * strength * smoothstep(-0.05, 0.12, lp.y);
 	if (crack > 0.0) {

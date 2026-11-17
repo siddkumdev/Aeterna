@@ -21,7 +21,7 @@ void vertex() {
 void fragment() {
 	vec3 col = texture(atlas, UV).rgb;
 	float n = fbm3(wp * 0.9, 3);
-	float m = fbm3(wp * 3.5 + 7.0, 2);
+	float m = noise_lod > 0 ? 0.5 : fbm3(wp * 3.5 + 7.0, 2);
 	col *= 0.86 + 0.24 * n + 0.08 * m;  // weathered, uneven paint and wood
 	col = mix(col * vec3(0.62, 0.56, 0.5), col, smoothstep(0.0, 1.1, hy + 0.3 * n));  // damp, dirty low down
 	col *= 1.0 - scorch * 0.6;

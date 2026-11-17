@@ -15,7 +15,7 @@ signal finished
 
 const SKIP_HOLD := 1.5
 const STORY_FAR := 160.0
-const STORY_RENDER_SCALE := 0.8
+const STORY_RENDER_SCALE := 0.7
 const EYE := 1.25  # m, seated eye height fallback
 const CAPTION_DIST := 1.5
 const WORD_GAP := 0.24  # s between typed words

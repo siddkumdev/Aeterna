@@ -36,12 +36,12 @@ void fragment() {
 	vec3 c = smoke_col * COLOR.rgb;
 	if (billboard) {
 		vec2 uv = UV * 2.0 - 1.0;
-		float n = fbm2(uv * 1.8 + vec2(seed * 7.0, clock * 0.25 + seed), 4);
+		float n = fbm2(uv * 1.8 + vec2(seed * 7.0, clock * 0.25 + seed), noise_lod > 0 ? 3 : 4);  // Quest: two octaves (noise_lod drops one more)
 		a = smoothstep(1.0, 0.2, length(uv) + (0.5 - n) * 0.7);
 		a *= smoothstep(0.0, 0.15, age) * (1.0 - age) * density * COLOR.a;
 		c *= 0.7 + 0.5 * n;
 	} else {
-		float n = fbm3(lp * 0.5 + vec3(0.0, -clock * 0.6, clock * 0.1), 4);
+		float n = fbm3(lp * 0.5 + vec3(0.0, -clock * 0.6, clock * 0.1), noise_lod > 0 ? 3 : 4);
 		float f = 1.0 - abs(dot(NORMAL, VIEW));
 		a = density * smoothstep(0.15, 0.55, n + 0.25 - f * 0.4);
 		c *= 0.4 + 0.6 * n;

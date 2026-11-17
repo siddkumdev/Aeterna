@@ -16,8 +16,12 @@ func _shot(path: String) -> void:
 
 func _initialize() -> void:
 	var prefix := OS.get_cmdline_user_args()[0]
+	if OS.get_environment("STORY_TIER") != "":
+		StoryWorld.force_tier = int(OS.get_environment("STORY_TIER"))  # 1 = low Quest, 2 = Quest 3 (PerfTier enum)
 	_w = StoryWorld.new()
 	root.add_child(_w)
+	if StoryWorld.force_tier >= 0:
+		_w.apply_perf_tier(StoryWorld.force_tier)  # as OpeningStage does after _ready (materials exist now)
 	var we := WorldEnvironment.new()
 	we.environment = _w.env
 	root.add_child(we)
