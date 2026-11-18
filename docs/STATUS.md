@@ -4,6 +4,15 @@ The handoff file. Read this first after a break or a compaction (skill `lean-con
 
 Last updated: 2026-11-18 (overnight run done, final check passed, submission draft in docs/SUBMISSION_DRAFT.md); before: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
+## 2026-11-18 evening (headset day, round 3) - UNVERIFIED ON HEADSET
+From Siddharth's Quest session (recordings in `quest_data/`, perf avg 64 fps, acceptable). Commit 1027d3c:
+- Quests: all of a day's quests are out at dawn (`QUEST_TIMES` 0); each waits for a tap on its waving asker (`HelpRequest.accepted/accept()`, `Game.ask_for_quests`, `quest_cap`); slip says "Tap the waving villager"; prayer needs no asking. Tutorial has a quest step (`Launcher.QUEST_STEP` 9, lantern), then sell/rebuild/hourglass/night (10-13); `quest_cap` 0 until the hourglass step.
+- Loss cutscene: plays story_music.ogg 97-126 s (looped, `Game._start_cutscene_score`); the rewind waits for a 1 s hold on the tray hourglass (`_cutscene_glass_wait`).
+- Zoom: hands together returns the table to its placed position (`_board_home`, `ZOOM_HOME_GAP`).
+- Tray: starts centred over the island's near edge (TRAY_OUT -0.08, DROP 0.25, SIDE 0); brass handles bigger and glow near a hand (`TRAY_HANDLE_GRAB`); held tray faces the headset (wrist turn removed: ask Siddharth if he wants it back).
+- Text/shimmer: MSDF fonts (font .import), story sun cascade 28 -> 14 m, tutorial hint card larger (px 80, 1.4 m wide). Cause of shimmer is an inference (shadow texel ~4 cm vs 5-6 cm fence parts).
+Not verified: everything above on the headset; OpenXRCompositionLayerQuad for text not tried.
+
 ## 2026-11-18 afternoon (headset day, round 2) - UNVERIFIED ON HEADSET
 Done in code, selftest 856/0, not yet felt on the Quest: story score + upbeat night loop wired; story MSAA 2x at 1.0 and eye buffer x1.2 (watch fps); lamps resized; pinch-only with 0.2 s hold; 2.5 s settle guard after board/tray placement; tutorial with Continue plaque, sell + rebuild steps, day clock frozen during it. Open: Quest recordings review (grip presses ~2.5x pinches, many <0.3 s), whether sharpness costs too many fps (governor still steps down), the wrong table/tray position needs a headset check.
 
