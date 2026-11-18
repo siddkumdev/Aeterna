@@ -19,6 +19,7 @@ var clumsy := false  # firstloop: a first-time player who reads slowly, hesitate
 var rng := RandomNumberGenerator.new()
 var mon: Node  # vr_monitor.gd: the timed event log (sounds, messages, text overlaps, things at the face)
 var _day_done := -1
+var normal := false  # playthrough: a player who knows the game, 1x speed, defends night 1, then lets the village fall
 
 
 func _initialize() -> void:
@@ -72,6 +73,10 @@ func _run(mode: String) -> void:
 			await do_cutscene()
 		"abuse":
 			await do_abuse()
+		"playthrough":
+			normal = true
+			bot.aim_error = 0.004
+			await do_firstloop()
 		"firstloop":
 			clumsy = true
 			bot.aim_error = 0.012
@@ -402,6 +407,14 @@ func do_firstloop() -> void:
 
 
 func night_turn() -> void:
+	if normal and g.night > 0:  # the loss is on purpose: watch the village fall
+		var foes: Array = g.enemies.filter(func(e): return is_instance_valid(e))
+		if not foes.is_empty():
+			await bot.look((foes[rng.randi_range(0, foes.size() - 1)] as Node3D).global_position)
+		else:
+			await bot.look(g.board.global_position)
+		await bot.hold(rng.randf_range(2.0, 3.5))
+		return
 	var ready: Array = []
 	for cd in g._tray.cards:
 		if cd.data.get("kind", "") == "spell" and g.spells.is_ready(cd.data.get("id", "")):
@@ -416,7 +429,7 @@ func night_turn() -> void:
 	var target: Node3D = live[rng.randi_range(0, live.size() - 1)]
 	var id: String = sc.data.get("id", "")
 	await bot.look(sc.global_position)
-	if rng.randf() < 0.2:
+	if clumsy and rng.randf() < 0.2:
 		await fumble()
 	await bot.reach("right", sc.global_position)
 	await bot.pinch("right", true)
@@ -428,7 +441,7 @@ func night_turn() -> void:
 		await bot.rest("right")
 		return
 	var aim: Vector3 = target.global_position + Vector3(rng.randf_range(-0.03, 0.03), 0.05, rng.randf_range(-0.03, 0.03)) if is_instance_valid(target) else g.board.global_position
-	if rng.randf() < 0.12:
+	if clumsy and rng.randf() < 0.12:
 		bot.note("     (clumsy) lets go of the spell half way")
 		aim = bot.hand_point("right").lerp(aim, 0.5)
 	await bot.look(aim)
@@ -452,7 +465,7 @@ func build_one() -> void:
 			if g.can_build(id, Vector2i(x, y)):
 				spots.append(Vector2i(x, y))
 	var c := Vector2i(rng.randi_range(2, GameConfig.SIZE - 4), rng.randi_range(2, GameConfig.SIZE - 4))
-	if not spots.is_empty() and rng.randf() > 0.2:
+	if not spots.is_empty() and (not clumsy or rng.randf() > 0.2):
 		c = spots[rng.randi_range(0, spots.size() - 1)]
 	else:
 		bot.note("     (clumsy) drops the card on any spot")
@@ -475,7 +488,10 @@ func build_one() -> void:
 
 func day_turn() -> void:
 	if _day_done == g.night:
-		await bot.hold(1.0)
+		if normal:
+			await glance()  # 1x: the day runs out by itself while the player looks round
+		else:
+			await bot.hold(1.0)
 		return
 	_day_done = g.night
 	bot.note("DAY %d: faith %d, towers %d, requests %d" % [g.night + 1, g.faith, g.towers.size(), g.requests.size()])
@@ -486,11 +502,11 @@ func day_turn() -> void:
 		if is_instance_valid(r) and not r.done and g.phase == Game.Phase.DAY:
 			await do_quest(r)
 			await bot.rest("right")
-	for k in rng.randi_range(2, 3):
+	for k in (rng.randi_range(2, 3) if not normal or g.night == 0 else 0):  # playthrough: builds on day 1 only
 		if g.phase == Game.Phase.DAY:
 			await build_one()
 	await shot("day%d_built" % (g.night + 1))
-	if g.phase == Game.Phase.DAY:
+	if g.phase == Game.Phase.DAY and not normal:
 		await glance()
 		var gp: Vector3 = g._fast_glass.global_position + Vector3(0, 0.03, 0)
 		await bot.look(gp)
@@ -534,7 +550,7 @@ func cutscene_turn() -> void:
 	var glass: Node3D = g._big_glass
 	if not check(glass != null and glass.visible, "a big hourglass is shown"):
 		return
-	if rng.randf() < 0.5:
+	if clumsy and rng.randf() < 0.5:
 		bot.note("     (clumsy) pinches beside the hourglass")
 		await bot.reach("right", glass.global_position + Vector3(0.14, 0.0, 0.0))
 		await bot.pinch("right", true)
