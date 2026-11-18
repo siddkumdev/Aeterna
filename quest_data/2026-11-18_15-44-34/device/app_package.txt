@@ -1,0 +1,146 @@
+Activity Resolver Table:
+  Non-Data Actions:
+      android.intent.action.MAIN:
+        acdad23 com.aeterna.game/com.godot.game.GodotApp filter 659220
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.DEFAULT"
+          Category: "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
+        28527d9 com.aeterna.game/com.godot.game.GodotAppLauncher filter fac459e
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.DEFAULT"
+          Category: "android.intent.category.LAUNCHER"
+        28527d9 com.aeterna.game/com.godot.game.GodotAppLauncher filter fc3f87f
+          Action: "android.intent.action.MAIN"
+          Category: "android.intent.category.DEFAULT"
+          Category: "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
+
+Receiver Resolver Table:
+  Non-Data Actions:
+      androidx.profileinstaller.action.SAVE_PROFILE:
+        d61b04c com.aeterna.game/androidx.profileinstaller.ProfileInstallReceiver filter fa99d9b
+          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
+      androidx.profileinstaller.action.INSTALL_PROFILE:
+        d61b04c com.aeterna.game/androidx.profileinstaller.ProfileInstallReceiver filter d176895
+          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
+      androidx.profileinstaller.action.SKIP_FILE:
+        d61b04c com.aeterna.game/androidx.profileinstaller.ProfileInstallReceiver filter d131daa
+          Action: "androidx.profileinstaller.action.SKIP_FILE"
+      androidx.profileinstaller.action.BENCHMARK_OPERATION:
+        d61b04c com.aeterna.game/androidx.profileinstaller.ProfileInstallReceiver filter a1f8538
+          Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
+
+Domain verification status:
+
+Registered ContentProviders:
+  com.aeterna.game/androidx.core.content.FileProvider:
+    Provider{5b0bb89 com.aeterna.game/androidx.core.content.FileProvider}
+  com.aeterna.game/androidx.startup.InitializationProvider:
+    Provider{a59c78e com.aeterna.game/androidx.startup.InitializationProvider}
+
+ContentProvider Authorities:
+  [com.aeterna.game.androidx-startup]:
+    Provider{a59c78e com.aeterna.game/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{8db6baf com.aeterna.game}
+  [com.aeterna.game.fileprovider]:
+    Provider{5b0bb89 com.aeterna.game/androidx.core.content.FileProvider}
+      applicationInfo=ApplicationInfo{8965bbc com.aeterna.game}
+
+Key Set Manager:
+  [com.aeterna.game]
+      Signing KeySets: 33
+
+Packages:
+  Package [com.aeterna.game] (8d3c276):
+    appId=10167
+    pkg=Package{7608745 com.aeterna.game}
+    codePath=/data/app/~~FNYISo9DH_KSHoBbTF7Quw==/com.aeterna.game-LGMRLDkwl2GmP1ggbWUt5w==
+    resourcePath=/data/app/~~FNYISo9DH_KSHoBbTF7Quw==/com.aeterna.game-LGMRLDkwl2GmP1ggbWUt5w==
+    legacyNativeLibraryDir=/data/app/~~FNYISo9DH_KSHoBbTF7Quw==/com.aeterna.game-LGMRLDkwl2GmP1ggbWUt5w==/lib
+    extractNativeLibs=false
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+    cpuAbiOverride=null
+    versionCode=1 minSdk=29 targetSdk=34
+    uses-metavr-sdk=[minApiVersion=-1 (not set), targetApiVersion=-1 (not set)]
+    minExtensionVersions=[]
+    versionName=0.1
+    usesNonSdkApi=false
+    splits=[base]
+    apkSigningVersion=2
+    flags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    privateFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    privateFlagsExt=[ PROFILEABLE ]
+    forceQueryable=false
+    queriesIntents=[Intent { act=org.khronos.openxr.OpenXRRuntimeService }, Intent { act=org.khronos.openxr.OpenXRApiLayerService }]
+    dataDir=/data/user/0/com.aeterna.game
+    supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+    timeStamp=2026-11-18 15:23:39
+    lastUpdateTime=2026-11-18 15:23:41
+    installerPackageName=null
+    installerPackageUid=-1
+    initiatingPackageName=com.android.shell
+    originatingPackageName=null
+    packageSource=1
+    appMetadataFilePath=null
+    signatures=PackageSignatures{e4b77a8 version:2, signatures:[da44a3e6], past signatures:[]}
+    installPermissionsFixed=true
+    pkgFlags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    privatePkgFlags=[ PRIVATE_FLAG_ACTIVITIES_RESIZE_MODE_RESIZEABLE_VIA_SDK_VERSION ALLOW_AUDIO_PLAYBACK_CAPTURE PRIVATE_FLAG_ALLOW_NATIVE_HEAP_POINTER_TAGGING ]
+    apexModuleName=null
+    requested permissions:
+      org.khronos.openxr.permission.OPENXR
+      org.khronos.openxr.permission.OPENXR_SYSTEM
+      com.oculus.permission.HAND_TRACKING
+      horizonos.permission.HAND_TRACKING
+      horizonos.permission.internal.ACCESS_HAND_TRACKING
+    install permissions:
+      horizonos.permission.HAND_TRACKING: granted=true
+      com.oculus.permission.HAND_TRACKING: granted=true
+      horizonos.permission.internal.ACCESS_HAND_TRACKING: granted=false
+    User 0: ceDataInode=229411 installed=true hidden=false suspended=false distractionFlags=0 stopped=false notLaunched=false enabled=0 instant=false virtual=false
+      installReason=0
+      firstInstallTime=2026-11-18 15:23:41
+      uninstallReason=0
+      overlay paths:
+        /data/resource-cache/android-default_dialer_overlay-7Ad7.frro
+        /product/overlay/Rlds1_2ThemeRRO.apk
+      legacy overlay paths:
+        /product/overlay/Rlds1_2ThemeRRO.apk
+      runtime permissions:
+
+Queries:
+  system apps queryable: false
+  queries via forceQueryable:
+  queries via package name:
+  queries via component:
+    com.oculus.oemconfig:
+      com.aeterna.game
+    com.oculus.q4bservice:
+      com.aeterna.game
+    com.meta.handseducationmodule:
+      com.aeterna.game
+    com.whatsapp:
+      com.aeterna.game
+  queryable via interaction:
+    User 0:
+      [com.oculus.os.cm,com.android.server.telecom,com.android.inputdevices,com.oculus.bugreportservice,com.oculus.labservice,horizonos.platform,oculus.platform,com.android.settings,com.android.keychain,com.android.localtransport,com.android.providers.settings,com.oculus.companion.server,com.oculus.deviceauthserver,android,com.android.location.fused]:
+        com.aeterna.game
+      horizonos.openxr.runtimebroker:
+        com.aeterna.game
+      com.oculus.vrshell:
+        com.aeterna.game
+      com.oculus.ovrmonitormetricsservice:
+        com.aeterna.game
+      com.oculus.systemdriver:
+        com.aeterna.game
+  queryable via uses-library:
+
+Dexopt state:
+  [com.aeterna.game]
+    path: /data/app/~~FNYISo9DH_KSHoBbTF7Quw==/com.aeterna.game-LGMRLDkwl2GmP1ggbWUt5w==/base.apk
+      arm64: [status=run-from-apk] [reason=unknown] [primary-abi]
+        [location is error]
+
+Compiler stats:
+  [com.aeterna.game]
+    (No recorded stats)
