@@ -628,6 +628,7 @@ func _tutorial(delta: float) -> void:
 		return
 	if _last_run_serial != game.run_serial:
 		_last_run_serial = game.run_serial
+		game.tutorial_hold = false  # a new run never inherits a frozen clock
 		if game.loop == 0 and game.night == 0 and game.phase == Game.Phase.DAY:
 			_enter_step(0)
 			return

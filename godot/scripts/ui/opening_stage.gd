@@ -131,6 +131,8 @@ func _drop_fade() -> void:
 
 func _exit_tree() -> void:
 	_drop_fade()
+	if game != null and is_instance_valid(game) and game.music != null:
+		game.music.hold = false
 
 
 func _view_cam() -> Camera3D:

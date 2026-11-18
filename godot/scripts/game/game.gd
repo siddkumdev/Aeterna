@@ -1397,7 +1397,7 @@ func _tick_day(delta: float) -> void:
 	## light warms toward dusk near the end, and the night begins.
 	var running := phase == Phase.DAY and day_clock and not asleep and not tutorial_hold
 	if _sun:
-		_sun.visible = running
+		_sun.visible = phase == Phase.DAY and day_clock and not asleep
 	if not running:
 		return
 	day_time += delta * (GameConfig.DAY_FAST if day_fast else 1.0)
