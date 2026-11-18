@@ -1,11 +1,17 @@
-"""Story (cutscene) score, 170 s, timed to the five opening chapters (opening_stage.gd CHAPTERS: 34/28/34/30/44 s).
-  I   The Island      0-34   the day music as it is (happy)
-  II  The Forgotten  34-62   the day motif turning minor (new render, same instruments as the day track)
-  III+IV  Curse/Dark 62-126  the voice memo's melody on cello, with a slightly flat music box and soft low piano
-  V   Your Turn     126-170  the day music again
+"""Story (cutscene) score v3, 170 s, scored to the opening cutscene's beats (opening_stage.gd CHAPTERS + _once cues).
+Chapter starts: I 0, II 34, III 62, IV 96, V 126 s. Beats (absolute s) and what the player should feel:
+  0-13  island at predawn: wonder, softly         13  morning light: warmth        19-26  Maren, the prayers: cozy then awe
+  26    the prayers weave the Veil: a rising shimmer
+  34-44 the Dark Wood's forgotten god: uneasy     44.5 rumble   44-52 forgotten: sad     52 the lights dim: hunger
+  62    the curse rises: low swell                65 "the hunger turned to spite"         68 thunder (sound effect, left alone)
+  73-80 Skotos: "they love you, I remember how that felt": bitter, wistful, only the high line   77 first crack   86 second crack
+  97.5  the Veil shatters: shock                  100 the beasts: terror, driving          105.5 doors   114.5 lights out: held breath
+  126-135 Maren kneels: fragile, small            135 dawn returns   143 "her prayer is your light": hope, full   164 "Watch over them": soft
+The memo ("AUDIO-2026-11-10-23-38-34") is two voices at once (a low bass line and a higher line, on a steady pulse). v1/v2 tried to
+follow it as one melody and jumped between the voices; v3 transcribes both (bass -> cello, upper -> slightly flat music box).
+Only the memo's pitches are used (nothing of the recording is in the output).
 Run (from this folder):  python build_story.py MEMO_AUDIO OUT.wav
 Needs: librosa, pretty_midi, pyloudnorm, numpy, soundfile, ffmpeg, FluidSynth + a GM soundfont (paths below).
-The memo is a private voice memo; only its pitches are used (nothing of the recording is in the output).
 """
 import os, random, subprocess, sys
 import numpy as np
@@ -23,12 +29,25 @@ FLUID = os.environ.get("FLUIDSYNTH", os.path.join(REPO, "_work", "music", "tools
 SF2 = os.environ.get("SOUNDFONT", os.path.join(REPO, "_work", "music", "sf", "GeneralUser-GS.sf2"))
 DAY_WAV = os.path.join(REPO, "godot", "assets", "audio", "music", "day_music.wav")
 SR = 44100
-BOUNDS = [0.0, 34.0, 62.0, 126.0, 170.0]  # four musical sections: I | II | III+IV | V (starts, then the end)
-XF = 4.0  # s crossfade centred on each chapter boundary
+END = 170.0
+XF = 4.0  # s crossfade at a section boundary
 G_MINOR = {7, 9, 10, 0, 2, 3, 5}  # G A Bb C D Eb F
+BPM = 76.0
+CELL = 60 / BPM / 2  # the memo's pulse: an eighth
+MEMO_T0 = 62.5  # story second the memo's first cell sounds
+OM_OFF = 60.0  # the ominous render's t=0 is story second 60 (2 s before chapter III, for the crossfade)
+MN_OFF = 32.0  # the chapter II render's t=0 is story second 32
+# dB trims on the soundfont renders, which come out at their own level (tuned by measurement against the day music)
+LEVELS = {"om": 6.0, "mn": 6.0, "sh": 0.0, "fr": 8.0}
 
 
-def render(mid, name, lowpass, lufs):
+def kf(points):
+    """Keyframes [(t, v), ...] -> function of t (linear, held beyond the ends)."""
+    ts = [p[0] for p in points]; vs = [p[1] for p in points]
+    return lambda t: float(np.interp(t, ts, vs))
+
+
+def render(mid, name, lowpass):
     raw = os.path.join(WORK, name + "_raw.wav")
     subprocess.run([FLUID, "-ni", "-g", "0.9", "-F", raw, "-r", str(SR), SF2, mid],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -36,154 +55,238 @@ def render(mid, name, lowpass, lufs):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", raw, "-af",
                     "lowpass=f=%d,highpass=f=40,acompressor=threshold=-24dB:ratio=2.2:attack=30:release=300,"
                     "aecho=0.8:0.6:90|170:0.22|0.14" % lowpass, out], check=True)
-    y, sr = sf.read(out, always_2d=True)
-    m = pln.Meter(sr)
-    y = pln.normalize.loudness(y, m.integrated_loudness(y), lufs)
-    return np.clip(y, -1, 1), sr
-
-
-def memo_grid(memo, bpm=76.0):
-    wav = os.path.join(WORK, "memo.wav")
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", memo, "-ac", "1", "-ar", "22050", wav], check=True)
-    y, sr = librosa.load(wav, sr=22050)
-    f0, _, _ = librosa.pyin(y, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C6"), sr=sr, hop_length=256)
-    t = librosa.times_like(f0, sr=sr, hop_length=256)
-    midi = np.where(np.isnan(f0), np.nan, librosa.hz_to_midi(f0))
-    step = 60 / bpm / 2
-    cells = []
-    for i in range(int(len(y) / sr / step)):
-        m = midi[(t >= i * step + 0.05) & (t < (i + 1) * step)]
-        m = m[~np.isnan(m)]
-        cells.append(int(round(np.median(m))) if len(m) >= 3 else None)
-    return cells
+    y, _ = sf.read(out, always_2d=True)
+    return y
 
 
 def snap_scale(n):
     return min((n + d for d in range(-2, 3) if (n + d) % 12 in G_MINOR), key=lambda c: abs(c - n))
 
 
-def ominous(path, cells, bpm=76.0, bars_total=None):
-    """Cello carries the memo's tune; music box and piano under it. Dynamics follow the story: III soft, IV swelling."""
+def memo_voices(memo):
+    """Two-voice transcription: lowest strong note (C2-G3) and the strongest higher note (A3-G5) per eighth-note cell."""
+    wav = os.path.join(WORK, "memo.wav")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", memo, "-ac", "1", "-ar", "22050", wav], check=True)
+    y, sr = librosa.load(wav, sr=22050)
+    H = 512
+    C = np.abs(librosa.cqt(y, sr=sr, fmin=librosa.note_to_hz("C1"), n_bins=72, bins_per_octave=12, hop_length=H))
+    n = int(len(y) / sr / CELL)
+
+    def pick(col, lo, hi, thr):
+        seg = col[lo - 24:hi - 24 + 1]
+        k = int(np.argmax(seg))
+        return lo + k if seg[k] >= thr * col.max() else None
+
+    bass, up = [], []
+    for i in range(n):
+        a = int((i * CELL + 0.03) * sr / H); b = max(a + 1, int((i * CELL + 0.25) * sr / H))
+        col = C[:, a:b].mean(axis=1)
+        bs = pick(col, 36, 55, 0.35); us = pick(col, 57, 79, 0.4)
+        if bs is not None and us is not None and (us - bs) % 12 in (0, 7) and col[us - 24] < 0.8 * col[bs - 24]:
+            us = None  # that is just the bass note's own harmonic
+        bass.append(snap_scale(bs) if bs else None)
+        up.append(snap_scale(us) if us else None)
+    return bass, up
+
+
+def ominous(path, bass, up):
+    """Chapters III and IV. Timeline in story seconds; the render starts at OM_OFF."""
     random.seed(3)
-    e = 60 / bpm / 2
-    notes = []  # (slot, midi) merged runs
-    last = None
-    for i, c in enumerate(cells):
-        if c is None:
-            last = None
-            continue
-        c = snap_scale(c)
-        while c < 43: c += 12  # cello floor: G2
-        while c > 67: c -= 12
-        if notes and last == c and notes[-1][0] + notes[-1][2] == i:
-            notes[-1][2] += 1
-        else:
-            notes.append([i, c, 1])
-        last = c
-    m = pm.PrettyMIDI(initial_tempo=bpm)
+    A = lambda t: t - OM_OFF
+    cello_v = kf([(62, 0), (63.5, 26), (65, 36), (72, 38), (73.0, 36), (73.6, 0), (80, 0), (80.5, 34), (86, 52), (92, 56),
+                  (97.4, 56), (97.5, 100), (100, 92), (105, 88), (105.5, 50), (110, 46), (114.4, 44), (114.5, 0), (118, 0),
+                  (118.5, 22), (123, 18), (126, 0)])
+    box_v = kf([(62, 0), (66, 26), (72, 32), (74, 46), (79, 44), (82, 30), (97, 34), (100, 52), (105, 48), (110, 38),
+                (114.5, 26), (118, 0)])
+    pno_v = kf([(62, 0), (63, 34), (80, 34), (97, 38), (100, 50), (114.4, 46), (114.5, 40), (126, 26)])
+    m = pm.PrettyMIDI(initial_tempo=BPM)
     cello = pm.Instrument(42, name="cello"); box = pm.Instrument(10, name="box"); pno = pm.Instrument(0, name="piano")
     box.pitch_bends.append(pm.PitchBend(-900, 0.0))  # about 22 cents flat: a slightly sour music box
-    total = max(len(cells), 1) * e  # the tune's length: dynamics follow it
-    bars = int(max(total, 72.0) / (8 * e)) + 1  # the section needs 68 s: piano and box carry on after the tune ends
-    for i, c, ln in notes:
-        t0 = i * e
-        prog = t0 / total
-        vel = int(46 + 30 * min(1.0, max(0.0, (prog - 0.35) / 0.4)))  # swells into chapter IV
-        cello.notes.append(pm.Note(vel, c, t0, t0 + max(ln, 2) * e * 0.98))
-        if random.random() < 0.28 and ln >= 2:
-            box.notes.append(pm.Note(int(34 + 12 * prog), c + 24, t0 + e * 0.5, t0 + e * 5))
-    cs = ["Gm", "Gm", "Ebmaj7", "Cm", "Gm", "Ebmaj7", "Cm", "Gm"]
-    for b in range(bars):
-        t0 = b * 8 * e
-        ch = cs[b % len(cs)]
-        r = ROOT[ch]
-        v = int(34 + 16 * min(1, b / max(bars - 1, 1) * 1.4))
-        pno.notes.append(pm.Note(v, r - 12 + 12, t0, t0 + 8 * e))  # low root, held
-        pno.notes.append(pm.Note(v - 8, r + 7, t0 + 2 * e, t0 + 8 * e))  # a fifth above, entering late
+    # low line: one cello note per run of equal notes; in the beasts (100-105.5) re-strike every cell so it drives
+    i = 0
+    while i < len(bass):
+        if bass[i] is None:
+            i += 1; continue
+        j = i
+        while j + 1 < len(bass) and bass[j + 1] == bass[i] and not (100 <= MEMO_T0 + i * CELL <= 105.5):
+            j += 1
+        t0 = MEMO_T0 + i * CELL
+        v = int(cello_v(t0))
+        if v > 6:
+            n = bass[i]
+            while n < 43: n += 12
+            cello.notes.append(pm.Note(min(v, 120), n, A(t0), A(t0 + (j - i + 1) * CELL * 0.98)))
+        i = j + 1
+    # high line: music box, an octave up for sparkle; a few notes dropped so it breathes
+    for i, u in enumerate(up):
+        if u is None: continue
+        t0 = MEMO_T0 + i * CELL
+        v = int(box_v(t0))
+        if v > 6 and random.random() < 0.8:
+            box.notes.append(pm.Note(v, u + 12 if u < 70 else u, A(t0 + 0.02), A(t0 + CELL * 5)))
+    # soft low piano pedal: the commonest bass note of each half bar, an octave down
+    for k in range(0, len(bass), 4):
+        seg = [b for b in bass[k:k + 4] if b]
+        if not seg: continue
+        t0 = MEMO_T0 + k * CELL
+        v = int(pno_v(t0))
+        if v > 6:
+            n = max(set(seg), key=seg.count)
+            while n > 40: n -= 12
+            pno.notes.append(pm.Note(v, n, A(t0), A(t0 + 4 * CELL)))
+
+    def hit(t, vel, notes, ln):
+        for n in notes: pno.notes.append(pm.Note(vel, n, A(t), A(t + ln)))
+    hit(77.0, 84, [31, 38, 44], 3.0)            # first crack (Ab over G and D: sour)
+    hit(86.0, 96, [31, 38, 44], 3.5)            # second crack
+    hit(97.5, 118, [28, 31, 38, 44, 50], 7.0)   # the Veil shatters
+    cello.notes.append(pm.Note(104, 43, A(97.5), A(105.0)))
+    hit(105.5, 62, [31, 38], 3.0)               # the doors
+    pno.notes.append(pm.Note(30, 31, A(114.6), A(126.0)))   # lights out: a bare low pedal, then nothing
+    pno.notes.append(pm.Note(22, 38, A(118.0), A(126.0)))
     for ins in (cello, box, pno): m.instruments.append(ins)
     m.write(path)
-    return bars * 8 * e
 
 
-def minor_motif(path, bpm=92.0, bars=14):
-    """The day motif (the day track's melody grid) over minor chords, dark rising: bridge for chapter II."""
+def chapter_two(path, bpm=80.0, bars=12):
+    """Chapter II (34-62 s): the day motif turning minor and thinning: uneasy, then sad, then hungry. Render t=0 is story 32 s."""
     random.seed(11)
     e = 60 / bpm / 2
-    prog = ["Gm", "Ebmaj7", "Cm", "Gm", "Gm", "Ebmaj7", "Cm", "Gm", "Cm", "Gm", "Ebmaj7", "Gm", "Gm", "Gm"][:bars]
+    prog = ["Gm", "Ebmaj7", "Cm", "Gm", "Gm", "Ebmaj7", "Cm", "Gm", "Cm", "Gm", "Gm", "Gm"][:bars]
+    p_v = kf([(32, 44), (44, 38), (52, 28), (58, 18)])
+    h_v = kf([(32, 36), (44, 30), (52, 22), (58, 14)])
     m = pm.PrettyMIDI(initial_tempo=bpm)
     piano = pm.Instrument(0); bass = pm.Instrument(32); harp = pm.Instrument(46)
     for b, ch in enumerate(prog):
         t0 = b * 8 * e
-        d = min(1.0, 0.15 + b / (bars - 1) * 0.9)  # darkness 0.15 -> 1
-        for s in range(0, 8, 2):
+        ta = MN_OFF + t0
+        d = min(1.0, 0.1 + b / (bars - 1) * 1.0)  # darkness 0.1 -> 1
+        step = 2 if d < 0.55 else 4  # the tune thins out as it gets sadder
+        for s in range(0, 8, step):
             n = DAY_GRID[(b * 8 + s) % len(DAY_GRID)]
             n = snap(n, ch) if n else snap(55 + random.choice([0, 3, 7]), ch)
             n = n + 12 if n < 62 else n
             n = max(60, min(n, 76))
-            piano.notes.append(pm.Note(int(46 + 5 * (s % 4 == 0) - 10 * d + random.randint(-3, 3)), n,
-                                       t0 + s * e + random.uniform(-0.008, 0.008), t0 + s * e + e * (3.6 + d)))
+            piano.notes.append(pm.Note(int(p_v(ta + s * e)) + random.randint(-2, 2), n, t0 + s * e + random.uniform(-0.008, 0.008),
+                                       t0 + s * e + e * (3.6 + 2 * d)))
         for q in (0, 4):
-            bass.notes.append(pm.Note(int(70 - 12 * d), ROOT[ch] + (0 if d > 0.5 else 12), t0 + q * e, t0 + q * e + e * 1.5))
+            if d < 0.8 or q == 0:
+                bass.notes.append(pm.Note(int(66 - 22 * d), ROOT[ch] + (0 if d > 0.5 else 12), t0 + q * e, t0 + q * e + e * 2.5))
         base = CH[ch]
         for k, pos in enumerate([3, 7] if d < 0.4 else [6]):
-            harp.notes.append(pm.Note(int(40 - 10 * d), 60 + ((base[(b + k) % len(base)] - 60) % 12), t0 + pos * e, t0 + pos * e + e * 4))
+            harp.notes.append(pm.Note(int(h_v(ta + pos * e)), 60 + ((base[(b + k) % len(base)] - 60) % 12), t0 + pos * e,
+                                      t0 + pos * e + e * 4))
+    piano.notes.append(pm.Note(40, 31, 44.4 - MN_OFF, 51.0 - MN_OFF))   # the rumble (44.5): a very soft low swell
+    piano.notes.append(pm.Note(34, 29, 52.0 - MN_OFF, 61.0 - MN_OFF))   # the lights dim (52): a sinking low note
     for ins in (piano, bass, harp): m.instruments.append(ins)
     m.write(path)
-    return bars * 8 * e
 
 
-def fade(y, a, b, kind):
-    n = int(XF * SR) if b is None else b - a
-    n = min(n, len(y) - a)
-    ramp = np.linspace(0, 1, n)
-    g = np.sin(ramp * np.pi / 2) if kind == "in" else np.cos(ramp * np.pi / 2)  # equal-power
-    y[a:a + n] *= g[:, None]
-    if kind == "out":
-        y[a + n:] = 0
+def shimmer(path):
+    """Chapter I, 26 s: the prayers weave the Veil: a rising harp and music box line. Render t=0 is story 26 s."""
+    m = pm.PrettyMIDI(initial_tempo=90)
+    harp = pm.Instrument(46); box = pm.Instrument(10)
+    for k, n in enumerate([70, 74, 77, 82, 86, 89, 94]):  # up the Bb major chord
+        t = 0.2 + k * 0.42
+        harp.notes.append(pm.Note(38 + 4 * k, n - 12 if n > 88 else n, t, t + 3.0))
+        box.notes.append(pm.Note(26 + 3 * k, n, t + 0.1, t + 4.0))
+    for ins in (harp, box): m.instruments.append(ins)
+    m.write(path)
+
+
+def fragile(path):
+    """Chapter V, 126-143 s: Maren kneels; small and quiet, Bb major: a few music box and harp notes. Render t=0 is story 126 s."""
+    random.seed(5)
+    m = pm.PrettyMIDI(initial_tempo=66)
+    box = pm.Instrument(10); harp = pm.Instrument(46)
+    v = kf([(126, 30), (136, 44), (143, 40)])
+    seq = [(1.0, 70), (3.2, 65), (5.1, 67), (7.3, 62), (9.4, 70), (11.2, 74), (13.5, 77), (15.6, 74)]
+    for t, n in seq:
+        box.notes.append(pm.Note(int(v(126 + t)), n, t, t + 3.5))
+        if random.random() < 0.7:
+            harp.notes.append(pm.Note(int(v(126 + t)) - 6, n - 12, t + 0.05, t + 3.0))
+    for ins in (box, harp): m.instruments.append(ins)
+    m.write(path)
+
+
+def lowpassed(y, hz):
+    a = os.path.join(WORK, "_lp_in.wav"); b = os.path.join(WORK, "_lp_out.wav")
+    sf.write(a, y, SR, subtype="FLOAT")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", a, "-af", "lowpass=f=%d" % hz, b], check=True)
+    return sf.read(b, always_2d=True)[0]
+
+
+def tile_to(src, n):
+    reps = int(np.ceil(n / len(src))) + 1
+    return np.tile(src, (reps, 1))[:n]
+
+
+def env(points, t0, n):
+    """dB keyframes in story seconds -> linear gain over n samples starting at story second t0."""
+    t = t0 + np.arange(n) / SR
+    return (10 ** (np.interp(t, [p[0] for p in points], [p[1] for p in points]) / 20.0))[:, None]
+
+
+def wet(points, t0, n):
+    t = t0 + np.arange(n) / SR
+    return np.interp(t, [p[0] for p in points], [p[1] for p in points])[:, None]
 
 
 def place(mix, clip, start_s):
-    a = int(start_s * SR)
+    a = int(round(start_s * SR))
+    if a < 0:
+        clip = clip[-a:]; a = 0
     b = min(len(mix), a + len(clip))
     mix[a:b] += clip[:b - a]
+
+
+def xfade(clip, fin, fout):
+    n = int(XF * SR)
+    if fin:
+        clip[:n] *= np.sin(np.linspace(0, 1, n) * np.pi / 2)[:, None]
+    if fout:
+        clip[-n:] *= np.cos(np.linspace(0, 1, n) * np.pi / 2)[:, None]
+    return clip
+
+
+def trim(y, key):
+    return y * 10 ** (LEVELS[key] / 20.0)
 
 
 def main(memo, out):
     os.makedirs(WORK, exist_ok=True)
     day, sr = sf.read(DAY_WAV, always_2d=True)
     assert sr == SR, sr
-    target = pln.Meter(SR).integrated_loudness(day)
-    cells = memo_grid(memo)
-    print("memo cells", len(cells), "notes", sum(1 for c in cells if c))
-    om_len = ominous(os.path.join(WORK, "ominous.mid"), cells)
-    om, _ = render(os.path.join(WORK, "ominous.mid"), "ominous", 2800, target - 1.0)
-    mm_len = minor_motif(os.path.join(WORK, "minor.mid"))
-    mn, _ = render(os.path.join(WORK, "minor.mid"), "minor", 3000, target - 0.5)
-    print("day LUFS %.1f  ominous %.1fs  minor %.1fs" % (target, om_len, mm_len))
-    total = int((BOUNDS[-1] + 1) * SR)
-    mix = np.zeros((total, 2))
-    half = XF / 2
+    day_lp = lowpassed(day, 700)
+    bass, up = memo_voices(memo)
+    print("memo cells", len(bass), "bass notes", sum(1 for b in bass if b), "upper notes", sum(1 for u in up if u))
+    ominous(os.path.join(WORK, "ominous.mid"), bass, up); om = trim(render(os.path.join(WORK, "ominous.mid"), "ominous", 2800), "om")
+    chapter_two(os.path.join(WORK, "minor.mid")); mn = trim(render(os.path.join(WORK, "minor.mid"), "minor", 3000), "mn")
+    shimmer(os.path.join(WORK, "shimmer.mid")); sh = trim(render(os.path.join(WORK, "shimmer.mid"), "shimmer", 4500), "sh")
+    fragile(os.path.join(WORK, "fragile.mid")); fr = trim(render(os.path.join(WORK, "fragile.mid"), "fragile", 3200), "fr")
+    mix = np.zeros((int(END * SR), 2))
 
-    def seg(src, k, loop=False):
-        start = BOUNDS[k] - (half if k > 0 else 0)
-        end = BOUNDS[k + 1] + (half if k < 3 else 0)
-        n = int((end - start) * SR)
-        if loop:  # the day loop is seamless, so wrap it
-            reps = int(np.ceil(n / len(src))) + 1
-            src = np.tile(src, (reps, 1))
-        clip = src[:n].copy()
-        if len(clip) < n:
-            clip = np.vstack([clip, np.zeros((n - len(clip), 2))])
-        if k > 0: fade(clip, 0, int(XF * SR), "in")
-        if k < 3: fade(clip, len(clip) - int(XF * SR), len(clip), "out")
-        place(mix, clip, start)
-
-    seg(day, 0, True)      # I
-    seg(mn, 1)             # II
-    seg(om, 2)             # III + IV: one continuous ominous passage, 62 s to 126 s
-    seg(day, 3, True)      # V
-    mix = mix[:int(BOUNDS[-1] * SR)]
-    fade(mix, len(mix) - int(3 * SR), len(mix), "out")
+    # I  0-36: the day music, opening from dark to bright as the island wakes, a lift at the prayers (26)
+    n = int(36 * SR)
+    w = wet([(0, 1.0), (4, 1.0), (13, 0.0)], 0, n)
+    c = (tile_to(day, n) * (1 - w) + tile_to(day_lp, n) * w) * env(
+        [(0, -40), (3, -15), (9, -9), (13, -4), (19, -1.5), (26, 0), (33, -1)], 0, n)
+    place(mix, xfade(c, False, True), 0.0)
+    place(mix, sh[:int(8 * SR)], 26.0)
+    # II 32-64
+    place(mix, xfade(mn[:int(32 * SR)].copy(), True, True), MN_OFF)
+    # III + IV 60-128
+    place(mix, xfade(om[:int(68 * SR)].copy(), True, True), OM_OFF)
+    # V 124-170: kneeling (fragile notes), the dawn (135), the day music opening up at 143, softening at the end
+    place(mix, xfade(fr[:int(20 * SR)].copy(), True, True), 124.0)
+    n = int((END - 133.0) * SR)
+    w = wet([(133, 1.0), (140, 0.85), (143, 0.0)], 133.0, n)
+    c = (tile_to(day, n) * (1 - w) + tile_to(day_lp, n) * w) * env(
+        [(133, -44), (135, -24), (139, -13), (143, -2), (160, 0), (164, -3), (170, -9)], 133.0, n)
+    c[:int(1.5 * SR)] *= np.linspace(0, 1, int(1.5 * SR))[:, None]
+    place(mix, c, 133.0)
+    fade_n = int(4.0 * SR)
+    mix[-fade_n:] *= np.cos(np.linspace(0, 1, fade_n) * np.pi / 2)[:, None] ** 2
     sf.write(out, np.clip(mix, -1, 1), SR, subtype="PCM_16")
     print("wrote", out, round(len(mix) / SR, 1), "s")
 
