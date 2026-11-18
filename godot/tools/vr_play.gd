@@ -316,6 +316,7 @@ func do_cutscene() -> void:
 	g._begin_rewind()
 	await bot.hold(3.0)
 	await shot("cutscene_story")
+	place_note()
 	check(g.is_cutscene() and not g._tray.visible, "during the story the tray is hidden")
 	check(await wait_until(func(): return g._cutscene_glass_wait, 90.0), "the story ends waiting for the hourglass")
 	await bot.hold(1.0)
@@ -323,6 +324,7 @@ func do_cutscene() -> void:
 	var glass: Node3D = g._big_glass
 	if not check(glass != null and glass.visible, "a big hourglass is shown"):
 		return
+	place_note()
 	bot.note("     glass %.2f m from the eye, %.2f m below it" % [glass.global_position.distance_to(bot.eye_world()), bot.eye_world().y - glass.global_position.y])
 	await bot.reach("right", glass.global_position)
 	await bot.pinch("right", true)
@@ -768,6 +770,15 @@ func do_abuse() -> void:
 	await bot.hold(2.0)
 	check(g.loop == loop0 + 1, "two hands and spam on the hourglass rewind exactly once (loop %d -> %d)" % [loop0, g.loop])
 	await state("after_cutscene")
+
+
+func place_note() -> void:
+	## Where the cutscene's caption and hourglass sit for the player's eye (distance, and angle below straight ahead).
+	var e: Vector3 = bot.eye_world()
+	for n in [g.board.get_node_or_null("FallCaption"), g._big_glass]:
+		if n and is_instance_valid(n) and (n as Node3D).visible:
+			var v: Vector3 = (n as Node3D).global_position - e
+			bot.note("     PLACE %s: %.2f m from the eye, %.0f deg below level, scale %.2f, eye board-local %s" % [n.name, v.length(), rad_to_deg(-atan2(v.y, Vector2(v.x, v.z).length())), (n as Node3D).scale.x, str(g.board.to_local(e))])
 
 
 func do_quest(r) -> void:

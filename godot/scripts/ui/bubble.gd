@@ -11,6 +11,7 @@ const FONT_SIZE := 42
 const PIXEL_SIZE := 0.00036
 const ACTIVE_GROUP := "active_speech_bubble"
 
+static var occluder: Node3D  # the card tray (set by the game): a bubble behind it from the eye is hidden
 var label: Label3D
 var text := ""
 
@@ -77,6 +78,10 @@ func set_text(line: String, colour := INK) -> void:
 
 func _process(_delta: float) -> void:
 	var cam := get_viewport().get_camera_3d()
+	if cam and occluder and is_instance_valid(occluder) and occluder.is_visible_in_tree() and occluder.has_method("blocks_view"):
+		visible = not occluder.blocks_view(cam.global_position, global_position)
+	else:
+		visible = true  # the tray hid (night, asleep) or went away: nothing in front of the bubble any more
 	if cam:
 		var to := cam.global_position - global_position
 		to.y = 0.0

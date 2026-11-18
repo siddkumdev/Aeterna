@@ -181,7 +181,7 @@ func _roots(pos: Vector3, cfg: Dictionary) -> bool:
 			best_d = d
 			best = i
 	if best < 0:
-		game.last_message = "Drop the root potion over a house."
+		game.last_message = "Root Ward shields a house: drop it on one."
 		return false
 	var h: House = game.houses[best]
 	h.ward = cfg["absorb"]

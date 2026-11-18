@@ -10,7 +10,8 @@ const AUTO_START := 6.0  # s of title before the story begins on its own
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
-const TUTORIAL_HINT_POS := Vector3(0, 0.40, 0)  # local to Game.hud_root: behind the table, follows its position but not its turn
+const TUTORIAL_HINT_POS := Vector3(0, 0.32, 0)  # local to Game.hud_root: behind the table, follows its position but not its turn (was 0.40: too high, stress test 2026-11-18)
+const HINT_SCALE := 1.33  # the hint card a third bigger (stress test 2026-11-18: small and thin at seated distance)
 const TUTORIAL_BUILD_CELL := Vector2i(17, 11)
 const HINTS := [
 	"Pinch a glowing tower card on your tray.",
@@ -66,6 +67,7 @@ const NIGHT_STEP := 12
 var _quest_accepted_seen := false
 var _quest_req: HelpRequest  # the carry quest the tutorial's quest step posts
 var _last_run_serial := -1
+var _use_save := false  # only the real game (this launcher is the main scene) saves; tools and tests never do
 var _auto_at := -1.0  # when the story starts by itself (the title shows a few seconds first)
 var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
 
@@ -82,12 +84,14 @@ func _ready() -> void:
 	if stale:
 		stale.queue_free()
 	game.press_override = _on_press
+	_use_save = get_tree().current_scene == self
+	game.autosave = _use_save
 	if game.lighting:
 		game.lighting.set_mood("night", 0.05)  # the island sleeps under the Veil until you wake it
 	if game.life:
 		game.life._nightfall()  # everyone is indoors
 	_build_title()
-	_auto_at = AUTO_START
+	_auto_at = -1.0  # nothing starts by itself (the user, 2026-11-18: the story began on its own after a few seconds)
 
 
 func _build_title() -> void:
@@ -98,7 +102,8 @@ func _build_title() -> void:
 	_title.name = "Title"
 	game.board.add_child(_title)
 	_card = TitleCard.show_over(_title, Vector3(0, 0.34, -0.1), "AETERNA", "a tiny god, a tiny land", -1.0, 132)
-	var wake := Plaque.make("Wake")
+	var saved := _use_save and Game.has_save()
+	var wake := Plaque.make("New game" if saved else "Wake")
 	wake.position = Vector3(0, 0.06, half + 0.1)
 	wake.rotation_degrees.x = -50
 	wake.scale = Vector3.ONE * 1.7
@@ -111,12 +116,19 @@ func _build_title() -> void:
 	skip.scale = Vector3.ONE * 0.8
 	_title.add_child(skip)
 	_plaques["skip"] = skip
+	if saved:  # auto-save (the user, 2026-11-18): resume at the start of the last day reached
+		var cont := Plaque.make("Continue")
+		cont.position = Vector3(-0.32, 0.03, half + 0.1)
+		cont.rotation_degrees.x = -50
+		cont.scale = Vector3.ONE * 1.2
+		_title.add_child(cont)
+		_plaques["continue"] = cont
 	if game._xr:
 		_xr_rig = Node3D.new()
 		_xr_rig.name = "TitleRig"
 		_xr_rig.visible = false  # shown when the headset's pose is known (_place_xr_rig)
 		game.add_child(_xr_rig)
-		for id in ["wake", "skip"]:
+		for id in _plaques.keys():
 			var pl: Node3D = _plaques[id]
 			pl.get_parent().remove_child(pl)
 			_xr_rig.add_child(pl)
@@ -125,6 +137,9 @@ func _build_title() -> void:
 		(_plaques["wake"] as Node3D).scale = Vector3.ONE * 1.5
 		(_plaques["skip"] as Node3D).position = Vector3(0.26, -0.03, 0.02)
 		(_plaques["skip"] as Node3D).scale = Vector3.ONE * 0.85
+		if _plaques.has("continue"):  # above the New game plaque, as big
+			(_plaques["continue"] as Node3D).position = Vector3(-0.11, 0.1, -0.02)
+			(_plaques["continue"] as Node3D).scale = Vector3.ONE * 1.5
 	_title.add_child(_fireflies())
 	if game.veil:
 		game.veil.snap(1.0, 0.0)
@@ -242,11 +257,30 @@ func _press_plaque(id: String) -> void:
 	game.snd("menu_open")
 	match id:
 		"wake":
+			if _use_save:
+				Game.delete_save()  # a new game starts over
 			_wake(true)
 		"skip":
+			if _use_save:
+				Game.delete_save()
 			_wake(false)
+		"continue":
+			_resume()
 
 
+
+
+func _resume() -> void:
+	## Continue: the first dawn without the story, then the saved run put back at the start of its day, tutorial over.
+	_wake(false)
+	if not game.load_save():
+		return  # an unreadable save: it plays on as a new game with the tutorial
+	_step = HINTS.size()
+	_end_hints()
+	_last_run_serial = game.run_serial
+	game._clear_requests()
+	game._plan_quests()  # the day's quests, now that the tutorial no longer holds them back
+	game._refresh_ui()
 
 
 func _wake(story := true) -> void:
@@ -310,7 +344,8 @@ func _hint(line: String) -> void:
 		_hint_root.name = "HintRoot"
 		game.update_hud_root()
 		game.hud_root.add_child(_hint_root)
-	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 80)
+		_hint_root.scale = Vector3.ONE * HINT_SCALE
+	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS / HINT_SCALE, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 80)
 
 
 func _end_hints() -> void:
@@ -730,7 +765,7 @@ func _tutorial(delta: float) -> void:
 			_advance()  # the night steps flow on their own; picking a card flows straight into placing it (one Continue, the user 2026-11-18)
 			return
 		game.snd("trust_chime")
-		_hint("Well done! Take your time, then tap Continue.")
+		_hint("Well done!")  # Continue shows by itself (stress test 2026-11-18: the long line repeated for ~8 steps)
 	if _step_done:
 		_update_continue()
 
@@ -756,15 +791,16 @@ func _update_continue() -> void:
 		_cont.position = Vector3(0, 0.03, 0)
 	var show := _step_done and _step_time >= MIN_STEP_S
 	if show and not _cont.visible:
-		# It appears in one fixed spot on the near-right of the island, big and close to the hand, facing the player, and
-		# stays put (the user, 2026-11-18: it was small, far away, behind the text and moved about).
+		# It appears in one fixed spot, the island's near-left corner as the player sees it, big, facing the player, and
+		# stays put (the user, 2026-11-18: it was small, far away, behind the text and moved about; later the same day:
+		# near-right sat under the tray behind its handle, so bottom-left of the island).
 		var eye := game._eye()
 		var c := game.board.global_position
 		var s := game.board.global_transform.basis.get_scale().x
 		var toward := Vector3(eye.x - c.x, 0.0, eye.z - c.z)
 		toward = Vector3(0, 0, 1) if toward.length() < 0.05 else toward.normalized()
 		var right := Vector3.UP.cross(toward).normalized()
-		var at := c + toward * Game.HALF * 0.55 * s + right * Game.HALF * 0.6 * s + Vector3(0, 0.06 * s, 0)
+		var at := c + toward * Game.HALF * 0.7 * s - right * Game.HALF * 0.7 * s + Vector3(0, 0.06 * s, 0)
 		var d := eye - at
 		_cont.global_transform = Transform3D(Basis(Vector3.UP, atan2(d.x, d.z)) * Basis(Vector3.RIGHT, deg_to_rad(-20.0)) * Basis.from_scale(Vector3.ONE * 3.0 * s), at)
 	_cont.visible = show

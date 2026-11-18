@@ -162,6 +162,7 @@ var _tray: CardTray  # the physical cards (with the rig only): towers by day, sp
 var _tray_key := ""  # what the tray shows now, so it is rebuilt only when that changes
 var _held_card: Card3D  # the tower card in a hand (or on the mouse hand)
 var _held_card_hand: GameHand
+var _pick_from := {}  # GameHand -> where its card was pinched (world): a tap without a drag puts the card back
 var _held_spell_cards := {}  # GameHand -> Card3D; one independent spell card per hand
 var _lens: Node3D  # the Crystal Lens model (spec 13)
 var _lens_rest := Transform3D.IDENTITY  # where it lies when nobody holds it (board-local)
@@ -422,6 +423,7 @@ func _start_loop(message: String, prayer_delay := 0.0) -> void:
 					say_at_shrine(StoryText.prayer(loop, 0)))
 		else:
 			say_at_shrine(StoryText.prayer(loop, 0))  # Maren's first prayer of the loop
+	autosave_now(true)  # day 1 of a loop (after a rewind) is a save point too; its dark houses are relighting
 
 
 func card(id: String) -> int:
@@ -1020,6 +1022,8 @@ func cast_spell(id: String, pos: Vector3, height := -1.0) -> bool:
 	if ok:
 		snd(SPELL_SOUNDS.get(id, ""), board.to_global(pos))
 		last_message = "%s!" % GameConfig.SPELLS[id]["name"]
+	else:
+		snd("invalid")  # stress test 2026-11-18: a Root Ward dropped off a house did nothing audible
 	_refresh_ui()
 	return ok
 
@@ -1068,6 +1072,110 @@ func _begin_day(message: String) -> void:
 	_set_phase(Phase.DAY, message)
 	if with_rig:
 		say_at_shrine(StoryText.prayer(loop, night))  # Maren's dawn prayer for this day
+	autosave_now()
+
+
+## Auto-save (the user, 2026-11-18): saved at the start of every day; the title then offers Continue, which resumes at
+## the start of that day. Quitting mid-night replays the day. Only the launcher turns `autosave` on (tests never write).
+const SAVE_PATH := "user://save.json"
+const SAVE_VERSION := 1
+var autosave := false
+
+
+static func has_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+
+static func delete_save() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+
+
+func save_data(houses_fresh := false) -> Dictionary:
+	var d := {"v": SAVE_VERSION, "seed": run_seed, "loop": loop, "night": night, "loop_nights": loop_nights, "faith": faith,
+		"carried_total": carried_total, "last_carry": last_carry, "cards": cards.duplicate(), "cutscene_count": cutscene_count,
+		"helped": _helped, "towers": [], "houses": []}
+	for t in towers:
+		if is_instance_valid(t):
+			d["towers"].append({"kind": t.kind, "x": t.cell.x, "y": t.cell.y, "built_night": t.built_night})
+	for h in houses:  # houses_fresh: a loop start, where the dark houses relight a moment later (on a timer)
+		d["houses"].append({"hp": h.max_hp if houses_fresh else h.hp, "shut": false if houses_fresh else h.is_shuttered})
+	return d
+
+
+func autosave_now(houses_fresh := false) -> void:
+	# Never the first day of a run: that is the tutorial's day, and a restart must not overwrite real progress with it.
+	if not autosave or asleep or tutorial_hold or phase != Phase.DAY or _cutscene or (loop == 0 and night == 0):
+		return
+	var tmp := SAVE_PATH + ".tmp"  # written whole first, so a quit mid-write never leaves a broken save
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		push_warning("autosave: cannot write %s" % tmp)
+		return
+	f.store_string(JSON.stringify(save_data(houses_fresh)))
+	f.close()
+	if DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+		DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(SAVE_PATH))
+
+
+func load_save() -> bool:
+	## Puts the saved run back at the start of its day. False (and nothing changed) when there is no usable save.
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+	if typeof(d) != TYPE_DICTIONARY or int(d.get("v", 0)) != SAVE_VERSION:
+		delete_save()  # unreadable: the title stops offering Continue
+		return false
+	return apply_save(d)
+
+
+func apply_save(d: Dictionary) -> bool:
+	var was_saving := autosave
+	autosave = false  # the half-restored run must not overwrite the save
+	new_run(int(d.get("seed", 1)))
+	var kept := {}
+	var saved_cards: Variant = d.get("cards", {})
+	if typeof(saved_cards) == TYPE_DICTIONARY:
+		for k in saved_cards:
+			if Cards.POOL.has(k):
+				kept[k] = int(saved_cards[k])
+	cards = kept
+	loop = maxi(0, int(d.get("loop", 0)))
+	carried_total = int(d.get("carried_total", 0))
+	_start_loop("")  # house strength and the nights of the loop follow the restored loop and cards
+	loop_nights = maxi(1, int(d.get("loop_nights", loop_nights)))
+	night = clampi(int(d.get("night", 0)), 0, fall_night())
+	faith = int(d.get("faith", faith))
+	last_carry = int(d.get("last_carry", 0))
+	cutscene_count = int(d.get("cutscene_count", 0))
+	_helped = int(d.get("helped", 0))
+	for td in d.get("towers", []):
+		var kind := str(td.get("kind", ""))
+		var cell := Vector2i(int(td.get("x", -1)), int(td.get("y", -1)))
+		if not GameConfig.TOWERS.has(kind) or not nav.can_build(cell, GameConfig.TOWER_SIZE, standing_houses()):
+			continue
+		nav.add_tower(cell, GameConfig.TOWER_SIZE)
+		var t := Tower.new()
+		t.game = self
+		_towers_root.add_child(t)
+		t.setup(kind, cell)
+		t.built_night = int(td.get("built_night", 0))
+		towers.append(t)
+	grass.refresh(nav)
+	var hs: Array = d.get("houses", [])
+	for i in mini(hs.size(), houses.size()):
+		var h: House = houses[i]
+		if bool(hs[i].get("shut", false)):
+			h.force_dark()
+		else:
+			h.hp = clampf(float(hs[i].get("hp", h.max_hp)), 1.0, h.max_hp)
+			h._update_bar()
+	_clear_requests()
+	_set_phase(Phase.DAY, "Welcome back. Day %d." % (night + 1) if night != fall_night() else "Welcome back. The fall night next.")
+	_update_shrine()
+	autosave = was_saving
+	return true
 
 
 func ending_available() -> bool:
@@ -1146,6 +1254,8 @@ const ENDINGS := {
 
 func _finish_story(id: String) -> bool:
 	## The ending the player chose. The run is over; a new run starts from the sign (or R).
+	if autosave:
+		delete_save()  # nothing to continue after an ending
 	ending_choice = false
 	offers = []
 	snd("dawn_bell")
@@ -2626,6 +2736,7 @@ func _build_ui() -> void:
 	if with_rig:
 		_tray = CardTray.new()
 		_tray.name = "CardTray"
+		Bubble.occluder = _tray
 		add_child(_tray)  # on its own, not on the board: moving, turning or resizing the island leaves it where it is
 		_tray.visible = not asleep
 	_hud = _make_label(ui, Vector3(0, 0.24, -HALF - 0.03), 80)
@@ -2873,7 +2984,9 @@ func _build_tray_bits() -> void:
 	_slip = QuestSlipScript.new()
 	_slip.name = "QuestSlip"
 	_tray.add_child(_slip)
-	_slip.position = Vector3(0, 0.001, 0.056)  # its top edge on the tray's front lip
+	# Its top edge on the tray's front lip, beside the middle handle rather than under it (stress test 2026-11-18: the handle
+	# hid the quest name, "LOST L", "WASHIN"); the handle spans x -0.07..0.07, the slip is 0.27 wide.
+	_slip.position = Vector3(-0.205, 0.001, 0.056)  # left edge -0.34, right edge -0.07
 	_slip.visible = false
 	_sun = MeshInstance3D.new()
 	_sun.name = "Sun"
@@ -2925,7 +3038,7 @@ func _tick_clock() -> void:
 		update_hud_root()
 		hud_root.add_child(_clock)
 	update_hud_root()
-	_clock.visible = phase == Phase.DAY and not asleep and not _cutscene and not hide_clock  # only the story's words during the cutscene
+	_clock.visible = phase == Phase.DAY and not asleep and not _cutscene and not hide_clock and not _toast_showing()  # only the story's words during the cutscene
 	if _clock.visible:
 		var left := int(ceil(day_left()))
 		_clock.text = "%d:%02d" % [left / 60, left % 60] if not tutorial_hold else "Take your time"
@@ -3107,6 +3220,16 @@ func _tick_tray_bits(delta: float) -> void:
 					c._body.scale = Vector3.ONE
 
 
+func _toast_showing() -> bool:
+	## A message line is up (stress test 2026-11-18: the day clock was drawn over it); the clock steps aside meanwhile.
+	if _toast and _toast.visible and float(_toast.get_meta("left", 0.0)) > 0.0:
+		return true
+	for t in _toast_stack:
+		if t.visible and float(t.get_meta("left", 0.0)) > 0.0:
+			return true
+	return false
+
+
 func _show_toast(line: String) -> void:
 	if _toast == null or line == "" or asleep or line == _toast_last:
 		return
@@ -3272,7 +3395,9 @@ func hand_pressed(h: GameHand) -> void:
 			toggle_fast()
 		else:
 			_fast_pending[h] = 0.0  # held for GameConfig.FAST_HOLD, then it hurries the day (see _tick_rim)
-			_show_toast("Hold to hurry the day")
+			# Only when nothing else is being said (stress test 2026-11-18: it lay over the tutorial hint and villager lines)
+			if not hide_clock and get_tree().get_nodes_in_group(Bubble.ACTIVE_GROUP).is_empty() and not _toast_showing():
+				_show_toast("Hold to hurry the day")
 		return
 	if _on_tray_compass(tp):
 		if h == _mouse_hand:
@@ -3376,6 +3501,7 @@ func _grab_card(cd: Card3D, h: GameHand) -> bool:
 			choose_card(_tray.cards.find(cd))
 			return true
 	snd("pinch")
+	_pick_from[h] = h.touch_point()
 	if cd.data.get("kind", "") == "spell":
 		_held_spell_cards[h] = cd
 	else:
@@ -3533,6 +3659,16 @@ func _tick_rim(delta := 0.0) -> void:
 	_update_compass_label()
 
 
+func _is_tap(h: GameHand) -> bool:
+	## A card pinched and let go without being carried (stress test 2026-11-18: four quick taps built four towers in front
+	## of the tray, a tap on a spell card cast it). Only a card pickup records a pick point; anything else is never a tap.
+	if not _pick_from.has(h):
+		return false
+	var from: Vector3 = _pick_from[h]
+	_pick_from.erase(h)
+	return h.touch_point().distance_to(from) < GameConfig.CARD_TAP_MOVE
+
+
 func hand_released(h: GameHand, cancelled := false) -> void:
 	_free_pinch.erase(h)
 	## cancelled: the hand lost tracking mid-pinch (GameHand.cancelled). Nothing is built, cast, delivered or moved.
@@ -3568,21 +3704,25 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		return
 	if not _crush.is_empty() and (_crush["hand"] == h or (_crush["hand"] == null and h == _mouse_hand)):
 		crush_cancel()
+	var tapped := _is_tap(h)
 	if _held_spell_cards.has(h):
 		var cd: Card3D = _held_spell_cards[h]
 		var id: String = cd.data.get("id", "")
 		var local := board.to_local(h.touch_point())
 		_held_spell_cards.erase(h)
 		spells.hide_aim()
-		if cancelled:
+		if cancelled or tapped:
 			cd.release_to_home()
-			_hand_log(h, "release card:%s cancelled" % id)
+			_hand_log(h, "release card:%s %s" % [id, "cancelled" if cancelled else "tapped"])
 			return
 		if absf(local.x) <= HALF and absf(local.z) <= HALF:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
 			var cast := cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 			_hand_log(h, "release card:%s %s" % [id, "cast" if cast else "rejected"])
 		else:
+			snd("invalid")  # stress test 2026-11-18: a card let go off the island went back with no word and no sound
+			last_message = "Drop the spell over the island."
+			_refresh_ui()
 			_hand_log(h, "release card:%s off-board" % id)
 		cd.release_to_home()
 		return
@@ -3593,11 +3733,11 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		_held_card = null
 		_held_card_hand = null
 		spells.hide_aim()
-		if cancelled:
+		if cancelled or tapped:
 			if cd.data.get("kind", "") == "tower":
 				select("")
 			cd.release_to_home()
-			_hand_log(h, "release card:%s cancelled" % id)
+			_hand_log(h, "release card:%s %s" % [id, "cancelled" if cancelled else "tapped"])
 			return
 		if cd.data.get("kind", "") == "tower":
 			var cell := Vector2i(-1, -1)
@@ -3607,6 +3747,10 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 					.clamp(Vector2i.ZERO, Vector2i(GameConfig.SIZE - 2, GameConfig.SIZE - 2))
 			if cell.x >= 0:
 				built = try_build(id, cell)
+			else:
+				snd("invalid")
+				last_message = "Drop the card on the island to build."
+				_refresh_ui()
 			_hand_log(h, "release card:%s %s cell:%s" % [id, "built" if built else "rejected", str(cell)])
 			select("")  # built or not, this card is done: no armed tower and no grid left behind
 		elif absf(local.x) <= HALF and absf(local.z) <= HALF:
@@ -3614,6 +3758,9 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 			var cast := cast_spell(id, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 			_hand_log(h, "release card:%s %s" % [id, "cast" if cast else "rejected"])
 		else:
+			snd("invalid")  # stress test 2026-11-18: a card let go off the island went back with no word and no sound
+			last_message = "Drop the spell over the island."
+			_refresh_ui()
 			_hand_log(h, "release card:%s off-board" % id)
 		cd.release_to_home()
 		return
@@ -3796,7 +3943,7 @@ static func tray_clamp(pos: Vector3, board_xf: Transform3D) -> Vector3:
 		p.z = board_xf.origin.z + flat.z
 	var l := board_xf.affine_inverse() * p
 	var lim := HALF + 0.06
-	if maxf(absf(l.x), absf(l.z)) < lim and l.y > -0.25 and l.y < 0.22:  # may hover above the island (the start pose is over its near edge), never sink into it
+	if maxf(absf(l.x), absf(l.z)) < lim and l.y > -0.25 and l.y < 0.12:  # may hover above the island (the start pose is over its near edge, TRAY_DROP 0.15), never sink into it (was 0.22 with TRAY_DROP 0.25)
 		if absf(l.x) > absf(l.z):
 			l.x = signf(l.x) * lim if l.x != 0.0 else lim
 		else:

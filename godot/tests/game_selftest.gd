@@ -616,6 +616,35 @@ func _hand_reach() -> void:
 		is_equal_approx(rig_game.spells.cooldown["fire_orb"], GameConfig.SPELLS["fire_orb"]["cooldown"]) \
 		and is_equal_approx(rig_game.spells.cooldown["boulder"], GameConfig.SPELLS["boulder"]["cooldown"]) \
 		and rig_game.faith == faith_before and rig_game._held_spell_cards.is_empty())
+	var storm_card: Card3D = rig_game._tray.cards.filter(func(c): return c.data.get("id", "") == "storm")[0]
+	spell_hand_a.global_position = storm_card.global_position
+	rig_game.hand_pressed(spell_hand_a)
+	var picked: bool = rig_game._held_spell_cards.get(spell_hand_a) == storm_card
+	spell_hand_a.global_position += Vector3(0, 0, -GameConfig.CARD_TAP_MOVE * 0.5)
+	rig_game.hand_released(spell_hand_a)
+	check("a spell card tapped (let go without being carried) goes back unused",
+		picked and rig_game.spells.is_ready("storm") and rig_game._held_spell_cards.is_empty())
+	# Auto-save (2026-11-18): a saved day, through JSON, comes back at the start of that day.
+	var sd := rig_game.save_data()
+	sd["loop"] = 1
+	sd["night"] = 1
+	sd["faith"] = 321
+	sd["cards"] = {}
+	var free_cell := Vector2i(-1, -1)
+	for y in GameConfig.SIZE - 1:
+		for x in GameConfig.SIZE - 1:
+			if free_cell.x < 0 and rig_game.nav.can_build(Vector2i(x, y), GameConfig.TOWER_SIZE, rig_game.standing_houses()):
+				free_cell = Vector2i(x, y)
+	var kind0: String = GameConfig.TOWERS.keys()[0]
+	sd["towers"] = [{"kind": kind0, "x": free_cell.x, "y": free_cell.y, "built_night": 0}]
+	if not sd["houses"].is_empty():
+		sd["houses"][0] = {"hp": 5.0, "shut": false}
+	var back: Dictionary = JSON.parse_string(JSON.stringify(sd))
+	var restored := rig_game.apply_save(back)
+	check("a saved day comes back: loop, night, faith, towers and house damage, by day",
+		restored and rig_game.loop == 1 and rig_game.night == 1 and rig_game.faith == 321 and rig_game.phase == Game.Phase.DAY \
+		and rig_game.towers.size() == 1 and rig_game.towers[0].cell == free_cell and rig_game.towers[0].kind == kind0 \
+		and (rig_game.houses.is_empty() or is_equal_approx(rig_game.houses[0].hp, 5.0)))
 	spell_hand_a.queue_free()
 	spell_hand_b.queue_free()
 	rig_game.queue_free()
@@ -2518,7 +2547,7 @@ func _tray_rules() -> void:
 	check("the tray starts on the headset side of the board", Vector2(out.x, out.z).dot(Vector2(to_head.x, to_head.z)) > 0.0)
 	check("the tray starts TRAY_DROP above the board's top, below the eyes (2026-11-18: beside the near edge, higher)", is_equal_approx(tray.global_position.y, c.y + GameConfig.TRAY_DROP) and tray.global_position.y < head.y - 0.1)
 	var l := g.board.to_local(tray.global_position)
-	check("the tray starts centred in front of the player, hovering over the island's near edge (the user, 2026-11-18)", absf(l.x) < 0.02 and l.y > 0.22 and absf(l.z) > Game.HALF - 0.2)
+	check("the tray starts centred in front of the player, hovering over the island's near edge (the user, 2026-11-18)", absf(l.x) < 0.02 and l.y > GameConfig.TRAY_DROP - 0.03 and absf(l.z) > Game.HALF - 0.2)
 	check("the tray is tipped up toward the player", tray.global_basis.y.y < 1.0 and tray.global_basis.y.z > 0.0)
 	var at0 := tray.global_transform
 	g.board.global_transform = Transform3D(Basis(Vector3.UP, 0.8) * Basis.from_scale(Vector3(1.6, 1.6, 1.6)), c + Vector3(0.3, 0.1, -0.2))

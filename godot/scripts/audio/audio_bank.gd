@@ -18,6 +18,8 @@ const DUCK_DB := -6.0  # a story beat (manifest "duck") lowers ambience and musi
 const DUCKED := ["ambience", "music"]
 const COMBO_STEPS := [0, 2, 4, 7, 9]  # semitones: the major pentatonic of the game's key (C major, make_audio.py)
 const COMBO_GAP_MS := 1200
+const MAX_SAME := 2  # at most this many copies of one sound at once; more are skipped (stress test 2026-11-18: 5+ piled up in night fights)
+const TRIM_DB := {"enemy_death": -4.0, "house_hit": -4.0, "bark_wizard_cheer": -4.0, "amb_owl": -4.0}  # peaked ~9 dB over their usual level (stress test 2026-11-18)
 const LOOP_FADE_IN := 0.4
 const LOOP_FADE_OUT := 0.5
 
@@ -27,6 +29,7 @@ var voices := 0
 var played := 0          # counted for tests
 var _streams := {}       # file name -> AudioStream (loops already set)
 var _last_ms := {}       # id -> last play time
+var _live := {}         # id -> copies playing now (MAX_SAME)
 var _bed_players := {}   # bed name -> AudioStreamPlayer
 var _bed := ""
 var _fades := {}         # player -> its running fade tween
@@ -108,6 +111,8 @@ func play(id: String, at := Vector3.INF) -> bool:
 		return false
 	if voices >= MAX_VOICES:
 		return false
+	if int(_live.get(id, 0)) >= MAX_SAME and not m.get("combo", false):
+		return false
 	var files: Array = m["files"]
 	var s := _stream(files[_rng.randi_range(0, files.size() - 1)]["file"], false)
 	if s == null:
@@ -124,6 +129,7 @@ func play(id: String, at := Vector3.INF) -> bool:
 		p3.stream = s
 		p3.bus = m["bus"]
 		p3.pitch_scale = pitch
+		p3.volume_db = TRIM_DB.get(id, 0.0)
 		p3.unit_size = 0.7
 		p3.max_distance = 8.0
 		# Godot's default 3D "air absorption" low-passes every placed sound at 5 kHz; on a tabletop board everything is
@@ -136,6 +142,7 @@ func play(id: String, at := Vector3.INF) -> bool:
 		p2.stream = s
 		p2.bus = m["bus"]
 		p2.pitch_scale = pitch
+		p2.volume_db = TRIM_DB.get(id, 0.0)
 		p = p2
 	add_child(p)
 	if placed:
@@ -144,8 +151,10 @@ func play(id: String, at := Vector3.INF) -> bool:
 		_duck(s.get_length() / maxf(pitch, 0.01))
 	voices += 1
 	played += 1
+	_live[id] = int(_live.get(id, 0)) + 1
 	p.finished.connect(func():
 		voices -= 1
+		_live[id] = maxi(0, int(_live.get(id, 0)) - 1)
 		p.queue_free())
 	p.play()
 	return true

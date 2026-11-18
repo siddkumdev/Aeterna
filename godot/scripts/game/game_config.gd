@@ -284,6 +284,7 @@ const DAY_DUSK_WARN := 20.0  # s before the end: the light turns to dusk
 const DAY_FAST := 20.0
 const NIGHT_FAST := 4.0
 const CRUSH_HOLD := 1.2  # s
+const CARD_TAP_MOVE := 0.04  # m: a card let go closer than this to where it was pinched goes back to the tray (stress test 2026-11-18)
 
 # The ledger (the user, 2026-11-11): turn the left palm up and hold it a moment.
 const PALM_UP_OPEN := 0.65  # dot of the palm's normal with straight up, to open (was 0.8; 2026-11-18 from the 11-17 recording: his four palm-up tries peaked at 0.7-0.9 for 0.6-0.94 s at dot > 0.7)
@@ -316,8 +317,8 @@ const BOARD_SCALE_STEPS: Array[float] = [0.8, 1.0, 1.2, 0.6]
 # The card tray (Siddharth 2026-11-12, after a headset recording; the game is played SITTING). It starts along the
 # board's front edge (the edge nearest the headset), low and tipped up toward the player, and can be grabbed and moved
 # on its own. It never follows the island. Start pose, measured from the island's edge and the board's top surface:
-const TRAY_OUT := -0.08  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
-const TRAY_DROP := 0.25  # m: the tray's middle sits this far above the board's top (was -0.03: card pick-ups then happened 35-64 deg below the horizon; 2026-11-18, 11-17 recording)
+const TRAY_OUT := -0.08  # m from the island's edge to the tray's middle (0.36 m from a seated eye; 2026-11-18 stress test: 0.06 put it 0.25 m from the eye and its messages filled the view)
+const TRAY_DROP := 0.15  # m (the user, 2026-11-18 stress test: was 0.25, the tray hid much of the island; before that -0.03): the tray's middle sits this far above the board's top (was -0.03: card pick-ups then happened 35-64 deg below the horizon; 2026-11-18, 11-17 recording)
 const TRAY_SIDE := 0.0  # m (board scale 1) the tray sits to the player's right of the board's middle, beside the near edge, so it is not under the chin (was 0 = straight ahead, 0.10 m from the face)
 const TRAY_TILT_DEG := 15.0  # degrees the tray's face is tipped up toward the player's face (cards lean back 51 degrees on top of it)
 const TRAY_MIN_Y := 0.35  # m above the floor: the lowest the tray may be dropped

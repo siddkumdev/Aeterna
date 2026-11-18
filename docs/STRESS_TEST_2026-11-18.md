@@ -1,4 +1,4 @@
-# VR stress test, 2026-11-18 (flag list, nothing fixed)
+# VR stress test, 2026-11-18 (flags, and what was fixed)
 
 A scripted player (`godot/tools/vr_play.gd`) drove the game through the real XR hand trackers, recorded with Godot Movie Maker (headset view 960x1024, 30 fps, with sound). Nothing in the game was changed; the team decides what to fix.
 
@@ -39,3 +39,24 @@ No crash, no script error, nothing left stuck in a hand after any abuse case, tw
 - The bot's "pinch the air" mistake often landed on the Boulder card, so FAILs on the Boulder card come from the bot.
 - The bot carried only one item on multi-item quests (washing, festival lanterns).
 - "Dome 0 m from the eye" is a rough bounding-box test, not seen in the frames. Leaning 45 cm into the island puts the head inside houses and trees (normal for VR, no protection).
+
+## Fixed the same day (the user's calls)
+| # | fix |
+|---|---|
+| 1 | A card pinched and let go within 4 cm of where it was picked (`CARD_TAP_MOVE`) goes back: no build, no cast. Self-test covers it. |
+| 2 | Night-1 balance: left as is (the user). |
+| 3 | A failed spell (Root Ward off a house) plays the invalid sound; line "Root Ward shields a house: drop it on one." |
+| 4 | A card let go off the island plays the invalid sound with a line ("Drop the card on the island to build." / "Drop the spell over the island."). |
+| 5 | Tutorial practice shade: intended (`spawn_tutorial_shade`), unchanged. |
+| 6 | The day clock hides while a message is up. |
+| 7 | "Hold to hurry the day" only shows when no tutorial hint, speech note or message is up. |
+| 8 | Speech notes hide while the tray or a card is between them and the eye (`CardTray.blocks_view`). |
+| 9 | Quest slip moved beside the middle handle (x -0.205), so the handle no longer hides its name. |
+| 10 | Cutscene caption band shown at 0.55 scale. |
+| 11 | Continue plaque at the island's near-left corner. |
+| 12 | Tutorial hints a third bigger and lower; the done line is just "Well done!". |
+| 13 | Night tray: left dark (the user). |
+| 15-16 | At most 2 copies of one sound at once (combo sounds exempt); enemy death, house hit, wizard cheer and owl 4 dB quieter. |
+| tray | Start pose: 8 cm inside the near edge (as before), 15 cm up (was 25); the no-sink limit over the island lowered to 12 cm to match. Trying 6 cm outside the edge put it 0.25 m from the eye with huge messages, so it was undone. |
+
+Also added: auto-save at the start of every day (`user://save.json`); the title shows Continue / New game / Skip story and never starts by itself.

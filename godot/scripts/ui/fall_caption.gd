@@ -12,6 +12,7 @@ const PARCHMENT := Color("F4E4B8")
 const EDGE := Color("5A3A24")
 const INK := Color("111C30")
 const BAND_AT := Vector3(0.0, 0.12, 0.64)  # board-local: in front of the player-side edge, clear of the village
+const SHOWN_SCALE := 0.55  # stress test 2026-11-18: at full size the band sat 0.37 m from the eye and filled ~90 deg of view
 
 
 static func say(board: Node3D, speaker: String, line: String, name_colour := Color("5A3A24"), seconds := 3.4) -> Node3D:
@@ -30,7 +31,7 @@ static func say(board: Node3D, speaker: String, line: String, name_colour := Col
 	c._build(speaker, line, name_colour)
 	c.scale = Vector3.ZERO
 	var tw := c.create_tween()
-	tw.tween_property(c, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(c, "scale", Vector3.ONE * SHOWN_SCALE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_interval(seconds)
 	tw.tween_property(c, "scale", Vector3.ZERO, 0.2)
 	tw.tween_callback(c.queue_free)

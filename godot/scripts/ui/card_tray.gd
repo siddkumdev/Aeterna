@@ -127,6 +127,19 @@ func light_handles(world_points: Array, radius: float, held: bool) -> void:
 			hot = hot or r.global_position.distance_to(p) <= radius
 		m.emission_energy_multiplier = 1.1 if hot else HANDLE_GLOW
 
+func blocks_view(from: Vector3, to: Vector3) -> bool:
+	## Whether the tray or one of its resting cards lies on the line from `from` (the eye) to `to`: speech bubbles draw
+	## without a depth test, so the game hides one that the tray stands in front of (stress test 2026-11-18).
+	for i in range(1, 16):
+		var p := from.lerp(to, i / 16.0)
+		if body_distance(p) < 0.006:
+			return true
+		for c in cards:
+			if is_instance_valid(c) and not c.lifted and c.touch_distance(p) < 0.006:
+				return true
+	return false
+
+
 func card_near(world_pos: Vector3, reach: float) -> Card3D:
 	## The unlifted card whose physical face is within `reach` of `world_pos` (a fingertip), nearest first.
 	var best: Card3D = null
