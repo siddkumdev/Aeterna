@@ -60,7 +60,7 @@ static func build(board: Node3D, rng_seed: int) -> Dictionary:
 	d._root.add_child(d._props_root)
 	d._house_props()
 	d._landmarks()
-	ModelUtil.merge_static_meshes(d._props_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "PropsMerged")
+	ModelUtil.merge_static_meshes(d._props_root, [], GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "PropsMerged")  # small fences, barrels, crates: their thin shadows shimmered on the Quest (the user, 2026-11-18)
 	var out: Array[Vector2i] = []
 	for c in d._nav.kind:
 		if d._nav.kind[c] == "decor":

@@ -2588,7 +2588,7 @@ func _tray_rules() -> void:
 	check("the tray is clamped above the floor, below the ceiling, within reach of the board and out of the island",
 		is_equal_approx(low.y, GameConfig.TRAY_MIN_Y) and is_equal_approx(high.y, GameConfig.TRAY_MAX_Y) 		and Vector2(far.x, far.z - bx.origin.z).length() <= GameConfig.TRAY_MAX_DIST + 0.001 and maxf(absf(li.x), absf(li.z)) >= Game.HALF + 0.05)
 	var e := Game.tray_held_transform(dropped, Vector3(0, 0.8, 0), Vector3.ZERO, Vector3(2, 1.3, 0), 0.0, 0.3)
-	check("a grabbed tray eases its yaw toward the headset instead of snapping", e.basis.get_euler().y > 0.1 and e.basis.get_euler().y < PI / 2.0 - 0.1)
+	check("a carried tray keeps the turn it had when grabbed and only moves", e.basis.is_equal_approx(dropped.basis) and e.origin.is_equal_approx(Vector3(0, 0.8, 0)))
 	var g2: Game = load("res://scripts/game/game.gd").new()
 	g2.with_rig = true
 	root.add_child(g2)
@@ -2777,8 +2777,14 @@ func _visual_rendering_fixes() -> void:
 		md.targets(0.0).is_equal_approx(Vector2(1, 0)) and md.targets(1.0).is_equal_approx(Vector2(0, 1)) and md.targets(0.45).x < 1.0 and md.targets(0.45).y > 0.0)
 	md.free()
 	g._tick_clock()
-	check("day clock and tutorial banner sit one above the other on the HUD root, which is not under the board",
-		g.hud_root != null and g._clock.get_parent() == g.hud_root and not g.board.is_ancestor_of(g.hud_root) and g._clock.position.y - Launcher.TUTORIAL_HINT_POS.y >= 0.20)
+	var clock_was: bool = g._clock.visible
+	g.hide_clock = true  # the tutorial hint stands where the clock is (the user, 2026-11-18: text over text)
+	g._tick_clock()
+	var clock_hid: bool = not g._clock.visible
+	g.hide_clock = false
+	g._tick_clock()
+	check("day clock is on the HUD root (not under the board) and hides while the tutorial hint shows",
+		g.hud_root != null and g._clock.get_parent() == g.hud_root and not g.board.is_ancestor_of(g.hud_root) and clock_hid and g._clock.visible == clock_was)
 	var hud_yaw := g.hud_root.global_transform.basis.get_euler().y
 	var far0 := g.hud_root.global_position.distance_to(g.board.global_position)
 	g.board.rotation.y += deg_to_rad(90.0)
@@ -3152,13 +3158,7 @@ func _interactive_tutorial() -> void:
 	g._tray_hand = g._mouse_hand
 	_tut_next(l)
 	g._tray_hand = null
-	check("grabbing a tray handle advances to step 7 (zoom)", l._step == 7 and g.tutorial_spotlight == "zoom")
-	g._zoom_hands = [g._mouse_hand, g._mouse_hand]
-	g._zoom_d0 = 0.1
-	g._zoom_d = 0.2
-	_tut_next(l)
-	g._zoom_hands = []
-	check("a zoom advances to step 8 (ledger)", l._step == 8 and g.tutorial_spotlight == "ledger")
+	check("grabbing the tray handle advances to step 7 (ledger; the zoom step is gone)", l._step == 7 and g.tutorial_spotlight == "ledger")
 	g.ledger.set_open(true)
 	Game.ask_for_quests = true  # this step is about being asked
 	_tut_next(l)
@@ -3172,7 +3172,7 @@ func _interactive_tutorial() -> void:
 	l._quest_req._finish()
 	_tut_next(l)
 	Game.ask_for_quests = false
-	check("doing the quest advances to step 10 (sell a tower)", l._step == Launcher.SELL_STEP and g.tutorial_spotlight == "board" and not g.towers.is_empty())
+	check("doing the quest advances to the sell step", l._step == Launcher.SELL_STEP and g.tutorial_spotlight == "board" and not g.towers.is_empty())
 	check("the sell step still holds the day clock", g.tutorial_hold)
 	var tower_n := g.towers.size()
 	l._tutorial(0.05)
@@ -3844,6 +3844,12 @@ func _loops() -> void:
 		check("rig: the cutscene is running and locks the input", rg.is_cutscene())
 		rg._cutscene_show_skotos()
 		rg._cutscene_dim_statue()
+		check("rig: the tray is hidden while the story plays", rg._tray == null or not rg._tray.visible)
+		rg._cutscene_glass_wait = true
+		rg._show_big_glass()
+		var bg: Node3D = rg._big_glass
+		check("rig: the big hourglass pops up within a seated reach of the eye",
+			bg != null and bg.visible and bg.global_position.distance_to(rg._eye()) < 0.6)
 		await create_timer(1.2).timeout
 		rg.new_run(9)
 		for i in 3:
@@ -3852,6 +3858,7 @@ func _loops() -> void:
 		var flame_ok: bool = rg._shrine_flame == null or rg._shrine_flame.scale.is_equal_approx(Vector3.ONE)
 		check("rig: a new run mid-cutscene clears it (unlocked, flame back, houses lit, no display Skotos)",
 			not rg.is_cutscene() and lit and flame_ok and not is_instance_valid(rg._cutscene_skotos))
+		check("rig: ... and the big hourglass is gone, the tray back", (bg == null or not bg.visible) and (rg._tray == null or rg._tray.visible))
 	else:
 		print("      (no rig in this run: the rig cutscene test was skipped)")
 	rg.queue_free()

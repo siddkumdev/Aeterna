@@ -297,6 +297,7 @@ const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
 const RIM_WIDTH := 0.065  # m outside the island's edge that counts as the rim (plus visible handles)
 const FAST_HOLD := 1.0  # s a pinch must stay on the tray hourglass to hurry the day (the user: it triggered by itself)
 const RIM_HOLD := 0.0  # s a pinch must be held on the rim before the island follows the hand (0 = instant grab)
+const ZOOM_ENABLED := false  # the two-hand zoom is off (the user, 2026-11-18: remove it; move the tray by its handle instead)
 const ZOOM_START_GAP := 0.25  # m: both hands pinch in empty air this close together to start a zoom
 const ZOOM_DEADZONE := 0.02  # m of hand-spread change ignored, so pinch jitter never moves the island
 const ZOOM_SMOOTH := 12.0  # 1/s: how fast the island follows the hands (higher = snappier)

@@ -14,6 +14,9 @@ uniform float crack : hint_range(0.0, 1.0) = 0.0;
 uniform float strength : hint_range(0.0, 2.0) = 0.4;
 uniform float weave_scale = 22.0;
 uniform float crack_seed = 0.0;  // changes where the crack runs, per loop
+// near the eye the dome fades out (the user, 2026-11-18: the lattice was in the way; it should step aside when you come close)
+uniform float near_clear = 0.30;  // m: fully clear this close to the eye
+uniform float near_full = 0.85;  // m: fully drawn from here out
 
 varying vec3 mpos;
 
@@ -62,6 +65,7 @@ void fragment() {
 	col += glow.rgb * seam * 0.7;
 	col += warden.rgb * (core * 2.4 + halo * 0.5) * step(0.02, v);
 	col *= shown;  // the crack lives on the dome: it goes when the dome goes
-	ALBEDO = col * strength;
+	float near = smoothstep(near_clear, near_full, length(VERTEX));
+	ALBEDO = col * strength * near;
 	ALPHA = 1.0;
 }

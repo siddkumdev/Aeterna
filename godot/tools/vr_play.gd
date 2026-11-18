@@ -60,6 +60,8 @@ func _run(mode: String) -> void:
 	match mode:
 		"tray":
 			await do_tray()
+		"cutscene":
+			await do_cutscene()
 		_:
 			await do_tutorial()
 	var f := FileAccess.open(out_dir + "/vr_play_log.txt", FileAccess.WRITE)
@@ -187,25 +189,11 @@ func act(s: int) -> void:
 		6:
 			await grab_tray_handle()
 		7:
-			var e: Vector3 = bot.eye_world()
-			var right: Vector3 = (g.board.global_position - e).cross(Vector3.UP).normalized()
-			var mid: Vector3 = e + (g.board.global_position - e).normalized() * 0.35 + right * 0.25 + Vector3(0, 0.08, 0)
-			bot.reach("left", mid - right * 0.03)
-			await bot.reach("right", mid + right * 0.03)
-			bot.pinch("left", true)
-			await bot.pinch("right", true)
-			bot.move_with("left", mid - right * 0.16, 0.7)
-			await bot.move_with("right", mid + right * 0.16, 0.7)
-			check(not g._zoom_hands.is_empty() or l._step_done, "two-hand pinch starts a zoom")
-			bot.pinch("left", false)
-			await bot.pinch("right", false)
-			bot.rest("left")
-		8:
 			await bot.palm_up("left", true)
 			var pp: Array = g.palm_pose()
 			bot.note("     dbg palm: found=%s up=%.2f dist=%.2f below_eye=%.2f" % [pp[0], (pp[2] as Vector3).dot(Vector3.UP), (pp[1] as Vector3).distance_to(bot.eye_world()), bot.eye_world().y - (pp[1] as Vector3).y])
 			var open := await wait_until(func(): return g.ledger != null and g.ledger.open, 2.0)
-			await shot("s08_ledger")
+			await shot("s07_ledger")
 			check(open, "palm up opens the ledger")
 			await bot.palm_up("left", false)
 			await bot.rest("left")
@@ -297,6 +285,35 @@ func do_tray() -> void:
 		await grab_tray_handle()
 		await bot.rest("right")
 	await place_card(0)
+
+
+func do_cutscene() -> void:
+	## The first-rewind cutscene: only the story while it plays (no tray), then a big hourglass to grab.
+	g.loop = 0
+	g.night = 1  # as after a real fall: the tutorial has ended by then
+	g._begin_rewind()
+	await bot.hold(3.0)
+	await shot("cutscene_story")
+	check(g.is_cutscene() and not g._tray.visible, "during the story the tray is hidden")
+	check(await wait_until(func(): return g._cutscene_glass_wait, 90.0), "the story ends waiting for the hourglass")
+	await bot.hold(1.0)
+	await shot("cutscene_glass")
+	var glass: Node3D = g._big_glass
+	if not check(glass != null and glass.visible, "a big hourglass is shown"):
+		return
+	bot.note("     glass %.2f m from the eye, %.2f m below it" % [glass.global_position.distance_to(bot.eye_world()), bot.eye_world().y - glass.global_position.y])
+	await bot.reach("right", glass.global_position)
+	await bot.pinch("right", true)
+	await bot.hold(0.3)
+	check(not g._cutscene_glass_wait, "pinching the big hourglass turns it")
+	await bot.hold(0.6)
+	await shot("cutscene_turning")
+	await bot.pinch("right", false)
+	await bot.rest("right")
+	check(await wait_until(func(): return not g.is_cutscene(), 6.0), "the cutscene ends after the turn")
+	check(g._tray.visible and not glass.visible and g.loop == 1, "the tray is back, the glass gone, loop 2 begins")
+	await bot.hold(1.5)
+	await shot("cutscene_after")
 
 
 func do_quest(r) -> void:

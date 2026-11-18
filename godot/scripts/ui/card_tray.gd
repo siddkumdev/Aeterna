@@ -9,13 +9,13 @@ const CARD_SPACING := 0.07
 const ENDS := 0.165  # room at each end of the tray for the compass, faith seal, hourglass and crystal lens
 const FAN_ARC := 0.06  # radians of tilt per card away from the middle
 const HANDLE_GLOW := 0.18
-const HANDLE_OUT := 0.027  # m the brass handle rails stand out past each end of the base
+const HANDLE_OUT := 0.027  # m the brass handle stands out past the front edge of the base
 const OAK := Color("9A6538")  # wood_mid
 const OAK_DARK := Color("5B2920")  # wood_dark
 
 var cards: Array[Card3D] = []
 var _base: MeshInstance3D
-var handles: Array[Node3D] = []  # the two brass end rails (tutorial points at them)
+var handles: Array[Node3D] = []  # the brass front handle (tutorial points at it)
 var _face_shader: Shader
 
 
@@ -46,31 +46,31 @@ func _build_base(width: float) -> void:
 	rim.material_override = ModelUtil.flat_material(OAK_DARK)
 	rim.position = Vector3(0, 0.004, 0.05)
 	_base.add_child(rim)
-	# Grab handles at both ends, like the island's rim handles (sykeriin, 2026-11-17): wood posts and a brass rail.
+	# One brass grab handle in the middle of the front edge (the user, 2026-11-18: the end handles were hard to find and
+	# the middle of the tray is where the hand already goes): two wood posts and a brass bar standing out toward you.
 	var wood := ModelUtil.flat_material(OAK_DARK)
 	handles.clear()
-	for sx in [-1.0, 1.0]:
-		var brass := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))  # one per end, so the near one can glow alone
-		brass.emission_enabled = true
-		brass.emission = Color8(0xF6, 0xA4, 0x5D)
-		brass.emission_energy_multiplier = HANDLE_GLOW
-		for sz in [-0.035, 0.035]:
-			var post := MeshInstance3D.new()
-			var pm := BoxMesh.new()
-			pm.size = Vector3(0.03, 0.012, 0.012)
-			post.mesh = pm
-			post.material_override = wood
-			post.position = Vector3(sx * (width / 2.0 + 0.012), 0.004, sz)
-			_base.add_child(post)
-		var rail := MeshInstance3D.new()
-		var rm := BoxMesh.new()
-		rm.size = Vector3(0.02, 0.02, 0.12)  # a chunkier rail, easier to see and to find with a pinch
-		rail.mesh = rm
-		rail.material_override = brass
-		rail.position = Vector3(sx * (width / 2.0 + HANDLE_OUT), 0.006, 0)
-		rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_base.add_child(rail)
-		handles.append(rail)
+	var brass := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))
+	brass.emission_enabled = true
+	brass.emission = Color8(0xF6, 0xA4, 0x5D)
+	brass.emission_energy_multiplier = HANDLE_GLOW
+	for sx in [-0.06, 0.06]:
+		var post := MeshInstance3D.new()
+		var pm := BoxMesh.new()
+		pm.size = Vector3(0.012, 0.012, 0.03)
+		post.mesh = pm
+		post.material_override = wood
+		post.position = Vector3(sx, 0.004, 0.055 + 0.012)
+		_base.add_child(post)
+	var rail := MeshInstance3D.new()
+	var rm := BoxMesh.new()
+	rm.size = Vector3(0.14, 0.02, 0.02)
+	rail.mesh = rm
+	rail.material_override = brass
+	rail.position = Vector3(0, 0.006, 0.055 + HANDLE_OUT)
+	rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_base.add_child(rail)
+	handles.append(rail)
 
 
 func set_cards(list: Array[Dictionary]) -> void:
@@ -99,7 +99,7 @@ func body_distance(world_pos: Vector3) -> float:
 	if _base == null or not is_instance_valid(_base):
 		return INF
 	var half: Vector3 = (_base.mesh as BoxMesh).size / 2.0
-	half.x += HANDLE_OUT + 0.01  # the end handles count as the tray's body
+	half.z += HANDLE_OUT + 0.01  # the front handle counts as the tray's body
 	var l := to_local(world_pos) - _base.position
 	var out := Vector3(maxf(absf(l.x) - half.x, 0.0), maxf(absf(l.y) - half.y, 0.0), maxf(absf(l.z) - half.z, 0.0))
 	return out.length()

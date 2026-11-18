@@ -60,6 +60,8 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 	if sun:
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL  # one cascade, not four
 		sun.directional_shadow_max_distance = 2.2
+		sun.shadow_blur = 2.0  # soft edges: hard one-texel edges crawled and shimmered as the head moved (the user, 2026-11-18)
+		sun.shadow_normal_bias = 1.5  # no acne speckle on flat rocks and roofs
 		sun.shadow_enabled = tier == HIGH
 	RenderingServer.directional_shadow_atlas_set_size(2048 if tier == HIGH else 1024, true)
 	if vp:

@@ -10,7 +10,7 @@ const AUTO_START := 6.0  # s of title before the story begins on its own
 const GOLD := Color("F2B630")  # rarity_gold
 const GLOW := Color("FFD45A")  # fire_yellow
 const OUTLINE := Color("5B2920")  # wood_dark
-const TUTORIAL_HINT_POS := Vector3(0, 0.20, 0)  # local to Game.hud_root: behind the table, follows its position but not its turn
+const TUTORIAL_HINT_POS := Vector3(0, 0.40, 0)  # local to Game.hud_root: behind the table, follows its position but not its turn
 const TUTORIAL_BUILD_CELL := Vector2i(17, 11)
 const HINTS := [
 	"Pinch a glowing tower card on your tray.",
@@ -19,8 +19,7 @@ const HINTS := [
 	"Someone is praying! Tap the villager under the golden mote.",
 	"Tap a villager walking the path to hear their thoughts.",
 	"Lift the mirror on your tray and look at the dark trees.",
-	"Grab a brass handle at either end of your card tray to move and turn it.",
-	"Zoom: pinch both hands in the air beside the island, then spread them apart. Bring them together to send it back.",
+	"Pinch the brass handle at the front of your card tray to move it.",
 	"Turn your left palm up to open your ledger: quests, cards and how to play.",
 	"A villager is waving! Tap them to hear what they need, then do what they ask.",
 	"Changed your mind? Pinch a tower on the board and HOLD it until it crumbles: you get its faith back.",
@@ -59,11 +58,11 @@ var _step_done := false  # this step's action is done; the next one starts when 
 var _towers_at_step := 0
 var _cont: Plaque
 const MIN_STEP_S := 4.0  # a step can be completed (Continue shows) no sooner than this
-const QUEST_STEP := 9
-const SELL_STEP := 10
-const REBUILD_STEP := 11
-const HOURGLASS_STEP := 12
-const NIGHT_STEP := 13
+const QUEST_STEP := 8
+const SELL_STEP := 9
+const REBUILD_STEP := 10
+const HOURGLASS_STEP := 11
+const NIGHT_STEP := 12
 var _quest_accepted_seen := false
 var _quest_req: HelpRequest  # the carry quest the tutorial's quest step posts
 var _last_run_serial := -1
@@ -305,6 +304,7 @@ func _hint(line: String) -> void:
 	## The tutorial, in the world and big, from the moment the story ends (the user, 2026-11-11: "the tutorial needs to be
 	## there when the game starts, not only in the ledger"). One gilded line over the island, its own parent so the story's
 	## title cards never replace it.
+	game.hide_clock = true  # the hint stands where the clock would; in the tutorial the clock only said "Take your time"
 	if _hint_root == null or not is_instance_valid(_hint_root):
 		_hint_root = Node3D.new()
 		_hint_root.name = "HintRoot"
@@ -318,6 +318,8 @@ func _end_hints() -> void:
 		_hint_card.dismiss()
 	_hint_card = null
 	_clear_ghost()
+	if is_instance_valid(game):
+		game.hide_clock = false
 	if is_instance_valid(_cont):
 		_cont.queue_free()
 	_cont = null
@@ -492,12 +494,10 @@ func _ring_target_for_step() -> Array:
 				return [Vector3.ZERO, 0.55, false]
 			return [l_pos + Vector3(0, 0.018, 0), 0.55, true]
 		6:
-			if game._tray == null or game._tray.handles.is_empty() or not is_instance_valid(game._tray.handles[1]):
+			if game._tray == null or game._tray.handles.is_empty() or not is_instance_valid(game._tray.handles[0]):
 				return [Vector3.ZERO, 0.55, false]
-			return [game._tray.handles[1].global_position + Vector3(0, 0.02, 0), 0.55, true]
+			return [game._tray.handles[0].global_position + Vector3(0, 0.02, 0), 0.55, true]
 		7:
-			return [game.board.to_global(Vector3(0, 0.12, Game.HALF + 0.12)), 0.8, true]
-		8:
 			if game.ledger != null and game.ledger.open:
 				return [Vector3.ZERO, 0.55, false]
 			return [game._eye() + Vector3(game.board.global_position.x - game._eye().x, 0, game.board.global_position.z - game._eye().z).normalized() * 0.3 + Vector3(-0.12, -0.3, 0), 0.6, true]
@@ -589,11 +589,6 @@ func _spawn_step_ghost() -> void:
 			var side := game._tray.global_transform.basis.x.normalized()
 			_active_ghost = GhostHand.carry(_cue_root, target + Vector3(0, 0.01, 0), target + side * 0.06 + Vector3(0, 0.01, -0.04))
 		7:
-			var across := game.board.global_transform.basis.x.normalized()
-			_active_ghost = GhostHand.carry(_cue_root, target - across * 0.05, target - across * 0.2)
-			var pair := GhostHand.carry(_cue_root, target + across * 0.05, target + across * 0.2)
-			_extra_ghosts.append(pair)
-		8:
 			_active_ghost = GhostHand.hover(_cue_root, target)
 		QUEST_STEP:
 			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.04, 0))
@@ -643,7 +638,7 @@ func _enter_step(idx: int) -> void:
 		_step3_quest = null
 	_quest_accepted_seen = false
 	_hint(_step_line(_step))
-	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "board", "board", "cards", "hourglass", "spells"]
+	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "ledger", "board", "board", "cards", "hourglass", "spells"]
 	game.set_tutorial_spotlight(spotlights[_step])
 	match _step:
 		2:
@@ -713,10 +708,8 @@ func _tutorial(delta: float) -> void:
 			5:
 				done = game.foresight.showing or game.phase != Game.Phase.DAY
 			6:
-				done = game._tray_hand != null or not game._xr  # mouse play has no hands to grab or zoom with
+				done = game._tray_hand != null or not game._xr  # mouse play has no hands to grab with
 			7:
-				done = (not game._zoom_hands.is_empty() and absf(game._zoom_d - game._zoom_d0) > GameConfig.ZOOM_DEADZONE) or not game._xr
-			8:
 				done = (game.ledger != null and game.ledger.open) or not game._xr
 			QUEST_STEP:
 				if is_instance_valid(_quest_req) and _quest_req.accepted and not _quest_accepted_seen:
@@ -761,12 +754,22 @@ func _update_continue() -> void:
 		game.update_hud_root()
 		game.hud_root.add_child(_cont)
 		_cont.position = Vector3(0, 0.03, 0)
-	_cont.visible = _step_done and _step_time >= MIN_STEP_S
+	var show := _step_done and _step_time >= MIN_STEP_S
+	if show and not _cont.visible:
+		# It appears in one fixed spot on the near-right of the island, big and close to the hand, facing the player, and
+		# stays put (the user, 2026-11-18: it was small, far away, behind the text and moved about).
+		var eye := game._eye()
+		var c := game.board.global_position
+		var s := game.board.global_transform.basis.get_scale().x
+		var toward := Vector3(eye.x - c.x, 0.0, eye.z - c.z)
+		toward = Vector3(0, 0, 1) if toward.length() < 0.05 else toward.normalized()
+		var right := Vector3.UP.cross(toward).normalized()
+		var at := c + toward * Game.HALF * 0.55 * s + right * Game.HALF * 0.6 * s + Vector3(0, 0.06 * s, 0)
+		var d := eye - at
+		_cont.global_transform = Transform3D(Basis(Vector3.UP, atan2(d.x, d.z)) * Basis(Vector3.RIGHT, deg_to_rad(-20.0)) * Basis.from_scale(Vector3.ONE * 3.0 * s), at)
+	_cont.visible = show
 	if not _cont.visible:
 		return
-	var eye := game._eye()
-	var d := eye - _cont.global_position
-	_cont.global_transform = Transform3D(Basis(Vector3.UP, atan2(d.x, d.z)) * Basis(Vector3.RIGHT, deg_to_rad(-30.0)) * Basis.from_scale(Vector3.ONE * 2.2 * game.hud_root.scale.x), _cont.global_position)
 	var hot := false
 	for h in game._hands:
 		hot = hot or _cont.hit_point(h.touch_point(), maxf(0.02, _touch_pad())) or _cont.hit_ray(h.ray_origin(), h.ray_dir())

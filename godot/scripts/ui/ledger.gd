@@ -31,6 +31,8 @@ var _turning := false
 var _turn_cooldown := 0.0
 
 
+var open_scale := 1.0  # its size when open (Game sets it)
+
 func _ready() -> void:
 	_book = Node3D.new()
 	_book.name = "Book"
@@ -157,13 +159,13 @@ func set_open(on: bool) -> void:
 	_leaf.visible = false
 	if not is_inside_tree():
 		visible = on
-		scale = Vector3.ONE if on else Vector3.ONE * 0.01
+		scale = Vector3.ONE * open_scale if on else Vector3.ONE * 0.01
 		return
 	_tween = create_tween()
 	if on:
 		visible = true
 		redraw()
-		_tween.tween_property(self, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_tween.tween_property(self, "scale", Vector3.ONE * open_scale, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	else:
 		_tween.tween_property(self, "scale", Vector3.ONE * 0.01, 0.14)
 		_tween.tween_callback(func(): visible = false)

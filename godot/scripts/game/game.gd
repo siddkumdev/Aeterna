@@ -206,7 +206,9 @@ var _slip_t := 0.0
 const HUD_GAP := 0.08  # m (board scale 1) between the table's far edge and the day clock / tutorial text
 const DAY_CLOCK_POS := Vector3(0, 0.42, 0)  # local to the HUD root (see update_hud_root)
 var hud_root: Node3D  # day clock + tutorial text: follows the table's position, never its turn (Siddharth 2026-11-16)
-const LEDGER_INWARD_SHIFT := 0.14
+const LEDGER_INWARD_SHIFT := -0.03  # m: opens over the left hand, a little outward, so it never covers the tutorial text (the user, 2026-11-18: less annoying)
+const LEDGER_SCALE := 0.8
+const LEDGER_LIFT := 0.12  # m above the palm
 const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
 const TUTORIAL_SHADE_REWARD := 15
 var tutorial_hold := false  # the tutorial is teaching by day: the day clock stands still until it is over (the user, 2026-11-18)
@@ -341,6 +343,10 @@ func new_run(rng_seed: int) -> void:
 	last_carry = 0
 	_cutscene = false
 	_cutscene_glass_wait = false
+	if _big_glass:
+		_big_glass.visible = false
+	if _tray:
+		_tray.visible = not asleep
 	_stop_cutscene_score(0.0)
 	_kill_statue_tweens()
 	cutscene_count = 0
@@ -1157,11 +1163,15 @@ const CUTSCENE_HOUSE_GAP := 1.5  # s between one house going dark and the next
 const GLASS_RISE := 0.8  # the rewind hourglass: rises, flips, the sand runs (seconds), then its burst
 const GLASS_FLIP := 0.9
 const GLASS_SAND := 1.3
-const CUTSCENE_GLASS := GLASS_RISE + GLASS_FLIP + GLASS_SAND + 0.3  # the day returns only once it has turned
+const CUTSCENE_GLASS := GLASS_FLIP + GLASS_SAND + 0.3  # the day returns only once the big glass has turned
+const BIG_GLASS_HEIGHT := 0.24  # m: the cutscene's rewind hourglass pops up in front of the player, grab it and it turns (the user, 2026-11-18)
+const BIG_GLASS_GRAB := 0.11  # m from its middle: a pinch this close grabs it
+var _big_glass: Node3D
+var hide_clock := false  # the launcher's tutorial hint stands where the clock is: hidden while it shows
 const CUTSCENE_SKOTOS_SCALE := 1.65  # the display Skotos on top of Enemy.BOSS_SCALE (0.65): 0.31 m x 1.65 = 0.52 m, about four houses tall, whole figure in frame
 const CUTSCENE_SKOTOS_TURN := 0.0  # yaw so he faces the player
 var _cutscene := false  # the player cannot act while it plays
-var _cutscene_glass_wait := false  # the story is told: the rewind waits for the player to hold the tray hourglass (the user, 2026-11-18)
+var _cutscene_glass_wait := false  # the story is told: the rewind waits for the player to grab the big hourglass (the user, 2026-11-18)
 const CUTSCENE_SCORE_FROM := 97.0  # story_music.ogg: the ominous stretch, beasts and the lights going out (97-126 s); looped while we wait
 const CUTSCENE_SCORE_LEN := 28.0
 var _score_player: AudioStreamPlayer
@@ -1190,6 +1200,9 @@ func _begin_rewind() -> void:
 		ledger.set_open(false)
 	_ledger_latched = false
 	_cutscene = true
+	if _tray:  # only the story's words and the island during the scene (the user, 2026-11-18)
+		_tray.visible = false
+		_tray_hand = null
 	last_message = "The village falls dark."
 	_start_cutscene_score()
 	if lighting:  # still the fall night, darker and colder than any night: held until the glass turns
@@ -1224,16 +1237,17 @@ func _begin_rewind() -> void:
 	var lines := StoryText.cutscene_narration()
 	for k in lines.size():
 		at.call(t_n0 + 3.4 * k, func(): _cutscene_line("", lines[k], Color.BLACK, 3.0))  # parchment narration
-	at.call(t_end, func():  # the story is told: the hourglass on the tray waits for the player's hand
+	at.call(t_end, func():  # the story is told: a big hourglass pops up in front of the player and waits for their hand
 		_cutscene_glass_wait = true
+		_show_big_glass()
 		_cutscene_prompt_glass(serial))
 
 
 func _cutscene_prompt_glass(serial: int) -> void:
-	## Until the player holds the tray hourglass the dark stays: the line is repeated, the glass pulses (see _tick_tray_bits).
+	## Until the player grabs the big hourglass the dark stays: the line is repeated.
 	if serial != _rewind_serial or not _cutscene or not _cutscene_glass_wait:
 		return
-	_cutscene_line("", "Hold the hourglass on your tray to turn back time.", Color.BLACK, 6.5)
+	_cutscene_line("", "Grab the hourglass to turn back time.", Color.BLACK, 6.5)
 	get_tree().create_timer(7.0).timeout.connect(_cutscene_prompt_glass.bind(serial))
 
 
@@ -1243,15 +1257,110 @@ func _cutscene_turn_glass() -> void:
 		return
 	_cutscene_glass_wait = false
 	var serial := _rewind_serial
-	_play_hourglass()
+	_turn_big_glass()
 	get_tree().create_timer(CUTSCENE_GLASS).timeout.connect(func():
 		if serial == _rewind_serial:
 			_cutscene = false
+			if _tray:
+				_tray.visible = not asleep
 			if is_instance_valid(_cutscene_skotos):
 				_cutscene_skotos.queue_free()
 			_cutscene_skotos = null
 			_stop_cutscene_score(1.5)
 			_rewind(true))
+
+
+func _show_big_glass() -> void:
+	## The rewind hourglass, big, between the player and the island, within a seated reach. It grows in with a few embers.
+	if not is_inside_tree() or board == null:
+		return
+	if _big_glass == null:
+		var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v02.glb")
+		if hg == null:
+			return
+		_big_glass = Node3D.new()
+		_big_glass.name = "BigGlass"
+		var m: Node3D = hg.instantiate()
+		m.name = "Model"
+		_big_glass.add_child(m)
+		add_child(_big_glass)  # in the world, not on the board: it stands where the player is, whatever the island's size
+		var b := ModelUtil.bounds(m)
+		var k := BIG_GLASS_HEIGHT / maxf(b.size.y, 0.001)
+		m.scale = Vector3.ONE * k
+		m.position = -b.get_center() * k  # it turns about its middle
+		var glow := OmniLight3D.new()  # a warm light of its own, so it reads in the fallen dark and invites the hand
+		glow.light_color = Color("F6A45D")  # lantern_glow
+		glow.light_energy = 1.2
+		glow.omni_range = 0.45
+		glow.position = Vector3(0, 0, 0.12)  # on the player's side
+		_big_glass.add_child(glow)
+	var e := _eye()
+	var fwd := board.global_position - e
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+	var at := e + fwd * 0.36 + Vector3(0, -0.2, 0)
+	at.y = maxf(at.y, board.global_position.y + BIG_GLASS_HEIGHT * 0.5 + 0.05)  # never into the table
+	_big_glass.global_transform = Transform3D(Basis(Vector3.UP, atan2(fwd.x, fwd.z)), at)  # local Z toward the island: it flips facing the player
+	var top: Node3D = _big_glass.find_child("*__sand_top", true, false)
+	var bottom: Node3D = _big_glass.find_child("*__sand_bottom", true, false)
+	if top:
+		top.scale.y = 1.0
+	if bottom:
+		bottom.scale.y = 0.12
+	_big_glass.visible = true
+	_big_glass.scale = Vector3.ONE * 0.01
+	if _rewind_tween and _rewind_tween.is_valid():
+		_rewind_tween.kill()
+	_rewind_tween = create_tween()
+	_rewind_tween.tween_property(_big_glass, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	VfxKit.burst(shots_root, at, Color("FFD45A"), Color("F6A45D"), 30, 0.1, 1.0, 0.006, 0.02)
+	snd("pinch", at)
+
+
+func _on_big_glass(p: Vector3) -> bool:
+	return _big_glass != null and _big_glass.visible and p.distance_to(_big_glass.global_position) <= reach(BIG_GLASS_GRAB)
+
+
+func _ray_on_big_glass(origin: Vector3, dir: Vector3) -> bool:
+	if _big_glass == null or not _big_glass.visible or dir.length() < 0.001:
+		return false
+	var d := dir.normalized()
+	var v := _big_glass.global_position - origin
+	var t := v.dot(d)
+	return t > 0.0 and (v - d * t).length() <= BIG_GLASS_GRAB
+
+
+func _turn_big_glass() -> void:
+	## Grabbed: it turns over, the sand runs, a warm burst and flash, and it shrinks away as the day returns.
+	snd("rewind_whoosh")
+	if _big_glass == null or not _big_glass.visible:
+		return
+	var top: Node3D = _big_glass.find_child("*__sand_top", true, false)
+	var bottom: Node3D = _big_glass.find_child("*__sand_bottom", true, false)
+	if _rewind_tween and _rewind_tween.is_valid():
+		_rewind_tween.kill()
+	_big_glass.scale = Vector3.ONE
+	var g := _big_glass
+	var tw := create_tween()
+	_rewind_tween = tw  # new_run kills it
+	tw.tween_property(g, "rotation:z", g.rotation.z + PI, GLASS_FLIP).set_trans(Tween.TRANS_BACK)
+	if top and bottom:
+		tw.tween_property(top, "scale:y", 0.08, GLASS_SAND)
+		tw.parallel().tween_property(bottom, "scale:y", 1.0, GLASS_SAND)
+	tw.tween_callback(func():
+		VfxKit.burst(shots_root, g.global_position, Color("FFD45A"), Color("F6A45D"), 48, 0.16, 1.4, 0.007, 0.05)
+		var flash := OmniLight3D.new()
+		flash.light_color = Color("FFF1B8")
+		flash.omni_range = 1.6
+		flash.light_energy = 0.0
+		add_child(flash)
+		flash.global_position = g.global_position
+		var ft := flash.create_tween()
+		ft.tween_property(flash, "light_energy", 6.0, 0.15)
+		ft.tween_property(flash, "light_energy", 0.0, 0.7)
+		ft.tween_callback(flash.queue_free))
+	tw.tween_property(g, "scale", Vector3.ONE * 0.01, 0.3)
+	tw.tween_callback(func(): g.visible = false)
 
 
 func _start_cutscene_score() -> void:
@@ -2169,10 +2278,8 @@ func say_at_shrine(line: String, colour := Bubble.INK, seconds := 6.0) -> void:
 
 func _press(origin: Vector3, dir: Vector3) -> void:
 	if _cutscene:
-		if _cutscene_glass_wait and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and Plane(Vector3.UP, _fast_glass.global_position.y).intersects_ray(origin, dir) != null:
-			var hit = Plane(Vector3.UP, _fast_glass.global_position.y).intersects_ray(origin, dir)
-			if (hit as Vector3).distance_to(_fast_glass.global_position) <= reach(GameConfig.TOUCH_REACH * 2.0):
-				_cutscene_turn_glass()  # the pointer (desktop, or a controller ray) on the glass turns it at once
+		if _cutscene_glass_wait and _ray_on_big_glass(origin, dir):
+			_cutscene_turn_glass()  # the pointer (desktop, or a controller ray) on the glass turns it at once
 		return
 	if press_override.is_valid() and press_override.call(origin, origin, dir):
 		return
@@ -2526,6 +2633,7 @@ func _build_ui() -> void:
 		ledger.name = "Ledger"
 		ledger.game = self
 		add_child(ledger)
+		ledger.open_scale = LEDGER_SCALE
 
 
 func ledger_data() -> Dictionary:
@@ -2640,7 +2748,7 @@ func ledger_from_palm(delta: float, found: bool, at: Vector3, normal: Vector3, e
 				var flat := Vector3(board.global_position.x - at.x, 0.0, board.global_position.z - at.z)
 				if flat.length() > 0.001:
 					inward = flat.normalized()
-			var open_pos := at + Vector3(0, 0.17, 0) + inward * LEDGER_INWARD_SHIFT
+			var open_pos := at + Vector3(0, LEDGER_LIFT, 0) + inward * LEDGER_INWARD_SHIFT
 			_face_ledger(open_pos, eye)  # it appears once, over the palm and shifted inward toward the board
 			ledger.set_open(true)
 			if GameConfig.VERBOSE_XR_LOG or OS.is_stdout_verbose():
@@ -2812,7 +2920,7 @@ func _tick_clock() -> void:
 		update_hud_root()
 		hud_root.add_child(_clock)
 	update_hud_root()
-	_clock.visible = phase == Phase.DAY and not asleep
+	_clock.visible = phase == Phase.DAY and not asleep and not _cutscene and not hide_clock  # only the story's words during the cutscene
 	if _clock.visible:
 		var left := int(ceil(day_left()))
 		_clock.text = "%d:%02d" % [left / 60, left % 60] if not tutorial_hold else "Take your time"
@@ -3090,12 +3198,12 @@ func lens_grip_position() -> Vector3:
 func hand_pressed(h: GameHand) -> void:
 	if _cutscene:
 		# the first-rewind cutscene: nothing can be pressed, grabbed, poked or turned until the glass turns; once the story
-		# is told, only the tray hourglass answers (held for FAST_HOLD, see _tick_rim)
+		# is told, only the big hourglass answers: a pinch on it turns it
 		if _cutscene_glass_wait and h == _mouse_hand:
 			_press(h.ray_origin(), h.ray_dir())
-		elif _cutscene_glass_wait and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and _on_tray_hourglass(h.touch_point()):
-			_fast_pending[h] = 0.0
+		elif _cutscene_glass_wait and _on_big_glass(h.target_point()):
 			snd("pinch")
+			_cutscene_turn_glass()
 		return
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
@@ -3208,7 +3316,7 @@ func hand_pressed(h: GameHand) -> void:
 			_rim_pending[h] = 0.0
 			snd("pinch")
 		return
-	if h != _mouse_hand and not placing():
+	if GameConfig.ZOOM_ENABLED and h != _mouse_hand and not placing():
 		for o in _free_pinch:
 			if Time.get_ticks_msec() >= _settle_until and is_instance_valid(o) and o != h and not o.is_lost() and o.is_pressing() and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
 				_zoom_hands = [o, h]
@@ -3665,16 +3773,10 @@ static func zoom_board_transform(start: Transform3D, head: Vector3, d0: float, d
 	return out
 
 
-static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, head: Vector3, from_yaw := NAN, weight := 1.0) -> Transform3D:
-	## The tray while a hand holds it: it follows the touch point, keeps its tilt and yaws (eased, `weight` of the way
-	## per call, no snap) to face the headset.
-	var pos := touch + off
-	var d := head - pos
-	d.y = 0.0
-	var yaw := atan2(d.x, d.z) if d.length() > 0.05 else start.basis.get_euler().y
-	if not is_nan(from_yaw):
-		yaw = lerp_angle(from_yaw, yaw, weight)
-	return Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+static func tray_held_transform(start: Transform3D, touch: Vector3, off: Vector3, _head: Vector3, _from_yaw := NAN, _weight := 1.0) -> Transform3D:
+	## The tray while a hand holds it: it follows the touch point and keeps the turn and tilt it had when grabbed (the
+	## user, 2026-11-18: it turned too much when it faced the headset; carried, it only moves).
+	return Transform3D(start.basis, touch + off)
 
 
 static func tray_clamp(pos: Vector3, board_xf: Transform3D) -> Vector3:
