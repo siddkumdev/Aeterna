@@ -4,7 +4,7 @@ shader_type spatial;
 //   knit  0..1  how much of the dome exists; it grows up from the island edge (dawn) and recedes down (shatter)
 //   crack 0..1  a jagged purple line (the Warden's colour) running down from the top of the dome (dusk)
 // Colours are palette.json: lantern_glow, fire_yellow and crystal_purple.
-render_mode unshaded, blend_add, cull_disabled, depth_draw_never, fog_disabled;
+render_mode unshaded, blend_add, cull_back, depth_draw_never, fog_disabled;
 
 uniform vec4 amber : source_color = vec4(0.965, 0.643, 0.365, 1.0);
 uniform vec4 glow : source_color = vec4(1.0, 0.831, 0.353, 1.0);
