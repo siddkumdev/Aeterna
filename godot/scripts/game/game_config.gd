@@ -108,7 +108,7 @@ const REQUESTS := {
 	"firewood": {"name": "Firewood for the fire", "reward": 20, "scene": ""},
 	"letter": {"name": "The runaway letter", "reward": 15, "scene": ""},
 }
-const QUEST_TIMES := [0.03, 0.35, 0.65]  # the fraction of the day at which each of the day's quests is posted
+const QUEST_TIMES := [0.0, 0.0, 0.0]  # the fraction of the day at which each of the day's quests is posted: all at dawn (the user, 2026-11-18); each waits to be asked
 const REQUESTS_PER_DAY := 3  # 4 -> 3 (Claude, overnight balance pass, Siddharth delegated): he found 4 a day far too frequent (2026-10-24)
 const HELP_MARKER_SCENE := "res://assets/ui/ew_ui_help_marker_v01.glb"
 const REQUEST_GRAB_REACH := TOUCH_REACH  # alias kept for game.gd: m from a hand (or the mouse ray) to a prop to grab it
@@ -300,6 +300,7 @@ const RIM_HOLD := 0.0  # s a pinch must be held on the rim before the island fol
 const ZOOM_START_GAP := 0.25  # m: both hands pinch in empty air this close together to start a zoom
 const ZOOM_DEADZONE := 0.02  # m of hand-spread change ignored, so pinch jitter never moves the island
 const ZOOM_SMOOTH := 12.0  # 1/s: how fast the island follows the hands (higher = snappier)
+const ZOOM_HOME_GAP := 0.10  # m: hands this close in a zoom = the table is back at its placed position
 const ZOOM_GAIN := 1.5  # m the table moves per metre the hands spread (+) or close (-)
 const BOARD_SCALE := Vector2(0.6, 2.0)
 const SEATED_BOARD_SCALE := 0.8
@@ -314,12 +315,13 @@ const BOARD_SCALE_STEPS: Array[float] = [0.8, 1.0, 1.2, 0.6]
 # The card tray (Siddharth 2026-11-12, after a headset recording; the game is played SITTING). It starts along the
 # board's front edge (the edge nearest the headset), low and tipped up toward the player, and can be grabbed and moved
 # on its own. It never follows the island. Start pose, measured from the island's edge and the board's top surface:
-const TRAY_OUT := 0.14  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
+const TRAY_OUT := -0.08  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
 const TRAY_DROP := 0.25  # m: the tray's middle sits this far above the board's top (was -0.03: card pick-ups then happened 35-64 deg below the horizon; 2026-11-18, 11-17 recording)
-const TRAY_SIDE := 0.30  # m (board scale 1) the tray sits to the player's right of the board's middle, beside the near edge, so it is not under the chin (was 0 = straight ahead, 0.10 m from the face)
+const TRAY_SIDE := 0.0  # m (board scale 1) the tray sits to the player's right of the board's middle, beside the near edge, so it is not under the chin (was 0 = straight ahead, 0.10 m from the face)
 const TRAY_TILT_DEG := 15.0  # degrees the tray's face is tipped up toward the player's face (cards lean back 51 degrees on top of it)
 const TRAY_MIN_Y := 0.35  # m above the floor: the lowest the tray may be dropped
 const TRAY_MAX_Y := 1.5  # m above the floor: the highest
 const TRAY_MAX_DIST := 1.2  # m from the board's middle (horizontal): the furthest
 const TRAY_YAW_EASE := 8.0  # 1/s: how fast a held tray turns to face the headset
+const TRAY_HANDLE_GRAB := 0.055  # m: a pinch this close to a brass end rail grabs the tray (the rails were hard to hit; 2026-11-18)
 const TRAY_GRAB_PAD := 0.02  # m: a pinch within this of the tray's wooden body (outside a card's face) grabs the tray

@@ -8,6 +8,7 @@ extends Node3D
 const CARD_SPACING := 0.07
 const ENDS := 0.165  # room at each end of the tray for the compass, faith seal, hourglass and crystal lens
 const FAN_ARC := 0.06  # radians of tilt per card away from the middle
+const HANDLE_GLOW := 0.18
 const HANDLE_OUT := 0.027  # m the brass handle rails stand out past each end of the base
 const OAK := Color("9A6538")  # wood_mid
 const OAK_DARK := Color("5B2920")  # wood_dark
@@ -47,11 +48,12 @@ func _build_base(width: float) -> void:
 	_base.add_child(rim)
 	# Grab handles at both ends, like the island's rim handles (sykeriin, 2026-11-17): wood posts and a brass rail.
 	var wood := ModelUtil.flat_material(OAK_DARK)
-	var brass := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))
-	brass.emission_enabled = true
-	brass.emission = Color8(0xF6, 0xA4, 0x5D)
-	brass.emission_energy_multiplier = 0.18
+	handles.clear()
 	for sx in [-1.0, 1.0]:
+		var brass := ModelUtil.flat_material(Color8(0xF2, 0xB6, 0x30))  # one per end, so the near one can glow alone
+		brass.emission_enabled = true
+		brass.emission = Color8(0xF6, 0xA4, 0x5D)
+		brass.emission_energy_multiplier = HANDLE_GLOW
 		for sz in [-0.035, 0.035]:
 			var post := MeshInstance3D.new()
 			var pm := BoxMesh.new()
@@ -62,7 +64,7 @@ func _build_base(width: float) -> void:
 			_base.add_child(post)
 		var rail := MeshInstance3D.new()
 		var rm := BoxMesh.new()
-		rm.size = Vector3(0.014, 0.014, 0.09)
+		rm.size = Vector3(0.02, 0.02, 0.12)  # a chunkier rail, easier to see and to find with a pinch
 		rail.mesh = rm
 		rail.material_override = brass
 		rail.position = Vector3(sx * (width / 2.0 + HANDLE_OUT), 0.006, 0)
@@ -102,6 +104,28 @@ func body_distance(world_pos: Vector3) -> float:
 	var out := Vector3(maxf(absf(l.x) - half.x, 0.0), maxf(absf(l.y) - half.y, 0.0), maxf(absf(l.z) - half.z, 0.0))
 	return out.length()
 
+
+func handle_distance(world_pos: Vector3) -> float:
+	## Distance from a point to the nearest brass end rail's middle (the whole rail is a grab zone, see Game._tray_grab_zone).
+	var best := INF
+	for r in handles:
+		if is_instance_valid(r):
+			best = minf(best, r.global_position.distance_to(world_pos))
+	return best
+
+
+func light_handles(world_points: Array, radius: float, held: bool) -> void:
+	## The end rail a hand is near (or holding) glows, so the player sees where to pinch.
+	for r in handles:
+		if not is_instance_valid(r):
+			continue
+		var m := r.material_override as StandardMaterial3D
+		if m == null:
+			continue
+		var hot := held
+		for p in world_points:
+			hot = hot or r.global_position.distance_to(p) <= radius
+		m.emission_energy_multiplier = 1.1 if hot else HANDLE_GLOW
 
 func card_near(world_pos: Vector3, reach: float) -> Card3D:
 	## The unlifted card whose physical face is within `reach` of `world_pos` (a fingertip), nearest first.

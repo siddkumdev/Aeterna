@@ -116,6 +116,8 @@ var _palm: XRController3D  # the left hand's grip pose: its +X is the palm's nor
 var _left_hand_tracker: XRHandTracker
 var _left_tracker_hooked := false
 var _xr_origin: XROrigin3D
+static var ask_for_quests := true  # a quest waits for the player to tap its asker (the user, 2026-11-18); the self-test turns it off for the old request checks
+var quest_cap := 99  # the tutorial holds the day's quests back (it posts its own) until it is over
 var quest_plan: Array = []  # today's quests not posted yet: [{"kind", "house"}]
 var _quest_deck: Array = []  # the kinds still to come round before the deck is reshuffled
 var _quest_rng := RandomNumberGenerator.new()
@@ -150,6 +152,8 @@ var _tray_start := Transform3D.IDENTITY
 var _tray_hand_yaw0 := 0.0  # the holding hand's yaw at the grab: turning the hand turns the tray (like the island)
 var _zoom_hands: Array[GameHand] = []  # both hands pinched close together in empty air, then spread: the table comes closer
 var _zoom_d0 := 0.0
+var _board_home := Vector3.ZERO  # where the table was placed (wake / recenter): closing both hands in a zoom returns it here
+var _board_home_set := false
 var _zoom_start := Transform3D.IDENTITY
 var _zoom_head := Vector3.ZERO  # eye at zoom start: the push/pull direction stays fixed while the head moves
 var _zoom_d := 0.0  # smoothed hand spread
@@ -336,6 +340,8 @@ func new_run(rng_seed: int) -> void:
 	_carry_in = 0
 	last_carry = 0
 	_cutscene = false
+	_cutscene_glass_wait = false
+	_stop_cutscene_score(0.0)
 	_kill_statue_tweens()
 	cutscene_count = 0
 	_dawn_pending = ""
@@ -754,8 +760,12 @@ func _post_quest(kind: String, house: int) -> HelpRequest:
 	_refresh_clearings()
 	if with_rig and not asleep and (_slip == null or _tray == null or not _tray.visible or phase != Phase.DAY or requests.size() > 1):
 		# the first open quest appears on the slip, so it gets no toast too (one message at a time)
-		last_message = "New quest: %s" % GameConfig.REQUESTS[kind]["name"]
-		_refresh_ui()
+		if r.accepted:
+			last_message = "New quest: %s" % GameConfig.REQUESTS[kind]["name"]
+			_refresh_ui()
+		elif requests.size() == 1:  # one line for the whole batch: it says how a quest starts
+			last_message = "Villagers are waving: tap one to hear what they need."
+			_refresh_ui()
 	return r
 
 
@@ -773,7 +783,7 @@ func _tick_quests(delta: float) -> void:
 	## a hand held over a house (warm), a fingertip on a lantern (lights).
 	if phase != Phase.DAY or asleep:
 		return
-	while requests.size() < quests_posted_by(day_time) and not quest_plan.is_empty():
+	while requests.size() < mini(quests_posted_by(day_time), quest_cap) and not quest_plan.is_empty():
 		post_next_quest()
 	var points: Array[Vector3] = []
 	for h in _hands:
@@ -1151,6 +1161,11 @@ const CUTSCENE_GLASS := GLASS_RISE + GLASS_FLIP + GLASS_SAND + 0.3  # the day re
 const CUTSCENE_SKOTOS_SCALE := 1.65  # the display Skotos on top of Enemy.BOSS_SCALE (0.65): 0.31 m x 1.65 = 0.52 m, about four houses tall, whole figure in frame
 const CUTSCENE_SKOTOS_TURN := 0.0  # yaw so he faces the player
 var _cutscene := false  # the player cannot act while it plays
+var _cutscene_glass_wait := false  # the story is told: the rewind waits for the player to hold the tray hourglass (the user, 2026-11-18)
+const CUTSCENE_SCORE_FROM := 97.0  # story_music.ogg: the ominous stretch, beasts and the lights going out (97-126 s); looped while we wait
+const CUTSCENE_SCORE_LEN := 28.0
+var _score_player: AudioStreamPlayer
+var _score_tween: Tween
 var cutscene_count := 0  # how many times it has played this run (only ever the end of loop 1)
 var _cutscene_skotos: Enemy
 var _statue_tweens: Array[Tween] = []
@@ -1175,6 +1190,7 @@ func _begin_rewind() -> void:
 	_ledger_latched = false
 	_cutscene = true
 	last_message = "The village falls dark."
+	_start_cutscene_score()
 	if lighting:  # still the fall night, darker and colder than any night: held until the glass turns
 		lighting.stop_sequence()
 		lighting.set_mood("fallen", 1.5)
@@ -1207,15 +1223,76 @@ func _begin_rewind() -> void:
 	var lines := StoryText.cutscene_narration()
 	for k in lines.size():
 		at.call(t_n0 + 3.4 * k, func(): _cutscene_line("", lines[k], Color.BLACK, 3.0))  # parchment narration
-	at.call(t_end, func():  # the hourglass rises and turns in the dark; the day comes only when it has turned
-		_play_hourglass()
-		get_tree().create_timer(CUTSCENE_GLASS).timeout.connect(func():
-			if serial == _rewind_serial:
-				_cutscene = false
-				if is_instance_valid(_cutscene_skotos):
-					_cutscene_skotos.queue_free()
-				_cutscene_skotos = null
-				_rewind(true)))
+	at.call(t_end, func():  # the story is told: the hourglass on the tray waits for the player's hand
+		_cutscene_glass_wait = true
+		_cutscene_prompt_glass(serial))
+
+
+func _cutscene_prompt_glass(serial: int) -> void:
+	## Until the player holds the tray hourglass the dark stays: the line is repeated, the glass pulses (see _tick_tray_bits).
+	if serial != _rewind_serial or not _cutscene or not _cutscene_glass_wait:
+		return
+	_cutscene_line("", "Hold the hourglass on your tray to turn back time.", Color.BLACK, 6.5)
+	get_tree().create_timer(7.0).timeout.connect(_cutscene_prompt_glass.bind(serial))
+
+
+func _cutscene_turn_glass() -> void:
+	## The player's hand turned it: the hourglass rises and turns in the dark, the day comes only when it has turned.
+	if not _cutscene_glass_wait:
+		return
+	_cutscene_glass_wait = false
+	var serial := _rewind_serial
+	_play_hourglass()
+	get_tree().create_timer(CUTSCENE_GLASS).timeout.connect(func():
+		if serial == _rewind_serial:
+			_cutscene = false
+			if is_instance_valid(_cutscene_skotos):
+				_cutscene_skotos.queue_free()
+			_cutscene_skotos = null
+			_stop_cutscene_score(1.5)
+			_rewind(true))
+
+
+func _start_cutscene_score() -> void:
+	## The loss cutscene plays the story score's ominous stretch (97-126 s of story_music.ogg) instead of the day / night loops,
+	## looped with a short dip while it waits for the hourglass (the user, 2026-11-18).
+	if audio == null or not (audio is AudioBank):
+		return
+	var st: AudioStream = (audio as AudioBank)._stream("music/story_music.ogg", false)
+	if st == null:
+		return
+	_stop_cutscene_score(0.0)
+	if music != null:
+		music.hold = true
+	_score_player = AudioStreamPlayer.new()
+	_score_player.stream = st
+	_score_player.bus = "music"
+	_score_player.volume_db = -40.0
+	add_child(_score_player)
+	_score_player.play(CUTSCENE_SCORE_FROM)
+	var pl := _score_player
+	_score_tween = create_tween().set_loops()
+	_score_tween.tween_property(pl, "volume_db", 0.0, 1.5)
+	_score_tween.tween_interval(CUTSCENE_SCORE_LEN - 3.0)
+	_score_tween.tween_property(pl, "volume_db", -40.0, 1.0)
+	_score_tween.tween_callback(func(): pl.seek(CUTSCENE_SCORE_FROM))
+
+
+func _stop_cutscene_score(fade: float) -> void:
+	if _score_tween and _score_tween.is_valid():
+		_score_tween.kill()
+	_score_tween = null
+	if music != null:
+		music.hold = false
+	if _score_player != null and is_instance_valid(_score_player):
+		var pl := _score_player
+		_score_player = null
+		if fade <= 0.0:
+			pl.queue_free()
+		else:
+			var tw := pl.create_tween()
+			tw.tween_property(pl, "volume_db", -60.0, fade)
+			tw.tween_callback(pl.queue_free)
 
 
 func _cutscene_show_skotos() -> void:
@@ -1976,6 +2053,12 @@ func tap_villager(v: Node) -> String:
 	if v == null or _cutscene:
 		return ""
 	for r in requests:
+		if is_instance_valid(r) and not r.accepted and not r.done and r.asker() == v:  # a waving villager: ask what is wrong
+			r.accept()
+			if v is Villager:
+				(v as Villager).taps += 1
+			return r.ask_line
+	for r in requests:
 		if r.answer(v):  # the one who prays was heard
 			if v is Villager:
 				(v as Villager).taps += 1
@@ -2083,6 +2166,10 @@ func say_at_shrine(line: String, colour := Bubble.INK, seconds := 6.0) -> void:
 
 func _press(origin: Vector3, dir: Vector3) -> void:
 	if _cutscene:
+		if _cutscene_glass_wait and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and Plane(Vector3.UP, _fast_glass.global_position.y).intersects_ray(origin, dir) != null:
+			var hit = Plane(Vector3.UP, _fast_glass.global_position.y).intersects_ray(origin, dir)
+			if (hit as Vector3).distance_to(_fast_glass.global_position) <= reach(GameConfig.TOUCH_REACH * 2.0):
+				_cutscene_turn_glass()  # the pointer (desktop, or a controller ray) on the glass turns it at once
 		return
 	if press_override.is_valid() and press_override.call(origin, origin, dir):
 		return
@@ -2791,7 +2878,7 @@ func active_request() -> HelpRequest:
 	for r in requests:
 		if r.done or not is_instance_valid(r):
 			continue
-		if best == null or (r.engaged_seq > best.engaged_seq):
+		if best == null or (r.accepted and not best.accepted) or (r.accepted == best.accepted and r.engaged_seq > best.engaged_seq):
 			best = r
 	return best
 
@@ -2868,11 +2955,17 @@ func _tick_slip(delta: float) -> void:
 
 func _tick_tray_bits(delta: float) -> void:
 	_tick_clock()
+	if _tray != null and _tray.visible:
+		var pts: Array = []
+		for hh in _hands:
+			if is_instance_valid(hh) and not hh.is_lost():
+				pts.append(hh.touch_point())
+		_tray.light_handles(pts, reach(GameConfig.TRAY_HANDLE_GRAB + 0.02), _tray_hand != null)
 	_tick_slip(delta)
 	if _compass_label and board and not is_equal_approx(_compass_scale, board.scale.x):
 		_update_compass_label()
 	if _fast_glass:
-		if tutorial_spotlight == "hourglass":
+		if tutorial_spotlight == "hourglass" or _cutscene_glass_wait:
 			_fast_glass.scale = Vector3.ONE * (1.0 + 0.1 * sin(Time.get_ticks_msec() * 0.007))
 		elif _fast_glass.scale != Vector3.ONE:
 			_fast_glass.scale = Vector3.ONE
@@ -2993,7 +3086,12 @@ func lens_grip_position() -> Vector3:
 
 func hand_pressed(h: GameHand) -> void:
 	if _cutscene:
-		return  # the first-rewind cutscene: nothing can be pressed, grabbed, poked or turned until the glass turns
+		# the first-rewind cutscene: nothing can be pressed, grabbed, poked or turned until the glass turns; once the story
+		# is told, only the tray hourglass answers (held for FAST_HOLD, see _tick_rim)
+		if _cutscene_glass_wait and h != _mouse_hand and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and _on_tray_hourglass(h.touch_point()):
+			_fast_pending[h] = 0.0
+			snd("pinch")
+		return
 	## A pinch or grasp near the lens grip, a request prop or a spell token picks it up; anywhere else (or while a
 	## tower, Sell or a spell is armed) it presses what the ray points at.
 	if press_override.is_valid() and press_override.call(h.touch_point(), h.ray_origin(), h.ray_dir()):
@@ -3023,7 +3121,8 @@ func hand_pressed(h: GameHand) -> void:
 		var cd := _tray.card_near(tp, card_reach())
 		# The tray's own wood (outside a card's face) takes the whole tray: a pinch within TRAY_GRAB_PAD of the base
 		# grabs it unless the point is on a card's face (within half a card's height of its centre), where the card keeps priority.
-		if h != _mouse_hand and _tray_hand == null and _held_spell_cards.is_empty() and _tray.visible and _tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) \
+		if h != _mouse_hand and _tray_hand == null and _held_spell_cards.is_empty() and _tray.visible \
+				and (_tray.body_distance(tp) <= reach(GameConfig.TRAY_GRAB_PAD) or _tray.handle_distance(tp) <= reach(GameConfig.TRAY_HANDLE_GRAB)) \
 				and (cd == null or cd.global_position.distance_to(tp) > Card3D.H / 2.0) \
 				and not _on_tray_hourglass(tp) and not _on_tray_compass(tp) and not _on_tray_lens(h):
 			_tray_grab(h)
@@ -3111,7 +3210,7 @@ func hand_pressed(h: GameHand) -> void:
 				_zoom_head = _eye()
 				_zoom_d = _zoom_d0
 				_free_pinch.clear()
-				_show_toast("Zoom: spread your hands to bring the island closer, close them to push it away.")
+				_show_toast("Zoom: spread your hands to bring the island closer, bring them together to send it back.")
 				_active_hand = null  # the first hand now belongs to the zoom, not to a ray drag
 				snd("grab")
 				return
@@ -3259,7 +3358,10 @@ func _tick_rim(delta := 0.0) -> void:
 		_fast_pending[h] += delta
 		if _fast_pending[h] >= GameConfig.FAST_HOLD:
 			_fast_pending.erase(h)
-			toggle_fast()
+			if _cutscene_glass_wait:
+				_cutscene_turn_glass()
+			else:
+				toggle_fast()
 	for h in _compass_pending.keys():
 		if not is_instance_valid(h) or not _on_tray_compass(h.target_point()):
 			_compass_pending.erase(h)
@@ -3297,7 +3399,7 @@ func _tick_rim(delta := 0.0) -> void:
 			var raw := _zoom_hands[0].touch_point().distance_to(_zoom_hands[1].touch_point())
 			raw = _zoom_d0 + signf(raw - _zoom_d0) * maxf(absf(raw - _zoom_d0) - GameConfig.ZOOM_DEADZONE, 0.0)
 			_zoom_d = lerpf(_zoom_d, raw, 1.0 - exp(-GameConfig.ZOOM_SMOOTH * get_process_delta_time()))
-			var zx := zoom_board_transform(_zoom_start, _zoom_head, _zoom_d0, _zoom_d)
+			var zx := zoom_board_transform(_zoom_start, _zoom_head, _zoom_d0, _zoom_d, _board_home if _board_home_set else Vector3.INF)
 			board.global_transform = board_clamp(zx, _eye()) if _xr else zx
 	if _rim_hands.is_empty():
 		return
@@ -3537,14 +3639,22 @@ static func tray_turned_transform(start: Transform3D, pos: Vector3, turn: float)
 	return Transform3D(Basis(Vector3.UP, start.basis.get_euler().y + turn) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
 
 
-static func zoom_board_transform(start: Transform3D, head: Vector3, d0: float, d: float) -> Transform3D:
+static func zoom_board_transform(start: Transform3D, head: Vector3, d0: float, d: float, home := Vector3.INF) -> Transform3D:
 	## Two-hand zoom (sykeriin, 2026-11-17): spreading the hands brings the table closer, bringing them together pushes
 	## it away; same size, same turn. ZOOM_GAIN metres of table travel per metre of change in hand spacing.
 	var flat := Vector3(head.x - start.origin.x, 0.0, head.z - start.origin.z)
 	if flat.length() < 0.001:
 		return start
 	var out := start
-	out.origin += flat.normalized() * (d - d0) * GameConfig.ZOOM_GAIN
+	var dir := flat.normalized()
+	if home != Vector3.INF and d < d0:
+		# Closing the hands (the user, 2026-11-18): the table glides back to where it was placed, however far the hands were
+		# when the pinch began; hands (nearly) together = home. It never goes past home.
+		var pulled := maxf((start.origin - home).dot(dir), 0.0)  # how far toward the head the table has been brought
+		var t := clampf((d0 - d) / maxf(d0 - GameConfig.ZOOM_HOME_GAP, 0.04), 0.0, 1.0)
+		out.origin -= dir * pulled * t
+		return out
+	out.origin += dir * (d - d0) * GameConfig.ZOOM_GAIN
 	return out
 
 
@@ -3572,7 +3682,7 @@ static func tray_clamp(pos: Vector3, board_xf: Transform3D) -> Vector3:
 		p.z = board_xf.origin.z + flat.z
 	var l := board_xf.affine_inverse() * p
 	var lim := HALF + 0.06
-	if maxf(absf(l.x), absf(l.z)) < lim and l.y > -0.25 and l.y < 0.3:
+	if maxf(absf(l.x), absf(l.z)) < lim and l.y > -0.25 and l.y < 0.22:  # may hover above the island (the start pose is over its near edge), never sink into it
 		if absf(l.x) > absf(l.z):
 			l.x = signf(l.x) * lim if l.x != 0.0 else lim
 		else:
@@ -3593,6 +3703,8 @@ func place_seated_board() -> void:
 		return
 	board.global_transform = seated_board_transform(_eye(), -_xr_cam.global_transform.basis.z)
 	_board_placed = true
+	_board_home = board.global_position
+	_board_home_set = true
 	_settle_until = Time.get_ticks_msec() + settle_ms
 	_update_compass_label()
 
@@ -3616,8 +3728,10 @@ func _update_tray() -> void:
 		if not is_instance_valid(_tray_hand):
 			_tray_hand = null
 		else:
-			var turn := wrapf(flat_yaw(_tray_hand.global_transform.basis) - _tray_hand_yaw0, -PI, PI)
-			var t := tray_turned_transform(_tray_start, _tray_hand.touch_point() + _tray_off, turn)
+			# the tray follows the hand and eases round to face the headset (the wrist's turn was noisy and sent it the wrong way;
+			# the user, 2026-11-18)
+			var t := tray_held_transform(_tray_start, _tray_hand.touch_point(), _tray_off, _eye(), _tray.global_transform.basis.get_euler().y,
+				1.0 - exp(-GameConfig.TRAY_YAW_EASE * get_process_delta_time()))
 			t.origin = tray_clamp(t.origin, board.global_transform)
 			_tray.global_transform = t
 
@@ -3678,6 +3792,8 @@ func recenter_seated_board() -> void:
 	var fwd := -_xr_cam.global_transform.basis.z if _xr_cam else Vector3(0.0, 0.0, -1.0)
 	board.global_transform = seated_board_transform(_eye(), fwd)
 	_board_placed = true
+	_board_home = board.global_position
+	_board_home_set = true
 	if _tray:
 		_tray.global_transform = tray_start_transform(board.global_transform, _eye())
 		_tray_placed = true

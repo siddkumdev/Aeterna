@@ -20,8 +20,9 @@ const HINTS := [
 	"Tap a villager walking the path to hear their thoughts.",
 	"Lift the mirror on your tray and look at the dark trees.",
 	"Grab a brass handle at either end of your card tray to move and turn it.",
-	"Zoom: pinch both hands in the air beside the island, then spread them apart. Close them to push it away.",
+	"Zoom: pinch both hands in the air beside the island, then spread them apart. Bring them together to send it back.",
 	"Turn your left palm up to open your ledger: quests, cards and how to play.",
+	"A villager is waving! Tap them to hear what they need, then do what they ask.",
 	"Changed your mind? Pinch a tower on the board and HOLD it until it crumbles: you get its faith back.",
 	"Now build a tower again: pinch a glowing card and drop it on the golden ring.",
 	"Hold the hourglass to call Night 1. At night, tap it again for 2x speed.",
@@ -58,10 +59,13 @@ var _step_done := false  # this step's action is done; the next one starts when 
 var _towers_at_step := 0
 var _cont: Plaque
 const MIN_STEP_S := 4.0  # a step can be completed (Continue shows) no sooner than this
-const SELL_STEP := 9
-const REBUILD_STEP := 10
-const HOURGLASS_STEP := 11
-const NIGHT_STEP := 12
+const QUEST_STEP := 9
+const SELL_STEP := 10
+const REBUILD_STEP := 11
+const HOURGLASS_STEP := 12
+const NIGHT_STEP := 13
+var _quest_accepted_seen := false
+var _quest_req: HelpRequest  # the carry quest the tutorial's quest step posts
 var _last_run_serial := -1
 var _auto_at := -1.0  # when the story starts by itself (the title shows a few seconds first)
 var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
@@ -306,7 +310,7 @@ func _hint(line: String) -> void:
 		_hint_root.name = "HintRoot"
 		game.update_hud_root()
 		game.hud_root.add_child(_hint_root)
-	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 54)
+	_hint_card = TitleCard.show_over(_hint_root, TUTORIAL_HINT_POS, line, "%d of %d" % [mini(_step + 1, HINTS.size()), HINTS.size()], -1.0, 80)
 
 
 func _end_hints() -> void:
@@ -319,6 +323,7 @@ func _end_hints() -> void:
 	_cont = null
 	if is_instance_valid(game):
 		game.tutorial_hold = false
+		game.quest_cap = 99
 	if is_instance_valid(_cue_root):
 		_cue_root.queue_free()
 	_cue_root = null
@@ -437,7 +442,22 @@ func _ensure_open_quest() -> HelpRequest:
 	return game._post_quest("prayer", home) if home >= 0 else null
 
 
+func _ensure_carry_quest() -> HelpRequest:
+	## The tutorial's quest step: a real carry quest (the lost lantern) on a house with no quest yet, waving to be asked.
+	for r in game.requests:
+		if is_instance_valid(r) and not r.done and r.kind != "prayer":
+			return r
+	if game.phase != Game.Phase.DAY:
+		return null
+	var open_houses: Array = game.standing_houses().filter(func(h): return not game.requests.any(func(r): return is_instance_valid(r) and r.house == h))
+	if open_houses.is_empty():
+		return null
+	return game._post_quest("lantern", open_houses[0])
+
+
 func _step_line(idx: int) -> String:
+	if idx == QUEST_STEP and is_instance_valid(_quest_req) and _quest_req.accepted:
+		return "Now do what they asked! " + String(HelpRequest.HOW.get(_quest_req.kind, ""))
 	if idx == 3:
 		var q := _open_quest()
 		if q != null and q.kind != "prayer":
@@ -479,6 +499,13 @@ func _ring_target_for_step() -> Array:
 			if game.ledger != null and game.ledger.open:
 				return [Vector3.ZERO, 0.55, false]
 			return [game._eye() + Vector3(game.board.global_position.x - game._eye().x, 0, game.board.global_position.z - game._eye().z).normalized() * 0.3 + Vector3(-0.12, -0.3, 0), 0.6, true]
+		QUEST_STEP:
+			if not is_instance_valid(_quest_req) or _quest_req.done:
+				return [Vector3.ZERO, 0.55, false]
+			var qa := _quest_req.asker()
+			if not _quest_req.accepted and qa != null:
+				return [qa.global_position + Vector3(0, 0.02, 0), 0.65, true]
+			return [_quest_req.focus_point() + Vector3(0, 0.02, 0), 0.65, true]
 		SELL_STEP:
 			if game.towers.is_empty() or not is_instance_valid(game.towers[0]):
 				return [Vector3.ZERO, 0.55, false]
@@ -566,6 +593,8 @@ func _spawn_step_ghost() -> void:
 			_extra_ghosts.append(pair)
 		8:
 			_active_ghost = GhostHand.hover(_cue_root, target)
+		QUEST_STEP:
+			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.04, 0))
 		SELL_STEP:
 			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.04, 0))
 		HOURGLASS_STEP:
@@ -596,8 +625,10 @@ func _enter_step(idx: int) -> void:
 	if is_instance_valid(_cont):
 		_cont.visible = false
 	game.tutorial_hold = idx < HOURGLASS_STEP
+	game.quest_cap = 99 if idx >= HOURGLASS_STEP else 0  # the day's own quests wait until the tutorial has taught the first ones
 	if idx == 0:
 		game.day_time = 0.0  # the day starts at its full length when the tutorial begins
+		game._plan_quests()  # nothing of today's quests is out yet: the tutorial posts its own first
 	_clear_ghost()
 	_ghost_timer = 0.08
 	if _step >= HINTS.size():
@@ -608,8 +639,9 @@ func _enter_step(idx: int) -> void:
 		_step3_quest = _ensure_open_quest()
 	else:
 		_step3_quest = null
+	_quest_accepted_seen = false
 	_hint(_step_line(_step))
-	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "board", "cards", "hourglass", "spells"]
+	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "board", "board", "cards", "hourglass", "spells"]
 	game.set_tutorial_spotlight(spotlights[_step])
 	match _step:
 		2:
@@ -619,6 +651,9 @@ func _enter_step(idx: int) -> void:
 			pass
 		4:
 			_taps_at_step = _total_villager_taps()
+		QUEST_STEP:
+			_quest_req = _ensure_carry_quest()
+			_hint(_step_line(QUEST_STEP))
 	_update_ring()
 
 
@@ -681,6 +716,11 @@ func _tutorial(delta: float) -> void:
 				done = (not game._zoom_hands.is_empty() and absf(game._zoom_d - game._zoom_d0) > GameConfig.ZOOM_DEADZONE) or not game._xr
 			8:
 				done = (game.ledger != null and game.ledger.open) or not game._xr
+			QUEST_STEP:
+				if is_instance_valid(_quest_req) and _quest_req.accepted and not _quest_accepted_seen:
+					_quest_accepted_seen = true
+					_hint(_step_line(QUEST_STEP))
+				done = not is_instance_valid(_quest_req) or _quest_req.done
 			SELL_STEP:
 				done = game.towers.size() < _towers_at_step or _towers_at_step == 0
 			REBUILD_STEP:

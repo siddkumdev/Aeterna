@@ -394,8 +394,11 @@ func apply_perf_tier(tier: int) -> void:
 		env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-		sun.directional_shadow_max_distance = 28.0
-		sun.shadow_blur = 1.0 if tier == PerfTier.HIGH else 0.0
+		# One ortho cascade fits a sphere round the view slice (about 1.5 x max distance in radius), so the texel is
+		# ~3 x max_distance / atlas: 28 m at 2048 was ~4 cm, bigger than a fence rail (6 cm) and the cause of the
+		# crawling shadow edges under direct sun. 14 m gives ~2 cm; a wider blur hides the remaining stair steps.
+		sun.directional_shadow_max_distance = 14.0
+		sun.shadow_blur = 1.5 if tier == PerfTier.HIGH else 0.0
 	else:
 		env.glow_enabled = true
 		env.adjustment_enabled = true

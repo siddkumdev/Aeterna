@@ -13,6 +13,7 @@ func check(name: String, cond: bool) -> void:
 
 
 func _initialize() -> void:
+	Game.ask_for_quests = false  # the old request checks pose and grab quests directly; _asked_quests() turns it back on
 	await process_frame
 	_waves()
 	_nav()
@@ -34,6 +35,7 @@ func _initialize() -> void:
 	await _review_fixes()
 	await _day_clock()
 	await _quests()
+	await _asked_quests()
 	await _new_quests()
 	await _quest_guidance()
 	await _ledger()
@@ -2330,6 +2332,24 @@ func _day_clock() -> void:
 	await process_frame
 
 
+func _asked_quests() -> void:
+	## 2026-11-18 (the user): a quest begins when the player taps its waving asker, not by itself.
+	Game.ask_for_quests = true
+	var g := await _make_game()
+	var r := g._post_quest("lantern", g.standing_houses()[0])
+	check("a posted carry quest is only offered: nothing can be grabbed yet", r != null and not r.accepted and r.grab_dist(Vector3.ZERO) == INF and not r.grab(Vector3.ZERO))
+	check("the slip tells the player to tap the villager", r.step_line().contains("Tap the waving villager"))
+	var who := r.asker()
+	var said := g.tap_villager(who)
+	check("tapping the asker takes the request on and returns its words", r.accepted and said == r.ask_line)
+	check("once asked, the item can be grabbed", r.grab_dist(r.grab_point()) < 0.01 and r.grab(r.grab_point()))
+	var p := g._post_quest("prayer", g.standing_houses()[1])
+	check("a prayer needs no asking", p != null and p.accepted)
+	g.queue_free()
+	await process_frame
+	Game.ask_for_quests = false
+
+
 func _quests() -> void:
 	## 2026-11-11 (the user): quests, at most 4 a day, posted one by one, cycling through every kind.
 	var g := await _make_game()
@@ -2338,8 +2358,7 @@ func _quests() -> void:
 	check("the very first quest is the prayer", g.quest_plan[0]["kind"] == "prayer")
 	var day1: Array = g.quest_plan.map(func(q): return q["kind"])
 	check("a day's quests are 3 different kinds", day1.size() == 3 and day1.all(func(k): return day1.count(k) == 1))
-	check("posted by the day's clock: 1 early, 2 by 40%, 3 late", g.quests_posted_by(10.0) == 1 \
-		and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.4) == 2 and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.9) == 3)
+	check("all the day's quests are out from dawn (the user, 2026-11-18)", g.quests_posted_by(0.0) == 3 and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.9) == 3)
 	var first := g.post_next_quest()
 	check("post_next_quest posts one and leaves two planned", first != null and g.requests.size() == 1 and g.quest_plan.size() == 2)
 	g.start_night()
@@ -2499,7 +2518,7 @@ func _tray_rules() -> void:
 	check("the tray starts on the headset side of the board", Vector2(out.x, out.z).dot(Vector2(to_head.x, to_head.z)) > 0.0)
 	check("the tray starts TRAY_DROP above the board's top, below the eyes (2026-11-18: beside the near edge, higher)", is_equal_approx(tray.global_position.y, c.y + GameConfig.TRAY_DROP) and tray.global_position.y < head.y - 0.1)
 	var l := g.board.to_local(tray.global_position)
-	check("the tray does not overlap the island or its rim", maxf(absf(l.x), absf(l.z)) - 0.055 > Game.HALF + GameConfig.RIM_WIDTH)
+	check("the tray starts centred in front of the player, hovering over the island's near edge (the user, 2026-11-18)", absf(l.x) < 0.02 and l.y > 0.22 and absf(l.z) > Game.HALF - 0.2)
 	check("the tray is tipped up toward the player", tray.global_basis.y.y < 1.0 and tray.global_basis.y.z > 0.0)
 	var at0 := tray.global_transform
 	g.board.global_transform = Transform3D(Basis(Vector3.UP, 0.8) * Basis.from_scale(Vector3(1.6, 1.6, 1.6)), c + Vector3(0.3, 0.1, -0.2))
@@ -2537,6 +2556,13 @@ func _tray_rules() -> void:
 	var zin := Game.zoom_board_transform(zs, Vector3(0, 1.3, 0), 0.1, 0.4)
 	var zout := Game.zoom_board_transform(zs, Vector3(0, 1.3, 0), 0.4, 0.1)
 	check("two-hand spread brings the table closer at the same size; closing pushes it away", zin.origin.z > zs.origin.z and zout.origin.z < zs.origin.z and zin.basis.is_equal_approx(zs.basis) and is_equal_approx(zin.origin.y, zs.origin.y))
+	var home := Vector3(0, 0.8, -0.8)
+	var pulled_in := Transform3D(zs.basis, Vector3(0, 0.8, -0.5))  # brought 0.3 m closer by an earlier zoom
+	var back_half := Game.zoom_board_transform(pulled_in, Vector3(0, 1.3, 0), 0.24, 0.17, home)
+	var back_all := Game.zoom_board_transform(pulled_in, Vector3(0, 1.3, 0), 0.24, 0.09, home)
+	var at_home := Game.zoom_board_transform(zs, Vector3(0, 1.3, 0), 0.24, 0.05, home)
+	check("closing the hands sends a pulled-in table back toward home, and fully home when they meet, never past it",
+		back_half.origin.z < pulled_in.origin.z and back_half.origin.z > home.z and absf(back_all.origin.z - home.z) < 0.001 and absf(at_home.origin.z - home.z) < 0.001)
 	check("a turned hand turns the held tray", absf(Game.tray_turned_transform(dropped, Vector3.ZERO, 0.5).basis.get_euler().y - wrapf(dropped.basis.get_euler().y + 0.5, -PI, PI)) < 0.01)
 	var card: Card3D = tray.cards[0]
 	hand.global_position = card.global_position
@@ -3134,10 +3160,19 @@ func _interactive_tutorial() -> void:
 	g._zoom_hands = []
 	check("a zoom advances to step 8 (ledger)", l._step == 8 and g.tutorial_spotlight == "ledger")
 	g.ledger.set_open(true)
+	Game.ask_for_quests = true  # this step is about being asked
 	_tut_next(l)
 	g.ledger.set_open(false)
 	g._xr = false
-	check("opening the ledger advances to step 9 (sell a tower)", l._step == Launcher.SELL_STEP and g.tutorial_spotlight == "board" and not g.towers.is_empty())
+	check("opening the ledger advances to the quest step: a waving villager", l._step == Launcher.QUEST_STEP and is_instance_valid(l._quest_req) and not l._quest_req.accepted and g.tutorial_hold)
+	g.tap_villager(l._quest_req.asker())
+	check("tapping the waving villager tells the player what to do", l._quest_req.accepted)
+	l._tutorial(0.05)
+	check("the quest step waits until the quest is done", l._step == Launcher.QUEST_STEP and not l._step_done)
+	l._quest_req._finish()
+	_tut_next(l)
+	Game.ask_for_quests = false
+	check("doing the quest advances to step 10 (sell a tower)", l._step == Launcher.SELL_STEP and g.tutorial_spotlight == "board" and not g.towers.is_empty())
 	check("the sell step still holds the day clock", g.tutorial_hold)
 	var tower_n := g.towers.size()
 	l._tutorial(0.05)
@@ -3535,6 +3570,7 @@ func _quest_guidance() -> void:
 	var C := GameConfig.CELL
 	var gr: Game = load("res://scripts/game/game.gd").new()
 	gr.with_rig = true
+	gr.quest_cap = 0
 	gr.with_life = false
 	root.add_child(gr)
 	for i in 4:

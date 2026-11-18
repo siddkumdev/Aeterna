@@ -131,6 +131,7 @@ var kind := ""
 var house := -1
 var reward := 0
 var done := false
+var accepted := false  # the player has asked what is wrong (tapped the asker): until then it only waves and glows; a prayer needs no asking
 var prop: Node3D
 var held := false
 var progress := 0.0  # warm: seconds held; lights: lanterns lit; NEW_KINDS: items placed (bell: rings)
@@ -262,13 +263,29 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 	else:
 		add_child(_mote)
 		_mote.position = h.position + Vector3(0, ModelUtil.bounds(h.get_child(0)).end.y + 0.02, 0)
-	_say("before")
+	accepted = kind == "prayer" or not Game.ask_for_quests
+	if accepted:
+		_say("before")
 	if _helper:  # it acts the request out: hops, waves both arms, turns to the problem and points, every couple of seconds
 		_helper.ask_face = problem_point()
 		if _helper.state == "stay" and _helper.rig and _helper.rig.anim == "wave":
 			_helper.wave_on(Vector3.INF)
+	if accepted:
+		_start_outline()
+		_build_trail()
+
+
+func accept() -> void:
+	## The player tapped the asker (the user, 2026-11-18: "player asks for it"): the request is told, and the quest begins:
+	## its item glows, the trail shows, the hands may take part.
+	if accepted or done:
+		return
+	accepted = true
+	_say("before")
 	_start_outline()
 	_build_trail()
+	if game != null and game.with_rig:
+		game.snd("trust_chime")
 
 
 func asker() -> Node3D:
@@ -419,6 +436,8 @@ func step_line() -> String:
 	## The one thing to do next, for the slip and the ledger.
 	if done:
 		return "Done. Thank you!"
+	if not accepted:
+		return "Tap the waving villager to hear what they need."
 	if kind == "apples" and not _shaken:
 		return "Wiggle the apple tree until the apples fall."
 	return STEP.get(kind, HOW.get(kind, ""))
@@ -504,6 +523,8 @@ func tick(delta: float, active := true) -> void:
 	if done:
 		return
 	_animate_prop(delta)
+	if not accepted:
+		return
 	if point_left > 0.0:
 		point_left -= delta
 		if point_left <= 0.0:
@@ -686,6 +707,8 @@ func grab_point() -> Vector3:
 
 func grab_dist(world: Vector3) -> float:
 	## Distance from a hand to the nearest thing a pinch here would take (INF when nothing is left to pinch).
+	if not accepted:
+		return INF
 	if not NEW_KINDS.has(kind):
 		return grab_point().distance_to(world)
 	var best := INF
@@ -697,7 +720,7 @@ func grab_dist(world: Vector3) -> float:
 
 func grab(world := Vector3.INF) -> bool:
 	## world = where the hand is (the item pinched is the nearest to it); unknown, the first one left.
-	if done or held or prop == null:
+	if done or held or prop == null or not accepted:
 		return false
 	if NEW_KINDS.has(kind) and not _grab_new(world):
 		return false
@@ -776,7 +799,7 @@ func release() -> bool:
 
 func warm_step(delta: float, hand_over: bool) -> bool:
 	## warm: a hand over the house fills the hold; taking it away lets it drain. true when that finished it.
-	if kind != "warm" or done:
+	if kind != "warm" or done or not accepted:
 		return false
 	progress = clampf(progress + (delta if hand_over else -delta * 1.5), 0.0, WARM_HOLD)
 	if _mote:
@@ -792,7 +815,7 @@ func warm_step(delta: float, hand_over: bool) -> bool:
 
 func touch(world: Vector3, reach: float) -> bool:
 	## lights: a fingertip at an unlit lantern lights it. true when the last one was lit.
-	if kind != "lights" or done:
+	if kind != "lights" or done or not accepted:
 		return false
 	for i in _lamps.size():
 		if not _lit[i] and world.distance_to(_lamps[i].global_position + Vector3(0, 0.012, 0)) <= reach:
