@@ -452,7 +452,9 @@ func _ensure_carry_quest() -> HelpRequest:
 	var open_houses: Array = game.standing_houses().filter(func(h): return not game.requests.any(func(r): return is_instance_valid(r) and r.house == h))
 	if open_houses.is_empty():
 		return null
-	return game._post_quest("lantern", open_houses[0])
+	var hz: int = open_houses[0]
+	game.quest_plan = game.quest_plan.filter(func(q): return q.get("house", -1) != hz and q.get("kind", "") != "lantern")  # today's plan never doubles it
+	return game._post_quest("lantern", hz)
 
 
 func _step_line(idx: int) -> String:

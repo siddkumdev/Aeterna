@@ -1165,6 +1165,7 @@ var _cutscene_glass_wait := false  # the story is told: the rewind waits for the
 const CUTSCENE_SCORE_FROM := 97.0  # story_music.ogg: the ominous stretch, beasts and the lights going out (97-126 s); looped while we wait
 const CUTSCENE_SCORE_LEN := 28.0
 var _score_player: AudioStreamPlayer
+var _score_own_hold := false  # this cutscene set music.hold (the story's own score may hold it too: never release that one)
 var _score_tween: Tween
 var cutscene_count := 0  # how many times it has played this run (only ever the end of loop 1)
 var _cutscene_skotos: Enemy
@@ -1264,6 +1265,7 @@ func _start_cutscene_score() -> void:
 	_stop_cutscene_score(0.0)
 	if music != null:
 		music.hold = true
+		_score_own_hold = true
 	_score_player = AudioStreamPlayer.new()
 	_score_player.stream = st
 	_score_player.bus = "music"
@@ -1282,8 +1284,9 @@ func _stop_cutscene_score(fade: float) -> void:
 	if _score_tween and _score_tween.is_valid():
 		_score_tween.kill()
 	_score_tween = null
-	if music != null:
+	if music != null and _score_own_hold:
 		music.hold = false
+		_score_own_hold = false
 	if _score_player != null and is_instance_valid(_score_player):
 		var pl := _score_player
 		_score_player = null
@@ -2036,7 +2039,7 @@ func villager_at(origin: Vector3, dir: Vector3, reach_m := 0.025) -> Villager:
 
 func _find_prayer_asker(origin: Vector3, dir := Vector3.ZERO, radius := 0.025) -> Node3D:
 	for r in requests:
-		if not r.done and r.kind == "prayer":
+		if not r.done and (r.kind == "prayer" or not r.accepted):  # a waving asker that is no listed villager (a stand-in) is tapped here
 			var who := r.asker()
 			if who == null or not who.is_visible_in_tree():
 				continue
@@ -2280,8 +2283,8 @@ func _press_button(id: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not with_rig:
 		return
-	if _cutscene and not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R):
-		return  # the cutscene locks the input; only the restart key gets through
+	if _cutscene and not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R) 			and not (_cutscene_glass_wait and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return  # the cutscene locks the input; only the restart key (and, once the story is told, a click on the hourglass) gets through
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_5:
@@ -3088,7 +3091,9 @@ func hand_pressed(h: GameHand) -> void:
 	if _cutscene:
 		# the first-rewind cutscene: nothing can be pressed, grabbed, poked or turned until the glass turns; once the story
 		# is told, only the tray hourglass answers (held for FAST_HOLD, see _tick_rim)
-		if _cutscene_glass_wait and h != _mouse_hand and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and _on_tray_hourglass(h.touch_point()):
+		if _cutscene_glass_wait and h == _mouse_hand:
+			_press(h.ray_origin(), h.ray_dir())
+		elif _cutscene_glass_wait and _fast_glass != null and _fast_glass.is_visible_in_tree() 				and _on_tray_hourglass(h.touch_point()):
 			_fast_pending[h] = 0.0
 			snd("pinch")
 		return
@@ -3170,6 +3175,8 @@ func hand_pressed(h: GameHand) -> void:
 			if not v.visible:
 				continue
 			var d := tp.distance_to(v.global_position + Vector3(0, 0.035, 0))
+			if requests.any(func(r): return is_instance_valid(r) and not r.accepted and not r.done and r.asker() == v):
+				d -= 0.02  # in a crowd the waving asker wins the tap
 			if d < nearest_d:
 				nearest_d = d
 				nearest_v = v
