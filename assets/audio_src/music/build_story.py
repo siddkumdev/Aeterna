@@ -6,7 +6,7 @@ Chapter starts: I 0, II 34, III 62, IV 96, V 126 s. Beats (absolute s) and what 
   62    the curse rises: low swell                65 "the hunger turned to spite"         68 thunder (sound effect, left alone)
   73-80 Skotos: "they love you, I remember how that felt": bitter, wistful, only the high line   77 first crack   86 second crack
   97.5  the Veil shatters: shock                  100 the beasts: terror, driving          105.5 doors   114.5 lights out: held breath
-  126-135 Maren kneels: fragile, small            135 dawn returns   143 "her prayer is your light": hope, full   164 "Watch over them": soft
+  126-135 Maren kneels: fragile, small            135 dawn returns   143 "her prayer is your light": a new hopeful theme, full   164 "Watch over them": soft
 The memo ("AUDIO-2026-11-10-23-38-34") is two voices at once (a low bass line and a higher line, on a steady pulse). v1/v2 tried to
 follow it as one melody and jumped between the voices; v3 transcribes both (bass -> cello, upper -> slightly flat music box).
 Only the memo's pitches are used (nothing of the recording is in the output).
@@ -38,7 +38,7 @@ MEMO_T0 = 62.5  # story second the memo's first cell sounds
 OM_OFF = 60.0  # the ominous render's t=0 is story second 60 (2 s before chapter III, for the crossfade)
 MN_OFF = 32.0  # the chapter II render's t=0 is story second 32
 # dB trims on the soundfont renders, which come out at their own level (tuned by measurement against the day music)
-LEVELS = {"om": 6.0, "mn": 6.0, "sh": 0.0, "fr": 8.0}
+LEVELS = {"om": 6.0, "mn": 6.0, "sh": 0.0, "fr": 8.0, "hp": 3.3}
 
 
 def kf(points):
@@ -209,6 +209,62 @@ def fragile(path):
     m.write(path)
 
 
+def hope(path):
+    """Chapter V, 135-170 s: a hopeful 'you are my only hope' theme (Bb major, warm, rising), not the day music.
+    Render t=0 is story 135 s. Bars at 88 BPM are 2.73 s; the theme and strings enter at 143.2 s (her prayer is your light),
+    swell to 153-160, and ease at 164 (Watch over them) to a held Bb."""
+    random.seed(21)
+    bpm = 88.0
+    e = 60 / bpm / 2
+    bar = 8 * e
+    ROOTS = {"Bb": 46, "F": 41, "Gm": 43, "Eb": 39, "Cm": 36}
+    TONES = {"Bb": (0, 4, 7), "F": (0, 4, 7), "Gm": (0, 3, 7), "Eb": (0, 4, 7), "Cm": (0, 3, 7)}
+    prog = ["Gm", "Eb", "F", "Bb", "F", "Gm", "Eb", "Bb", "F", "Eb", "Cm", "F", "Bb"]  # bar 3 (Bb) lands on 143.2 s
+    # melody: (bar, eighth, pitch, length in eighths); a rising fourth, a held note, a gentle fall
+    mel = [(3, 0, 65, 2), (3, 2, 70, 2), (3, 4, 74, 4),
+           (4, 0, 72, 2), (4, 2, 69, 2), (4, 4, 72, 4),
+           (5, 0, 70, 2), (5, 2, 74, 2), (5, 4, 79, 4),
+           (6, 0, 77, 3), (6, 3, 75, 1), (6, 4, 74, 4),
+           (7, 0, 74, 2), (7, 2, 77, 2), (7, 4, 82, 4),
+           (8, 0, 81, 2), (8, 2, 77, 2), (8, 4, 72, 4),
+           (9, 0, 79, 2), (9, 2, 82, 2), (9, 4, 79, 2), (9, 6, 75, 2),
+           (10, 0, 79, 3), (10, 3, 77, 1), (10, 4, 77, 4),
+           (11, 0, 76, 2), (11, 2, 77, 2), (11, 4, 72, 4),
+           (12, 0, 70, 8)]
+    lead_v = kf([(135, 30), (143, 52), (153, 66), (163, 64), (166, 46), (170, 36)])
+    str_v = kf([(135, 0), (142.5, 0), (143.5, 44), (153, 58), (163, 56), (166, 40), (170, 30)])
+    harp_v = kf([(135, 34), (143, 46), (153, 56), (163, 52), (170, 30)])
+    bass_v = kf([(135, 30), (143, 56), (153, 70), (163, 64), (170, 40)])
+    m = pm.PrettyMIDI(initial_tempo=bpm)
+    pno = pm.Instrument(0); harp = pm.Instrument(46); strs = pm.Instrument(49); bass = pm.Instrument(32); timp = pm.Instrument(47)
+    for b, ch in enumerate(prog):
+        tb = b * bar
+        ta = 135.0 + tb
+        r = ROOTS[ch]
+        tones = [r + 24 + t for t in TONES[ch]]
+        for s in range(8):  # rolling harp arpeggio through the chord, every eighth
+            n = tones[(s * 2) % 3] if s % 2 == 0 else tones[(s + 1) % 3] + 12
+            harp.notes.append(pm.Note(int(harp_v(ta + s * e)) + random.randint(-2, 2), n, tb + s * e, tb + s * e + e * 3))
+        for q in (0, 4):
+            bass.notes.append(pm.Note(int(bass_v(ta + q * e)), r + 12, tb + q * e, tb + q * e + e * 3.2))
+        if ta >= 142.5:  # slow strings hold the chord from the entry
+            for t in TONES[ch]:
+                strs.notes.append(pm.Note(int(str_v(ta)), r + 24 + t, tb, tb + bar * (1.02 if b < 12 else 3.0)))
+    for bar_i, s0, n, ln in mel:
+        tb = bar_i * bar + s0 * e
+        ta = 135.0 + tb
+        pno.notes.append(pm.Note(int(lead_v(ta)), n, tb, tb + ln * e * 1.05))
+        if 153.0 <= ta < 164.0:  # in the middle the melody is doubled an octave down on strings
+            strs.notes.append(pm.Note(int(str_v(ta)) - 6, n - 12, tb, tb + ln * e))
+    # before the entry: a few soft piano notes asking the question (dawn returns, 135-143)
+    for t, n in [(0.6, 70), (2.6, 74), (4.5, 77), (6.4, 74)]:
+        pno.notes.append(pm.Note(int(lead_v(135 + t)) - 6, n - 12, t, t + 2.5))
+    timp.notes.append(pm.Note(58, 46, 143.2 - 135.0, 143.2 - 135.0 + 2.5))   # a soft lift at the entry
+    timp.notes.append(pm.Note(52, 46, 154.1 - 135.0, 154.1 - 135.0 + 2.0))   # and as the theme rises a second time
+    for ins in (pno, harp, strs, bass, timp): m.instruments.append(ins)
+    m.write(path)
+
+
 def lowpassed(y, hz):
     a = os.path.join(WORK, "_lp_in.wav"); b = os.path.join(WORK, "_lp_out.wav")
     sf.write(a, y, SR, subtype="FLOAT")
@@ -277,14 +333,12 @@ def main(memo, out):
     place(mix, xfade(mn[:int(32 * SR)].copy(), True, True), MN_OFF)
     # III + IV 60-128
     place(mix, xfade(om[:int(68 * SR)].copy(), True, True), OM_OFF)
-    # V 124-170: kneeling (fragile notes), the dawn (135), the day music opening up at 143, softening at the end
+    # V 124-170: kneeling (fragile notes), the dawn (135), a new hopeful theme from 143 (not the day music), easing at 164
     place(mix, xfade(fr[:int(20 * SR)].copy(), True, True), 124.0)
-    n = int((END - 133.0) * SR)
-    w = wet([(133, 1.0), (140, 0.85), (143, 0.0)], 133.0, n)
-    c = (tile_to(day, n) * (1 - w) + tile_to(day_lp, n) * w) * env(
-        [(133, -44), (135, -24), (139, -13), (143, -2), (160, 0), (164, -3), (170, -9)], 133.0, n)
-    c[:int(1.5 * SR)] *= np.linspace(0, 1, int(1.5 * SR))[:, None]
-    place(mix, c, 133.0)
+    hope(os.path.join(WORK, "hope.mid"))
+    hp = trim(render(os.path.join(WORK, "hope.mid"), "hope", 4200), "hp")[:int((END - 135.0 + 1) * SR)].copy()
+    hp[:int(2.0 * SR)] *= np.linspace(0, 1, int(2.0 * SR))[:, None]
+    place(mix, hp, 135.0)  # the hopeful theme from the dawn (135) on
     fade_n = int(4.0 * SR)
     mix[-fade_n:] *= np.cos(np.linspace(0, 1, fade_n) * np.pi / 2)[:, None] ** 2
     sf.write(out, np.clip(mix, -1, 1), SR, subtype="PCM_16")
