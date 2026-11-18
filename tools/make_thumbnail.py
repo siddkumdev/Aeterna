@@ -1,6 +1,8 @@
 """Compose the Devpost / store thumbnail from a real in-game frame.
 
-    python tools/make_thumbnail.py <island.png> <out.png>
+    python tools/make_thumbnail.py <island.png> <out.png> [zoom]
+
+zoom: island width as a share of the image width (e.g. 1.15 lets it run past the edges); omitted = fit it all in.
 
 <island.png> is a transparent-background frame from godot/tools/thumb_shot.gd (e.g. _work/thumb/t_dusk_0.png).
 Adds a dusk sky gradient, a warm glow behind the island, the title in Cinzel and the tagline in EB Garamond
@@ -36,7 +38,7 @@ def sky() -> Image.Image:
     return img
 
 
-def main(src: str, out: str) -> None:
+def main(src: str, out: str, zoom: float = 0.0) -> None:
     base = sky().convert("RGBA")
     # warm glow behind the island
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -47,9 +49,11 @@ def main(src: str, out: str) -> None:
     bbox = isl.getbbox()
     isl = isl.crop(bbox)
     scale = min((W * 0.86) / isl.width, (H * 0.74) / isl.height)
+    if zoom:
+        scale = (W * zoom) / isl.width
     isl = isl.resize((int(isl.width * scale), int(isl.height * scale)), Image.LANCZOS)
     x = (W - isl.width) // 2
-    y = H - isl.height + int(H * 0.02)
+    y = H - isl.height + int(H * 0.02) if not zoom else int(H * 0.29)
     # soft shadow-free drop: fade the island's lowest roots into the horizon
     fade = Image.new("L", isl.size, 255)
     fd = ImageDraw.Draw(fade)
@@ -80,4 +84,4 @@ def main(src: str, out: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 0.0)

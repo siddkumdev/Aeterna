@@ -40,9 +40,9 @@ func _initialize() -> void:
 		_no_fog(root)  # fog writes alpha on a transparent background and washes the island out
 		for a in ANGLES.size():
 			_hide_ui(g)
-			cam.global_position = centre + ANGLES[a][0] * 1.38
+			cam.global_position = centre + ANGLES[a][0] * 1.0
 			cam.fov = ANGLES[a][1]
-			cam.look_at(centre + Vector3(0, -0.10, 0), Vector3.UP)  # aim below the board so the whole island and its swings fit under the title
+			cam.look_at(centre + Vector3(0, 0.0, 0), Vector3.UP)  # close-up on the village; make_thumbnail.py zoom 1.12 lets the board run past the edges
 			for i in 8:
 				await process_frame
 			var img := root.get_viewport().get_texture().get_image()
