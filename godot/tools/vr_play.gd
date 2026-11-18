@@ -1099,7 +1099,8 @@ func do_showcase() -> void:
 	await settle_tray()
 	# demo framing: the head turns about half way to the tray (the eyes do the rest), so the island stays in shot
 	bot.gaze_anchor = g.board.global_position
-	bot.head_share = 0.45
+	bot.head_share = 0.35
+	bot.steady = true  # the user (2026-11-18): the footage was too shaky
 	var loop0: int = g.loop
 	var t0 := Time.get_ticks_msec()
 	while g.loop == loop0 and Time.get_ticks_msec() - t0 < 40 * 60 * 1000:

@@ -28,6 +28,7 @@ var look_target := Vector3.INF
 var head_offset := Vector3.ZERO  # stress tests: leaning, standing up (origin space, m)
 var gaze_anchor := Vector3.INF  # natural: the head turns only head_share of the way from here to a target, the eyes do the rest
 var head_share := 1.0
+var steady := false  # demo camera: no recorded jitter or sway, slow smooth head turns (a flat video shows every wobble)
 var lean_target := Vector3.ZERO  # natural: head_offset eases toward this (leaning in, origin space, m)
 var natural := false  # playthrough videos (the user, 2026-11-18): curved reaches with overshoot and a correction, a
 # pause before a pinch, breathing drift, spring-like head turns with idle motion, hands resting in view over the tray
@@ -108,11 +109,11 @@ func note(s: String) -> void:
 func head_transform() -> Transform3D:
 	var base: Transform3D = sample(head_rec_t + _clock * 0.0)["head"] if _count > 0 else Transform3D(Basis.IDENTITY, Vector3(0, 1.2, 0))
 	var sway: Vector3 = Vector3.ZERO
-	if _count > 0:
+	if _count > 0 and not steady:
 		var tt := fposmod(head_rec_t + _clock, maxf(duration - 1.0, 1.0))
 		sway = (sample(tt)["head"].origin - base.origin).limit_length(0.03)  # the recorded small head motion, not its big moves
 	var o: Vector3 = base.origin + sway + head_offset
-	if natural:
+	if natural and not steady:
 		var hm: Array = lib().get("head", [])
 		if not hm.is_empty():  # the team's own head jitter (yaw, pitch, roll, position), played on a loop
 			var fi := fposmod(_clock * 30.0, float(hm.size() - 1))
@@ -293,13 +294,14 @@ func _tick_head(dt: float) -> void:
 		if natural:
 			# a critically damped spring matched to the recorded turns (15 deg peaks ~1.1 rad/s and settles in ~0.4 s);
 			# big turns saturate near the recorded top speed (~1.9 rad/s) as real necks do
-			var w := 10.0
+			var w := 3.2 if steady else 10.0  # steady: a slow, settled camera move
 			var dy := wrapf(want_yaw - _head_yaw, -PI, PI)
 			_head_yaw_v += (dy * w * w - 2.0 * w * _head_yaw_v) * dt
 			_head_pitch_v += ((want_pitch - _head_pitch) * w * w - 2.0 * w * _head_pitch_v) * dt
 			var sp := Vector2(_head_yaw_v, _head_pitch_v)
-			if sp.length() > 1.9:
-				sp = sp.normalized() * 1.9
+			var cap := 0.6 if steady else 1.9
+			if sp.length() > cap:
+				sp = sp.normalized() * cap
 				_head_yaw_v = sp.x
 				_head_pitch_v = sp.y
 			_head_yaw += _head_yaw_v * dt
