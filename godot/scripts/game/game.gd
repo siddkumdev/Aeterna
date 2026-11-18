@@ -927,7 +927,7 @@ func request_near(world: Vector3) -> HelpRequest:
 
 
 func grab_request(r: HelpRequest, hand: GameHand = null) -> bool:
-	if _cutscene or phase != Phase.DAY or r == null or _held_req != null or not r.grab(hand.global_position if hand else Vector3.INF):
+	if _cutscene or phase != Phase.DAY or r == null or _held_req != null or not r.grab(hand.target_point() if hand else Vector3.INF):
 		return false
 	_held_req = r
 	_held_req_hand = hand
@@ -986,18 +986,18 @@ func _update_held() -> void:
 			var b: Dictionary = GameConfig.SPELLS["boulder"]
 			spells.show_aim(card.data["id"], local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 	if _held_spell != "" and _held_spell_hand:
-		var local := board.to_local(_held_spell_hand.global_position)
+		var local := board.to_local(_held_spell_hand.touch_point())
 		var b: Dictionary = GameConfig.SPELLS["boulder"]
 		var inside := absf(local.x) <= HALF and absf(local.z) <= HALF
 		if inside:
 			spells.show_aim(_held_spell, local, clampf(local.y / GameConfig.CELL, b["min_height"], b["max_height"]))
 		else:
 			spells.hide_aim()
-		spells.tokens[_held_spell].global_position = _held_spell_hand.global_position  # the token rides in the hand
+		spells.tokens[_held_spell].global_position = _held_spell_hand.touch_point()  # the token rides in the hand
 	if _held_req == null:
 		return
 	if _held_req_hand:
-		_held_req.move_to(board.to_local(_held_req_hand.global_position))
+		_held_req.move_to(board.to_local(_held_req_hand.touch_point()))
 
 
 func cast_spell(id: String, pos: Vector3, height := -1.0) -> bool:
@@ -2420,7 +2420,7 @@ func _process(delta: float) -> void:
 	_tick_lens_window()
 	_update_held()
 	for h in _hands:
-		h.set_bubble_hot(not h.is_lost() and grabbable_near(h.global_position))
+		h.set_bubble_hot(not h.is_lost() and grabbable_near(h.target_point()))
 		if h.bubble:
 			h.bubble.visible = not h.is_lost()
 	if _held_card or not _held_spell_cards.is_empty():
@@ -3146,7 +3146,7 @@ func hand_pressed(h: GameHand) -> void:
 			return
 		if grab_request(request_near(tp), h):
 			return
-		var tok := spells.token_near(h.global_position) if phase == Phase.NIGHT and _held_spell == "" else ""
+		var tok := spells.token_near(tp) if phase == Phase.NIGHT and _held_spell == "" else ""
 		if tok != "" and spells.is_ready(tok):
 			_held_spell = tok
 			_held_spell_hand = h
@@ -3506,7 +3506,7 @@ func hand_released(h: GameHand, cancelled := false) -> void:
 		return
 	if _held_spell != "" and _held_spell_hand == h:
 		var id := _held_spell
-		var local := board.to_local(h.global_position)
+		var local := board.to_local(h.touch_point())
 		_held_spell = ""
 		_held_spell_hand = null
 		spells.hide_aim()
