@@ -2,7 +2,8 @@
 
     python tools/make_thumbnail.py <island.png> <out.png> [zoom]
 
-zoom: island width as a share of the image width (e.g. 1.15 lets it run past the edges); omitted = fit it all in.
+zoom: island width as a share of the image width (e.g. 1.15 lets it run past the edges); omitted = fit it all in;
+-1 = full-bleed close-up (a 1800 x 1200 frame used as shot, top darkened for the title).
 
 <island.png> is a transparent-background frame from godot/tools/thumb_shot.gd (e.g. _work/thumb/t_dusk_0.png).
 Adds a dusk sky gradient, a warm glow behind the island, the title in Cinzel and the tagline in EB Garamond
@@ -46,6 +47,14 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
     base = Image.alpha_composite(base, glow.filter(ImageFilter.GaussianBlur(160)))
 
     isl = Image.open(src).convert("RGBA")
+    if zoom < 0:  # full-bleed close-up: the frame is already W x H, keep it as shot, darken the top for the title
+        base.alpha_composite(isl.resize((W, H), Image.LANCZOS))
+        shade = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(shade)
+        for yy in range(int(H * 0.42)):
+            sd.line((0, yy, W, yy), fill=TOP + (int(235 * (1 - yy / (H * 0.42)) ** 1.4),))
+        base = Image.alpha_composite(base, shade)
+        return _text(base, out)
     bbox = isl.getbbox()
     isl = isl.crop(bbox)
     scale = min((W * 0.86) / isl.width, (H * 0.74) / isl.height)
@@ -63,7 +72,10 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
     a = Image.composite(isl.getchannel("A"), Image.new("L", isl.size, 0), fade)
     isl.putalpha(a)
     base.alpha_composite(isl, (x, y))
+    _text(base, out)
 
+
+def _text(base: Image.Image, out: str) -> None:
     d = ImageDraw.Draw(base)
     title_font = ImageFont.truetype(str(FONTS / "cinzel/Cinzel.ttf"), 168)
     sub_font = ImageFont.truetype(str(FONTS / "ebgaramond/EBGaramond-Italic.ttf"), 52)
@@ -71,12 +83,20 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
     tw = d.textlength(title, font=title_font)
     # glow under the title
     tg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(tg).text(((W - tw) / 2, 48), title, font=title_font, fill=TOP + (255,), stroke_width=10, stroke_fill=TOP + (255,))
+    base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(14)))
+    tg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(tg).text(((W - tw) / 2, 48), title, font=title_font, fill=GLOW + (200,))
     base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(18)))
     d = ImageDraw.Draw(base)
     d.text(((W - tw) / 2, 48), title, font=title_font, fill=TITLE)
     sub = "Defend a tiny village with your bare hands. Then turn back time."
     sw = d.textlength(sub, font=sub_font)
+    # dark soft shadow so the tagline reads over a busy close-up
+    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).text(((W - sw) / 2, 252), sub, font=sub_font, fill=TOP + (255,), stroke_width=6, stroke_fill=TOP + (255,))
+    base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(8)))
+    d = ImageDraw.Draw(base)
     d.text(((W - sw) / 2, 252), sub, font=sub_font, fill=SUB)
 
     base.convert("RGB").save(out, quality=95)

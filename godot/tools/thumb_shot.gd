@@ -1,6 +1,6 @@
 ﻿extends SceneTree
 ## Hero frames for the store / Devpost thumbnail (desktop window needed, not --headless):
-##   <godot console> --xr-mode off --resolution 1800x1200 --path godot -s res://tools/thumb_shot.gd -- OUT_PREFIX [distance factor]
+##   <godot console> --xr-mode off --resolution 1800x1200 --path godot -s res://tools/thumb_shot.gd -- OUT_PREFIX [distance factor] [aim x,y,z] [dof far m] [lift m]
 ## Builds a game with a few towers, hides every UI piece (tray, slip, bubbles, clock, labels, desktop buttons) and
 ## shoots the island from a few low three-quarter angles in the dusk and day moods, on a transparent background: OUT_PREFIX_<mood>_<angle>.png.
 
@@ -19,6 +19,12 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var prefix := args[0] if args.size() > 0 else "thumb"
 	var dist := float(args[1]) if args.size() > 1 else 1.0  # camera distance factor: 1.38 whole island (icon), 1.0 village, 0.8 close
+	var aim := Vector3.ZERO  # look-at offset from the board centre, "x,y,z" in metres
+	if args.size() > 2:
+		var p := args[2].split(",")
+		aim = Vector3(float(p[0]), float(p[1]), float(p[2]))
+	var dof_far := float(args[3]) if args.size() > 3 else 0.0  # > 0: blur beyond this distance (miniature look)
+	var lift := float(args[4]) if args.size() > 4 else 0.0  # tilt the view up by aiming this much higher (camera stays): room for a title
 	var g: Game = load("res://scripts/game/game.gd").new()
 	root.add_child(g)
 	for i in 5:
@@ -34,6 +40,14 @@ func _initialize() -> void:
 	root.transparent_bg = true
 	var centre: Vector3 = g.board.global_position if g.board else Vector3.ZERO
 	var cam: Camera3D = root.get_viewport().get_camera_3d()
+	if dof_far > 0.0:
+		var ca := CameraAttributesPractical.new()
+		ca.dof_blur_far_enabled = true
+		ca.dof_blur_far_distance = dof_far
+		ca.dof_blur_far_transition = dof_far * 0.8
+		ca.dof_blur_amount = 0.12
+		cam.attributes = ca
+	print("THUMBSHOT centre ", centre)
 	for mood in MOODS:
 		g.lighting.set_mood(mood, 0.0)
 		for i in 20:
@@ -41,9 +55,9 @@ func _initialize() -> void:
 		_no_fog(root)  # fog writes alpha on a transparent background and washes the island out
 		for a in ANGLES.size():
 			_hide_ui(g)
-			cam.global_position = centre + ANGLES[a][0] * dist
+			cam.global_position = centre + aim + ANGLES[a][0] * dist
 			cam.fov = ANGLES[a][1]
-			cam.look_at(centre + Vector3(0, 0.0, 0), Vector3.UP)  # close-up on the village; make_thumbnail.py zoom 1.12 lets the board run past the edges
+			cam.look_at(centre + aim + Vector3(0, lift, 0), Vector3.UP)
 			for i in 8:
 				await process_frame
 			var img := root.get_viewport().get_texture().get_image()
