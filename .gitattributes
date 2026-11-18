@@ -13,3 +13,4 @@
 quest_data/recordings/*.bin.gz filter=lfs diff=lfs merge=lfs -text
 quest_data/**/logcat_full.txt filter=lfs diff=lfs merge=lfs -text
 quest_data/**/quest_build_log.txt filter=lfs diff=lfs merge=lfs -text
+quest_data/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
