@@ -26,6 +26,7 @@ func _initialize() -> void:
 	await _spells()
 	await _mouse_hand_rules()
 	await _warden()
+	await _grove()
 	await _elites()
 	await _doom()
 	await _endings()
@@ -50,6 +51,8 @@ func _initialize() -> void:
 	await _village_life()
 	await _audio()
 	await _juice()
+	await load("res://tests/input_selftest.gd").run(self)  # replay driver, god-hand fallback, pinch debounce, palm direction
+	await _fake_bloom()
 	print("game_selftest: %d failure(s)" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -419,8 +422,8 @@ func _hand_reach() -> void:
 	tray.queue_free()
 	var bx := Transform3D(Basis.IDENTITY, Vector3(0, 0.75, -0.85))
 	var ts := Game.tray_start_transform(bx, Vector3(0, 1.2, 0.3))
-	check("tray start pose: on the headset side, TRAY_OUT past the edge, below the board top, facing the player, tipped up",
-		is_equal_approx(ts.origin.z, -0.85 + Game.HALF + GameConfig.TRAY_OUT) and is_equal_approx(ts.origin.x, 0.0) 		and ts.origin.y < 0.75 and ts.basis.z.dot(Vector3(0, 0, 1)) > 0.9 and ts.basis.y.y < 1.0 and ts.basis.y.z > 0.0)
+	check("tray start pose: on the headset side, TRAY_OUT past the edge, TRAY_SIDE to the right, above the board top, turned to the player, tipped up",
+		is_equal_approx(ts.origin.z, -0.85 + Game.HALF + GameConfig.TRAY_OUT) and is_equal_approx(ts.origin.x, GameConfig.TRAY_SIDE) 		and ts.origin.y > 0.75 and ts.basis.z.dot(Vector3(0, 0, 1)) > 0.6 and ts.basis.y.y < 1.0 and ts.basis.y.z > 0.0)  # 2026-11-18: beside the near edge on the player's right, above the board top, turned to the eyes
 	var left := Game.tray_start_transform(bx, Vector3(-2, 1.2, -0.85))
 	check("tray start pose: the edge nearest the headset is chosen, not a fixed side", is_equal_approx(left.origin.x, -(Game.HALF + GameConfig.TRAY_OUT)))
 	var turned_board := Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(1.5, 1.5, 1.5)), Vector3(0, 0.75, -0.85))
@@ -929,7 +932,7 @@ func _requests() -> void:
 	for r in g.requests:
 		kinds[r.kind] = true
 		where[r.house] = true
-	check("4 quests of 4 kinds on 4 different houses", g.requests.size() == 4 and kinds.size() == 4 and where.size() == 4)
+	check("4 forced quests of 4 kinds on 4 different houses", g.requests.size() == 4 and kinds.size() == 4 and where.size() == 4)
 	var by := {}
 	for r in g.requests:
 		by[r.kind] = r
@@ -998,9 +1001,9 @@ func _requests() -> void:
 	check("requests vanish at night", g.requests.is_empty())
 	g._clear_night()
 	g._end_night()
-	check("the next day plans 4 new quests, none posted yet", g.quest_plan.size() == 4 and g.requests.is_empty())
+	check("the next day plans 3 new quests, none posted yet", g.quest_plan.size() == 3 and g.requests.is_empty())
 	g.post_all_quests()
-	check("posted, the day has 4 open quests", g.requests.size() == 4 and g.requests.all(func(r): return not r.done))
+	check("posted, the day has 3 open quests", g.requests.size() == 3 and g.requests.all(func(r): return not r.done))
 	g.queue_free()
 	await process_frame
 
@@ -1325,8 +1328,9 @@ func _warden() -> void:
 	_run(g, 0.5)
 	check("Warden phase 2: no damage while a crystal stands", boss.alive and boss.hp == before)
 	var c0: Enemy = g.warden.crystals[0]
-	check("Warden phase 2: crystals ring it at %.0f cells" % GameConfig.WARDEN_CRYSTAL_RING,
-		absf(Vector2(c0.position.x - boss.position.x, c0.position.z - boss.position.z).length() - GameConfig.WARDEN_CRYSTAL_RING * GameConfig.CELL) < 0.002)
+	var kd := Vector2(c0.position.x - boss.position.x, c0.position.z - boss.position.z).length()
+	check("Warden phase 2: knots stand on open ground outside his mantle (%.2f m away, 0.2 to 0.36, toward the board centre)" % kd, kd > 0.2 and kd < 0.36 and g.warden.crystals.all(func(c): return (Vector2(-boss.position.x, -boss.position.z).normalized().dot(Vector2(c.position.x - boss.position.x, c.position.z - boss.position.z).normalized()) > 0.1))
+		and g.warden.crystals.all(func(c): return g.houses.all(func(h): return Vector2(c.position.x - h.position.x, c.position.z - h.position.z).length() > 0.03)))
 	for c in g.warden.crystals.duplicate():
 		c.take_damage(40.0)
 		_run(g, 0.05)
@@ -1358,6 +1362,139 @@ func _warden() -> void:
 	_run(g, 0.1)
 	check("Warden: empty phase-4 HP does not kill it (never killable on a fall night)", boss.alive and boss.hp > 0.0 and g.warden != null)
 	g.queue_free()
+
+
+func _grove_game(loop_index: int, tower_cells: Array) -> Game:
+	## A night with a Warden already in its final stand (phase 4), towers on the given cells, the Grove's own timers held back.
+	var g := await _make_game()
+	g.loop = loop_index
+	g.loop_nights = 5
+	g.night = 1
+	g.faith = 5000
+	for c in tower_cells:
+		g.try_build("fire", c)
+	g.start_night()
+	g._spawn_queue.clear()
+	var boss: Enemy = g._spawn(Vector2i(12, 3), "boss", _at(12, 3))
+	boss.offset = Vector3.ZERO
+	boss.slow(0.0001, 100000.0)
+	g.warden = Warden.new(g, boss)
+	g.warden._final_stand()
+	if g.warden.grove != null:
+		g.warden.grove._seed_t = -100000.0
+		g.warden.grove._lash_t = -100000.0
+	return g
+
+
+func _grove() -> void:
+	## Skotos phase 4 "The Grove Awakens" (loop 2+): seeds, saplings, stranglers that disable a tower, the branch lash, cleanup.
+	var g0 := await _grove_game(0, [Vector2i(16, 11)])
+	check("Grove: loop 1 phase 4 has no Grove (unchanged)", g0.warden.phase == 4 and g0.warden.grove == null)
+	_run(g0, 14.0)
+	check("Grove: loop 1 plants nothing", g0.enemies.filter(func(e): return e.kind == "crystal").size() <= Warden.WARDEN_VINES)
+	g0.queue_free()
+	var g := await _grove_game(1, [Vector2i(16, 11)])
+	var gr: Grove = g.warden.grove
+	var tw: Tower = g.towers[0]
+	check("Grove: loop 2 phase 4 starts the Grove", gr != null and g.towers.size() == 1)
+	gr._seed_t = GameConfig.GROVE_SEED_EVERY - GameConfig.GROVE_SEED_FIRST  # the real first-planting timing
+	_run(g, GameConfig.GROVE_SEED_FIRST - 0.3)
+	check("Grove: nothing planted before the first %d s" % int(GameConfig.GROVE_SEED_FIRST), gr.seeds_planted == 0)
+	_run(g, 0.5)
+	var ok := gr.saplings.size() == GameConfig.GROVE_SEEDS and gr.saplings.all(func(d): return d["e"].hp == GameConfig.GROVE_SAPLING_HP and g.enemies.has(d["e"]))
+	check("Grove: %d saplings of %d HP planted, targetable enemies" % [GameConfig.GROVE_SEEDS, int(GameConfig.GROVE_SAPLING_HP)], ok)
+	var near := gr.saplings.all(func(d): var dv: Vector3 = d["e"].position - tw.position; return Vector2(dv.x, dv.z).length() < GameConfig.CELL * 3.6)
+	check("Grove: seeds land near the tower", near)
+	gr._seed_t = -100000.0  # no more plantings
+	var s0: Enemy = gr.saplings[0]["e"]
+	s0.take_damage(GameConfig.GROVE_SAPLING_HP)
+	_run(g, 0.1)
+	check("Grove: a sapling dies to %d damage and leaves the list" % int(GameConfig.GROVE_SAPLING_HP), not s0.alive and gr.saplings.size() == GameConfig.GROVE_SEEDS - 1)
+	check("Grove: a growing sapling does not disable the tower", not tw.is_inactive())
+	tw.stun_left = 1000.0  # (the tower would shoot the saplings dead; this test is about the ones that survive)
+	_run(g, GameConfig.GROVE_SAPLING_GROW + 0.2)
+	tw.stun_left = 0.0
+	var st := gr.saplings.filter(func(d): return d["strangler"])
+	check("Grove: surviving saplings become %d HP stranglers that disable the nearest tower" % int(GameConfig.GROVE_STRANGLER_HP),
+		st.size() == GameConfig.GROVE_SEEDS - 1 and st.all(func(d): return d["e"].hp == GameConfig.GROVE_STRANGLER_HP and d["tower"] == tw) and tw.strangled and tw.is_inactive())
+	var grunt := _still(g, "grunt", tw.position + Vector3(GameConfig.CELL * 3.0, 0, 0))
+	var shots0 := tw.shots_fired
+	_run(g, 1.5)
+	check("Grove: a strangled tower does not fire", tw.shots_fired == shots0)
+	var kill_a: Enemy = st[0]["e"]
+	kill_a.take_damage(999.0)
+	_run(g, 0.1)
+	check("Grove: still strangled while another strangler holds it", tw.strangled)
+	var kill_b: Enemy = st[1]["e"]
+	kill_b.take_damage(999.0)
+	_run(g, 0.1)
+	check("Grove: destroying the stranglers re-enables the tower", not tw.strangled and not tw.is_inactive())
+	grunt.hp = 9999.0
+	_run(g, 2.0)
+	check("Grove: the freed tower fires again", tw.shots_fired > shots0)
+	g.queue_free()
+	# branch lash: one tower on the line, one off it
+	var g2 := await _grove_game(1, [Vector2i(16, 11), Vector2i(5, 11)])
+	var gr2: Grove = g2.warden.grove
+	var on_line: Tower = g2.towers[0]
+	var off_line: Tower = g2.towers[1]
+	var boss2: Enemy = g2.warden.boss
+	var dir2 := (on_line.position - boss2.position).normalized()
+	gr2._lash_line = {"a": boss2.position, "b": boss2.position + dir2 * 1.4, "t": 0.0, "mi": null, "struck": false}
+	check("Grove: the lash geometry crosses only the tower on its line", gr2.lash_crosses(on_line, gr2._lash_line["a"], gr2._lash_line["b"]) and not gr2.lash_crosses(off_line, gr2._lash_line["a"], gr2._lash_line["b"]))
+	_run(g2, GameConfig.GROVE_LASH_WARN - 0.2)
+	check("Grove: nothing is stunned during the %.1f s warning" % GameConfig.GROVE_LASH_WARN, on_line.stun_left == 0.0)
+	_run(g2, 0.4)
+	check("Grove: the lash stuns the tower it crosses for %d s, not the other" % int(GameConfig.GROVE_LASH_STUN), on_line.stun_left > GameConfig.GROVE_LASH_STUN - 0.3 and on_line.is_inactive() and off_line.stun_left == 0.0)
+	_run(g2, GameConfig.GROVE_LASH_STUN + 0.1)
+	check("Grove: the stun wears off", not on_line.is_inactive())
+	g2.queue_free()
+	# the real schedule: with one tower, the lash comes every GROVE_LASH_EVERY s and always aims at it
+	var g3 := await _grove_game(1, [Vector2i(16, 11)])
+	var gr3: Grove = g3.warden.grove
+	gr3._lash_t = 0.0
+	_run(g3, GameConfig.GROVE_LASH_EVERY + 0.3)
+	check("Grove: a lash lands every %d s" % int(GameConfig.GROVE_LASH_EVERY), g3.towers[0].stun_left > 0.0)
+	# cleanup when the boss dies
+	gr3._seed_t = GameConfig.GROVE_SEED_EVERY
+	g3.warden.step(0.05)
+	_run(g3, GameConfig.GROVE_SAPLING_GROW + 0.5)
+	var seeds: Array = gr3.saplings.map(func(d): return d["e"])
+	g3.towers[0].stun_left = 2.0
+	g3.warden.crystals.clear()  # (the old vine cleanup is not the Grove's)
+	g3.log_sounds = true
+	g3.sound_log.clear()
+	g3.warden.boss.alive = false
+	g3.step(0.05)
+	check("Grove: cleanup is silent (no enemy_death sounds)", not g3.sound_log.has("enemy_death"))
+	check("Grove: boss death clears saplings, stranglers, stuns and the warden", g3.warden == null and not seeds.is_empty()
+		and seeds.all(func(e): return not is_instance_valid(e) or not e.alive) and not g3.towers[0].is_inactive())
+	g3.queue_free()
+	# the lash period is exactly GROVE_LASH_EVERY (strike to strike)
+	var g4 := await _grove_game(1, [Vector2i(16, 11)])
+	var gr4: Grove = g4.warden.grove
+	var t4: Tower = g4.towers[0]
+	gr4._lash_t = 0.0
+	_run(g4, GameConfig.GROVE_LASH_EVERY + 0.1)
+	var first := t4.stun_left > 0.0
+	t4.stun_left = 0.0
+	_run(g4, GameConfig.GROVE_LASH_EVERY - 0.4)
+	var early := t4.stun_left > 0.0
+	_run(g4, 0.6)
+	check("Grove: lash period is exactly %d s (strike at 12 and 24, not 12.3)" % int(GameConfig.GROVE_LASH_EVERY), first and not early and t4.stun_left > 0.0)
+	# stun wobble reaches the model, and the cap on live saplings
+	var model := Node3D.new()
+	t4.add_child(model)
+	t4._model = model
+	t4.stun_left = 1.0
+	t4.wobble = 0.05
+	g4.step(0.05)
+	check("Grove: a stunned tower still applies its wobble", is_equal_approx(model.rotation.z, 0.05))
+	gr4._seed_t = -100000.0
+	for i in 5:
+		gr4.plant_seeds()
+	check("Grove: at most %d live saplings and stranglers (planting skipped at the cap)" % GameConfig.GROVE_MAX_LIVE, gr4.saplings.size() == GameConfig.GROVE_MAX_LIVE and gr4.seeds_planted == GameConfig.GROVE_MAX_LIVE)
+	g4.queue_free()
 
 
 func _elites() -> void:
@@ -1686,13 +1823,44 @@ func _real_models() -> void:
 		check("%s: the model leaves its HP alone" % k, is_equal_approx(e.hp, hp0))
 	check("every enemy kind wears its model", all_rigged)
 	var boss: Enemy = g._spawn(Vector2i(12, 2), "boss")
-	check("the Warden wears the first of its four forms", boss._rig != null and boss._rig.key == "eclipse_bloom_a")
+	check("the Warden wears the first of its four forms", boss._rig != null and boss._rig.key == "skotos_v02" and boss._rig.family == "skotos" and boss._vfx != null)
 	for k in GameConfig.ELITES:
 		var el: Enemy = g._spawn(Vector2i(12, 2), k)
 		check("elite %s wears its model and is not the Warden" % k, el._rig != null and not el.is_boss and el.stats["elite"])
 	for i in 4:
 		boss.set_form(i)
-		check("Warden form %d is its own body (%s)" % [i + 1, Enemy.BOSS_FORMS[i]], boss._rig.key == Enemy.BOSS_FORMS[i] and boss._rig.parts.has("head"))
+		check("Warden form %d is its own body (%s)" % [i + 1, Enemy.BOSS_FORMS[i]], boss._rig.key == Enemy.form_key(i) and boss._rig.parts.has("head"))
+	boss.set_form(0)
+	check("Skotos: arms, head and fan are animated parts, the eyes and chest knot have glows",
+		["arm_l", "arm_r", "head", "fan"].all(func(n): return boss._rig.parts.has(n)) and boss._vfx._eyes.size() == 2 and boss._vfx._bands.size() == 4 and boss._vfx._chest != null and boss._vfx._hands.size() == 2)
+	check("Skotos stands about 2.3 cottages tall (BOSS_SCALE %.2f)" % Enemy.BOSS_SCALE, absf(ModelUtil.bounds(boss._rig.model).size.y * Enemy.BOSS_SCALE / 0.1376 - 2.25) < 0.5)
+	var sw := Warden.new(g, boss)
+	g.warden = sw
+	boss.take_damage(boss.hp + 1.0)
+	check("phase 2 with effects: three heartwood knots (rigged stand-in or model), veins grow", sw.phase == 2 and sw.crystals.size() == 3
+		and sw.crystals.all(func(c): return c._knot_holder != null and c.stats["hp"] == 40.0) and is_instance_valid(sw.veins) and sw.veins.vein_count() == 3)
+	await process_frame
+	await process_frame
+	sw.crystals[0].take_damage(99999.0)
+	await process_frame
+	await process_frame
+	check("a broken knot snaps its vein", is_instance_valid(sw.veins) and sw.veins.vein_count() == 2)
+	for c in sw.crystals.duplicate():
+		if is_instance_valid(c) and c.alive:
+			c.take_damage(99999.0)
+	await process_frame
+	await process_frame
+	await process_frame
+	check("no knots left: the veins are cleaned up and phase 3 begins", not is_instance_valid(sw.veins) and sw.phase == 3 and boss._rig.key == Enemy.form_key(2) and boss._rig.fury == 1.0)
+	sw.crystals = [g._spawn(Vector2i(12, 2), "crystal", boss.position + Vector3(0.1, 0, 0))]
+	sw._grow_veins()
+	await process_frame
+	check("veins reappear for a fresh knot", is_instance_valid(sw.veins) and sw.veins.vein_count() == 1)
+	boss.alive = false  # the night ends / a new run starts: the boss is gone, so are the veins
+	await process_frame
+	await process_frame
+	check("veins are cleaned up when the boss goes (night end / new run)", not is_instance_valid(sw.veins))
+	g.warden = null
 	var victim: Enemy = g.enemies[0]
 	victim.take_damage(99999.0)
 	check("a dead enemy leaves its toppling body behind", g._enemies_root.get_children().any(func(c): return c is CharacterRig))
@@ -2138,19 +2306,19 @@ func _quests() -> void:
 	## 2026-11-11 (the user): quests, at most 4 a day, posted one by one, cycling through every kind.
 	var g := await _make_game()
 	g.loop_nights = 6  # the day-cycle check below plays 3 nights without the fall
-	check("day 1 plans 4 quests and posts none at once", g.quest_plan.size() == 4 and g.requests.is_empty())
+	check("day 1 plans 3 quests and posts none at once", g.quest_plan.size() == 3 and g.requests.is_empty())
 	check("the very first quest is the prayer", g.quest_plan[0]["kind"] == "prayer")
 	var day1: Array = g.quest_plan.map(func(q): return q["kind"])
-	check("a day's quests are 4 different kinds", day1.size() == 4 and day1.all(func(k): return day1.count(k) == 1))
-	check("posted by the day's clock: 1 early, 2 by a quarter, 4 late", g.quests_posted_by(10.0) == 1 \
-		and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.3) == 2 and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.9) == 4)
+	check("a day's quests are 3 different kinds", day1.size() == 3 and day1.all(func(k): return day1.count(k) == 1))
+	check("posted by the day's clock: 1 early, 2 by 40%, 3 late", g.quests_posted_by(10.0) == 1 \
+		and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.4) == 2 and g.quests_posted_by(GameConfig.DAY_LENGTH * 0.9) == 3)
 	var first := g.post_next_quest()
-	check("post_next_quest posts one and leaves three planned", first != null and g.requests.size() == 1 and g.quest_plan.size() == 3)
+	check("post_next_quest posts one and leaves two planned", first != null and g.requests.size() == 1 and g.quest_plan.size() == 2)
 	g.start_night()
 	g._clear_night()
 	g._end_night()
 	var days: Array = day1 + g.quest_plan.map(func(q): return q["kind"])
-	for d in 2:  # 16 kinds at 4 a day: four days make one cycle
+	for d in 3:  # 16 kinds at 3 a day (since 2026-11-18): five days deal 15 different kinds
 		g.start_night()
 		g._clear_night()
 		g._end_night()
@@ -2158,7 +2326,7 @@ func _quests() -> void:
 	var seen := {}
 	for k in days:
 		seen[k] = true
-	check("four days cycle through every kind once, none twice", days.size() == 16 and seen.size() == 16 and GameConfig.REQUESTS.size() == 16)
+	check("five days deal 15 different kinds, none twice", days.size() == 15 and seen.size() == 15 and GameConfig.REQUESTS.size() == 16)
 	for k: String in GameConfig.REQUESTS:
 		check("quest %s has its words and its how-to" % k, StoryText.task(HelpRequest.TASK_ID[k], "before") != "" and HelpRequest.HOW[k] != "")
 
@@ -2300,7 +2468,7 @@ func _tray_rules() -> void:
 	var out := tray.global_position - c
 	var to_head := head - c
 	check("the tray starts on the headset side of the board", Vector2(out.x, out.z).dot(Vector2(to_head.x, to_head.z)) > 0.0)
-	check("the tray starts below the board's top", tray.global_position.y < c.y)
+	check("the tray starts TRAY_DROP above the board's top, below the eyes (2026-11-18: beside the near edge, higher)", is_equal_approx(tray.global_position.y, c.y + GameConfig.TRAY_DROP) and tray.global_position.y < head.y - 0.1)
 	var l := g.board.to_local(tray.global_position)
 	check("the tray does not overlap the island or its rim", maxf(absf(l.x), absf(l.z)) - 0.055 > Game.HALF + GameConfig.RIM_WIDTH)
 	check("the tray is tipped up toward the player", tray.global_basis.y.y < 1.0 and tray.global_basis.y.z > 0.0)
@@ -3589,3 +3757,33 @@ func _loops() -> void:
 		print("      (no rig in this run: the rig cutscene test was skipped)")
 	rg.queue_free()
 
+
+func _fake_bloom() -> void:
+	## Quest tiers: cheap halos stand in for the bloom (scripts/vfx/fake_bloom.gd).
+	var g := await _make_game()
+	var old_tier := PerfTier.tier
+	PerfTier.tier = PerfTier.HIGH
+	var fb = load("res://scripts/vfx/fake_bloom.gd").attach(g)
+	fb.force_level = 1.0
+	for i in 4:
+		await process_frame
+	check("fake bloom: halos exist on a Quest tier at night (house windows)", fb.enabled and fb.sources.size() >= g.houses.size() and fb.visible_halos() >= g.houses.size())
+	fb.force_level = 0.0
+	await process_frame
+	check("fake bloom: no halos by day", fb.visible_halos() == 0)
+	fb.force_level = 1.0
+	await process_frame
+	var before: int = fb.visible_halos()
+	var h: House = g.houses[0]
+	var mine := 0
+	for s in fb.sources:
+		if s["house"] == h:
+			mine += 1
+	h.force_dark()
+	await process_frame
+	check("fake bloom: a dark house loses its halos, the others keep theirs", mine > 0 and fb.visible_halos() == before - mine)
+	PerfTier.tier = PerfTier.DESKTOP
+	await process_frame
+	check("fake bloom: desktop draws none", fb.visible_halos() == 0)
+	PerfTier.tier = old_tier
+	g.queue_free()

@@ -9,6 +9,7 @@ extends Node3D
 ## With controllers only (no hand tracking) a small ember orb stands in for the hand.
 ## Add it as a child of the XROrigin3D: joint transforms are in the origin's space.
 
+const HandFallbackPose := preload("res://scripts/game/hand_fallback_pose.gd")
 const J_PALM := 0
 const J_WRIST := 1
 const J_COUNT := 26
@@ -27,6 +28,7 @@ const KNUCKLES := [[6, 11], [11, 16], [16, 21]]  # the palm web between the fing
 const PINCH_NEAR := 0.012  # m between the thumb and index tips that counts as full pinch
 const PINCH_FAR := 0.06  # m at which the pinch value is 0
 const CHUNK := 0.98  # 2026-11-11 (the user: "they look like gloves, they should be smooth hands"): true to the tracked bone width, no plump padding
+const FALLBACK_RADII := [0.0158, 0.0208, 0.0188, 0.0119, 0.0095, 0.0085, 0.0205, 0.01, 0.0083, 0.0074, 0.0064, 0.0205, 0.0108, 0.0078, 0.0074, 0.0064, 0.0185, 0.0096, 0.0074, 0.007, 0.006, 0.0175, 0.0082, 0.0065, 0.0062, 0.0052]  # the recorded player's hand (hand_radii event)
 const LOST_GRACE := 0.6  # s a hand keeps its last pose when tracking blinks out (the user: "my hands disappear midway")
 
 # palette: fire_yellow FFD45A, lantern_glow F6A45D, fire_red E8452C (never blue)
@@ -37,6 +39,7 @@ var side := "left"  # "left" or "right"
 var controller: Node3D  # the GameHand, for the controller-only orb
 var tracked := false  # a tracked hand is being drawn
 var ever_live := false  # the hand tracker has delivered a live hand at least once (so a lost hand is hidden, never replaced by the controller orb)
+var fallback := false  # a hand is drawn from the controller/aim pose because no joint data exists (2026-11-18, fix A)
 var pinch_strength := 0.0  # 0 open .. 1 thumb and index touching (raw, GameHand adds the hysteresis)
 
 var _tracker: XRHandTracker
@@ -61,6 +64,8 @@ var _was_live := false
 var _still_t := 0.0  # seconds the tracker's joints have been bit-for-bit unchanged (a frozen last-known pose)
 var _spark_boost := false
 var _incoming: Array = []
+var _fb_trig := 0.0  # smoothed trigger / grip values that curl the fallback hand
+var _fb_grip := 0.0
 
 
 func _ready() -> void:
@@ -251,9 +256,14 @@ func _process(delta: float) -> void:
 		ok = true
 	apply_tracking(ok, delta)
 	if ok:
+		_set_fallback(false)
 		_pose()
-	elif _orb.visible:
-		_orb.global_position = controller.global_position  # the controller-only stand-in
+	elif tracked:
+		pass  # a short tracking blink: the last real pose is kept (apply_tracking)
+	else:
+		_update_fallback(delta)
+	if _orb.visible:
+		_orb.global_position = controller.global_position  # the stand-in, only when even the fallback hand has no pose
 	_hot_amount = move_toward(_hot_amount, 1.0 if _hot else 0.0, delta * 6.0)
 	_update_glow()
 
@@ -294,10 +304,10 @@ func _refresh_orb() -> void:
 	if controller != null and is_instance_valid(controller):
 		has_data = controller.get_has_tracking_data()
 		on_ctrl = controller.has_method("on_controller") and bool(controller.call("on_controller"))
-	var want := orb_wanted(has_data, on_ctrl)
+	var want := orb_wanted(has_data, on_ctrl) and not fallback
 	if _orb != null:
 		_orb.visible = want
-	visible = tracked or want
+	visible = tracked or fallback or want
 
 
 func orb_wanted(controller_has_pose: bool, on_real_controller: bool) -> bool:
@@ -332,6 +342,103 @@ func thumb_tip_global() -> Vector3:
 
 func _set_tracked(on: bool) -> void:
 	tracked = on
+	_show_hand(on or fallback)
+
+
+func _set_fallback(on: bool) -> void:
+	if on == fallback:
+		return
+	fallback = on
+	_show_hand(tracked or on)
+
+
+func fallback_grip_pose() -> Variant:
+	## The hand's grip pose in the XR origin's space for the fallback hand, or null when the runtime has none: the tracker's
+	## grip pose; failing that the (filtered) aim pose turned back into a grip pose with the recorded aim-from-grip offset.
+	if controller == null or not is_instance_valid(controller):
+		return null
+	var ct := XRServer.get_tracker(StringName(String(controller.get("tracker")))) as XRPositionalTracker
+	if ct != null:
+		var gp := ct.get_pose(&"grip")
+		if gp != null and gp.has_tracking_data:
+			return gp.get_adjusted_transform()
+	if not controller.get_has_tracking_data():
+		return null
+	var parent := get_parent() as Node3D
+	var aim: Transform3D = (parent.global_transform.affine_inverse() if parent != null else Transform3D.IDENTITY) * controller.global_transform
+	return aim * fallback_aim_offset().affine_inverse()  # aim = grip * offset
+
+
+func fallback_aim_offset() -> Transform3D:
+	if side == "left":
+		return Transform3D(Basis(HandFallbackPose.LEFT_AIM_Q), HandFallbackPose.LEFT_AIM)
+	return Transform3D(Basis(HandFallbackPose.RIGHT_AIM_Q), HandFallbackPose.RIGHT_AIM)
+
+
+func _update_fallback(delta: float) -> void:
+	## No joint data (a controller in the hand, or hand tracking lost while the aim/grip pose is still valid): draw a hand
+	## at the grip pose, curled by the trigger (pinch) and grip (fist) like the recorded Quest hands (HandFallbackPose).
+	var g: Variant = fallback_grip_pose()
+	if g == null:
+		_set_fallback(false)
+		return
+	var trig := 0.0
+	var grip := 0.0
+	var ct := XRServer.get_tracker(StringName(String(controller.get("tracker")))) as XRPositionalTracker
+	if ct != null:
+		trig = _num(ct.get_input(&"trigger"))
+		grip = _num(ct.get_input(&"grip"))
+		if _bool(ct.get_input(&"trigger_click")):
+			trig = maxf(trig, 1.0)
+		if _bool(ct.get_input(&"grip_click")):
+			grip = maxf(grip, 1.0)
+	_fb_trig = move_toward(_fb_trig, trig, delta * 14.0)
+	_fb_grip = move_toward(_fb_grip, grip, delta * 14.0)
+	fallback_joints(g, _fb_trig, _fb_grip)
+	_set_fallback(true)
+	_pose()
+
+
+static func _num(v: Variant) -> float:
+	return float(v) if v is float or v is int else 0.0
+
+
+static func _bool(v: Variant) -> bool:
+	return v is bool and v
+
+
+func fallback_joints(grip_pose: Transform3D, trig: float, grip: float) -> void:
+	## Fill _joints/_radii with the recorded open/pinch/fist hand, blended by trigger and grip, placed at grip_pose.
+	var open: Array
+	var pinch: Array
+	var fist: Array
+	var q_open: Quaternion
+	var q_pinch: Quaternion
+	var q_fist: Quaternion
+	if side == "left":
+		open = HandFallbackPose.LEFT_OPEN
+		pinch = HandFallbackPose.LEFT_PINCH
+		fist = HandFallbackPose.LEFT_FIST
+		q_open = HandFallbackPose.LEFT_OPEN_PALM
+		q_pinch = HandFallbackPose.LEFT_PINCH_PALM
+		q_fist = HandFallbackPose.LEFT_FIST_PALM
+	else:
+		open = HandFallbackPose.RIGHT_OPEN
+		pinch = HandFallbackPose.RIGHT_PINCH
+		fist = HandFallbackPose.RIGHT_FIST
+		q_open = HandFallbackPose.RIGHT_OPEN_PALM
+		q_pinch = HandFallbackPose.RIGHT_PINCH_PALM
+		q_fist = HandFallbackPose.RIGHT_FIST_PALM
+	var wt := smoothstep(0.1, 0.9, trig)
+	var wg := smoothstep(0.1, 0.9, grip)
+	var pq := q_open.slerp(q_pinch, wt).slerp(q_fist, wg)
+	for i in J_COUNT:
+		var p: Vector3 = (open[i] as Vector3).lerp(pinch[i], wt).lerp(fist[i], wg)
+		_joints[i] = grip_pose * Transform3D(Basis(pq) if i == J_PALM else Basis.IDENTITY, p)
+		_radii[i] = FALLBACK_RADII[i]
+
+
+func _show_hand(on: bool) -> void:
 	if _bones == null:
 		return
 	_bones.visible = on

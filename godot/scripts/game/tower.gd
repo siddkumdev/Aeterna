@@ -60,6 +60,9 @@ var _model_pos := Vector3.ZERO
 var _recoil := 0.0
 var _away := Vector3.ZERO   # board-world, flat, from the target towards this tower
 var fx: TowerFx  # this tower's visual effects, when it has them yet
+var stun_left := 0.0  # Skotos' branch lash (Grove): seconds this tower cannot fire
+var strangled := false  # Skotos' strangler tree (Grove): the tower stays dead until the strangler is destroyed
+var wobble := 0.0  # radians of sway on the model while stunned (set by Grove, looks only)
 
 
 func settle() -> void:
@@ -75,6 +78,19 @@ func settle() -> void:
 	tw.tween_property(self, "scale", Vector3(1.12, 0.84, 1.12), 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "scale", Vector3(0.97, 1.05, 0.97), 0.1).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(self, "scale", Vector3.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func is_inactive() -> bool:
+	return stun_left > 0.0 or strangled
+
+
+func release_grove() -> void:
+	## Clears every Grove effect (night over, boss dead, rewind).
+	stun_left = 0.0
+	strangled = false
+	wobble = 0.0
+	if _model != null:
+		_model.rotation.z = 0.0
 
 
 func tint(mat: Material) -> void:
@@ -219,6 +235,12 @@ func step(delta: float) -> void:
 	if cfg["kind"] == "spawner":
 		_step_guards(delta)
 		return
+	stun_left = maxf(0.0, stun_left - delta)
+	if is_inactive():  # stunned or strangled: no aiming, no shots, the wind-up is lost
+		aiming = false
+		_recoil = 0.0
+		_tick_kick(delta, null)  # relaxes the kick pose and applies the wobble
+		return
 	cooldown = maxf(0.0, cooldown - delta * game.spells.haste_at(position))  # Rage rings speed it up
 	var target := _nearest([])
 	aiming = target != null
@@ -283,6 +305,7 @@ func _tick_kick(delta: float, target: Enemy) -> void:
 		w *= w
 		push = WIND_PULL * w
 		squash = WIND_SQUASH * w
+	_model.rotation.z = wobble
 	_model.scale = _model_scale * Vector3(1.0 + squash * 0.6, 1.0 - squash, 1.0 + squash * 0.6)
 	_model.position = _model_pos + (global_transform.basis.inverse() * (_away * push) if is_inside_tree() else _away * push)
 
@@ -290,6 +313,7 @@ func _tick_kick(delta: float, target: Enemy) -> void:
 func reset_kick() -> void:
 	## Night is over (or the run reset): the tower rests exactly as authored, whatever the wind-up was doing.
 	_recoil = 0.0
+	release_grove()
 	if _model != null:
 		_model.scale = _model_scale
 		_model.position = _model_pos

@@ -1443,12 +1443,12 @@ def rFACE_final(cx, y, z, w, tilt=-12, cracks=False):
     """ONE carved pale face plate: heavy brow bar, two deep almond sockets cut into the plate (inner ends low), small nose ridge, thin mouth line."""
     yf = y - w * 0.16
     P = [B(w * 0.5, (cx, y, z), "bone", 2, (1.0, 0.32, 1.1)),
-         B(w * 0.5, (cx, yf - w * 0.045, z + w * 0.33), "wood_dark", 2, (0.98, 0.30, 0.20))]  # one heavy carved brow bar
+         B(w * 0.5, (cx, yf - w * 0.06, z + w * 0.255), "wood_dark", 2, (1.0, 0.36, 0.26))]  # one heavy carved brow bar, low over the sockets (harsher, less friendly; user 2026-11-18)
     for sx in (-1, 1):
-        P.append(_tilted_ellipsoid((cx + sx * w * 0.235, yf - w * 0.045, z + w * 0.075), w * 0.19, (1.5, 0.55, 0.78), -sx * 20, "ink"))  # almond socket
+        P.append(_tilted_ellipsoid((cx + sx * w * 0.235, yf - w * 0.045, z + w * 0.075), w * 0.215, (1.55, 0.6, 0.95), -sx * 30, "ink"))  # deep slanted almond socket
     P.append(B(w * 0.085, (cx, yf - w * 0.03, z - w * 0.07), "wood_light", 1, (0.7, 0.7, 1.7)))  # nose ridge
     P.append(B(w * 0.10, (cx, yf - w * 0.012, z - w * 0.33), "ink", 1, (2.4, 0.4, 0.12)))  # thin mouth line
-    if cracks:  # P3: the mask is cracked (still readable): two dark fissures across the plate
+    if False:  # P3 cracks removed (player-critic 2026-11-18: a line across the face): the mask is cracked (still readable): two dark fissures across the plate
         P.append(_tilted_ellipsoid((cx + w * 0.07, yf - w * 0.06, z + w * 0.12), w * 0.30, (0.035, 0.12, 1.0), 18, 'ink', 1))
         P.append(_tilted_ellipsoid((cx - w * 0.22, yf - w * 0.06, z - w * 0.22), w * 0.20, (0.04, 0.12, 1.0), -35, 'ink', 1))
     m = tilt_parts(P, (cx, y, z), tilt)
@@ -1494,7 +1494,7 @@ def build_final():
         head.append(rPL(-90 + sx * 82, 7.0, hz - 1.5, 4.0, 6.5, 3.0, "wood_dark"))
     face, ey = rFACE_final(0, -2.4, hz, 13.4)
     head += face
-    cols = ("leaf_dark", "ink", "leaf_dark", "leaf_green", "ink", "leaf_dark", "leaf_green", "warden_deep")
+    cols = ("leaf_dark", "ink", "leaf_dark", "leaf_green", "ink", "leaf_dark", "leaf_green", "leaf_dark")  # v02: the navy (warden_deep) leaf is dark green like its neighbours
     fan = []
     for ly in range(2):
         cnt = 13 - ly * 3
@@ -1510,7 +1510,7 @@ def build_final():
         pts = [(sx * 5.4, 0.0, z0), (sx * 9.2, -1.6, z0 - 1.8), (sx * 11.0, -3.6, z0 - 4.8), (sx * 10.6, -5.6, z0 - 7.2)]
         groups.append((nm, rLIMB(pts, [2.4, 2.2, 2.1, 2.0], "warden_dark") + rFIST_final((sx * 10.4, -6.4, z0 - 8.6), 2.9), pv((sx * 5.4, 0.0, z0)), ""))
         hp[nm] = (sx * 10.4, -8.6, z0 - 8.6)
-    obj = bc.assemble("ew_boss_skotos_v01", groups)
+    obj = bc.assemble("ew_boss_skotos_v02", groups)  # v02: harsher brow, deeper slanted sockets, no navy crown leaf (v01 stays as approved)
     ranchors(obj, ey, (hp["arm_l"], hp["arm_r"]), (0, -7.4, 15.5), 9.0)
     for i, z in enumerate((4.0, 10.5, 16.4, 21.8)):
         bc.anchor(obj, "band_%d_anchor" % (i + 1), pv((0, -(9.4 - i * 1.7), z)), "", 2.0 * K)
@@ -1651,7 +1651,7 @@ def build_phase(phase):
                 ang = math.radians(sk * 120 + u * 420)
                 pts.append((math.cos(ang) * 3.7, math.sin(ang) * 3.7, 4.0 + u * 21.0))
             body += rCH(pts, [2.0] * 9, ("wood_dark", "wood_mid", "stone_dark")[sk], 8)
-        body += [B(5.2, (0, -4.6, 15.6), "wood_mid", 2, (1.0, 0.42, 1.9)), B(3.8, (0, -6.3, 15.6), "ink", 2, (0.85, 0.45, 1.9))]  # open dark heartwood core in a bark lip
+        body += [B(5.2, (0, -4.6, 15.6), "wood_dark", 2, (1.0, 0.42, 1.9)), B(3.8, (0, -6.3, 15.6), "ink", 2, (0.85, 0.45, 1.9))]  # open dark heartwood core in a bark lip
         body += arch_roots(11, 11.0, 7.0, 7.0, 2.8, 10) + buttress_roots(2, 8.0, 10.0, 3.0, 2.6, 90)
         bf = [rPL(-90 - 22, 7.2, 14.5, 4.0, 6.2, 1.4, "wood_dark", 0, 0), rPL(-90 + 22, 7.2, 14.5, 4.0, 6.2, 1.4, "wood_dark", 0, 0)]
         fan = bare_fan(6, 21.0, 3.2, hz, 4.6, 145, 7.6, True, "ink")
@@ -1728,6 +1728,6 @@ if __name__ == "__main__":
     bpy.context.view_layer.update()
     cs = [o.matrix_world @ mathutils.Vector(c) for o in [obj] + list(obj.children_recursive) if o.type == "MESH" for c in o.bound_box]
     print("BBOX min", [round(min(c[i] for c in cs), 4) for i in range(3)], "max", [round(max(c[i] for c in cs), 4) for i in range(3)])
-    bc.save_blend(obj, {"FINAL": "skotos", "P2": "skotos_p2", "P3": "skotos_p3", "KNOT": "heartwood_knot"}.get(key, "skotos_%s" % key.lower()))
+    bc.save_blend(obj, {"FINAL": "skotos_v02", "P2": "skotos_p2", "P3": "skotos_p3", "KNOT": "heartwood_knot"}.get(key, "skotos_%s" % key.lower()))
     if key in BUILD:
         print("EXPORT", bc.export_glb(obj, "boss"))

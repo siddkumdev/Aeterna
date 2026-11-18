@@ -24,6 +24,8 @@ signal poked(node: Node3D)  # the index fingertip touched a node of the group "e
 const PRESS_ACTIONS := ["trigger_click", "grip_click", "select_button"]
 const PINCH_PRESS := 0.85  # joint pinch value (1 = tips touching) that presses
 const PINCH_RELEASE := 0.55  # ... and the lower value that lets go
+const RELEASE_DEBOUNCE := 0.10  # s a headset release must hold before it counts: a re-press inside it is the same press (fix B, 2026-11-18)
+const SPIKE_S := 0.05  # a headset press shorter than this is a tracking spike: when it ends it is cancelled, never played
 const POKE_RADIUS := 0.02  # m from the fingertip to a pokable node's origin
 const POKE_GROUP := &"ew_pokable"
 # one-euro filter (position in m, rotation in radians): a low cutoff steadies a still hand, beta opens it up when moving
@@ -32,6 +34,9 @@ const FILTER_BETA_POS := 9.0  # extra Hz per m/s of hand speed
 const FILTER_BETA_ROT := 1.2  # extra Hz per rad/s of turn
 const FILTER_D_CUTOFF := 1.0  # Hz, smoothing of the speed estimate
 
+static var debounce := true  # tools/tests switch this off to measure the undebounced behaviour (headset hands only)
+var merged_presses := 0  # re-presses inside RELEASE_DEBOUNCE that were folded into the running press (stats for the replay tool)
+var spike_cancels := 0  # presses shorter than SPIKE_S that ended as cancelled
 var show_ray := true  # the long pointing ray (off for the mouse hand); in VR it is invisible
 var camera: Camera3D  # set for the mouse hand: the ray follows the mouse instead of the node's rotation
 var bubble: MeshInstance3D  # the reach bubble: how close an object must be to be grabbed (debug aid)
@@ -43,6 +48,11 @@ var _ray: MeshInstance3D
 var _thread_mat: StandardMaterial3D
 var _xr_live := false
 var _pinching := false
+var _release_wait := -1.0  # >= 0: the release of the last held input is being debounced; seconds left
+var _held_s := 0.0  # seconds the current press has been held (game time, so a fast replay measures the same)
+var _held_at_release := 0.0
+var _press_from_controller := false  # a real controller's quick tap is a real tap: only a hand-tracking pinch can be a spike
+var _frozen_touch := Vector3.ZERO  # touch_point() while a release is debounced: the opening fingers do not move what was held
 var _poking := {}  # node instance id -> true while the fingertip is still on it
 var _poke_nodes: Array[Node] = []
 var _poke_cache_dirty := true
@@ -57,7 +67,7 @@ var _orb: MeshInstance3D  # the controller-only stand-in
 
 func _ready() -> void:
 	var xr := XRServer.find_interface("OpenXR")
-	_xr_live = xr != null and xr.is_initialized()
+	_xr_live = xr != null and xr.is_initialized() or GameConfig.FORCE_XR
 	# Pokable plaques change only when nodes enter or leave the scene. Reuse the group list between those changes
 	# instead of rebuilding it for both hands on every XR frame.
 	get_tree().node_added.connect(_invalidate_poke_cache)
@@ -132,11 +142,23 @@ func _uses_joint_pinch() -> bool:
 	return camera == null and visual != null and is_instance_valid(visual) and visual.tracked and not on_controller()
 
 
+func _debounce_on() -> bool:
+	return debounce and camera == null and _xr_live
+
+
 func _press_key(key: String) -> void:
 	if is_lost():
 		return
+	if _release_wait >= 0.0 and _down.is_empty():
+		_release_wait = -1.0  # a re-press inside the window: the same press carries on, no release and no new press
+		merged_presses += 1
+		_down[key] = true
+		_show_thread(true)
+		return
 	if _down.is_empty():
 		press_started_ms = Time.get_ticks_msec()
+		_held_s = 0.0
+		_press_from_controller = on_controller()
 		pressed.emit(self)
 	_down[key] = true
 	_show_thread(true)
@@ -149,9 +171,33 @@ func _release_key(key: String, lost := false) -> void:
 		if _down.is_empty():
 			if lost:
 				cancelled.emit(self)
+			elif _debounce_on():
+				_release_wait = RELEASE_DEBOUNCE
+				_held_at_release = _held_s
+				_frozen_touch = _live_touch_point()
+				return  # the thread stays on and the held thing stays put until the window runs out (_tick_release)
 			else:
 				released.emit(self)
 			_show_thread(false)
+
+
+func _tick_release(delta: float) -> void:
+	## The debounced release: lets go for good once RELEASE_DEBOUNCE passed with no re-press; a hand that lost tracking in
+	## the meantime cancels at once. A press that lasted less than SPIKE_S ends as cancelled (nothing built, cast or moved).
+	if _release_wait < 0.0:
+		return
+	_release_wait -= delta
+	var lost := is_lost()
+	if _release_wait > 0.0 and not lost:
+		return
+	_release_wait = -1.0
+	_show_thread(false)
+	if lost or (_held_at_release < SPIKE_S and not _press_from_controller):
+		if not lost:
+			spike_cancels += 1
+		cancelled.emit(self)
+	else:
+		released.emit(self)
 
 
 func _show_thread(on: bool) -> void:
@@ -166,7 +212,10 @@ func _process(delta: float) -> void:
 			_f_ready = false  # the filter restarts at the real pose on the first frame after tracking returns
 		else:
 			_smooth_pose(delta)
+	if not _down.is_empty():
+		_held_s += delta
 	_update_pinch()
+	_tick_release(delta)
 	_update_poke()
 
 
@@ -207,6 +256,8 @@ func _update_pinch() -> void:
 	## The joint pinch with hysteresis, added to whatever the runtime reports.
 	if visual == null or not visual.tracked:
 		var had := not _down.is_empty()
+		if _release_wait >= 0.0 and is_lost():
+			_tick_release(0.0)  # tracking lost during a debounced release: cancel now
 		if _pinching:
 			_pinching = false
 			_down.erase("pinch")
@@ -292,13 +343,22 @@ func release() -> void:
 
 
 func is_pressing() -> bool:
-	## A pinch, grasp or mouse press is being held.
+	## A pinch, grasp or mouse press is being held (the raw state: false the moment the fingers let go).
 	return not _down.is_empty()
+
+
+func is_press_continuing() -> bool:
+	## Like is_pressing, but also true while a release is still being debounced (a flap may yet fold back into this press).
+	return not _down.is_empty() or _release_wait >= 0.0
 
 
 
 
 func touch_point() -> Vector3:
+	return _frozen_touch if _release_wait >= 0.0 else _live_touch_point()
+
+
+func _live_touch_point() -> Vector3:
 	## Where this hand touches things: for a tracked hand, between the thumb and index tips the player sees (the
 	## runtime's aim pose sits a few cm away from the drawn fingers). Controllers, the mouse hand and a hand that
 	## has lost tracking: this node's own position, as before.
@@ -308,6 +368,8 @@ func touch_point() -> Vector3:
 
 
 func target_point() -> Vector3:
+	if _release_wait >= 0.0:
+		return _frozen_touch
 	## Direct selection follows the visible thumb/index pinch. The OpenXR aim pose remains the touch point used while
 	## dragging, because that was preferred in the headset; only choosing a small target needs visual agreement.
 	if camera == null and visual != null and is_instance_valid(visual) and visual.tracked and visual.is_inside_tree():

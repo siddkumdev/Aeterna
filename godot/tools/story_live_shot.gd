@@ -24,6 +24,7 @@ func _initialize() -> void:
 		_w.apply_perf_tier(StoryWorld.force_tier)  # as OpeningStage does after _ready (materials exist now)
 	var we := WorldEnvironment.new()
 	we.environment = _w.env
+
 	root.add_child(we)
 	_cam = Camera3D.new()
 	_cam.fov = 90.0
@@ -31,9 +32,10 @@ func _initialize() -> void:
 	root.add_child(_cam)
 	_cam.current = true
 	await process_frame
+	we.environment = _w.env
 	_w.set_mood("curse", 0.0)
 	_w.skotos.visible = true
-	_w.skotos.position.y = StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 3.0
+	_w.skotos.position.y = StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) + StoryWorld.SKOTOS_RISE_END
 	_w.skotos_eyes.light_energy = 4.0
 	_cam.position = Vector3(0, 1.6, 0)
 	_cam.look_at(Vector3(StoryWorld.SKOTOS_AT.x, 12.0, StoryWorld.SKOTOS_AT.z))

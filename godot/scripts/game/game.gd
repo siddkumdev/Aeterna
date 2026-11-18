@@ -273,6 +273,7 @@ func _ready() -> void:
 	_path_tiles = dressing["tiles"]
 	_prop_points = dressing["props"]
 	_setup_shrine(dressing["shrine"])
+	load("res://scripts/vfx/fake_bloom.gd").attach(self)  # Quest tiers only: cheap halos instead of the bloom (builds itself when PerfTier is not DESKTOP)
 	_build_ghost()
 	spells = Spells.new()
 	spells.name = "Spells"
@@ -299,7 +300,7 @@ func _ready() -> void:
 		haze.name = "Haze"
 		add_child(haze)
 		haze.set_active(lighting.enable_passthrough())  # false on the desktop and in the simulator: nothing changes there
-		if _xr:
+		if _xr or PerfTier.forced():
 			PerfTier.apply(get_viewport(), lighting.env, lighting.sun, XRServer.find_interface("OpenXR"))
 		veil = VeilDome.new()
 		veil.name = "Veil"
@@ -1142,7 +1143,7 @@ const GLASS_RISE := 0.8  # the rewind hourglass: rises, flips, the sand runs (se
 const GLASS_FLIP := 0.9
 const GLASS_SAND := 1.3
 const CUTSCENE_GLASS := GLASS_RISE + GLASS_FLIP + GLASS_SAND + 0.3  # the day returns only once it has turned
-const CUTSCENE_SKOTOS_SCALE := 3.0  # the display Skotos: about three houses tall (the new boss model will set this)
+const CUTSCENE_SKOTOS_SCALE := 1.65  # the display Skotos on top of Enemy.BOSS_SCALE (0.65): 0.31 m x 1.65 = 0.52 m, about four houses tall, whole figure in frame
 const CUTSCENE_SKOTOS_TURN := 0.0  # yaw so he faces the player
 var _cutscene := false  # the player cannot act while it plays
 var cutscene_count := 0  # how many times it has played this run (only ever the end of loop 1)
@@ -1330,6 +1331,8 @@ func _clear_night() -> void:
 		if is_instance_valid(e):
 			e.queue_free()
 	enemies.clear()
+	if warden != null:
+		warden.cleanup()  # the Grove's roots, lash line and stuns (phase 4, loop 2+)
 	warden = null
 	for t in towers:
 		if is_instance_valid(t):
@@ -3506,9 +3509,13 @@ static func tray_start_transform(board_xf: Transform3D, head: Vector3) -> Transf
 		if w.dot(to_head) > best:
 			best = w.dot(to_head)
 			n = w
-	var pos := board_xf.origin + n * (half + GameConfig.TRAY_OUT)
+	var right := (-n).cross(Vector3.UP)  # the player's right as they face the board
+	var pos := board_xf.origin + n * (half + GameConfig.TRAY_OUT) + right * GameConfig.TRAY_SIDE * board_xf.basis.get_scale().x
 	pos.y = board_xf.origin.y + GameConfig.TRAY_DROP
-	return Transform3D(Basis(Vector3.UP, atan2(n.x, n.z)) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
+	var face := head - pos  # beside the near edge it turns toward the eyes, not straight out from the board
+	face.y = 0.0
+	var yaw := atan2(face.x, face.z) if face.length() > 0.05 else atan2(n.x, n.z)
+	return Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(GameConfig.TRAY_TILT_DEG)), pos)
 
 
 static func flat_yaw(b: Basis) -> float:
@@ -4003,6 +4010,9 @@ static func configure_xr_viewport(vp: Viewport, xr: Object = null) -> void:
 
 func _init_xr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
+	if GameConfig.FORCE_XR and (xr == null or not xr.is_initialized()):
+		print("[game] XR rig forced without OpenXR (replay)")
+		return true
 	if xr and xr.is_initialized():
 		configure_xr_viewport(get_viewport(), xr)
 		print("[game] OpenXR running: hand rays + pinch")

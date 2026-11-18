@@ -1525,6 +1525,20 @@ func _build_veil() -> void:
 
 
 # ------------------------------------------------------------------ Skotos
+const SKOTOS_MODEL := "res://assets/boss/ew_boss_skotos_v02.glb"
+const SKOTOS_MODEL_SCALE := 97.0  # the model is 0.481 m (9.6 cells): x97 x SKOTOS_SCALE = about 42 m tall (1.2x the first pass; head about 43 deg up at 44 m)
+const SKOTOS_RISE_END := 4.0  # the rise ends this far above the ground at his feet, so the hill does not hide his base
+const SKOTOS_RIM := "shader_type spatial;
+render_mode blend_add, unshaded, cull_back, depth_draw_never;
+uniform vec3 rim_col : source_color = vec3(0.62, 0.28, 1.0);
+uniform float rim_power = 3.0;
+uniform float rim_gain = 1.5;
+uniform float wash = 0.07;
+void fragment() {
+	float f = pow(1.0 - clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0), rim_power);
+	ALBEDO = rim_col * (f * rim_gain + wash);
+}
+"
 const SKOTOS_SCALE := 0.9  # about 35 m tall at 44 m (head ~36 deg up): the whole of him fits in the headset's view (the user, 2026-11-17:
 	# at x1.7, 66 m, half of him was out of sight even looking up); a lane is cleared through the wood so he stands clear
 
@@ -1544,70 +1558,82 @@ func _build_skotos() -> void:
 	skotos_mat.set_shader_parameter("smoke_col", Color(0.16, 0.08, 0.2))
 	skotos_mat.set_shader_parameter("density", 0.97)
 	skotos_mat.set_shader_parameter("rim", 2.2)
-	var st := new_st()
-	lathe(st, PackedVector2Array([Vector2(11.0, 0), Vector2(8.0, 6.0), Vector2(6.2, 14.0), Vector2(6.6, 21.0), Vector2(5.0, 25.0), Vector2(3.2, 28.0),
-		Vector2(3.6, 30.0), Vector2(3.0, 32.5), Vector2(1.6, 34.5), Vector2(0.0, 35.0)]), Transform3D.IDENTITY, K.CLOTH, Color(1, 1, 1), 24, 0.18)
-	for sx in [-1, 1]:  # arms
-		lathe(st, PackedVector2Array([Vector2(1.6, 0), Vector2(1.3, 6.0), Vector2(0.9, 12.0), Vector2(1.3, 13.0), Vector2(0.4, 15.0), Vector2(0.0, 15.5)]),
-			Transform3D(Basis(Vector3.FORWARD, sx * -1.25) * Basis(Vector3.RIGHT, 0.35), Vector3(sx * 5.0, 22.0, 1.0)), K.CLOTH, Color(1, 1, 1), 10, 0.2)
-	# a shape, not a blob (the user, 2026-11-14: "he looks like a blob"): a peaked hood thrown forward over a void, a
-	# mantle of drapes on the shoulders, a tattered hem that trails into the smoke
-	lathe(st, PackedVector2Array([Vector2(4.6, 27.0), Vector2(5.0, 29.5), Vector2(4.4, 32.5), Vector2(3.0, 35.0), Vector2(1.4, 37.0), Vector2(0.3, 38.6), Vector2(0.0, 39.0)]),
-		Transform3D(Basis(Vector3.RIGHT, 0.22), Vector3(0, -1.5, 0.8)), K.CLOTH, Color(1, 1, 1), 20, 0.12)
-	for i in 11:  # the mantle: ragged lengths of shroud hanging off the shoulders down the body
-		var a := TAU * i / 11.0 + 0.2 * sin(i * 2.3)
-		var drop := 9.0 + 5.0 * absf(sin(i * 1.9))
-		seg(st, Vector3(cos(a) * 4.2, 27.5, sin(a) * 3.4), Vector3(cos(a) * 7.0, 27.5 - drop, sin(a) * 5.6), 1.8, 0.3, K.CLOTH, Color(1, 1, 1), 7)
-	for i in 28:  # tatters
-		var a := TAU * i / 28.0 + 0.1 * sin(i * 7.0)
-		var r := 10.0 + 1.5 * sin(i * 3.1)
-		seg(st, Vector3(cos(a) * r * 0.85, 4.0, sin(a) * r * 0.85), Vector3(cos(a) * (r + 2.5), -2.0 - 2.0 * absf(sin(i * 1.7)), sin(a) * (r + 2.5)), 1.1, 0.15, K.CLOTH, Color(1, 1, 1), 5)
-	var hard := new_st()  # the hard parts: a void face, a crown of black thorns, long clawed hands
-	ball(hard, 1.0, Transform3D(Basis.from_scale(Vector3(2.3, 2.9, 1.2)), Vector3(0, 31.0, 2.6)), K.INK, Color(0.015, 0.01, 0.02), 14)
-	for i in 9:
-		var a := lerpf(-1.25, 1.25, i / 8.0)
-		var base := Vector3(sin(a) * 3.2, 34.5 - absf(a) * 1.2, cos(a) * 1.8 + 0.6)
-		var tip := base + Vector3(sin(a) * 2.0, 4.5 - absf(a) * 1.6 + (1.2 if i % 2 == 0 else 0.0), -0.8)
-		seg(hard, base, tip, 0.55, 0.02, K.INK, Color(0.05, 0.03, 0.06), 6)
-	for sx in [-1, 1]:
-		var axf := Transform3D(Basis(Vector3.FORWARD, sx * -1.25) * Basis(Vector3.RIGHT, 0.35), Vector3(sx * 5.0, 22.0, 1.0))
-		var palm := axf * Vector3(0, 14.6, 0)
-		var up := (axf.basis * Vector3.UP).normalized()
-		var side := (axf.basis * Vector3.RIGHT).normalized()
-		var fwd := (axf.basis * Vector3.BACK).normalized()
-		ball(hard, 1.0, Transform3D(Basis.from_scale(Vector3(1.2, 1.4, 0.7)), palm), K.INK, Color(0.04, 0.025, 0.05), 10)
-		for f in 5:
-			var spread := lerpf(-0.9, 0.9, f / 4.0)
-			var knuckle := palm + side * spread * 1.0 + up * 0.8
-			var mid := knuckle + (up * 2.4 + side * spread * 1.4 + fwd * 0.9)
-			var tip := mid + (up * 1.4 + side * spread * 0.5 + fwd * 2.4)
-			if f == 0:
-				mid = palm + side * -1.3 * sx + fwd * 1.5
-				tip = mid + fwd * 2.0 + up * 0.8
-			seg(hard, knuckle, mid, 0.32, 0.24, K.INK, Color(0.04, 0.025, 0.05), 6)
-			seg(hard, mid, tip, 0.24, 0.02, K.BONE, Color(0.35, 0.3, 0.33), 6)  # the claw
-	var hm := MeshInstance3D.new()
-	hm.mesh = hard.commit()
-	hm.material_override = surf
-	hm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	skotos.add_child(hm)
-	var body := MeshInstance3D.new()
-	body.mesh = st.commit()
-	body.material_override = skotos_mat
-	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	skotos.add_child(body)
-	var eyes := new_st()
-	for sx in [-1, 1]:
-		ball(eyes, 0.42, Transform3D(Basis.from_scale(Vector3(1.3, 0.55, 0.5)), Vector3(sx * 0.9, 30.8, 3.85)), K.EMBER, Color(0.75, 0.45, 1.0), 10)
-	var em := MeshInstance3D.new()
-	em.mesh = eyes.commit()
-	em.material_override = surf
-	skotos.add_child(em)
+	# the game's own Warden model (E08, phase 1 form), scaled to the giant of the story. The old smoke-lathe stand-in is gone
+	# (Claude, overnight, 2026-11-18, under Siddharth's delegation); skotos_mat is kept (clock / noise_lod loops use it) but no
+	# longer drawn: no chapter animated it beyond its clock.
+	var model: Node3D = load(SKOTOS_MODEL).instantiate()
+	model.name = "SkotosModel"
+	model.scale = Vector3.ONE * SKOTOS_MODEL_SCALE
+	skotos.add_child(model)
+	var rim_sh := Shader.new()  # a strong purple fresnel pass plus a flat wash, so the dark body (and its red / blue-ish tier bands) separates from the sky and reads purple
+	rim_sh.code = SKOTOS_RIM
+	var rim := ShaderMaterial.new()
+	rim.shader = rim_sh
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for k in mi.mesh.get_surface_count():
+			var bm := mi.get_active_material(k)
+			if bm is BaseMaterial3D:
+				var d: Material = bm.duplicate()
+				d.next_pass = rim
+				mi.set_surface_override_material(k, d)
+	var eye_pos: Array[Vector3] = []
+	for a in model.find_children("*_eye_?_anchor", "Marker3D", true, false):  # the glb's eye anchors (group ew_vfx_anchor)
+		var xf := Transform3D.IDENTITY  # anchors sit under moving parts (the head): accumulate up to the model root
+		var n: Node3D = a
+		while n != null and n != model:
+			xf = n.transform * xf
+			n = n.get_parent() as Node3D
+		eye_pos.append(xf.origin * SKOTOS_MODEL_SCALE)
+	if eye_pos.size() < 2:
+		eye_pos = [Vector3(-3.4, 31.2, 6.1), Vector3(3.4, 31.2, 6.1)]
+	var mid := Vector3.ZERO
+	var eye_mat := StandardMaterial3D.new()  # unshaded, bright purple-white: they must read at 44 m
+	eye_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	eye_mat.albedo_color = Color(0.9, 0.78, 1.0)
+	var halo_sh := Shader.new()  # a radial falloff that is exactly 0 well inside the quad edge, so no square shows
+	halo_sh.code = "shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, fog_disabled, cull_disabled;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0), vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+}
+void fragment() {
+	float r = length(UV - vec2(0.5)) * 2.0;
+	float a = 1.0 - smoothstep(0.0, 0.85, r);
+	ALBEDO = vec3(0.7, 0.4, 1.0) * a * a;
+}
+"
+	var halo_mat := ShaderMaterial.new()
+	halo_mat.shader = halo_sh
+	for e in eye_pos:
+		var fwd := e + Vector3(0, 0, 1.4)  # pushed forward off the face so the socket does not swallow them
+		var eb := MeshInstance3D.new()
+		var sph := SphereMesh.new()
+		sph.radius = 1.0
+		sph.height = 2.0
+		sph.radial_segments = 12
+		sph.rings = 6
+		eb.mesh = sph
+		eb.material_override = eye_mat
+		eb.scale = Vector3(1.6, 0.8, 0.5)
+		eb.position = fwd
+		eb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		skotos.add_child(eb)
+		var hq := MeshInstance3D.new()
+		var qm := QuadMesh.new()
+		qm.size = Vector2(9.0, 9.0)
+		hq.mesh = qm
+		hq.material_override = halo_mat
+		hq.position = fwd + Vector3(0, 0, 0.8)
+		hq.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		skotos.add_child(hq)
+		mid += e / eye_pos.size()
 	skotos_eyes = OmniLight3D.new()
 	skotos_eyes.light_color = Color(0.6, 0.35, 0.85)
 	skotos_eyes.omni_range = 30.0
 	skotos_eyes.light_energy = 0.0
-	skotos_eyes.position = Vector3(0, 30, 6)
+	skotos_eyes.position = mid + Vector3(0, 0, 4.0)
 	skotos.add_child(skotos_eyes)
 	var pm := ParticleProcessMaterial.new()
 	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE

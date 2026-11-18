@@ -58,32 +58,33 @@ static func _make(parent: Node3D) -> GhostHand:
 	var g := GhostHand.new()
 	g.name = "GhostHand"
 	parent.add_child(g)
-	g._mat = ModelUtil.flat_material(Color(GOLD.r, GOLD.g, GOLD.b, 0.55), true)
-	g._mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	g._mat.no_depth_test = true
-	g._ball(Vector3(0, 0.02, 0.012), Vector3(0.016, 0.02, 0.008))  # the palm, above and behind the fingertips
-	g._thumb = g._ball(Vector3(-0.008, 0.004, 0), Vector3(0.006, 0.012, 0.006))
-	g._index = g._ball(Vector3(0.008, 0.004, 0), Vector3(0.006, 0.014, 0.006))
+	# ew_ui_ghost_hand_v02: a gold glove in a pinch, origin = the pinch point; parts thumb, index, fingers (rotate about Z)
+	var model: Node3D = load("res://assets/ui/ew_ui_ghost_hand_v02.glb").instantiate()
+	g.add_child(model)
+	for n in ModelUtil.walk(model):
+		if n is MeshInstance3D:
+			var src := (n as MeshInstance3D).get_active_material(0)
+			var m: StandardMaterial3D = src.duplicate() if src is StandardMaterial3D else ModelUtil.flat_material(GOLD)
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			m.albedo_color = Color(m.albedo_color, 0.55)
+			m.no_depth_test = true
+			(n as MeshInstance3D).material_override = m
+	var parts := ModelUtil.parts(model)
+	g._thumb = parts.get("thumb")
+	g._index = parts.get("index")
 	return g
-
-
-func _ball(at: Vector3, size: Vector3) -> MeshInstance3D:
-	var m := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 0.5
-	s.height = 1.0
-	s.radial_segments = 10
-	s.rings = 5
-	m.mesh = s
-	m.scale = size
-	m.position = at
-	m.material_override = _mat
-	add_child(m)
-	return m
 
 
 func _open(open: bool) -> void:
 	## Open: the fingertips apart. Closed: they meet in a pinch.
-	var x := 0.008 if open else 0.0025
-	_thumb.position.x = -x
-	_index.position.x = x
+	## (the model is the closed pinch; opening swings the thumb out and the index slightly the other way)
+	if _thumb == null or _index == null:
+		return
+	if not is_inside_tree():
+		_thumb.rotation.z = -0.5 if open else 0.0
+		_index.rotation.z = 0.15 if open else 0.0
+		return
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(_thumb, "rotation:z", -0.5 if open else 0.0, 0.15)
+	tw.tween_property(_index, "rotation:z", 0.15 if open else 0.0, 0.15)

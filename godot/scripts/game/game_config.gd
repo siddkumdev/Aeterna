@@ -78,6 +78,7 @@ const LENS_RAISE := 0.15  # m above the table: the lens counts as held up to the
 # the env var AETERNA_EASY_REACH=1 (set by run_sim.ps1), so keyboard-driven hands can find small objects. Real
 # headset: 1.
 const EASY_REACH := 2.0
+static var FORCE_XR := false  # InputReplay / tools: build the XR rig (hands, head camera) without OpenXR; set BEFORE the Game exists
 const VERBOSE_XR_LOG := false  # silence continuous/per-pinch XR logcat spam on Quest 3 unless --verbose is passed
 const LENS_GAZE_DEG := 20.0  # a group is seen when its gap is within this angle of where the head looks (gaps are ~32 deg apart from the seat)
 # Systems that exist in the build; cards for anything else are not offered (Cards.available)
@@ -107,8 +108,8 @@ const REQUESTS := {
 	"firewood": {"name": "Firewood for the fire", "reward": 20, "scene": ""},
 	"letter": {"name": "The runaway letter", "reward": 15, "scene": ""},
 }
-const QUEST_TIMES := [0.03, 0.25, 0.5, 0.72]  # the fraction of the day at which each of the day's quests is posted
-const REQUESTS_PER_DAY := 4
+const QUEST_TIMES := [0.03, 0.35, 0.65]  # the fraction of the day at which each of the day's quests is posted
+const REQUESTS_PER_DAY := 3  # 4 -> 3 (Claude, overnight balance pass, Siddharth delegated): he found 4 a day far too frequent (2026-10-24)
 const HELP_MARKER_SCENE := "res://assets/ui/ew_ui_help_marker_v01.glb"
 const REQUEST_GRAB_REACH := TOUCH_REACH  # alias kept for game.gd: m from a hand (or the mouse ray) to a prop to grab it
 const LANTERN_DISTANCE := Vector2(4, 7)  # cells from its house where a lost lantern lies
@@ -196,6 +197,21 @@ const WARDEN_SUMMON_EVERY := 10.0  # phase 1: this many seconds between summons 
 const WARDEN_SUMMON_COUNT := 2  # ... of this many Grunts beside it
 const WARDEN_CRYSTALS := 3  # phase 2: shield crystals; it takes no damage until all are broken
 const WARDEN_CRYSTAL_RING := 2.0  # cells from the Warden
+# Phase 4 on loop 2+, "The Grove Awakens" (Claude's design, Siddharth delegated 2026-11-18; all stand-ins)
+const GROVE_FROM_LOOP := 1  # 0-based loop index
+const GROVE_SEED_EVERY := 9.0  # s between plantings
+const GROVE_SEED_FIRST := 3.0  # s after phase 4 begins until the first planting
+const GROVE_MAX_LIVE := 9  # live saplings + stranglers; a planting that would pass this is skipped
+const GROVE_SEEDS := 3  # seeds per planting
+const GROVE_SAPLING_HP := 30.0  # 10 -> 30 (Claude, overnight): one tower shot killed a 10 HP sapling, so the Grove never bit
+const GROVE_SAPLING_GROW := 6.0  # s from seed to strangler
+const GROVE_STRANGLER_HP := 40.0
+const GROVE_SEED_MIN_CELLS := 1.5  # a seed lands this far ...
+const GROVE_SEED_MAX_CELLS := 3.0  # ... to this far from a tower (cells)
+const GROVE_LASH_EVERY := 12.0
+const GROVE_LASH_WARN := 1.5  # s of purple warning line before the lash
+const GROVE_LASH_STUN := 3.0  # s a crossed tower is stunned
+const GROVE_LASH_HALF_WIDTH := 1.0  # cells either side of the lash line that still count as crossed
 const WARDEN_P3_HP := 200.0  # phase 3 (the final stand)
 const WARDEN_ENRAGE := 1.5  # phase 3: speed and damage multiplier
 const WARDEN_WISP_EVERY := 8.0  # phase 3: Wisps rise from a random forest edge this often ...
@@ -270,9 +286,9 @@ const NIGHT_FAST := 4.0
 const CRUSH_HOLD := 1.2  # s
 
 # The ledger (the user, 2026-11-11): turn the left palm up and hold it a moment.
-const PALM_UP_OPEN := 0.8  # dot of the palm's normal with straight up, to open
+const PALM_UP_OPEN := 0.65  # dot of the palm's normal with straight up, to open (was 0.8; 2026-11-18 from the 11-17 recording: his four palm-up tries peaked at 0.7-0.9 for 0.6-0.94 s at dot > 0.7)
 const PALM_UP_CLOSE := 0.3  # below this it folds shut
-const PALM_UP_HOLD := 1.0  # s the LEFT palm must be held up (the user, 2026-11-11: a proper rule)
+const PALM_UP_HOLD := 0.6  # s the LEFT palm must be held up (was 1.0: his four tries lasted 0.6-0.94 s, so the book never opened; in 20 min every palm-up spell of 0.5 s or more at dot > 0.6 fell in his 119-260 s tries)
 const PALM_CLOSE_HOLD := 0.35  # s a tracking blink or shallow palm dip must persist before the open ledger folds shut
 const PALM_REACH := Vector2(0.15, 0.65)  # m from the eye: the palm counts only held out in front of you ...
 const PALM_BELOW_EYE := 0.08  # ... and at least this far below the eyes
@@ -299,7 +315,8 @@ const BOARD_SCALE_STEPS: Array[float] = [0.8, 1.0, 1.2, 0.6]
 # board's front edge (the edge nearest the headset), low and tipped up toward the player, and can be grabbed and moved
 # on its own. It never follows the island. Start pose, measured from the island's edge and the board's top surface:
 const TRAY_OUT := 0.14  # m from the island's edge to the tray's middle (the tray is 11 cm deep: a 8.5 cm gap, past the rim)
-const TRAY_DROP := -0.03  # m: the tray's middle sits this far below the board's top (negative = below)
+const TRAY_DROP := 0.25  # m: the tray's middle sits this far above the board's top (was -0.03: card pick-ups then happened 35-64 deg below the horizon; 2026-11-18, 11-17 recording)
+const TRAY_SIDE := 0.30  # m (board scale 1) the tray sits to the player's right of the board's middle, beside the near edge, so it is not under the chin (was 0 = straight ahead, 0.10 m from the face)
 const TRAY_TILT_DEG := 15.0  # degrees the tray's face is tipped up toward the player's face (cards lean back 51 degrees on top of it)
 const TRAY_MIN_Y := 0.35  # m above the floor: the lowest the tray may be dropped
 const TRAY_MAX_Y := 1.5  # m above the floor: the highest

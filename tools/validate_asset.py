@@ -18,7 +18,8 @@ BLENDER = ew_env.require("BLENDER_EXE")
 BUDGETS = {"world": 800, "village": 2000, "defense": 2000, "enemy": 2000, "boss": 6000,
            "portal": 2000, "vr": 800, "foresight": 800, "ui": 800, "vfx": 800}
 # per-asset budgets that differ from the category default (the 12 x 12 board is one big model: ASSET_LIST W01 says 1-2k)
-BUDGET_OVERRIDES = {"ew_world_story_ground": 16000,  # sykeriin 2026-11-17: life-size story land, whole 250 m world
+BUDGET_OVERRIDES = {"ew_ui_ghost_hand": 1200,  # Claude 2026-11-18 (Siddharth delegated): gold glove hand as 4 separate parts
+                    "ew_world_story_ground": 16000,  # sykeriin 2026-11-17: life-size story land, whole 250 m world
                     "ew_world_island": 4000, "ew_world_path_plaza": 1500, "ew_world_forest_clump_mix": 1200, "ew_world_forest_clump_dark": 1200, "ew_world_forest_clump_low": 1200, "ew_vfx_rewind_hourglass": 2000,  # v02 (the user 2026-11-10): ornate hero prop, one instance, only during the rewind
                     "ew_world_island_underside": 8500,  # was stuck inside the comment above (code-critic 2026-11-17); same as check_assets.gd
                     # creature bosses (Durva 2026-11-02: "extreme detail", try a bigger budget): 20000 until tested on a Quest

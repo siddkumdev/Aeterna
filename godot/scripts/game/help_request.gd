@@ -143,10 +143,14 @@ var _mote: Node3D  # the gold mote over the asker
 var _prop_mote: Node3D  # a smaller one on a loose prop, so it can be found even behind a tall tower
 var _villager: Node3D
 var _helper: Villager
-var _field: MeshInstance3D
+var _field: Node3D
 var _lamps: Array[Node3D] = []
 var _lit: Array[bool] = []
 var _ghost: Node3D
+var _anim_t := 0.0
+var _anim_phase := 0.0
+var _anim_last := Vector3.INF
+var _drizzle := 0.0
 var _outlined: Array[MeshInstance3D] = []
 static var _outline_mat: ShaderMaterial
 # NEW_KINDS state
@@ -203,8 +207,7 @@ func setup(request_kind: String, house_index: int, lantern_at := Vector3.ZERO) -
 			prop = _make_kite()
 			_home = socket
 		"bird":
-			prop = load(cfg["scene"]).instantiate()
-			prop.scale = Vector3.ONE * 0.8  # the lamb: the bunny kid as a stand-in
+			prop = load("res://assets/village/ew_village_lamb_v01.glb").instantiate()  # parts head, leg_l, leg_r; scale 1.0
 			_home = _free_beside(h)
 		"lantern":
 			prop = load(cfg["scene"]).instantiate()
@@ -500,6 +503,7 @@ func tick(delta: float, active := true) -> void:
 	## Once per frame while the day runs: the show-me glow, the stuck-replay of the ghost hand, the trail.
 	if done:
 		return
+	_animate_prop(delta)
 	if point_left > 0.0:
 		point_left -= delta
 		if point_left <= 0.0:
@@ -522,6 +526,42 @@ func tick(delta: float, active := true) -> void:
 	if _trail_t >= 0.1:  # the trail follows the item at 10 Hz, not every frame
 		_trail_t = 0.0
 		_update_trail()
+
+
+func _animate_prop(delta: float) -> void:
+	## The kite's tail sways, the lamb walks (legs swing, head nods, turns the way it is led), the held cloud drizzles.
+	if prop == null or not is_instance_valid(prop) or not prop.is_inside_tree():
+		return
+	_anim_t += delta
+	var parts := ModelUtil.parts(prop)
+	match kind:
+		"chimney":
+			if parts.has("tail"):
+				(parts["tail"] as Node3D).rotation.z = sin(_anim_t * 2.4) * 0.28
+		"bird":
+			var moved := 0.0
+			if _anim_last.is_finite():
+				var d := prop.position - _anim_last
+				d.y = 0.0
+				moved = d.length()
+				if moved > 0.0004:
+					prop.rotation.y = lerp_angle(prop.rotation.y, atan2(d.x, d.z), 0.25)
+			_anim_last = prop.position
+			_anim_phase += moved / 0.004
+			var swing := minf(moved / maxf(delta, 0.001) / 0.05, 1.0) * 0.55 if moved > 0.0 else 0.0
+			if parts.has("leg_l"):
+				(parts["leg_l"] as Node3D).rotation.x = sin(_anim_phase) * swing
+			if parts.has("leg_r"):
+				(parts["leg_r"] as Node3D).rotation.x = -sin(_anim_phase) * swing
+			if parts.has("head"):
+				(parts["head"] as Node3D).rotation.x = sin(_anim_t * 1.6) * 0.08 + (sin(_anim_phase * 2.0) * 0.06 if moved > 0.0 else 0.0)
+		"rain":
+			_drizzle -= delta
+			if held and _drizzle <= 0.0 and game.with_rig and is_inside_tree():
+				_drizzle = 0.18
+				for n in ModelUtil.walk(prop):
+					if n is Marker3D and str(n.name).ends_with("rain_anchor"):
+						VfxKit.burst(game.shots_root, (n as Node3D).global_position, Color("F4E4B8"), Color("EFE3C4"), 3, 0.004, 0.5, 0.0015, -0.3)  # pale drops, never blue
 
 
 func trail_ends() -> PackedVector3Array:
@@ -853,7 +893,11 @@ func _trot_home(n: Node3D) -> void:
 func _rain() -> void:
 	## The field drinks: it turns green, with a short fall of drops (pale, never blue: blue is Foresight's).
 	if _field:
-		(_field.material_override as StandardMaterial3D).albedo_color = Color("88BE45")  # grass
+		var wet := _make_field(true)
+		add_child(wet)
+		wet.position = _field.position
+		_field.queue_free()
+		_field = wet
 	if game.with_rig and is_inside_tree():
 		VfxKit.burst(game.shots_root, to_global(_goal + Vector3(0, 0.05, 0)), Color("F4E4B8"), Color("88BE45"), 30, 0.05, 0.9, 0.003, -0.25)
 
@@ -916,19 +960,19 @@ func _drop_ghost() -> void:
 
 
 func _make_mote(radius: float) -> Node3D:
-	## The quest marker: a small gold mote, bobbing. Not a "!".
+	## The quest marker: the gold spark model (ew_ui_quest_mote_v01, 15 mm tall, origin at its base), bobbing. Not a "!".
+	## radius 0.008 is the full-size mote over the asker; 0.005 the smaller one on a loose prop.
 	var n := Node3D.new()
-	var m := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = radius
-	s.height = radius * 2.0
-	m.mesh = s
-	m.material_override = ModelUtil.flat_material(GLOW, true)
+	var m: Node3D = load("res://assets/ui/ew_ui_quest_mote_v01.glb").instantiate()
+	var sc := radius / 0.008
+	m.scale = Vector3.ONE * sc
+	var base_y := -0.0075 * sc  # the model's centre sits where the old sphere's centre was
+	m.position.y = base_y
 	n.add_child(m)
 	if is_inside_tree():
 		var tw := m.create_tween().set_loops()
-		tw.tween_property(m, "position:y", 0.006, 0.8).set_trans(Tween.TRANS_SINE)
-		tw.tween_property(m, "position:y", 0.0, 0.8).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(m, "position:y", base_y + 0.006, 0.8).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(m, "position:y", base_y, 0.8).set_trans(Tween.TRANS_SINE)
 	return n
 
 
@@ -950,53 +994,24 @@ func _dim(lamp: Node3D, dark: bool) -> void:
 
 
 static func _make_kite() -> Node3D:
-	## STAND-IN (to model later): a pink diamond kite with a red tail, from primitives, palette colours only.
+	## The kite model (ew_village_kite_v01: flat diamond; the tail is the moving part "tail"), leaning back so its face shows from above.
 	var k := Node3D.new()
-	var diamond := MeshInstance3D.new()
-	var q := BoxMesh.new()  # a thin closed slab (a quad would be open: the quest outline hull needs a closed mesh)
-	q.size = Vector3(0.016, 0.016, 0.0012)
-	diamond.mesh = q
-	diamond.rotation.z = PI / 4.0
-	diamond.position.y = 0.012
-	var mat := ModelUtil.flat_material(Color("EE8FA8"))  # flower_pink
-	diamond.material_override = mat
-	k.add_child(diamond)
-	for i in 3:
-		var bow := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.004, 0.003, 0.001)
-		bow.mesh = bm
-		bow.position = Vector3(0.002 * i, 0.0045 - i * 0.004, 0)
-		bow.material_override = ModelUtil.flat_material(Color("E8452C"))  # fire_red
-		k.add_child(bow)
+	var m: Node3D = load("res://assets/village/ew_village_kite_v01.glb").instantiate()
+	m.rotation.x = -0.6
+	k.add_child(m)
 	return k
 
 
 static func _make_cloud() -> Node3D:
-	## STAND-IN (to model later): a small cream cloud of three puffs.
+	## The rain cloud model (ew_village_rain_cloud_v01, 40 mm wide, origin at its base, a "rain_anchor" marker under it).
 	var c := Node3D.new()
-	for spec in [[Vector3(0, 0.008, 0), 0.011], [Vector3(-0.011, 0.005, 0.002), 0.008], [Vector3(0.012, 0.005, -0.002), 0.0085]]:
-		var puff := MeshInstance3D.new()
-		var s := SphereMesh.new()
-		s.radius = spec[1]
-		s.height = spec[1] * 2.0
-		s.radial_segments = 10
-		s.rings = 5
-		puff.mesh = s
-		puff.position = spec[0]
-		puff.material_override = ModelUtil.flat_material(Color("F4E4B8"))  # wall_cream
-		c.add_child(puff)
+	c.add_child(load("res://assets/village/ew_village_rain_cloud_v01.glb").instantiate())
 	return c
 
 
-static func _make_field() -> MeshInstance3D:
-	## STAND-IN (to model later): a dry patch of field, 2 x 2 cells.
-	var f := MeshInstance3D.new()
-	var p := PlaneMesh.new()
-	p.size = Vector2(GameConfig.CELL * 2.0, GameConfig.CELL * 2.0)
-	f.mesh = p
-	f.material_override = ModelUtil.flat_material(Color("A98A72"))  # dirt_light
-	return f
+static func _make_field(wet := false) -> Node3D:
+	## The dry field model (2 x 2 cells) or, after the rain, the same patch watered and green.
+	return load("res://assets/village/ew_village_dry_field_%sv01.glb" % ("wet_" if wet else "")).instantiate()
 
 
 func _anchor(h: House, suffix: String) -> Vector3:

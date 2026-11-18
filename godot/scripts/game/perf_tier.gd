@@ -8,8 +8,8 @@ extends RefCounted
 enum { DESKTOP, LOW, HIGH }
 
 const TARGET_HZ := 72.0
-const DIP_FPS := 68.0  # under this for DIP_HOLD seconds = one step down
-const DIP_HOLD := 3.0
+const DIP_FPS := 66.0  # under this for DIP_HOLD seconds = one step down (68/3 s fired on loading and spell hitches)
+const DIP_HOLD := 4.0
 const MAX_STEP := 3
 
 static var tier := DESKTOP
@@ -18,7 +18,14 @@ static var _dip_t := 0.0
 static var _settle_t := 0.0
 
 
+static func forced() -> bool:
+	## Tools only: AETERNA_TIER=0 desktop, 1 low Quest, 2 Quest 3 (like STORY_TIER) previews a headset tier on the PC.
+	return OS.get_environment("AETERNA_TIER") != ""
+
+
 static func detect() -> int:
+	if forced():
+		return clampi(int(OS.get_environment("AETERNA_TIER")), 0, 2)
 	if OS.get_name() != "Android":
 		return DESKTOP
 	var model := OS.get_model_name().to_lower()
@@ -48,8 +55,7 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 	if env:
 		# bloom is a full-screen pass for each eye: on a tiled mobile GPU it costs more than the whole board. The
 		# emissive colours stay bright without it.
-		env.glow_enabled = false
-		env.adjustment_enabled = false
+		env.glow_enabled = false  # (adjustment stays on: saturation/contrast is folded into the tonemap pass, nearly free, and it is the day/dusk/night grade)
 	if sun:
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL  # one cascade, not four
 		sun.directional_shadow_max_distance = 2.2
@@ -63,7 +69,7 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 
 
 static func govern(delta: float, vp: Viewport, sun: DirectionalLight3D, xr: Object) -> void:
-	## One step down after DIP_HOLD seconds under DIP_FPS: shadows off, then stronger foveation, then a lower render scale.
+	## One step down after DIP_HOLD seconds under DIP_FPS: shadows off, then a lower render scale, then MSAA off and a lower scale again.
 	if tier == DESKTOP or step >= MAX_STEP:
 		return
 	if _settle_t > 0.0:
@@ -77,15 +83,14 @@ static func govern(delta: float, vp: Viewport, sun: DirectionalLight3D, xr: Obje
 	_settle_t = 3.0
 	step += 1
 	match step:
-		1:
+		1:  # shadows are the big cost; MSAA is nearly free on the tiled Quest GPU, so it stays until the last step
 			if sun:
 				sun.shadow_enabled = false
-			if vp:
-				vp.msaa_3d = Viewport.MSAA_DISABLED
 		2:
 			if vp:
 				vp.scaling_3d_scale = minf(vp.scaling_3d_scale, 0.9) if vp.scaling_3d_scale > 0.9 else 0.85
 		3:
 			if vp:
+				vp.msaa_3d = Viewport.MSAA_DISABLED
 				vp.scaling_3d_scale = maxf(0.75, vp.scaling_3d_scale - 0.12)
 	print("[perf] fps=%d under %d: quality step %d" % [fps, int(DIP_FPS), step])

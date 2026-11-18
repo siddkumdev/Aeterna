@@ -587,7 +587,7 @@ func _tick_2(t: float) -> void:
 func _enter_3() -> void:
 	world.set_mood("curse", 0.0)
 	world.skotos.visible = true
-	world.skotos.position.y = StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 34.0
+	world.skotos.position.y = StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 38.0
 	world.wind = 2.0
 
 
@@ -595,7 +595,7 @@ func _tick_3(t: float) -> void:
 	if _once("rise", 1.0):
 		_sound("story_rise", Vector3.INF, -2.0)
 		var tw := create_tween()
-		tw.tween_property(world.skotos, "position:y", StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) - 3.0, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_property(world.skotos, "position:y", StoryWorld.height(StoryWorld.SKOTOS_AT.x, StoryWorld.SKOTOS_AT.z) + StoryWorld.SKOTOS_RISE_END, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tw.parallel().tween_property(world.skotos_eyes, "light_energy", 4.0, 9.0)
 	if _once("thunder1", 6.0):
 		_sound("story_thunder", Vector3.INF, -4.0)

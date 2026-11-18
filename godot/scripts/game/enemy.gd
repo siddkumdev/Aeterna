@@ -24,11 +24,17 @@ const MIST := Color(0.62, 0.62, 0.64)
 const DIRT := Color(0.36, 0.25, 0.17)
 const MODELS := {"grunt": ["blightbark", "bark"], "fog": ["blightbark", "bark"], "scout": ["veilrunner", "veil"], "splitter": ["sporebloom", "spore"],
 	"splitling": ["sporebud", "spore"], "wisp": ["lantern_spirit", "lantern"], "tunneler": ["mawdrill", "drill"],
-	"boss": ["eclipse_bloom_a", "bloom"], "elite_mammoth": ["cinder_mammoth", "elite"], "elite_bear": ["gravemaw_bear", "elite"],
+	"boss": ["skotos_v02", "skotos"], "elite_mammoth": ["cinder_mammoth", "elite"], "elite_bear": ["gravemaw_bear", "elite"],
 	"elite_orc": ["furnace_orc", "elite"]}
 const ELITE_SCALE := 0.3
-const BOSS_FORMS: Array[String] = ["eclipse_bloom_a", "eclipse_bloom_b", "eclipse_bloom_c", "eclipse_bloom_d"]  # one per Warden phase (the user, 2026-11-11: a -> b -> c -> d)
-const BOSS_SCALE := 0.6
+const BOSS_FORMS: Array[String] = ["skotos_v02", "skotos_p2_v01", "skotos_p3_v01", "skotos_p3_v01"]  # one per Warden phase (Siddharth 2026-11-18: reskin; shed-and-grow forms). A missing GLB falls back to the previous phase's body (see form_key).
+const BOSS_SCALE := 0.65  # Skotos is 0.48 m tall at scale 1 (9.6 cells); x 0.65 = 0.31 m = about 2.3 cottages (0.14 m) tall, 0.23 m across: the village stays readable from the seat (player-critic 2026-11-18; was 0.9)
+const KNOT_MODEL := "res://assets/boss/ew_boss_heartwood_knot_v01.glb"  # the real knot model, used when present; else the stand-in stump (_knot)
+const BARK := Color(0.20, 0.14, 0.10)
+const KNOT_SINK := 0.05
+const KNOT_PILLAR := 0.12  # m: the light pillar over a knot
+const KNOT_RISE := 0.4
+const KNOT_GLOW := Color("B070E0")
 const MODEL_SCALE := 0.75
 # Tower-to-enemy juice (Siddharth 2026-11-16), looks only: the hit enemy's visual freezes for HIT_FREEZE[source] seconds,
 # its body squashes and is nudged away from the shot. No damage, speed or timing number is touched.
@@ -83,6 +89,13 @@ var _jt := 0.0
 var _js := 0.0
 var _jdir := Vector3.ZERO
 var _hurt := false
+var _knot_holder: Node3D
+var _knot_burst_done := false
+var _knot_core: MeshInstance3D  # the bright purple heart (pulses, flashes white when hit)
+var _knot_glow: MeshInstance3D
+var _knot_ring: MeshInstance3D  # purple ground ring: "break this"
+var _knot_flash := 0.0
+var _knot_pillar: MeshInstance3D  # a thin soft purple light pillar over the knot: a separate target from the seat
 
 
 func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator) -> void:
@@ -139,6 +152,8 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 			height = 0.06
 			colour = Color(0.66, 0.45, 0.95)  # Warden purple, light enough to spot
 			_crystal(0.012, 0.03, 0.04)
+			if game != null and game.with_rig:
+				_knot()
 		"boss":
 			height = 0.112
 			_capsule(0.03, 0.112)
@@ -150,6 +165,14 @@ func setup(enemy_kind: String, night: int, loop: int, rng: RandomNumberGenerator
 		_use_model()
 
 
+static func form_key(i: int) -> String:
+	## The model of Warden form i (0-based). A phase whose GLB is not there yet wears the previous phase's body.
+	i = clampi(i, 0, BOSS_FORMS.size() - 1)
+	while i > 0 and not ResourceLoader.exists(CharacterRig.model_path(BOSS_FORMS[i])):
+		i -= 1
+	return BOSS_FORMS[i]
+
+
 func _use_model() -> void:
 	## Durva's model instead of the stand-in shapes (test import 2026-11-03, her designs are awaiting approval).
 	for c in _body.get_children():
@@ -157,7 +180,7 @@ func _use_model() -> void:
 	_mats.clear()
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
-	_rig.setup(MODELS[kind][0], MODELS[kind][1])
+	_rig.setup(form_key(0) if is_boss else MODELS[kind][0], MODELS[kind][1])
 	_rig.set_hurt(_hurt)
 	_rig.scale = Vector3.ONE * (BOSS_SCALE if is_boss else (ELITE_SCALE if stats.get("elite", false) else MODEL_SCALE))
 	if stats.get("elite", false):
@@ -166,9 +189,95 @@ func _use_model() -> void:
 			VfxKit.trail(fire, Color("F6A45D"), Color("E8452C"), 18, 0.9, 0.005).gravity = Vector3(0, 0.03, 0)
 	if stats.get("hidden", false):
 		_rig.set_misty()
+	if is_boss:
+		height = 0.22  # the chest knot sits at about 0.16 m: shots and sparks aim there, not at the stand-in capsule's height
 	if is_boss and game != null and game.with_rig:
 		_vfx = BossVfx.new()
 		_vfx.setup(self)
+
+
+func _knot() -> void:
+	## Phase 2's shield pieces are heartwood knots: dark knotted stumps with a purple glowing core that burst up out of the
+	## ground (the real model when it exists, else a stump built from primitives). Same HP and mechanics as the crystal.
+	for c in _body.get_children():
+		c.free()
+	_mats.clear()
+	var holder := Node3D.new()
+	_body.add_child(holder)
+	var core_parent: Node3D = holder
+	if ResourceLoader.exists(KNOT_MODEL):
+		var m: Node3D = load(KNOT_MODEL).instantiate()
+		m.scale = Vector3.ONE * 1.5
+		holder.add_child(m)
+		for n in ModelUtil.walk(m):
+			if n is Marker3D and str(n.name).ends_with("core_anchor"):
+				core_parent = n
+	else:
+		var bark := ModelUtil.flat_material(BARK)
+		var parts := [[0.016, 0.022, 0.034, Vector3(0, 0.017, 0)], [0.011, 0.015, 0.03, Vector3(0.007, 0.043, -0.003)],
+			[0.007, 0.01, 0.022, Vector3(-0.011, 0.03, 0.006)]]
+		for pr in parts:
+			var mi := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = pr[0]
+			cm.bottom_radius = pr[1]
+			cm.height = pr[2]
+			cm.radial_segments = 7
+			cm.rings = 1
+			mi.mesh = cm
+			mi.material_override = bark
+			mi.position = pr[3]
+			mi.rotation = Vector3(0.18 * pr[3].x * 40.0, 0.4, -0.25 * pr[3].x * 40.0)
+			holder.add_child(mi)
+		core_parent.position = Vector3(0, 0.032, 0.014)
+	var csz := float(core_parent.get_meta("ew_size", 0.02))
+	_knot_glow = VfxKit.halo(core_parent, maxf(csz, 0.02) * 6.0, Color(KNOT_GLOW, 0.5))  # a soft purple light round the heart
+	_knot_core = VfxKit.halo(core_parent, maxf(csz, 0.02) * 2.4, Color(KNOT_GLOW.lightened(0.2), 0.95), "disc")  # the bright heart
+	_knot_core.position.z = 0.012
+	_knot_ring = MeshInstance3D.new()  # a purple ring on the ground under it: a target
+	_knot_ring.mesh = VfxKit.quad(1.0)
+	var rm: StandardMaterial3D = VfxKit.material("ring").duplicate()
+	rm.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+	rm.albedo_color = Color(KNOT_GLOW, 0.8)
+	_knot_ring.material_override = rm
+	_knot_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_knot_ring.rotation.x = -PI / 2.0
+	_knot_ring.scale = Vector3.ONE * 0.11
+	_knot_ring.position.y = 0.012
+	add_child(_knot_ring)
+	_knot_pillar = MeshInstance3D.new()
+	var pm := CylinderMesh.new()
+	pm.top_radius = 0.006
+	pm.bottom_radius = 0.014
+	pm.height = KNOT_PILLAR
+	pm.radial_segments = 8
+	pm.rings = 1
+	pm.cap_top = false
+	pm.cap_bottom = false
+	_knot_pillar.mesh = pm
+	var pmat := StandardMaterial3D.new()
+	pmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	pmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pmat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	pmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	pmat.albedo_color = Color(KNOT_GLOW, 0.3)
+	_knot_pillar.material_override = pmat
+	_knot_pillar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_knot_pillar.position.y = KNOT_PILLAR * 0.5
+	add_child(_knot_pillar)
+	height = 0.06
+	_knot_holder = holder
+	holder.position.y = -KNOT_SINK  # bursts up out of the ground (step() raises it)
+
+
+func knot_burst(world_pos: Vector3) -> void:
+	## Bark splinters and a purple flash (spawn and break); looks only.
+	var root := get_parent()
+	if root == null or not is_inside_tree():
+		return
+	VfxKit.burst(root, world_pos + Vector3(0, 0.02, 0), BARK.lightened(0.25), BARK, 14, 0.07, 0.6, 0.006, -0.18, false)
+	VfxKit.burst(root, world_pos + Vector3(0, 0.03, 0), KNOT_GLOW, Color("E8452C"), 8, 0.05, 0.5, 0.005, -0.05)
+	VfxKit.flash(root, world_pos + Vector3(0, 0.03, 0), Color(KNOT_GLOW, 0.7), 0.06, 0.25)
 
 
 func _capsule(r: float, h: float) -> void:
@@ -301,6 +410,20 @@ func step(delta: float) -> void:
 	if not alive:
 		return
 	_age += delta
+	if _knot_holder != null:
+		var k := clampf(_age / KNOT_RISE, 0.0, 1.0)
+		var back := 1.0 + 2.7 * pow(k - 1.0, 3.0) + 1.7 * pow(k - 1.0, 2.0)  # ease out back: overshoots, settles
+		_knot_holder.position.y = -KNOT_SINK * (1.0 - back)
+		_knot_flash = maxf(0.0, _knot_flash - delta / 0.2)
+		var pulse := 0.75 + 0.25 * sin(_age * 4.0 + position.x * 40.0)
+		VfxKit.set_halo(_knot_core, 0.036 * (0.9 + 0.2 * pulse + 0.6 * _knot_flash), Color(KNOT_GLOW.lightened(0.2).lerp(Color.WHITE, _knot_flash), 0.95))
+		VfxKit.set_halo(_knot_glow, 0.12 * (0.9 + 0.2 * pulse + 0.4 * _knot_flash), Color(KNOT_GLOW, 0.4 + 0.25 * pulse + 0.3 * _knot_flash))
+		_knot_holder.scale = Vector3.ONE * (1.0 + 0.15 * _knot_flash)
+		(_knot_ring.material_override as StandardMaterial3D).albedo_color = Color(KNOT_GLOW, 0.55 + 0.35 * pulse)
+		(_knot_pillar.material_override as StandardMaterial3D).albedo_color = Color(KNOT_GLOW, (0.4 + 0.2 * pulse + 0.4 * _knot_flash) * minf(1.0, _age / KNOT_RISE))
+		if not _knot_burst_done and is_inside_tree():
+			_knot_burst_done = true  # the knot spawns on its spot: the burst fires there
+			knot_burst(global_position)
 	if _jt > 0.0:
 		_tick_juice(delta)
 	_sync_hurt()
@@ -410,6 +533,8 @@ func take_damage(amount: float, flash := true, hit_sound := "", hit_weight := 0.
 	if not alive or shielded:
 		return
 	hp -= amount
+	if _knot_holder != null:
+		_knot_flash = 1.0  # the knot flashes white and swells when hit
 	if flash and game != null:
 		if hit_sound != "":
 			game.snd(hit_sound, global_position)
@@ -430,6 +555,8 @@ func take_damage(amount: float, flash := true, hit_sound := "", hit_weight := 0.
 		if on_zero.is_valid() and on_zero.call():
 			return  # a phase ended, the Warden lives on
 		alive = false
+		if _knot_holder != null and is_inside_tree():
+			knot_burst(global_position)  # the heartwood knot breaks: bark splinters (BossVeins snaps its vein)
 		if game != null and game.with_rig and is_inside_tree() and not is_boss and kind != "crystal":
 			VfxKit.enemy_death(get_parent(), global_position, kind, flying, height)
 			if game.kill_sparks != null:
@@ -483,7 +610,7 @@ func set_form(i: int) -> void:
 	var old := _rig
 	_rig = CharacterRig.new()
 	_body.add_child(_rig)
-	_rig.setup(BOSS_FORMS[clampi(i, 0, BOSS_FORMS.size() - 1)], "bloom")
+	_rig.setup(form_key(i), "skotos")
 	_rig.set_hurt(_hurt)
 	_rig.scale = Vector3.ONE * BOSS_SCALE
 	old.queue_free()
