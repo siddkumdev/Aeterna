@@ -647,7 +647,25 @@ func _dress_square() -> void:
 	_prop("tools_leaning_v02", v + Vector3(-5.6, 0, -2.0), 1.6, 40.0)
 	for k in 6:
 		var a := PI / 2.0 + 0.9 + k * (TAU - 1.8) / 5.0  # round the square, leaving the side you look in from clear
-		_prop("lantern_v01", v + Vector3(cos(a) * 7.5, 0, sin(a) * 7.5), -a, 55.0)
+		# the lantern model is a 4 cm hand lantern: at 55 x it stood 2 m tall, as big as the houses (the user, 2026-11-18).
+		# Now life size (about 0.55 m) hung on a 1.8 m post.
+		var lp := v + Vector3(cos(a) * 7.5, 0, sin(a) * 7.5)
+		var lamp := _prop("lantern_v01", lp, -a, 14.0)
+		lamp.position.y += 1.8
+		var post := MeshInstance3D.new()
+		var pm := CylinderMesh.new()
+		pm.top_radius = 0.05
+		pm.bottom_radius = 0.07
+		pm.height = 1.8
+		pm.radial_segments = 6
+		post.mesh = pm
+		var pmat := StandardMaterial3D.new()
+		pmat.albedo_color = Color8(0x9A, 0x65, 0x38)  # palette wood_mid
+		pmat.roughness = 1.0
+		post.material_override = pmat
+		post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_props_root.add_child(post)
+		post.position = Vector3(lp.x, height(lp.x, lp.z) + 0.9, lp.z)
 
 
 func _campfire(st: SurfaceTool, p: Vector3) -> void:

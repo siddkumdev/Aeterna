@@ -25,6 +25,7 @@ const PRESS_ACTIONS := ["trigger_click", "grip_click", "select_button"]
 const PINCH_PRESS := 0.85  # joint pinch value (1 = tips touching) that presses
 const PINCH_RELEASE := 0.55  # ... and the lower value that lets go
 const RELEASE_DEBOUNCE := 0.10  # s a headset release must hold before it counts: a re-press inside it is the same press (fix B, 2026-11-18)
+const PRESS_HOLD := 0.2  # s a hand-tracking pinch must stay closed before it counts: brushes and tracking flicker never act (the user, 2026-11-18: gestures fired by accident)
 const SPIKE_S := 0.05  # a headset press shorter than this is a tracking spike: when it ends it is cancelled, never played
 const POKE_RADIUS := 0.02  # m from the fingertip to a pokable node's origin
 const POKE_GROUP := &"ew_pokable"
@@ -48,6 +49,7 @@ var _ray: MeshInstance3D
 var _thread_mat: StandardMaterial3D
 var _xr_live := false
 var _pinching := false
+var _arm_t := -1.0  # >= 0: a pinch is closed and being timed toward PRESS_HOLD
 var _release_wait := -1.0  # >= 0: the release of the last held input is being debounced; seconds left
 var _held_s := 0.0  # seconds the current press has been held (game time, so a fast replay measures the same)
 var _held_at_release := 0.0
@@ -73,6 +75,8 @@ func _ready() -> void:
 	get_tree().node_added.connect(_invalidate_poke_cache)
 	get_tree().node_removed.connect(_invalidate_poke_cache)
 	button_pressed.connect(func(action: String):
+		if action == "grip_click" and _grip_ignored():
+			return  # a curled or closed hand is not a command: only a pinch presses (the user, 2026-11-18)
 		if action in PRESS_ACTIONS:
 			# Hand tracking reports the same pinch through trigger_click and the joint distance below. Keep one logical
 			# source so a late runtime trigger release cannot leave a card held after the fingers have opened.
@@ -140,6 +144,12 @@ func is_lost() -> bool:
 
 func _uses_joint_pinch() -> bool:
 	return camera == null and visual != null and is_instance_valid(visual) and visual.tracked and not on_controller()
+
+
+func _grip_ignored() -> bool:
+	## Bare tracked hands in the headset: grip_click is a relaxed fist, 2-3 times more frequent than real pinches in the
+	## 2026-11-18 recordings and mostly under 0.3 s. Controllers, the mouse hand and the simulator keep their grip.
+	return debounce and camera == null and _xr_live and not on_controller() and visual != null and is_instance_valid(visual) and visual.ever_live
 
 
 func _debounce_on() -> bool:
@@ -214,7 +224,7 @@ func _process(delta: float) -> void:
 			_smooth_pose(delta)
 	if not _down.is_empty():
 		_held_s += delta
-	_update_pinch()
+	_update_pinch(delta)
 	_tick_release(delta)
 	_update_poke()
 
@@ -252,9 +262,10 @@ static func _alpha(cutoff: float, dt: float) -> float:
 	return 1.0 / (1.0 + tau / dt)
 
 
-func _update_pinch() -> void:
+func _update_pinch(delta := 0.0) -> void:
 	## The joint pinch with hysteresis, added to whatever the runtime reports.
 	if visual == null or not visual.tracked:
+		_arm_t = -1.0
 		var had := not _down.is_empty()
 		if _release_wait >= 0.0 and is_lost():
 			_tick_release(0.0)  # tracking lost during a debounced release: cancel now
@@ -268,6 +279,21 @@ func _update_pinch() -> void:
 			_show_thread(false)
 		return
 	var s := visual.pinch_strength
+	if not _pinching and _debounce_on():
+		# a deliberate pinch: closed (>= PINCH_PRESS) and kept closed (> PINCH_RELEASE) for PRESS_HOLD before it presses
+		if s >= PINCH_PRESS and _arm_t < 0.0:
+			_arm_t = 0.0
+		elif _arm_t >= 0.0:
+			if s <= PINCH_RELEASE:
+				_arm_t = -1.0
+			else:
+				_arm_t += delta
+		if _arm_t < PRESS_HOLD:
+			return
+		_arm_t = -1.0
+		s = maxf(s, PINCH_PRESS)
+	elif _pinching:
+		_arm_t = -1.0
 	if not _pinching and s >= PINCH_PRESS:
 		_pinching = true
 		var already_down := not _down.is_empty()

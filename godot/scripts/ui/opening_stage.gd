@@ -86,6 +86,7 @@ var _stand := Vector3.ZERO
 var _aerial := false
 var _shake := 0.0  # desktop camera only; never shake the headset view
 var _pitch := 0.0  # desktop camera tilt (down while over the village)
+var _score: AudioStreamPlayer  # the story's own music
 const AERIAL_TURN := 0.09  # rad/s: slow, so it stays comfortable in the headset
 const AERIAL_HIGH := 24.0
 const AERIAL_LOW := 13.0
@@ -171,12 +172,13 @@ func _enter() -> void:
 	_saved["transparent"] = vp.transparent_bg
 	vp.transparent_bg = false
 	if PerfTier.detect() != PerfTier.DESKTOP:
-		# The headset story (the user, 2026-11-17: it lagged and hurt): no MSAA and a lighter render scale while the
-		# story runs, and a far plane that still reaches the edge of the 125 m ground from the flying shot.
+		# The headset story: 2026-11-17 it ran with no MSAA at 0.7 scale (it lagged), which made stone, fences and sheep
+		# shimmer and everything blurry (the user, 2026-11-18): the Quest 3 now keeps MSAA 2x at full scale, older Quests
+		# keep the light setting. Also a far plane that still reaches the edge of the 125 m ground from the flying shot.
 		_saved["msaa"] = vp.msaa_3d
 		_saved["scale3d"] = vp.scaling_3d_scale
-		vp.msaa_3d = Viewport.MSAA_DISABLED
-		vp.scaling_3d_scale = minf(vp.scaling_3d_scale, STORY_RENDER_SCALE)
+		vp.msaa_3d = Viewport.MSAA_2X if PerfTier.detect() == PerfTier.HIGH else Viewport.MSAA_DISABLED
+		vp.scaling_3d_scale = 1.0 if PerfTier.detect() == PerfTier.HIGH else minf(vp.scaling_3d_scale, STORY_RENDER_SCALE)
 		if _xr():
 			_saved["far"] = game._xr_cam.far
 			game._xr_cam.far = STORY_FAR
@@ -445,6 +447,7 @@ func play() -> void:
 	_started = true
 	await get_tree().process_frame  # the world's first frame (shaders compile) happens under black
 	_hint.text = "Hold a pinch to skip the story"
+	_start_score()
 	create_tween().tween_property(_hint, "modulate:a", 0.75, 1.0).set_delay(2.0)
 	for ch in CHAPTERS.size():
 		if _skipped:
@@ -457,8 +460,40 @@ func play() -> void:
 		if ch < CHAPTERS.size() - 1 and not _skipped:
 			await _fade_to(1.0, 1.2).finished
 	await _fade_to(1.0, 1.0 if not _skipped else 0.6).finished
+	_stop_score()
 	_leave()
 	finished.emit()
+
+
+func _start_score() -> void:
+	## The story's own 170 s score (assets/audio_src/music/build_story.py), started with chapter I; the game's day and
+	## night loops are held silent meanwhile. (Siddharth, 2026-11-18)
+	if game == null or game.audio == null:
+		return
+	var st: AudioStream = (game.audio as AudioBank)._stream("music/story_music.ogg", false)
+	if st == null:
+		return
+	if game.music != null:
+		game.music.hold = true
+	_score = AudioStreamPlayer.new()
+	_score.stream = st
+	_score.bus = "music"
+	_score.volume_db = 0.0
+	add_child(_score)
+	_score.play()
+
+
+func _stop_score() -> void:
+	## Skipped or finished: the score fades out and the game's music comes back.
+	if game != null and game.music != null:
+		game.music.hold = false
+	if _score != null and is_instance_valid(_score):
+		var sc := _score
+		_score = null
+		sc.reparent(game if game != null else get_tree().root)
+		var tw := sc.create_tween()
+		tw.tween_property(sc, "volume_db", -60.0, 1.2)
+		tw.tween_callback(sc.queue_free)
 
 
 func _fade_to(a: float, seconds: float) -> Tween:

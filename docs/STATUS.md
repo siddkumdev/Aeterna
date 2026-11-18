@@ -4,6 +4,9 @@ The handoff file. Read this first after a break or a compaction (skill `lean-con
 
 Last updated: 2026-11-18 (overnight run done, final check passed, submission draft in docs/SUBMISSION_DRAFT.md); before: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
+## 2026-11-18 afternoon (headset day, round 2) - UNVERIFIED ON HEADSET
+Done in code, selftest 856/0, not yet felt on the Quest: story score + upbeat night loop wired; story MSAA 2x at 1.0 and eye buffer x1.2 (watch fps); lamps resized; pinch-only with 0.2 s hold; 2.5 s settle guard after board/tray placement; tutorial with Continue plaque, sell + rebuild steps, day clock frozen during it. Open: Quest recordings review (grip presses ~2.5x pinches, many <0.3 s), whether sharpness costs too many fps (governor still steps down), the wrong table/tray position needs a headset check.
+
 ## Plan to the deadline (Siddharth, 2026-11-18)
 - Deadline 2026-11-18 12:00 PM PT = 2026-11-19 01:30 IST. Submission work (APK on the Competition channel, video, Devpost, licence proof) is the LAST job, done before 8 PM IST on 2026-11-18.
 - Before that: Skotos in game (phases, glow, wood-growth attacks), then fixes A god hands, B pinch debounce (from the 11-17 recording), C ledger palm direction, D villager origins below ground, E story sky/veil look check, F quest-prop readability (weeds, laundry, bell, basket), G bigger cat, H balance pass. Queued after: phase 4, giant story Skotos, quest-item remakes.

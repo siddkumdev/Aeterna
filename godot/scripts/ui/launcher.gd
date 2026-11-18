@@ -22,6 +22,8 @@ const HINTS := [
 	"Grab a brass handle at either end of your card tray to move and turn it.",
 	"Zoom: pinch both hands in the air beside the island, then spread them apart. Close them to push it away.",
 	"Turn your left palm up to open your ledger: quests, cards and how to play.",
+	"Changed your mind? Pinch a tower on the board and HOLD it until it crumbles: you get its faith back.",
+	"Now build a tower again: pinch a glowing card and drop it on the golden ring.",
 	"Hold the hourglass to call Night 1. At night, tap it again for 2x speed.",
 	"Night 1! Pinch Fire Orb or Boulder and drop it on the shades!",
 ]
@@ -52,6 +54,14 @@ var _start_board_yaw := 0.0
 var _start_board_pos := Vector3.ZERO
 var _taps_at_step := 0
 var _step_entered := -1
+var _step_done := false  # this step's action is done; the next one starts when the player taps Continue (the user, 2026-11-18: do not rush)
+var _towers_at_step := 0
+var _cont: Plaque
+const MIN_STEP_S := 4.0  # a step can be completed (Continue shows) no sooner than this
+const SELL_STEP := 9
+const REBUILD_STEP := 10
+const HOURGLASS_STEP := 11
+const NIGHT_STEP := 12
 var _last_run_serial := -1
 var _auto_at := -1.0  # when the story starts by itself (the title shows a few seconds first)
 var _xr_rig: Node3D  # headset: the plaques float in front of you (placed once), not on the island's front edge
@@ -190,6 +200,10 @@ func _process(delta: float) -> void:
 func _on_press(world: Vector3, origin: Vector3, dir: Vector3) -> bool:
 	## Game asks us first. true = we used the press.
 	if _state == "playing":
+		if _cont != null and is_instance_valid(_cont) and _cont.visible and (_cont.hit_point(world, _touch_pad()) or _cont.hit_ray(origin, dir)):
+			game.snd("menu_open")
+			_advance()
+			return true
 		return false
 	if _state == "narrating":
 		_skip = true
@@ -300,6 +314,11 @@ func _end_hints() -> void:
 		_hint_card.dismiss()
 	_hint_card = null
 	_clear_ghost()
+	if is_instance_valid(_cont):
+		_cont.queue_free()
+	_cont = null
+	if is_instance_valid(game):
+		game.tutorial_hold = false
 	if is_instance_valid(_cue_root):
 		_cue_root.queue_free()
 	_cue_root = null
@@ -431,7 +450,7 @@ func _ring_target_for_step() -> Array:
 	if game == null or not is_instance_valid(game):
 		return [Vector3.ZERO, 1.0, false]
 	match _step:
-		0, 1:
+		0, 1, REBUILD_STEP:
 			return [game.board.to_global(NavGrid.footprint_centre(tutorial_build_cell(), GameConfig.TOWER_SIZE) + Vector3(0, 0.025, 0)), 1.0, true]
 		2:
 			var rim_pos := game._rim_handles[0].global_position if not game._rim_handles.is_empty() and is_instance_valid(game._rim_handles[0]) \
@@ -460,11 +479,15 @@ func _ring_target_for_step() -> Array:
 			if game.ledger != null and game.ledger.open:
 				return [Vector3.ZERO, 0.55, false]
 			return [game._eye() + Vector3(game.board.global_position.x - game._eye().x, 0, game.board.global_position.z - game._eye().z).normalized() * 0.3 + Vector3(-0.12, -0.3, 0), 0.6, true]
-		9:
+		SELL_STEP:
+			if game.towers.is_empty() or not is_instance_valid(game.towers[0]):
+				return [Vector3.ZERO, 0.55, false]
+			return [game.towers[0].global_position + Vector3(0, 0.02, 0), 0.7, true]
+		HOURGLASS_STEP:
 			if game._fast_glass == null or not is_instance_valid(game._fast_glass):
 				return [Vector3.ZERO, 0.55, false]
 			return [game._fast_glass.global_position + Vector3(0, 0.022, 0), 0.55, true]
-		10:
+		NIGHT_STEP:
 			for e in game.enemies:
 				if is_instance_valid(e) and e.alive:
 					return [e.global_position + Vector3(0, 0.02, 0), 1.0, true]
@@ -478,6 +501,7 @@ func _update_ring() -> void:
 	if _target_ring == null or not is_instance_valid(_target_ring):
 		return
 	var info := _ring_target_for_step()
+	info[2] = info[2] and not _step_done
 	_target_ring.visible = info[2]
 	if not info[2]:
 		return
@@ -507,7 +531,7 @@ func _spawn_step_ghost() -> void:
 				_active_ghost.basis = tb * Basis.from_euler(Vector3(deg_to_rad(28.0), 0.0, deg_to_rad(-28.0)))
 			else:
 				_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.03, 0))
-		1:
+		1, REBUILD_STEP:
 			var pick: Card3D = null
 			if game._tray:
 				for c in game._tray.cards:
@@ -542,9 +566,11 @@ func _spawn_step_ghost() -> void:
 			_extra_ghosts.append(pair)
 		8:
 			_active_ghost = GhostHand.hover(_cue_root, target)
-		9:
+		SELL_STEP:
+			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.04, 0))
+		HOURGLASS_STEP:
 			_active_ghost = GhostHand.hover(_cue_root, target + Vector3(0, 0.02, 0))
-		10:
+		NIGHT_STEP:
 			var from_at := game._tray.cards[0].global_position + Vector3(0, 0.02, 0) if game._tray and not game._tray.cards.is_empty() and is_instance_valid(game._tray.cards[0]) \
 				else target + Vector3(0, 0.08, 0.08)
 			_active_ghost = GhostHand.carry(_cue_root, from_at, target + Vector3(0, 0.03, 0))
@@ -552,7 +578,7 @@ func _spawn_step_ghost() -> void:
 		if _active_ghost._mat:
 			_active_ghost._mat.albedo_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.85 if _step == 0 else 0.68)
 			_active_ghost._mat.emission_enabled = false
-		if _step != 9:
+		if _step != HOURGLASS_STEP:
 			_active_ghost.scale = Vector3.ONE * 1.4
 		for g in _extra_ghosts:
 			if is_instance_valid(g) and g._mat:
@@ -565,6 +591,13 @@ func _enter_step(idx: int) -> void:
 	_step = idx
 	_step_time = 0.0
 	_step_entered = idx
+	_step_done = false
+	_towers_at_step = game.towers.size()
+	if is_instance_valid(_cont):
+		_cont.visible = false
+	game.tutorial_hold = idx < HOURGLASS_STEP
+	if idx == 0:
+		game.day_time = 0.0  # the day starts at its full length when the tutorial begins
 	_clear_ghost()
 	_ghost_timer = 0.08
 	if _step >= HINTS.size():
@@ -576,7 +609,7 @@ func _enter_step(idx: int) -> void:
 	else:
 		_step3_quest = null
 	_hint(_step_line(_step))
-	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "hourglass", "spells"]
+	var spotlights := ["cards", "cards", "rim", "board", "board", "lens", "tray", "zoom", "ledger", "board", "cards", "hourglass", "spells"]
 	game.set_tutorial_spotlight(spotlights[_step])
 	match _step:
 		2:
@@ -606,56 +639,95 @@ func _tutorial(delta: float) -> void:
 		return
 	if _step_entered != _step:
 		_enter_step(_step)
-	if game.phase == Game.Phase.NIGHT and _step < 10:
-		_enter_step(10)
+	if game.phase == Game.Phase.NIGHT and _step < NIGHT_STEP:
+		_enter_step(NIGHT_STEP)
 		return
 	_step_time += delta
 	_ghost_timer -= delta
-	if _ghost_timer <= 0.0 and not is_instance_valid(_active_ghost):
+	if _ghost_timer <= 0.0 and not is_instance_valid(_active_ghost) and not _step_done:
 		_spawn_step_ghost()
 		_ghost_timer = 2.8
 	_update_ring()
 	if _step == 1 and game.towers.is_empty() and game._held_card == null and game.selected == "":
 		_enter_step(0)
 		return
-	var done := false
-	match _step:
-		0:
-			done = game._held_card != null or game.selected != "" or not game.towers.is_empty()
-		1:
-			done = not game.towers.is_empty()
-			if done:
-				game.spawn_tutorial_shade(game.towers[0])
-		2:
-			done = not game._rim_hands.is_empty() \
-				or absf(angle_difference(game.board.rotation.y, _start_board_yaw)) > 0.03 \
-				or game.board.global_position.distance_to(_start_board_pos) > 0.015
-		3:
-			if not is_instance_valid(_step3_quest):
-				_step3_quest = _ensure_open_quest()
-				if _step3_quest != null:
-					_hint(_step_line(3))
-			done = is_instance_valid(_step3_quest) and _step3_quest.done
-		4:
-			done = _total_villager_taps() > _taps_at_step
-		5:
-			done = game.foresight.showing or game.phase != Game.Phase.DAY
-		6:
-			done = game._tray_hand != null or not game._xr  # mouse play has no hands to grab or zoom with
-		7:
-			done = (not game._zoom_hands.is_empty() and absf(game._zoom_d - game._zoom_d0) > GameConfig.ZOOM_DEADZONE) or not game._xr
-		8:
-			done = (game.ledger != null and game.ledger.open) or not game._xr
-		9:
-			done = game.phase == Game.Phase.NIGHT
-		10:
-			done = game.spells.cooldown.values().any(func(cd): return cd > 0.0) or game.phase != Game.Phase.NIGHT
-	if done:
-		if _step + 1 >= HINTS.size():
-			_step = HINTS.size()
-			game.snd("trust_chime")
-			game.last_message = "Well struck! Defend the village till dawn."
-			game._refresh_ui()
-			_end_hints()
-		else:
-			_enter_step(_step + 1)
+	var done := _step_done
+	if not done:
+		match _step:
+			0:
+				done = game._held_card != null or game.selected != "" or not game.towers.is_empty()
+			1:
+				done = not game.towers.is_empty()
+				if done:
+					game.spawn_tutorial_shade(game.towers[0])
+			2:
+				done = not game._rim_hands.is_empty() \
+					or absf(angle_difference(game.board.rotation.y, _start_board_yaw)) > 0.03 \
+					or game.board.global_position.distance_to(_start_board_pos) > 0.015
+			3:
+				if not is_instance_valid(_step3_quest):
+					_step3_quest = _ensure_open_quest()
+					if _step3_quest != null:
+						_hint(_step_line(3))
+				done = is_instance_valid(_step3_quest) and _step3_quest.done
+			4:
+				done = _total_villager_taps() > _taps_at_step
+			5:
+				done = game.foresight.showing or game.phase != Game.Phase.DAY
+			6:
+				done = game._tray_hand != null or not game._xr  # mouse play has no hands to grab or zoom with
+			7:
+				done = (not game._zoom_hands.is_empty() and absf(game._zoom_d - game._zoom_d0) > GameConfig.ZOOM_DEADZONE) or not game._xr
+			8:
+				done = (game.ledger != null and game.ledger.open) or not game._xr
+			SELL_STEP:
+				done = game.towers.size() < _towers_at_step or _towers_at_step == 0
+			REBUILD_STEP:
+				done = not game.towers.is_empty()
+			HOURGLASS_STEP:
+				done = game.phase == Game.Phase.NIGHT
+			NIGHT_STEP:
+				done = game.spells.cooldown.values().any(func(cd): return cd > 0.0) or game.phase != Game.Phase.NIGHT
+	if done and not _step_done:
+		_step_done = true
+		if _step >= HOURGLASS_STEP:
+			_advance()  # the night steps flow on their own
+			return
+		game.snd("trust_chime")
+		_hint("Well done! Take your time, then tap Continue.")
+	if _step_done:
+		_update_continue()
+
+
+func _advance() -> void:
+	if _step + 1 >= HINTS.size():
+		_step = HINTS.size()
+		game.snd("trust_chime")
+		game.last_message = "Well struck! Defend the village till dawn."
+		game._refresh_ui()
+		_end_hints()
+	else:
+		_enter_step(_step + 1)
+
+
+func _update_continue() -> void:
+	## The Continue plaque under the tutorial text, shown MIN_STEP_S after the step began and once its action is done. It
+	## turns to face the player and is pressed like the title's plaques (a fingertip, or the pinch ray).
+	if _cont == null or not is_instance_valid(_cont):
+		_cont = Plaque.make("Continue")
+		game.update_hud_root()
+		game.hud_root.add_child(_cont)
+		_cont.position = Vector3(0, 0.03, 0)
+	_cont.visible = _step_done and _step_time >= MIN_STEP_S
+	if not _cont.visible:
+		return
+	var eye := game._eye()
+	var d := eye - _cont.global_position
+	_cont.global_transform = Transform3D(Basis(Vector3.UP, atan2(d.x, d.z)) * Basis(Vector3.RIGHT, deg_to_rad(-30.0)) * Basis.from_scale(Vector3.ONE * 2.2 * game.hud_root.scale.x), _cont.global_position)
+	var hot := false
+	for h in game._hands:
+		hot = hot or _cont.hit_point(h.touch_point(), maxf(0.02, _touch_pad())) or _cont.hit_ray(h.ray_origin(), h.ray_dir())
+	if game._camera and not game._xr:
+		var m := get_viewport().get_mouse_position()
+		hot = hot or _cont.hit_ray(game._camera.project_ray_origin(m), game._camera.project_ray_normal(m))
+	_cont.hot = hot

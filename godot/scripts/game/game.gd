@@ -105,6 +105,8 @@ var _rim_hands: Array = []  # the hands pinching the table rim (move, turn, resi
 var _rim_start := Transform3D.IDENTITY  # the board when the current grip began
 var _rim_p0: Array[Vector3] = []  # where each gripping hand was then
 var _rim_handles: Array[MeshInstance3D] = []  # visible edge handles for Lazy-Susan board movement
+var settle_ms := 2500  # (tests set 0)
+var _settle_until := 0  # msec: right after the board and tray are placed, grabbing the tray or rim and zooming are ignored, so a stray pinch cannot drag them away (the user, 2026-11-18)
 var _board_placed := false  # seated XR auto-centering done once per wake / start
 var ledger: Ledger  # the stat screens (scripts/ui/ledger.gd): left palm up in the headset, L on the desktop
 var _ledger_latched := false  # opened by a button or key: stays until closed the same way
@@ -203,6 +205,7 @@ var hud_root: Node3D  # day clock + tutorial text: follows the table's position,
 const LEDGER_INWARD_SHIFT := 0.14
 const SELL_TOWER_HINT := "Pinch and hold a tower to return it for faith."
 const TUTORIAL_SHADE_REWARD := 15
+var tutorial_hold := false  # the tutorial is teaching by day: the day clock stands still until it is over (the user, 2026-11-18)
 var tutorial_spotlight := ""  # "", "cards", "rim", "board", "lens", "tray", "zoom", "ledger", "hourglass", "spells"
 var run_serial := 0
 var _sell_hint_shown := false
@@ -1392,7 +1395,7 @@ func day_left() -> float:
 func _tick_day(delta: float) -> void:
 	## The day runs out by itself (the user, 2026-11-11: "day ends at 3 min"). The sun crosses the island, the
 	## light warms toward dusk near the end, and the night begins.
-	var running := phase == Phase.DAY and day_clock and not asleep
+	var running := phase == Phase.DAY and day_clock and not asleep and not tutorial_hold
 	if _sun:
 		_sun.visible = running
 	if not running:
@@ -2722,7 +2725,7 @@ func _tick_clock() -> void:
 	_clock.visible = phase == Phase.DAY and not asleep
 	if _clock.visible:
 		var left := int(ceil(day_left()))
-		_clock.text = "%d:%02d" % [left / 60, left % 60]
+		_clock.text = "%d:%02d" % [left / 60, left % 60] if not tutorial_hold else "Take your time"
 		_clock.modulate = Color("E8452C") if left <= int(GameConfig.DAY_DUSK_WARN) else Color("FFD45A")
 
 
@@ -3087,7 +3090,7 @@ func hand_pressed(h: GameHand) -> void:
 			if Vector2(d.x, d.z).length() <= GameConfig.CELL * 1.1 and d.y > -0.01 and d.y <= 0.16:
 				crush_start(t, h, tp)  # crush_step measures the drift from this same touch point
 				return
-	if not placing() and on_rim(tp):
+	if not placing() and on_rim(tp) and Time.get_ticks_msec() >= _settle_until:
 		if h == _mouse_hand:
 			mouse_rim_begin(get_viewport().get_mouse_position().x)  # a plain click without a drag turns nothing
 			snd("grab")
@@ -3101,7 +3104,7 @@ func hand_pressed(h: GameHand) -> void:
 		return
 	if h != _mouse_hand and not placing():
 		for o in _free_pinch:
-			if is_instance_valid(o) and o != h and not o.is_lost() and o.is_pressing() and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
+			if Time.get_ticks_msec() >= _settle_until and is_instance_valid(o) and o != h and not o.is_lost() and o.is_pressing() and o.touch_point().distance_to(h.touch_point()) <= GameConfig.ZOOM_START_GAP:
 				_zoom_hands = [o, h]
 				_zoom_d0 = o.touch_point().distance_to(h.touch_point())
 				_zoom_start = board.global_transform
@@ -3590,6 +3593,7 @@ func place_seated_board() -> void:
 		return
 	board.global_transform = seated_board_transform(_eye(), -_xr_cam.global_transform.basis.z)
 	_board_placed = true
+	_settle_until = Time.get_ticks_msec() + settle_ms
 	_update_compass_label()
 
 
@@ -3607,6 +3611,7 @@ func _update_tray() -> void:
 			return  # retry every frame until the headset reports a real pose
 		_tray.global_transform = tray_start_transform(board.global_transform, _eye())
 		_tray_placed = true
+		_settle_until = Time.get_ticks_msec() + settle_ms
 	if _tray_hand != null:
 		if not is_instance_valid(_tray_hand):
 			_tray_hand = null
@@ -3682,6 +3687,8 @@ func recenter_seated_board() -> void:
 
 
 func _tray_grab(h: GameHand) -> void:
+	if Time.get_ticks_msec() < _settle_until:
+		return
 	_tray_hand = h
 	_tray_start = _tray.global_transform
 	_tray_off = _tray.global_position - h.touch_point()

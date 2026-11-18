@@ -168,6 +168,7 @@ func _seals_north(nav: NavGrid, all: Array[int]) -> bool:
 func _make_game() -> Game:
 	var g: Game = load("res://scripts/game/game.gd").new()
 	g.with_rig = false
+	g.settle_ms = 0
 	root.add_child(g)
 	await process_frame
 	return g
@@ -477,6 +478,33 @@ func _hand_reach() -> void:
 	v.pinch_strength = GameHand.PINCH_RELEASE
 	hand._update_pinch()
 	check("opening a joint pinch releases once without waiting for runtime trigger", logical_releases[0] == 1 and not hand.is_pressing())
+	# a headset pinch must be held PRESS_HOLD before it counts, and a fist (grip_click) never presses (the user, 2026-11-18)
+	hand._xr_live = true
+	hand._down.clear()
+	hand._pinching = false
+	hand._arm_t = -1.0
+	var presses_a: int = logical_presses[0]
+	v.pinch_strength = 1.0
+	hand._update_pinch(0.1)
+	hand._update_pinch(0.05)
+	check("a pinch closed for 0.15 s has not pressed yet", logical_presses[0] == presses_a and not hand.is_pressing())
+	v.pinch_strength = 0.2
+	hand._update_pinch(0.05)
+	v.pinch_strength = 1.0
+	hand._update_pinch(0.1)
+	check("a pinch that opens before the hold starts over and does not press", logical_presses[0] == presses_a)
+	hand._update_pinch(0.25)
+	check("a pinch held past PRESS_HOLD presses once", logical_presses[0] == presses_a + 1 and hand.is_pressing())
+	v.pinch_strength = GameHand.PINCH_RELEASE
+	hand._update_pinch(0.05)
+	hand._release_wait = -1.0
+	hand._down.clear()
+	var visual_was := hand.visual.ever_live
+	hand.visual.ever_live = true
+	hand.button_pressed.emit("grip_click")
+	check("a fist (grip_click) on a bare tracked hand never presses", not hand.is_pressing())
+	hand.visual.ever_live = visual_was
+	hand._xr_live = false
 	# tracking lost: the hand keeps its pose only through the blink grace, then is hidden and takes part in nothing
 	v.controller = hand
 	v.apply_tracking(true, 0.016)
@@ -2458,6 +2486,7 @@ func _tray_rules() -> void:
 	## Siddharth 2026-11-12: the tray starts at the board's front edge, low; it is grabbed and moved on its own and
 	## never follows the island.
 	var g: Game = load("res://scripts/game/game.gd").new()
+	g.settle_ms = 0
 	g.with_rig = true
 	root.add_child(g)
 	for i in 4:
@@ -2838,6 +2867,7 @@ func _seated_experience() -> void:
 		absf(spun.basis.get_euler().y - PI / 2.0) < 0.01 and spun.origin.distance_to(center) < 0.01)
 
 	var g: Game = load("res://scripts/game/game.gd").new()
+	g.settle_ms = 0
 	g.with_rig = true
 	g.with_life = false
 	root.add_child(g)
@@ -2940,6 +2970,14 @@ func _seated_experience() -> void:
 	await process_frame
 
 
+func _tut_next(l: Launcher) -> void:
+	## One tutorial step the way the player does it: the action is noticed, the step waits MIN_STEP_S, then Continue is tapped.
+	l._tutorial(0.05)
+	l._step_time = Launcher.MIN_STEP_S + 1.0
+	l._tutorial(0.05)
+	l._advance()
+
+
 func _interactive_tutorial() -> void:
 	## Step-gated interactive tutorial: active spotlighting, card pickup/revert, daytime Live Fire shade, board spin, prayer, villager tap, lens, Night 1 spell finale.
 	var l: Launcher = load("res://scripts/ui/launcher.gd").new()
@@ -2958,8 +2996,17 @@ func _interactive_tutorial() -> void:
 
 	g._held_card = g._tray.cards[0]
 	l._tutorial(0.05)
-	check("picking up a tower card advances tutorial to step 1 (place on grass)",
-		l._step == 1 and g.tutorial_spotlight == "cards")
+	check("a finished step waits for Continue: it does not advance by itself, and Continue is hidden for the first seconds",
+		l._step == 0 and l._step_done and (l._cont == null or not l._cont.visible))
+	l._step_time = Launcher.MIN_STEP_S + 1.0
+	l._tutorial(0.05)
+	check("after the minimum time the Continue plaque shows", l._cont != null and l._cont.visible and l._step == 0)
+	check("the day clock stands still during the tutorial", g.tutorial_hold and absf(g.day_time) < 0.001)
+	g._tick_day(30.0)
+	check("a tutorial day does not run down", absf(g.day_time) < 0.001)
+	l._advance()
+	check("picking up a tower card, then Continue, advances tutorial to step 1 (place on grass)",
+		l._step == 1 and g.tutorial_spotlight == "cards" and not l._step_done and not l._cont.visible)
 
 	g._held_card = null
 	g.selected = ""
@@ -2968,12 +3015,12 @@ func _interactive_tutorial() -> void:
 		l._step == 0 and g.tutorial_spotlight == "cards")
 
 	g.selected = "fire"
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("selecting a tower kind advances to step 1", l._step == 1)
 	var build_cell := l.tutorial_build_cell()
 	var built := g.try_build("fire", build_cell)
 	var faith_before_fire := g.faith
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("building tower spawns harmless daytime Live Fire shade and advances to step 2",
 		built and l._step == 2 and g.tutorial_spotlight == "rim" \
 		and g.enemies.size() == 1 and g.phase == Game.Phase.DAY)
@@ -2998,7 +3045,7 @@ func _interactive_tutorial() -> void:
 		l._step == 2 and l._hint_card != null and is_instance_valid(l._hint_card))
 
 	g.board.rotation.y += deg_to_rad(25.0)
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("spinning the island advances to step 3 and ensures prayer quest is posted",
 		l._step == 3 and g.tutorial_spotlight == "board" and not g.requests.is_empty())
 	check("the tutorial text hangs on the HUD root, not on the board",
@@ -3019,7 +3066,7 @@ func _interactive_tutorial() -> void:
 	if not g.requests.is_empty():
 		asker = g.requests[0].asker()
 		g.tap_villager(asker)
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("answering the first prayer increments _helped and advances to step 4",
 		g._helped > 0 and l._step == 4 and g.tutorial_spotlight == "board")
 
@@ -3038,7 +3085,7 @@ func _interactive_tutorial() -> void:
 	var still_waiting_for_prayer := l._step == 3
 	if step3_has_prayer:
 		g.tap_villager(l._step3_quest.asker())
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("tutorial step 3 posts prayer even with another quest open and completes on the prayer",
 		step3_has_prayer and still_waiting_for_prayer and l._step == 4)
 	g._clear_requests()
@@ -3055,7 +3102,7 @@ func _interactive_tutorial() -> void:
 	var found_standin := g._find_prayer_asker(standin.global_position + Vector3(0, 0.035, 0), Vector3.ZERO, 0.05) == standin if standin_ok else false
 	if standin_ok:
 		g.tap_villager(standin)
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("tutorial step 3 falls back to a tappable stand-in villager when a house has no villager",
 		standin_ok and found_standin and l._step == 4)
 	for pair in saved_homes:
@@ -3063,12 +3110,12 @@ func _interactive_tutorial() -> void:
 	g._clear_requests()
 	if asker != null:
 		g.tap_villager(asker)
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("tapping a villager advances to step 5 (Crystal Lens foresight)",
 		l._step == 5 and g.tutorial_spotlight == "lens")
 
 	g.set_lens(true)
-	l._tutorial(0.05)
+	_tut_next(l)
 	check("peeking through Crystal Lens advances to step 6 (tray handles)",
 		l._step == 6 and g.tutorial_spotlight == "tray")
 	g._xr = true  # the hand steps only gate in XR; mouse play skips them
@@ -3077,25 +3124,36 @@ func _interactive_tutorial() -> void:
 	l._tutorial(0.05)
 	check("the tray step waits for a real grab", l._step == 6)
 	g._tray_hand = g._mouse_hand
-	l._tutorial(0.05)
+	_tut_next(l)
 	g._tray_hand = null
 	check("grabbing a tray handle advances to step 7 (zoom)", l._step == 7 and g.tutorial_spotlight == "zoom")
 	g._zoom_hands = [g._mouse_hand, g._mouse_hand]
 	g._zoom_d0 = 0.1
 	g._zoom_d = 0.2
-	l._tutorial(0.05)
+	_tut_next(l)
 	g._zoom_hands = []
 	check("a zoom advances to step 8 (ledger)", l._step == 8 and g.tutorial_spotlight == "ledger")
 	g.ledger.set_open(true)
-	l._tutorial(0.05)
+	_tut_next(l)
 	g.ledger.set_open(false)
 	g._xr = false
-	check("opening the ledger advances to step 9 (hourglass, 2x)", l._step == 9 and g.tutorial_spotlight == "hourglass")
+	check("opening the ledger advances to step 9 (sell a tower)", l._step == Launcher.SELL_STEP and g.tutorial_spotlight == "board" and not g.towers.is_empty())
+	check("the sell step still holds the day clock", g.tutorial_hold)
+	var tower_n := g.towers.size()
+	l._tutorial(0.05)
+	check("the sell step waits until a tower is sold", l._step == Launcher.SELL_STEP and not l._step_done)
+	g.sell(g.towers[0])
+	_tut_next(l)
+	check("selling a tower advances to the rebuild step", tower_n > 0 and l._step == Launcher.REBUILD_STEP and g.tutorial_spotlight == "cards" and g.towers.is_empty())
+	g.faith = maxi(g.faith, 200)
+	g.try_build("fire", build_cell)
+	_tut_next(l)
+	check("building again advances to the hourglass step, and the day clock is free", l._step == Launcher.HOURGLASS_STEP and g.tutorial_spotlight == "hourglass" and not g.tutorial_hold)
 
 	g.start_night()
 	l._tutorial(0.05)
-	check("starting Night 1 advances to step 10 (God Spell finale)",
-		l._step == 10 and g.tutorial_spotlight == "spells" and g.phase == Game.Phase.NIGHT)
+	check("starting Night 1 advances to the God Spell finale",
+		l._step == Launcher.NIGHT_STEP and g.tutorial_spotlight == "spells" and g.phase == Game.Phase.NIGHT)
 
 	var casted := g.cast_spell("fire_orb", NavGrid.footprint_centre(build_cell, GameConfig.TOWER_SIZE))
 	l._tutorial(0.05)

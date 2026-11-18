@@ -13,3 +13,5 @@ Files: `godot/assets/audio/music/day_music.wav` (day loop, 36.9 s, 104 BPM, Bb m
 Reference only: the Animal Crossing music mix on YouTube was analysed (brightness, tempo, note density) to steer the feel. Nothing was copied from it; the audio stays in the git-ignored `_work/refs` and is not shipped.
 
 Status: awaiting Siddharth's approval (he has approved the sound of day v7 and night v3 by ear in chat on 2026-11-18, but has not signed off the track as final in the game).
+
+2026-11-18 (second round): `story_music.ogg` is the 170 s score for the opening (cello and music box from the same voice-memo melody, day-music motif for the happy parts, a new hopeful theme for 143-170 s), built by `assets/audio_src/music/build_story.py` with FluidSynth and the GeneralUser GS soundfont. `night_music.wav` was replaced by the upbeat night loop (`build_night_action.py`, same night theme at 120 BPM). Status: awaiting Siddharth's approval.

@@ -19,6 +19,8 @@ var audio: Node
 var lighting: Object
 ## test hook: >= 0 replaces the lighting-derived night level
 var force_level := -1.0
+## true while the opening story plays its own score: both loops stay silent (the story is not the game's day or night)
+var hold := false
 var day_gain := 0.0
 var night_gain := 0.0
 var _day: AudioStreamPlayer
@@ -74,6 +76,12 @@ func targets(lv: float) -> Vector2:
 
 
 func _process(delta: float) -> void:
+	if hold:
+		day_gain = 0.0
+		night_gain = 0.0
+		_apply(_day, 0.0)
+		_apply(_night, 0.0)
+		return
 	var t := targets(level())
 	day_gain = move_toward(day_gain, t.x, SLEW * delta)
 	night_gain = move_toward(night_gain, t.y, SLEW * delta)

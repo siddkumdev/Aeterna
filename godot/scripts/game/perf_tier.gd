@@ -11,6 +11,7 @@ const TARGET_HZ := 72.0
 const DIP_FPS := 66.0  # under this for DIP_HOLD seconds = one step down (68/3 s fired on loading and spell hitches)
 const DIP_HOLD := 4.0
 const MAX_STEP := 3
+const XR_SHARPNESS := 1.2  # Quest 3 eye-buffer size relative to the runtime's recommended size (1.0 = recommended)
 
 static var tier := DESKTOP
 static var step := 0  # how many downgrades the governor has made
@@ -66,6 +67,8 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 		vp.scaling_3d_scale = 1.0 if tier == HIGH else 0.9
 	if xr != null and "foveation_level" in xr:
 		xr.set("foveation_level", Game.XR_FOVEATION_LEVEL)  # foveation off; the user, 2026-11-17
+	if xr != null and tier == HIGH and "render_target_size_multiplier" in xr:
+		xr.set("render_target_size_multiplier", XR_SHARPNESS)  # sharper picture: everything looked blurry next to the Quest's own UI (the user, 2026-11-18)
 
 
 static func govern(delta: float, vp: Viewport, sun: DirectionalLight3D, xr: Object) -> void:
