@@ -3028,17 +3028,11 @@ func _interactive_tutorial() -> void:
 
 	g._held_card = g._tray.cards[0]
 	l._tutorial(0.05)
-	check("a finished step waits for Continue: it does not advance by itself, and Continue is hidden for the first seconds",
-		l._step == 0 and l._step_done and (l._cont == null or not l._cont.visible))
-	l._step_time = Launcher.MIN_STEP_S + 1.0
-	l._tutorial(0.05)
-	check("after the minimum time the Continue plaque shows", l._cont != null and l._cont.visible and l._step == 0)
+	check("picking up a tower card flows straight into step 1 (place on grass) with no Continue (the user, 2026-11-18)",
+		l._step == 1 and g.tutorial_spotlight == "cards" and not l._step_done and (l._cont == null or not l._cont.visible))
 	check("the day clock stands still during the tutorial", g.tutorial_hold and absf(g.day_time) < 0.001)
 	g._tick_day(30.0)
 	check("a tutorial day does not run down", absf(g.day_time) < 0.001)
-	l._advance()
-	check("picking up a tower card, then Continue, advances tutorial to step 1 (place on grass)",
-		l._step == 1 and g.tutorial_spotlight == "cards" and not l._step_done and not l._cont.visible)
 
 	g._held_card = null
 	g.selected = ""
@@ -3047,7 +3041,7 @@ func _interactive_tutorial() -> void:
 		l._step == 0 and g.tutorial_spotlight == "cards")
 
 	g.selected = "fire"
-	_tut_next(l)
+	l._tutorial(0.05)  # no Continue between picking and placing
 	check("selecting a tower kind advances to step 1", l._step == 1)
 	var build_cell := l.tutorial_build_cell()
 	var built := g.try_build("fire", build_cell)

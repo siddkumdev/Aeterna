@@ -12,8 +12,9 @@ From the user's 10-min headset video (`docs/QUEST_VIDEO_2026-11-18.md`). Commits
 - Ledger smaller (0.8) and to the side; Veil lattice fades near the eye (`veil_dome` near_clear/near_full).
 - Shimmer: soft shadow filter 1 (mobile too), sun shadow_blur 2, normal_bias 1.5, village props cast no shadow. Inference: the shimmer was hard shadow edges; not seen on a headset.
 - Loss cutscene: tray + clock hidden during the story; then a big lit hourglass (`_show_big_glass`, 0.36 m toward the board from the eye) - a pinch on it turns it and the rewind runs.
+- Tutorial: picking a card flows straight into placing it (one Continue for steps 0+1, the user OK).
 - Headset-free VR test: `godot/tools/vr_play.gd` (+ `vr_human.gd`) plays the tutorial / tray / cutscene with recorded hand shapes; all pass, 0 fails.
-Not done: double Continue at steps 0/1, waving villagers still move a little, quest slip looks large in shots.
+Not done: waving villagers still move a little, quest slip looks large in shots.
 
 ## 2026-11-18 evening (headset day, round 3) - UNVERIFIED ON HEADSET
 From Siddharth's Quest session (recordings in `quest_data/`, perf avg 64 fps, acceptable). Commit 1027d3c:

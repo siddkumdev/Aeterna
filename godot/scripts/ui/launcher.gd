@@ -726,8 +726,8 @@ func _tutorial(delta: float) -> void:
 				done = game.spells.cooldown.values().any(func(cd): return cd > 0.0) or game.phase != Game.Phase.NIGHT
 	if done and not _step_done:
 		_step_done = true
-		if _step >= HOURGLASS_STEP:
-			_advance()  # the night steps flow on their own
+		if _step >= HOURGLASS_STEP or _step == 0:
+			_advance()  # the night steps flow on their own; picking a card flows straight into placing it (one Continue, the user 2026-11-18)
 			return
 		game.snd("trust_chime")
 		_hint("Well done! Take your time, then tap Continue.")
