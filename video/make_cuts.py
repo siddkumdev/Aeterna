@@ -84,8 +84,8 @@ for sec, cuts in out.items():
         name = f"{sec}_{i}.mp4"
         ln = max(float(c["len"]), 6.0 if sec == "titlePlate" else 0.0) + 0.5
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(c["from"]), "-i", str(raw), "-t", f"{ln:.2f}",
-                        "-vf", "fps=30", "-c:v", "libx264", "-crf", "16", "-preset", "veryfast", "-g", "15",
-                        "-pix_fmt", "yuv420p", "-af", "volume=3.0,alimiter=limit=0.89", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", str(clips / name)], check=True)
+                        "-vf", "fps=30,setpts=N/30/TB", "-c:v", "libx264", "-crf", "16", "-preset", "veryfast", "-g", "1", "-bf", "0", "-avoid_negative_ts", "make_zero", "-use_editlist", "0",
+                        "-pix_fmt", "yuv420p", "-af", "asetpts=PTS-STARTPTS,volume=3.0,alimiter=limit=0.89", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", str(clips / name)], check=True)
         c["src"] = f"footage/clips/{name}"
 (here / "src" / "cuts.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
 print("anchors:", {k: round(v, 1) for k, v in anchors.items()})
