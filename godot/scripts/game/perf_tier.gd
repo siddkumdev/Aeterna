@@ -66,7 +66,7 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D, xr: O
 		vp.msaa_3d = Viewport.MSAA_2X if tier == HIGH else Viewport.MSAA_DISABLED
 		vp.scaling_3d_scale = 1.0 if tier == HIGH else 0.9
 	if xr != null and "foveation_level" in xr:
-		xr.set("foveation_level", Game.XR_FOVEATION_LEVEL)  # foveation off; the user, 2026-11-17
+		xr.set("foveation_level", Game.XR_FOVEATION_LEVEL)  # low foveation: see Game.XR_FOVEATION_LEVEL
 	if xr != null and tier == HIGH and "render_target_size_multiplier" in xr:
 		xr.set("render_target_size_multiplier", XR_SHARPNESS)  # sharper picture: everything looked blurry next to the Quest's own UI (the user, 2026-11-18)
 

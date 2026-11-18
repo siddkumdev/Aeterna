@@ -45,7 +45,7 @@ const SPELL_SOUNDS := {"fire_orb": "orb_launch", "boulder": "boulder_fall", "sto
 const RARITY_SOUNDS := ["rarity_common", "rarity_rare", "rarity_legendary"]
 const HALF := GameConfig.SIZE * GameConfig.CELL / 2.0
 const MAX_TICK := 0.05  # fast speeds run several small steps a frame, so nothing skips past a target
-const XR_FOVEATION_LEVEL := 0  # off (the user, 2026-11-17: level 2 broke the view; off until measured)
+const XR_FOVEATION_LEVEL := 1  # low (2026-11-18, the user OK: GPU-bound at ~64 fps; level 2 broke the view on 2026-11-17, so only low; set 0 to turn off)
 
 ## false = no camera, hands or input (headless tests build the game without them)
 var with_rig := true
