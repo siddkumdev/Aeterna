@@ -326,3 +326,320 @@
 11-17 19:32:57.997 I/VrApi   ( 3040): MakeNonblockingRequest: blocked for 1.06ms
 11-17 19:32:58.003 I/VrApi   ( 3040): FPS=33/0,Prd=0ms,Tear=0,Early=0,Stale=73,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=-1/-1,1382/640MHz,OC=3F,TA=0/0/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.16ms,App=0.00ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=0.00ms,LCnt=3(DR0,LM0),GPU%=0.89,CPU%=0.23(W0.24),CFL=13.83/18.97,ICFLp95=17.90,LD=0,SF=0.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=288,PoseAgeP95=0.00
 [gpu] GPU % Utilization                          :           0.260
+[gpu] GPU % Bus Busy                             :          40.510
+[gpu] % Texture Fetch Stall                      :           4.005
+[gpu] % Stalled on System Memory                 :           6.000
+[gpu] % Shaders Busy                             :          37.962
+[gpu] % Time Shading Fragments                   :          99.845
+[gpu] % Time Shading Vertices                    :           0.155
+[gpu] 
+11-17 19:32:59.000 I/VrApi   ( 7128): FPS=3/72,Prd=1ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/2,0/0MHz,OC=0,TA=0/38/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.90ms,App=13.54ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=0.00ms,LCnt=3(DR0,LM0),GPU%=0.25,CPU%=0.17(W0.50),CFL=inf/-inf,ICFLp95=0.00,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=1,PoseAgeP95=0.00
+11-17 19:32:59.000 I/VrApi   ( 3040): FPS=45/72,Prd=61ms,Tear=0,Early=1,Stale=1,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/2,0/0MHz,OC=0,TA=0/0/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.90ms,App=6.19ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=5.57ms,LCnt=3(DR0,LM0),GPU%=0.25,CPU%=0.17(W0.50),CFL=inf/-inf,ICFLp95=0.00,LD=0,SF=0.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=1,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          37.826
+[gpu] GPU % Bus Busy                             :          30.075
+[gpu] % Texture Fetch Stall                      :          11.117
+[gpu] % Stalled on System Memory                 :          11.083
+[gpu] % Shaders Busy                             :          83.201
+[gpu] % Time Shading Fragments                   :          96.380
+[gpu] % Time Shading Vertices                    :           3.368
+[gpu] 
+11-17 19:33:00.000 I/VrApi   ( 3040): FPS=71/72,Prd=47ms,Tear=1,Early=69,Stale=0,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/2,0/0MHz,OC=0,TA=0/0/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.82ms,App=9.29ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=6.93ms,LCnt=3(DR0,LM0),GPU%=0.62,CPU%=0.24(W0.29),CFL=-6.95/21.63,ICFLp95=24.50,LD=0,SF=0.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=245,PoseAgeP95=0.00
+11-17 19:33:00.000 I/VrApi   ( 7128): FPS=45/72,Prd=59ms,Tear=1,Early=39,Stale=33,Stale2/5/10/max=1/1/1/25,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/2,0/0MHz,OC=0,TA=0/38/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.82ms,App=9.05ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=17.55ms,LCnt=3(DR0,LM0),GPU%=0.62,CPU%=0.24(W0.29),CFL=-6.95/21.63,ICFLp95=24.50,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=245,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          81.596
+[gpu] GPU % Bus Busy                             :          22.954
+[gpu] % Texture Fetch Stall                      :           7.640
+[gpu] % Stalled on System Memory                 :           7.251
+[gpu] % Shaders Busy                             :          86.092
+[gpu] % Time Shading Fragments                   :          97.234
+[gpu] % Time Shading Vertices                    :           2.496
+[gpu] 
+11-17 19:33:01.000 I/VrApi   ( 7128): FPS=72/72,Prd=38ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/3,0/0MHz,OC=0,TA=0/38/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.08ms,App=7.85ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=17.46ms,LCnt=3(DR0,LM0),GPU%=0.76,CPU%=0.21(W0.35),CFL=14.91/20.53,ICFLp95=19.34,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=286,PoseAgeP95=0.00
+11-17 19:33:01.000 I/VrApi   ( 3040): FPS=74/72,Prd=45ms,Tear=0,Early=59,Stale=2,Stale2/5/10/max=1/0/0/2,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/3,0/0MHz,OC=0,TA=0/0/0,SP=N/N/N,Mem=0MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.08ms,App=7.78ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=7.08ms,LCnt=3(DR0,LM0),GPU%=0.76,CPU%=0.21(W0.35),CFL=14.91/20.53,ICFLp95=19.34,LD=0,SF=0.30,DpuScale=1.00,LP=0,DVFS=0,Preempt=286,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          63.255
+[gpu] GPU % Bus Busy                             :          26.506
+[gpu] % Texture Fetch Stall                      :           7.125
+[gpu] % Stalled on System Memory                 :           8.760
+[gpu] % Shaders Busy                             :          85.358
+[gpu] % Time Shading Fragments                   :          97.671
+[gpu] % Time Shading Vertices                    :           2.090
+[gpu] 
+11-17 19:33:02.000 I/VrApi   ( 7128): FPS=65/72,Prd=37ms,Tear=1,Early=5,Stale=9,Stale2/5/10/max=0/1/0/9,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=3/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.21ms,App=2.98ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.29ms,LCnt=3(DR0,LM0),GPU%=0.52,CPU%=0.23(W0.47),CFL=14.25/22.85,ICFLp95=20.88,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=259,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          27.804
+[gpu] GPU % Bus Busy                             :          50.539
+[gpu] % Texture Fetch Stall                      :          19.400
+[gpu] % Stalled on System Memory                 :           7.714
+[gpu] % Shaders Busy                             :          73.735
+[gpu] % Time Shading Fragments                   :          95.796
+[gpu] % Time Shading Vertices                    :           4.204
+[gpu] 
+11-17 19:33:03.000 I/VrApi   ( 7128): FPS=72/72,Prd=30ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.21ms,App=3.03ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.38ms,LCnt=3(DR0,LM0),GPU%=0.45,CPU%=0.20(W0.43),CFL=13.91/22.55,ICFLp95=20.51,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=279,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          28.247
+[gpu] GPU % Bus Busy                             :          50.705
+[gpu] % Texture Fetch Stall                      :          19.071
+[gpu] % Stalled on System Memory                 :           7.726
+[gpu] % Shaders Busy                             :          77.705
+[gpu] % Time Shading Fragments                   :          94.065
+[gpu] % Time Shading Vertices                    :           5.935
+[gpu] 
+11-17 19:33:04.000 I/VrApi   ( 7128): FPS=73/72,Prd=27ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.23ms,App=4.34ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=12.09ms,LCnt=3(DR0,LM0),GPU%=0.49,CPU%=0.24(W0.29),CFL=13.26/19.74,ICFLp95=18.13,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=171,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          33.737
+[gpu] GPU % Bus Busy                             :          45.317
+[gpu] % Texture Fetch Stall                      :          16.287
+[gpu] % Stalled on System Memory                 :           7.366
+[gpu] % Shaders Busy                             :          81.340
+[gpu] % Time Shading Fragments                   :          82.574
+[gpu] % Time Shading Vertices                    :          17.426
+[gpu] 
+11-17 19:33:05.000 I/VrApi   ( 7128): FPS=73/72,Prd=27ms,Tear=0,Early=0,Stale=2,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.23ms,App=4.43ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.62ms,LCnt=3(DR0,LM0),GPU%=0.50,CPU%=0.25(W0.38),CFL=12.77/17.85,ICFLp95=16.82,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=174,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          33.443
+[gpu] GPU % Bus Busy                             :          45.220
+[gpu] % Texture Fetch Stall                      :          16.250
+[gpu] % Stalled on System Memory                 :           6.965
+[gpu] % Shaders Busy                             :          81.594
+[gpu] % Time Shading Fragments                   :          82.430
+[gpu] % Time Shading Vertices                    :          17.570
+[gpu] 
+11-17 19:33:06.000 I/VrApi   ( 7128): FPS=72/72,Prd=26ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=4.36ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=12.11ms,LCnt=3(DR0,LM0),GPU%=0.50,CPU%=0.22(W0.28),CFL=12.36/17.63,ICFLp95=16.52,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=166,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          33.428
+[gpu] GPU % Bus Busy                             :          45.438
+[gpu] % Texture Fetch Stall                      :          16.269
+[gpu] % Stalled on System Memory                 :           7.239
+[gpu] % Shaders Busy                             :          81.445
+[gpu] % Time Shading Fragments                   :          82.430
+[gpu] % Time Shading Vertices                    :          17.570
+[gpu] 
+11-17 19:33:07.000 I/VrApi   ( 7128): FPS=70/72,Prd=27ms,Tear=0,Early=4,Stale=5,Stale2/5/10/max=0/1/0/5,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.21ms,App=4.19ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.75ms,LCnt=3(DR0,LM0),GPU%=0.49,CPU%=0.23(W0.38),CFL=12.22/17.21,ICFLp95=16.10,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=160,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          32.056
+[gpu] GPU % Bus Busy                             :          46.364
+[gpu] % Texture Fetch Stall                      :          16.917
+[gpu] % Stalled on System Memory                 :           7.554
+[gpu] % Shaders Busy                             :          80.190
+[gpu] % Time Shading Fragments                   :          82.364
+[gpu] % Time Shading Vertices                    :          17.636
+[gpu] 
+11-17 19:33:08.000 I/VrApi   ( 7128): FPS=72/72,Prd=28ms,Tear=0,Early=15,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.23ms,App=2.24ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=9.46ms,LCnt=3(DR0,LM0),GPU%=0.42,CPU%=0.23(W0.39),CFL=12.26/17.19,ICFLp95=16.04,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=162,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          24.594
+[gpu] GPU % Bus Busy                             :          58.283
+[gpu] % Texture Fetch Stall                      :          22.138
+[gpu] % Stalled on System Memory                 :           9.821
+[gpu] % Shaders Busy                             :          77.180
+[gpu] % Time Shading Fragments                   :          93.150
+[gpu] % Time Shading Vertices                    :           6.850
+[gpu] 
+11-17 19:33:09.000 I/VrApi   ( 7128): FPS=72/72,Prd=23ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.21ms,App=2.98ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=9.71ms,LCnt=3(DR0,LM0),GPU%=0.41,CPU%=0.23(W0.40),CFL=12.20/17.03,ICFLp95=15.88,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=156,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          27.138
+[gpu] GPU % Bus Busy                             :          53.902
+[gpu] % Texture Fetch Stall                      :          19.944
+[gpu] % Stalled on System Memory                 :           8.380
+[gpu] % Shaders Busy                             :          78.721
+[gpu] % Time Shading Fragments                   :          90.274
+[gpu] % Time Shading Vertices                    :           9.726
+[gpu] 
+11-17 19:33:10.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=4.49ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.59ms,LCnt=3(DR0,LM0),GPU%=0.45,CPU%=0.25(W0.26),CFL=12.04/16.62,ICFLp95=15.53,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=156,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          31.750
+[gpu] GPU % Bus Busy                             :          47.461
+[gpu] % Texture Fetch Stall                      :          17.157
+[gpu] % Stalled on System Memory                 :           7.716
+[gpu] % Shaders Busy                             :          80.631
+[gpu] % Time Shading Fragments                   :          84.713
+[gpu] % Time Shading Vertices                    :          15.287
+[gpu] 
+11-17 19:33:11.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=1,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1651/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.24ms,App=4.20ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.18ms,LCnt=3(DR0,LM0),GPU%=0.48,CPU%=0.24(W0.39),CFL=12.05/16.60,ICFLp95=15.53,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=154,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          32.508
+[gpu] GPU % Bus Busy                             :          45.959
+[gpu] % Texture Fetch Stall                      :          16.672
+[gpu] % Stalled on System Memory                 :           7.066
+[gpu] % Shaders Busy                             :          81.752
+[gpu] % Time Shading Fragments                   :          82.529
+[gpu] % Time Shading Vertices                    :          17.471
+[gpu] 
+11-17 19:33:12.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=1,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.23ms,App=3.90ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.49ms,LCnt=3(DR0,LM0),GPU%=0.48,CPU%=0.25(W0.27),CFL=11.96/16.72,ICFLp95=15.57,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=166,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          31.749
+[gpu] GPU % Bus Busy                             :          47.265
+[gpu] % Texture Fetch Stall                      :          17.144
+[gpu] % Stalled on System Memory                 :           7.656
+[gpu] % Shaders Busy                             :          81.167
+[gpu] % Time Shading Fragments                   :          81.709
+[gpu] % Time Shading Vertices                    :          18.291
+[gpu] 
+11-17 19:33:13.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=4.47ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.09ms,LCnt=3(DR0,LM0),GPU%=0.50,CPU%=0.23(W0.27),CFL=12.21/16.52,ICFLp95=15.50,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          36.555
+[gpu] GPU % Bus Busy                             :          42.126
+[gpu] % Texture Fetch Stall                      :          15.147
+[gpu] % Stalled on System Memory                 :           6.787
+[gpu] % Shaders Busy                             :          80.576
+[gpu] % Time Shading Fragments                   :          80.608
+[gpu] % Time Shading Vertices                    :          19.392
+[gpu] 
+11-17 19:33:14.000 I/VrApi   ( 7128): FPS=73/72,Prd=28ms,Tear=1,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=5.81ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=16.22ms,LCnt=3(DR0,LM0),GPU%=0.61,CPU%=0.24(W0.31),CFL=12.07/17.12,ICFLp95=15.93,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=221,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          43.078
+[gpu] GPU % Bus Busy                             :          34.955
+[gpu] % Texture Fetch Stall                      :          13.201
+[gpu] % Stalled on System Memory                 :           3.960
+[gpu] % Shaders Busy                             :          79.251
+[gpu] % Time Shading Fragments                   :          79.431
+[gpu] % Time Shading Vertices                    :          20.569
+[gpu] 
+11-17 19:33:15.000 I/VrApi   ( 7128): FPS=73/72,Prd=28ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=1.80ms,App=9.87ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=20.01ms,LCnt=3(DR0,LM0),GPU%=0.69,CPU%=0.24(W0.41),CFL=12.99/17.13,ICFLp95=16.28,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=207,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          63.925
+[gpu] GPU % Bus Busy                             :          27.372
+[gpu] % Texture Fetch Stall                      :          10.512
+[gpu] % Stalled on System Memory                 :           4.731
+[gpu] % Shaders Busy                             :          79.427
+[gpu] % Time Shading Fragments                   :          78.815
+[gpu] % Time Shading Vertices                    :          21.185
+[gpu] 
+11-17 19:33:16.000 I/VrApi   ( 7128): FPS=72/72,Prd=33ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.09ms,App=4.49ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=16.72ms,LCnt=3(DR0,LM0),GPU%=0.68,CPU%=0.25(W0.40),CFL=13.02/16.71,ICFLp95=15.89,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=289,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          50.928
+[gpu] GPU % Bus Busy                             :          33.194
+[gpu] % Texture Fetch Stall                      :          12.062
+[gpu] % Stalled on System Memory                 :           6.355
+[gpu] % Shaders Busy                             :          79.816
+[gpu] % Time Shading Fragments                   :          79.820
+[gpu] % Time Shading Vertices                    :          20.180
+[gpu] 
+11-17 19:33:17.000 I/VrApi   ( 7128): FPS=72/72,Prd=25ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2518MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=3.65ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.66ms,LCnt=3(DR0,LM0),GPU%=0.52,CPU%=0.23(W0.35),CFL=12.54/16.50,ICFLp95=15.79,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=177,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          29.212
+[gpu] GPU % Bus Busy                             :          50.271
+[gpu] % Texture Fetch Stall                      :          18.490
+[gpu] % Stalled on System Memory                 :           7.804
+[gpu] % Shaders Busy                             :          79.915
+[gpu] % Time Shading Fragments                   :          83.916
+[gpu] % Time Shading Vertices                    :          16.084
+[gpu] 
+11-17 19:33:18.028 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=3.97ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.91ms,LCnt=3(DR0,LM0),GPU%=0.49,CPU%=0.25(W0.27),CFL=12.18/16.39,ICFLp95=15.52,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          31.353
+[gpu] GPU % Bus Busy                             :          47.900
+[gpu] % Texture Fetch Stall                      :          17.325
+[gpu] % Stalled on System Memory                 :           7.888
+[gpu] % Shaders Busy                             :          81.007
+[gpu] % Time Shading Fragments                   :          81.367
+[gpu] % Time Shading Vertices                    :          18.633
+[gpu] 
+11-17 19:33:19.000 I/VrApi   ( 7128): FPS=72/72,Prd=24ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.20ms,App=3.53ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.50ms,LCnt=3(DR0,LM0),GPU%=0.47,CPU%=0.26(W0.33),CFL=12.05/16.47,ICFLp95=15.40,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=160,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          29.990
+[gpu] GPU % Bus Busy                             :          48.755
+[gpu] % Texture Fetch Stall                      :          17.941
+[gpu] % Stalled on System Memory                 :           7.169
+[gpu] % Shaders Busy                             :          80.166
+[gpu] % Time Shading Fragments                   :          80.453
+[gpu] % Time Shading Vertices                    :          19.547
+[gpu] 
+11-17 19:33:20.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.22ms,App=8.23ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.34ms,LCnt=3(DR0,LM0),GPU%=0.54,CPU%=0.23(W0.51),CFL=12.00/16.51,ICFLp95=15.45,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          41.483
+[gpu] GPU % Bus Busy                             :          36.899
+[gpu] % Texture Fetch Stall                      :          13.386
+[gpu] % Stalled on System Memory                 :           4.922
+[gpu] % Shaders Busy                             :          79.158
+[gpu] % Time Shading Fragments                   :          79.922
+[gpu] % Time Shading Vertices                    :          20.078
+[gpu] 
+11-17 19:33:21.000 I/VrApi   ( 7128): FPS=73/72,Prd=29ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.19ms,App=4.67ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=12.81ms,LCnt=3(DR0,LM0),GPU%=0.57,CPU%=0.22(W0.47),CFL=11.97/17.03,ICFLp95=15.96,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=246,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          35.989
+[gpu] GPU % Bus Busy                             :          40.592
+[gpu] % Texture Fetch Stall                      :          14.998
+[gpu] % Stalled on System Memory                 :           4.811
+[gpu] % Shaders Busy                             :          81.195
+[gpu] % Time Shading Fragments                   :          82.269
+[gpu] % Time Shading Vertices                    :          17.731
+[gpu] 
+11-17 19:33:22.000 I/VrApi   ( 7128): FPS=72/72,Prd=26ms,Tear=0,Early=0,Stale=2,Stale2/5/10/max=1/0/0/2,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=4.14ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.52ms,LCnt=3(DR0,LM0),GPU%=0.52,CPU%=0.24(W0.52),CFL=12.38/16.87,ICFLp95=15.82,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=164,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          32.496
+[gpu] GPU % Bus Busy                             :          44.230
+[gpu] % Texture Fetch Stall                      :          16.399
+[gpu] % Stalled on System Memory                 :           5.343
+[gpu] % Shaders Busy                             :          81.690
+[gpu] % Time Shading Fragments                   :          82.100
+[gpu] % Time Shading Vertices                    :          17.900
+[gpu] 
+11-17 19:33:23.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.19ms,App=3.82ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.57ms,LCnt=3(DR0,LM0),GPU%=0.49,CPU%=0.24(W0.54),CFL=12.14/16.56,ICFLp95=15.54,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=152,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          31.845
+[gpu] GPU % Bus Busy                             :          45.080
+[gpu] % Texture Fetch Stall                      :          16.708
+[gpu] % Stalled on System Memory                 :           5.549
+[gpu] % Shaders Busy                             :          80.457
+[gpu] % Time Shading Fragments                   :          81.586
+[gpu] % Time Shading Vertices                    :          18.414
+[gpu] 
+11-17 19:33:24.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=4.27ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.94ms,LCnt=3(DR0,LM0),GPU%=0.50,CPU%=0.22(W0.48),CFL=12.00/16.41,ICFLp95=15.32,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          33.801
+[gpu] GPU % Bus Busy                             :          43.118
+[gpu] % Texture Fetch Stall                      :          15.816
+[gpu] % Stalled on System Memory                 :           5.469
+[gpu] % Shaders Busy                             :          80.986
+[gpu] % Time Shading Fragments                   :          82.352
+[gpu] % Time Shading Vertices                    :          17.648
+[gpu] 
+11-17 19:33:25.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=0,Early=0,Stale=1,Stale2/5/10/max=0/0/0/1,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.20ms,App=3.56ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.07ms,LCnt=3(DR0,LM0),GPU%=0.48,CPU%=0.24(W0.49),CFL=11.97/16.11,ICFLp95=15.23,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=162,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          30.394
+[gpu] GPU % Bus Busy                             :          47.055
+[gpu] % Texture Fetch Stall                      :          17.510
+[gpu] % Stalled on System Memory                 :           5.927
+[gpu] % Shaders Busy                             :          79.825
+[gpu] % Time Shading Fragments                   :          81.638
+[gpu] % Time Shading Vertices                    :          18.362
+[gpu] 
+11-17 19:33:26.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.19ms,App=3.57ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.44ms,LCnt=3(DR0,LM0),GPU%=0.46,CPU%=0.24(W0.43),CFL=11.94/16.40,ICFLp95=15.37,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=152,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          29.108
+[gpu] GPU % Bus Busy                             :          48.501
+[gpu] % Texture Fetch Stall                      :          18.300
+[gpu] % Stalled on System Memory                 :           6.164
+[gpu] % Shaders Busy                             :          79.085
+[gpu] % Time Shading Fragments                   :          80.958
+[gpu] % Time Shading Vertices                    :          19.042
+[gpu] 
+11-17 19:33:27.000 I/VrApi   ( 7128): FPS=72/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=3.71ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.36ms,LCnt=3(DR0,LM0),GPU%=0.45,CPU%=0.23(W0.47),CFL=11.85/16.22,ICFLp95=15.22,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=154,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          29.884
+[gpu] GPU % Bus Busy                             :          47.556
+[gpu] % Texture Fetch Stall                      :          17.777
+[gpu] % Stalled on System Memory                 :           5.902
+[gpu] % Shaders Busy                             :          79.418
+[gpu] % Time Shading Fragments                   :          80.648
+[gpu] % Time Shading Vertices                    :          19.352
+[gpu] 
+11-17 19:33:28.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.17ms,App=3.82ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=10.97ms,LCnt=3(DR0,LM0),GPU%=0.46,CPU%=0.22(W0.38),CFL=11.87/16.23,ICFLp95=15.22,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          30.840
+[gpu] GPU % Bus Busy                             :          46.068
+[gpu] % Texture Fetch Stall                      :          17.241
+[gpu] % Stalled on System Memory                 :           5.467
+[gpu] % Shaders Busy                             :          80.749
+[gpu] % Time Shading Fragments                   :          81.196
+[gpu] % Time Shading Vertices                    :          18.804
+[gpu] 
+11-17 19:33:29.000 I/VrApi   ( 7128): FPS=73/72,Prd=24ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=4.15ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.12ms,LCnt=3(DR0,LM0),GPU%=0.48,CPU%=0.22(W0.30),CFL=11.97/16.59,ICFLp95=15.42,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=156,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          32.249
+[gpu] GPU % Bus Busy                             :          44.628
+[gpu] % Texture Fetch Stall                      :          16.495
+[gpu] % Stalled on System Memory                 :           5.256
+[gpu] % Shaders Busy                             :          81.619
+[gpu] % Time Shading Fragments                   :          81.992
+[gpu] % Time Shading Vertices                    :          18.008
+[gpu] 
+11-17 19:33:30.000 I/VrApi   ( 7128): FPS=73/72,Prd=25ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=4.61ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=11.35ms,LCnt=3(DR0,LM0),GPU%=0.49,CPU%=0.23(W0.47),CFL=12.04/16.44,ICFLp95=15.44,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=150,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          34.123
+[gpu] GPU % Bus Busy                             :          42.518
+[gpu] % Texture Fetch Stall                      :          15.698
+[gpu] % Stalled on System Memory                 :           4.936
+[gpu] % Shaders Busy                             :          82.201
+[gpu] % Time Shading Fragments                   :          81.918
+[gpu] % Time Shading Vertices                    :          18.082
+[gpu] 
+11-17 19:33:31.000 I/VrApi   ( 7128): FPS=73/72,Prd=26ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=3196MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.20ms,App=5.53ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=12.87ms,LCnt=3(DR0,LM0),GPU%=0.55,CPU%=0.22(W0.57),CFL=11.90/16.21,ICFLp95=15.26,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=150,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          38.980
+[gpu] GPU % Bus Busy                             :          38.379
+[gpu] % Texture Fetch Stall                      :          14.135
+[gpu] % Stalled on System Memory                 :           4.659
+[gpu] % Shaders Busy                             :          82.631
+[gpu] % Time Shading Fragments                   :          80.604
+[gpu] % Time Shading Vertices                    :          19.396
+[gpu] 
+11-17 19:33:32.000 I/VrApi   ( 7128): FPS=73/72,Prd=26ms,Tear=1,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.18ms,App=5.85ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=13.05ms,LCnt=3(DR0,LM0),GPU%=0.58,CPU%=0.23(W0.51),CFL=11.94/16.26,ICFLp95=15.41,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=158,PoseAgeP95=0.00
+[gpu] GPU % Utilization                          :          39.759
+[gpu] GPU % Bus Busy                             :          37.579
+[gpu] % Texture Fetch Stall                      :          13.931
+[gpu] % Stalled on System Memory                 :           4.358
+[gpu] % Shaders Busy                             :          82.051
+[gpu] % Time Shading Fragments                   :          80.249
+[gpu] % Time Shading Vertices                    :          19.751
+[gpu] 
+11-17 19:33:33.000 I/VrApi   ( 7128): FPS=73/72,Prd=28ms,Tear=0,Early=0,Stale=0,Stale2/5/10/max=0/0/0/0,VSnc=1,Lat=-4,Fov=0,CPU4/GPU=2/2,1382/456MHz,OC=3F,TA=0/38/0,SP=N/N/N,Mem=2736MHz,Free=2466MB,PLS=0,Temp=47.0C/0.0C,TW=2.17ms,App=4.85ms,GD=0.00ms,SPC=0.00ms,CPU&GPU=12.64ms,LCnt=3(DR0,LM0),GPU%=0.58,CPU%=0.24(W0.50),CFL=12.25/16.50,ICFLp95=15.54,LD=0,SF=1.00,DpuScale=1.00,LP=0,DVFS=0,Preempt=214,PoseAgeP95=0.00
