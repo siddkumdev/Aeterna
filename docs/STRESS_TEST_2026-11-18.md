@@ -60,3 +60,6 @@ No crash, no script error, nothing left stuck in a hand after any abuse case, tw
 | tray | Start pose: 8 cm inside the near edge (as before), 15 cm up (was 25); the no-sink limit over the island lowered to 12 cm to match. Trying 6 cm outside the edge put it 0.25 m from the eye with huge messages, so it was undone. |
 
 Also added: auto-save at the start of every day (`user://save.json`); the title shows Continue / New game / Skip story and never starts by itself.
+
+## Re-run after the fixes (`_work/rerun_first`, `rerun_abuse_day`, `rerun_abuse_night`, recorded)
+No game script error (one in the bot: it touched a freed enemy). Tap spam built 0 towers. The first loop still reaches loop 2. Sound: no clipping, fewer pile-ups at night. Every FAIL was checked in the event log: refusals the game should make (no faith, a spell cooling down), the bot checking a frame before the pick registers, and the bot carrying one item on multi-item quests. None is a game bug.
