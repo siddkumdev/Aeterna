@@ -1,6 +1,7 @@
-﻿extends SceneTree
+extends SceneTree
 ## Hero frames for the store / Devpost thumbnail (desktop window needed, not --headless):
 ##   <godot console> --xr-mode off --resolution 1800x1200 --path godot -s res://tools/thumb_shot.gd -- OUT_PREFIX [distance factor] [aim x,y,z] [dof far m] [lift m]
+## Env THUMB_SIZE=2560x1440 renders off-screen at that size (bigger than the screen allows).
 ## Builds a game with a few towers, hides every UI piece (tray, slip, bubbles, clock, labels, desktop buttons) and
 ## shoots the island from a few low three-quarter angles in the dusk and day moods, on a transparent background: OUT_PREFIX_<mood>_<angle>.png.
 
@@ -12,6 +13,7 @@ const ANGLES := [
 	[Vector3(1.15, 0.55, 1.15), 34.0],
 ]
 const HIDE_NAME := ["Slip", "Toast", "Tray", "Clock", "Hint", "Label", "Ghost", "Compass"]
+var _vp: Viewport  # what gets saved: the window, or the off-screen SubViewport when THUMB_SIZE is set
 const FREE_NAME := ["Bubble", "Hand", "mouse_hand", "Cursor", "Pointer"]
 
 
@@ -38,8 +40,25 @@ func _initialize() -> void:
 		await process_frame
 	_hide_ui(g)
 	root.transparent_bg = true
+	_vp = root
 	var centre: Vector3 = g.board.global_position if g.board else Vector3.ZERO
 	var cam: Camera3D = root.get_viewport().get_camera_3d()
+	var sz := OS.get_environment("THUMB_SIZE")  # "2560x1440": render off-screen at this size (the desktop window is clamped to the screen)
+	if sz != "":
+		var p := sz.split("x")
+		var sv := SubViewport.new()
+		sv.size = Vector2i(int(p[0]), int(p[1]))
+		sv.transparent_bg = true
+		sv.world_3d = root.find_world_3d()
+		sv.msaa_3d = root.msaa_3d
+		sv.screen_space_aa = root.screen_space_aa
+		sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		root.add_child(sv)
+		var c2 := Camera3D.new()
+		sv.add_child(c2)
+		c2.make_current()
+		cam = c2
+		_vp = sv
 	if dof_far > 0.0:
 		var ca := CameraAttributesPractical.new()
 		ca.dof_blur_far_enabled = true
@@ -68,7 +87,7 @@ func _initialize() -> void:
 			cam.look_at(centre + aim + Vector3(0, lift, 0), Vector3.UP)
 			for i in 8:
 				await process_frame
-			var img := root.get_viewport().get_texture().get_image()
+			var img := _vp.get_texture().get_image()
 			img.convert(Image.FORMAT_RGBA8)
 			img.save_png("%s_%s_%d.png" % [prefix, mood, a])
 	print("THUMBSHOT saved ", prefix, "_*.png")
@@ -113,7 +132,7 @@ func _portraits(g: Game, cam: Camera3D, prefix: String) -> void:
 			cam.attributes = ca
 			for f in 8:
 				await process_frame
-			var img := root.get_viewport().get_texture().get_image()
+			var img := _vp.get_texture().get_image()
 			img.convert(Image.FORMAT_RGBA8)
 			img.save_png("%s_%s_v%d.png" % [prefix, mood, i])
 			print("THUMBSHOT v", i, " ", v.key, " ", v.job, " h=", h)
@@ -189,7 +208,7 @@ func _group(g: Game, cam: Camera3D, prefix: String) -> void:
 		for t in 3:  # three moments of the wave loop
 			for f in 9:
 				await process_frame
-			var img := root.get_viewport().get_texture().get_image()
+			var img := _vp.get_texture().get_image()
 			img.convert(Image.FORMAT_RGBA8)
 			img.save_png("%s_%s_g%d.png" % [prefix, mood, t])
 	print("THUMBSHOT group saved")

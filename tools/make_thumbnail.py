@@ -1,6 +1,8 @@
 """Compose the Devpost / store thumbnail from a real in-game frame.
 
-    python tools/make_thumbnail.py <island.png> <out.png> [zoom]
+    python tools/make_thumbnail.py <island.png> <out.png> [zoom] [WxH]
+
+WxH: output size (default 1800x1200), e.g. 2560x1440 for a 16:9 cover; text scales with the height.
 
 zoom: island width as a share of the image width (e.g. 1.15 lets it run past the edges); omitted = fit it all in;
 -1 = full-bleed close-up (the frame used as shot at its own size, top darkened for the title).
@@ -49,7 +51,7 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
     # warm glow behind the island
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(glow).ellipse((W * 0.2, H * 0.36, W * 0.8, H * 0.98), fill=GLOW + (120,))
-    base = Image.alpha_composite(base, glow.filter(ImageFilter.GaussianBlur(160)))
+    base = Image.alpha_composite(base, glow.filter(ImageFilter.GaussianBlur(160 * H / 1200)))
 
     isl = Image.open(src).convert("RGBA")
     if zoom < 0:  # full-bleed close-up: keep the frame as shot (any size, e.g. 1920 x 1080 for a 16:9 cover), darken the top for the title
@@ -83,32 +85,36 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
 
 
 def _text(base: Image.Image, out: str) -> None:
+    k = H / 1200  # everything below was laid out for a 1200 px tall image
     d = ImageDraw.Draw(base)
-    title_font = ImageFont.truetype(str(FONTS / "cinzel/Cinzel.ttf"), 168)
-    sub_font = ImageFont.truetype(str(FONTS / "ebgaramond/EBGaramond-Italic.ttf"), 52)
+    title_font = ImageFont.truetype(str(FONTS / "cinzel/Cinzel.ttf"), round(168 * k))
+    sub_font = ImageFont.truetype(str(FONTS / "ebgaramond/EBGaramond-Italic.ttf"), round(52 * k))
     title = "AETERNA"
+    ty, sy = 48 * k, 252 * k
     tw = d.textlength(title, font=title_font)
     # glow under the title
     tg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(tg).text(((W - tw) / 2, 48), title, font=title_font, fill=TOP + (255,), stroke_width=10, stroke_fill=TOP + (255,))
-    base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(14)))
+    ImageDraw.Draw(tg).text(((W - tw) / 2, ty), title, font=title_font, fill=TOP + (255,), stroke_width=round(10 * k), stroke_fill=TOP + (255,))
+    base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(14 * k)))
     tg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(tg).text(((W - tw) / 2, 48), title, font=title_font, fill=GLOW + (200,))
-    base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(18)))
+    ImageDraw.Draw(tg).text(((W - tw) / 2, ty), title, font=title_font, fill=GLOW + (200,))
+    base = Image.alpha_composite(base, tg.filter(ImageFilter.GaussianBlur(18 * k)))
     d = ImageDraw.Draw(base)
-    d.text(((W - tw) / 2, 48), title, font=title_font, fill=TITLE)
+    d.text(((W - tw) / 2, ty), title, font=title_font, fill=TITLE)
     sub = "Defend a tiny village with your bare hands. Then turn back time."
     sw = d.textlength(sub, font=sub_font)
     # dark soft shadow so the tagline reads over a busy close-up
     sh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(sh).text(((W - sw) / 2, 252), sub, font=sub_font, fill=TOP + (255,), stroke_width=6, stroke_fill=TOP + (255,))
-    base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(8)))
+    ImageDraw.Draw(sh).text(((W - sw) / 2, sy), sub, font=sub_font, fill=TOP + (255,), stroke_width=round(6 * k), stroke_fill=TOP + (255,))
+    base = Image.alpha_composite(base, sh.filter(ImageFilter.GaussianBlur(8 * k)))
     d = ImageDraw.Draw(base)
-    d.text(((W - sw) / 2, 252), sub, font=sub_font, fill=SUB)
+    d.text(((W - sw) / 2, sy), sub, font=sub_font, fill=SUB)
 
     base.convert("RGB").save(out, quality=95)
     print("saved", out)
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 4:
+        _resize(*(int(v) for v in sys.argv[4].lower().split("x")))
     main(sys.argv[1], sys.argv[2], float(sys.argv[3]) if len(sys.argv) > 3 else 0.0)
