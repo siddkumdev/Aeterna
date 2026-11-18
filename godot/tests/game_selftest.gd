@@ -2716,6 +2716,11 @@ func _visual_rendering_fixes() -> void:
 	check("resting Crystal Lens sits at 1.0x tabletop scale", g._lens.transform.basis.get_scale().is_equal_approx(Vector3.ONE))
 	check("audio bus levels raise music and ambience for Quest speakers",
 		AudioBank.BUS_DB["ambience"] == -10.0 and AudioBank.BUS_DB["music"] == -6.0)
+	var md: Node = load("res://scripts/audio/music_director.gd").new()
+	md.game = g
+	check("music: day music alone by day, night bed alone at night, both silent-ish in between",
+		md.targets(0.0).is_equal_approx(Vector2(1, 0)) and md.targets(1.0).is_equal_approx(Vector2(0, 1)) and md.targets(0.45).x < 1.0 and md.targets(0.45).y > 0.0)
+	md.free()
 	g._tick_clock()
 	check("day clock and tutorial banner sit one above the other on the HUD root, which is not under the board",
 		g.hud_root != null and g._clock.get_parent() == g.hud_root and not g.board.is_ancestor_of(g.hud_root) and g._clock.position.y - Launcher.TUTORIAL_HINT_POS.y >= 0.20)

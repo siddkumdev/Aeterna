@@ -238,6 +238,7 @@ var _xr := false
 var log_sounds := false  # tests: record every sound asked for (headless has no audio rig)
 var sound_log: Array = []
 var audio: AudioBank  # sounds; only made with the rig (headless tests stay silent)
+var music: Node  # MusicDirector (scripts/audio/music_director.gd): background loops that follow dusk and dawn
 
 
 func _ready() -> void:
@@ -293,6 +294,7 @@ func _ready() -> void:
 		audio.name = "Audio"
 		add_child(audio)
 		audio.setup()
+		music = load("res://scripts/audio/music_director.gd").attach(self)  # day music, fades out at dusk for the night bed, back in at dawn
 		_build_rig()
 		if _xr:
 			_mount_ui_rig()
