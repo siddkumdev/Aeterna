@@ -25,6 +25,8 @@ var aim_error := 0.006  # m, 1 sigma per axis, where a reach lands around its ta
 var tremor := 0.0015  # m
 var head_rec_t := 120.0  # where in the recording the head is taken from (it plays on from there, for the sway)
 var look_target := Vector3.INF
+var head_offset := Vector3.ZERO  # stress tests: leaning, standing up (origin space, m)
+var lost := {}  # stress tests: side -> true while that hand's tracking is gone
 var log_lines: PackedStringArray = []
 var rng := RandomNumberGenerator.new()
 
@@ -65,7 +67,7 @@ func head_transform() -> Transform3D:
 	if _count > 0:
 		var tt := fposmod(head_rec_t + _clock, maxf(duration - 1.0, 1.0))
 		sway = (sample(tt)["head"].origin - base.origin).limit_length(0.03)  # the recorded small head motion, not its big moves
-	var o: Vector3 = base.origin + sway
+	var o: Vector3 = base.origin + sway + head_offset
 	return Transform3D(Basis.from_euler(Vector3(_head_pitch, _head_yaw, 0.0)), o)
 
 
@@ -245,6 +247,13 @@ func _tick_hand(side: String, dt: float) -> void:
 	var aim_t: Transform3D = grip_t * aig
 	var tr: XRPositionalTracker = _trackers.get(side)
 	if tr == null:
+		return
+	if lost.get(side, false):
+		tr.invalidate_pose(&"aim")
+		tr.invalidate_pose(&"grip")
+		var lh: XRHandTracker = _hand_trackers.get(side)
+		if lh:
+			lh.has_tracking_data = false
 		return
 	tr.profile = HAND_PROFILE if joints else TOUCH_PROFILE
 	tr.set_pose(&"aim", aim_t, Vector3.ZERO, Vector3.ZERO, XRPose.XR_TRACKING_CONFIDENCE_HIGH)

@@ -120,3 +120,6 @@ Done in code, selftest 856/0, not yet felt on the Quest: story score + upbeat ni
 - Open: not tried on a headset; chapter VI's last shot is not captured (shot guard); Skotos only reads when you look up; burning-house flames look like flat sprites; critics not run yet on this round.
 
 - 2026-11-17 (sykeriin): ground shader per-vertex (24 ms saved on Quest), sheep fleece 34 curls, zoom steadied (fixed direction, deadzone, smoothing, freezes on lost hand), tutorial now 11 steps (+tray handles, two-hand zoom, ledger, hourglass 2x). Installed build on headset: NOT yet rebuilt; run quest_build.bat.
+
+## 2026-11-18 late: VR stress test
+Flag list (nothing fixed, team decides): `docs/STRESS_TEST_2026-11-18.md`. Bot modes `firstloop` (clumsy newcomer, whole first loop) and `abuse [dayonly]` in `godot/tools/vr_play.gd`; event log `godot/tools/vr_monitor.gd`; sound check `python tools/vr_audio_check.py _work/<run>`.
