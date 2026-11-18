@@ -645,6 +645,12 @@ func _hand_reach() -> void:
 		restored and rig_game.loop == 1 and rig_game.night == 1 and rig_game.faith == 321 and rig_game.phase == Game.Phase.DAY \
 		and rig_game.towers.size() == 1 and rig_game.towers[0].cell == free_cell and rig_game.towers[0].kind == kind0 \
 		and (rig_game.houses.is_empty() or is_equal_approx(rig_game.houses[0].hp, 5.0)))
+	rig_game._refresh_tray()
+	rig_game.set_tutorial_spotlight("lens")
+	var tower_cards: Array = rig_game._tray.cards.filter(func(c): return c.data.get("kind", "") == "tower")
+	check("a tutorial step about something else does not grey out affordable tower cards (the user, 2026-11-18)",
+		not tower_cards.is_empty() and tower_cards.any(func(c): return c.glow))
+	rig_game.set_tutorial_spotlight("")
 	spell_hand_a.queue_free()
 	spell_hand_b.queue_free()
 	rig_game.queue_free()

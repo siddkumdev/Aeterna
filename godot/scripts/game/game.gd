@@ -4286,10 +4286,8 @@ func set_tutorial_spotlight(mode: String) -> void:
 
 func _refresh_card_availability() -> void:
 	## Cheap state-only update used every night tick; does not rebuild card data or allocate tray lists.
-	if tutorial_spotlight in ["rim", "board", "lens", "tray", "zoom", "ledger", "hourglass"]:
-		for c in _tray.cards:
-			c.set_glow(false)
-		return
+	## Cards always show their real state: grey means "cannot afford / cooling down" only (the user, 2026-11-18: the
+	## tutorial greyed every card during its rim, lens, tray, zoom, ledger and hourglass steps, which read as no faith).
 	for c in _tray.cards:
 		var id: String = c.data.get("id", "")
 		match c.data.get("kind", ""):
