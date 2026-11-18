@@ -158,6 +158,17 @@ func _group(g: Game, cam: Camera3D, prefix: String) -> void:
 				v.rotation.y = atan2(d.x, d.z) - v.get_parent().global_rotation.y
 				v.rig.anim = e[3]
 				v.rig.gait = 0.0
+	if OS.get_environment("THUMB_CAT") != "":  # the village cat, sitting in the front row facing the camera
+		var cat: Node3D = load("res://assets/village/ew_village_cat_v02.glb").instantiate()
+		g.add_child(cat)
+		var cp: Vector3 = sp + Vector3(float(OS.get_environment("THUMB_CATX")) if OS.get_environment("THUMB_CATX") != "" else -0.03, 0, float(OS.get_environment("THUMB_CATZ")) if OS.get_environment("THUMB_CATZ") != "" else 0.17).rotated(Vector3.UP, yaw)
+		cp.y = ground
+		cat.global_position = cp
+		var cd: Vector3 = cam_pos - cp
+		cat.rotation.y = atan2(cd.x, cd.z)
+		var cs := float(OS.get_environment("THUMB_CATSCALE")) if OS.get_environment("THUMB_CATSCALE") != "" else 1.0
+		cat.scale = Vector3.ONE * cs
+		print("THUMBSHOT cat bounds ", ModelUtil.bounds(cat))
 	for mood in MOODS:
 		g.lighting.set_mood(mood, 0.0)
 		for i in 20:
