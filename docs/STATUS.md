@@ -2,7 +2,7 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
+Last updated: 2026-11-18 (overnight run done, final check passed, submission draft in docs/SUBMISSION_DRAFT.md); before: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
 
 ## Plan to the deadline (Siddharth, 2026-11-18)
 - Deadline 2026-11-18 12:00 PM PT = 2026-11-19 01:30 IST. Submission work (APK on the Competition channel, video, Devpost, licence proof) is the LAST job, done before 8 PM IST on 2026-11-18.
@@ -13,6 +13,8 @@ Last updated: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (S
 - OVERNIGHT addendum (Siddharth, 2026-11-18 ~00:35 IST): (a) VR must not bug out or look worse: many 2026-11-15/16 optimisations made the game look worse on the headset; audit them (PerfTier steps/render scale/MSAA, GrassField/FlowerField shaders, merged meshes, LOD/visibility ranges, shadow cuts, story tier) and restore the look where the gain was small; verify in the Meta XR Simulator (godot/run_sim.ps1) and desktop. (b) Use the 2026-11-17 recording to the fullest, his trust, no questions: build the desktop replay driver (recordings -> XR head/hand trackers, tools/rec_read.py format) and use it to replay real play for testing/shots, plus tune input (pinch debounce, reach radii, hand-loss) and comfort (head position/height for HUD/tray placement) from it. (c) Target on wake: an almost-done game needing only polish. (d) After the list, with context left: review the game end to end in desktop and VR sim (with the replay), critic visuals and ease of use (player-critic + art-critic), fix what's clearly wrong, report.
 
 - RESTART 2026-11-18 01:12 IST: the session restarted and three agents stopped mid-work. Item 1 (Skotos in game) is PARTLY done and UNCOMMITTED in the working tree: character_rig.gd, enemy.gd, game.gd, warden.gd, boss_vfx.gd, game_selftest.gd, new scripts/vfx/boss_veins.gd. Finish it from there (review the diff, run selftest, shots, critics), do not discard it. Fixes A-E and D/F/G had not changed any files yet: start them fresh.
+
+- FINAL CHECK 2026-11-18 (~09:00 IST): selftest 843/0; code-critic PASS on b179bfd (7 plausible minor notes: Grove cleanup on boss death, sapling halos on Quest, per-frame lookups); story sky/Veil shots look fine; player-critic FAIL is mostly close-camera shot artifacts, real open points: Veil lattice may hide the board, tiny low-contrast beast. NOT run: XR simulator, headset. Awaiting Siddharth: approve Skotos v02 and quest props; submission steps in docs/SUBMISSION_DRAFT.md.
 
 ## Two sessions
 - Cross-session messaging (ListAgents / SendMessage) is on. Siddharth-side or second session: none was running on 2026-11-11. This session's name: `aeterna-first-five-minutes-overhaul`. Before editing a file the other session may hold, ListAgents and message it; say which plan step you are taking.
