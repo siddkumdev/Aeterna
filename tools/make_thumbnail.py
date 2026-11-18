@@ -3,7 +3,7 @@
     python tools/make_thumbnail.py <island.png> <out.png> [zoom]
 
 zoom: island width as a share of the image width (e.g. 1.15 lets it run past the edges); omitted = fit it all in;
--1 = full-bleed close-up (a 1800 x 1200 frame used as shot, top darkened for the title).
+-1 = full-bleed close-up (the frame used as shot at its own size, top darkened for the title).
 
 <island.png> is a transparent-background frame from godot/tools/thumb_shot.gd (e.g. _work/thumb/t_dusk_0.png).
 Adds a dusk sky gradient, a warm glow behind the island, the title in Cinzel and the tagline in EB Garamond
@@ -39,6 +39,11 @@ def sky() -> Image.Image:
     return img
 
 
+def _resize(w: int, h: int) -> None:
+    global W, H
+    W, H = w, h
+
+
 def main(src: str, out: str, zoom: float = 0.0) -> None:
     base = sky().convert("RGBA")
     # warm glow behind the island
@@ -47,8 +52,10 @@ def main(src: str, out: str, zoom: float = 0.0) -> None:
     base = Image.alpha_composite(base, glow.filter(ImageFilter.GaussianBlur(160)))
 
     isl = Image.open(src).convert("RGBA")
-    if zoom < 0:  # full-bleed close-up: the frame is already W x H, keep it as shot, darken the top for the title
-        base.alpha_composite(isl.resize((W, H), Image.LANCZOS))
+    if zoom < 0:  # full-bleed close-up: keep the frame as shot (any size, e.g. 1920 x 1080 for a 16:9 cover), darken the top for the title
+        _resize(*isl.size)
+        base = sky().convert("RGBA")
+        base.alpha_composite(isl)
         shade = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         sd = ImageDraw.Draw(shade)
         for yy in range(int(H * 0.42)):
