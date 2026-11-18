@@ -48,6 +48,14 @@ func _initialize() -> void:
 		ca.dof_blur_amount = 0.12
 		cam.attributes = ca
 	print("THUMBSHOT centre ", centre)
+	if OS.get_environment("THUMB_GROUP") != "":
+		await _group(g, cam, prefix)
+		quit()
+		return
+	if OS.get_environment("THUMB_PORTRAIT") != "":
+		await _portraits(g, cam, prefix)
+		quit()
+		return
 	for mood in MOODS:
 		g.lighting.set_mood(mood, 0.0)
 		for i in 20:
@@ -65,6 +73,144 @@ func _initialize() -> void:
 			img.save_png("%s_%s_%d.png" % [prefix, mood, a])
 	print("THUMBSHOT saved ", prefix, "_*.png")
 	quit()
+
+
+# Character portraits (env THUMB_PORTRAIT=1, optional THUMB_ONLY=<index>, THUMB_YAW=<deg>, THUMB_DIST=<x height>):
+# one eye-level frame per villager, close in front of its face, the village blurred behind: PREFIX_<mood>_v<i>.png
+func _portraits(g: Game, cam: Camera3D, prefix: String) -> void:
+	var only := int(OS.get_environment("THUMB_ONLY")) if OS.get_environment("THUMB_ONLY") != "" else -1
+	var yaw := float(OS.get_environment("THUMB_YAW")) if OS.get_environment("THUMB_YAW") != "" else 25.0
+	var k := float(OS.get_environment("THUMB_DIST")) if OS.get_environment("THUMB_DIST") != "" else 2.6
+	var vs: Array = g.life.villagers if g.life else []
+	print("THUMBSHOT villagers ", vs.size())
+	for mood in MOODS:
+		g.lighting.set_mood(mood, 0.0)
+		for i in 20:
+			await process_frame
+		_no_fog(root)
+		for i in vs.size():
+			if only >= 0 and i != only:
+				continue
+			var v: Node3D = vs[i]
+			if not v.visible:
+				continue
+			_hide_ui(g)
+			var box := _aabb(v, v.global_transform)
+			var h: float = max(box.size.y, 0.02)
+			var base: Vector3 = v.global_position
+			var fwd: Vector3 = (v.rig.global_basis.z if v.rig else v.global_basis.z)
+			fwd.y = 0.0
+			fwd = fwd.normalized().rotated(Vector3.UP, deg_to_rad(yaw))
+			var eye := base + Vector3(0, h * 0.62, 0)
+			cam.fov = 34.0
+			cam.global_position = eye + fwd * h * k + Vector3(0, h * 0.75, 0)
+			cam.look_at(eye - Vector3(0, h * 0.05, 0), Vector3.UP)
+			var ca := CameraAttributesPractical.new()
+			ca.dof_blur_far_enabled = true
+			ca.dof_blur_far_distance = h * k * 1.5
+			ca.dof_blur_far_transition = h * k * 1.5
+			ca.dof_blur_amount = 0.25
+			cam.attributes = ca
+			for f in 8:
+				await process_frame
+			var img := root.get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGBA8)
+			img.save_png("%s_%s_v%d.png" % [prefix, mood, i])
+			print("THUMBSHOT v", i, " ", v.key, " ", v.job, " h=", h)
+
+
+# Group portrait (env THUMB_GROUP=1): a few real villagers staged on the open square in front of the statue,
+# facing the camera and waving, shot at their eye level with the village blurred behind: PREFIX_<mood>_g<n>.png
+const GROUP := [["cat_girl", -0.075, 0.115, "wave"], ["dancer_butterfly", -0.025, 0.135, "cheer"],
+	["farmer_horse", 0.03, 0.13, "wave"], ["bee_kid", 0.075, 0.11, "cheer"], ["kid_bunny", -0.05, 0.075, "wave"],
+	["elder_ram", 0.055, 0.07, "talk"]]
+
+
+func _group(g: Game, cam: Camera3D, prefix: String) -> void:
+	var statue := _find(root, "statue")
+	var sp: Vector3 = statue.global_position if statue else Vector3(0, 0.837, -0.831)
+	print("THUMBSHOT statue ", statue.name if statue else "none", " ", sp)
+	if g.life:
+		g.life.set_process(false)
+	var vs: Array = g.life.villagers if g.life else []
+	var ground := sp.y
+	var hs := []
+	for v in vs:
+		hs.append(v.global_position.y)
+	hs.sort()
+	if hs.size() > 0:
+		ground = hs[hs.size() / 2]
+	var camd := float(OS.get_environment("THUMB_DIST")) if OS.get_environment("THUMB_DIST") != "" else 0.22
+	var yaw := deg_to_rad(float(OS.get_environment("THUMB_YAW")) if OS.get_environment("THUMB_YAW") != "" else 0.0)
+	var gs := float(OS.get_environment("THUMB_SPREAD")) if OS.get_environment("THUMB_SPREAD") != "" else 0.7
+	var cam_pos := sp + Vector3(0.012, 0, camd).rotated(Vector3.UP, yaw)
+	cam_pos.y = ground + float(OS.get_environment("THUMB_CAMY")) if OS.get_environment("THUMB_CAMY") != "" else ground + 0.06
+	for v in vs:
+		for e in GROUP:
+			if v.key == e[0]:
+				var gp: Vector3 = sp + Vector3(e[1] * gs, 0, e[2] * gs).rotated(Vector3.UP, yaw)
+				gp.y = ground
+				v.state = "stay"
+				v.visible = true
+				v.scale = Vector3.ONE
+				v.global_position = gp
+				var d: Vector3 = cam_pos - gp
+				v.rotation.y = atan2(d.x, d.z) - v.get_parent().global_rotation.y
+				v.rig.anim = e[3]
+				v.rig.gait = 0.0
+	for mood in MOODS:
+		g.lighting.set_mood(mood, 0.0)
+		for i in 20:
+			await process_frame
+		_no_fog(root)
+		_hide_ui(g)
+		cam.fov = float(OS.get_environment("THUMB_FOV")) if OS.get_environment("THUMB_FOV") != "" else 30.0
+		cam.global_position = cam_pos
+		var look: Vector3 = sp + Vector3(0, 0, 0.05).rotated(Vector3.UP, yaw)
+		look.y = ground + (float(OS.get_environment("THUMB_LOOKY")) if OS.get_environment("THUMB_LOOKY") != "" else 0.04)
+		cam.look_at(look, Vector3.UP)
+		var ca := CameraAttributesPractical.new()
+		ca.dof_blur_far_enabled = true
+		ca.dof_blur_far_distance = camd
+		ca.dof_blur_far_transition = 0.4
+		ca.dof_blur_amount = 0.18
+		cam.attributes = ca
+		for t in 3:  # three moments of the wave loop
+			for f in 9:
+				await process_frame
+			var img := root.get_viewport().get_texture().get_image()
+			img.convert(Image.FORMAT_RGBA8)
+			img.save_png("%s_%s_g%d.png" % [prefix, mood, t])
+	print("THUMBSHOT group saved")
+
+
+func _find(n: Node, part: String) -> Node3D:
+	if n is Node3D and part in str(n.name).to_lower():
+		return n
+	for c in n.get_children():
+		var r := _find(c, part)
+		if r:
+			return r
+	return null
+
+
+func _aabb(n: Node, xf: Transform3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for ch in n.get_children():
+		var t := xf * (ch as Node3D).transform if ch is Node3D else xf
+		var b := AABB()
+		if ch is VisualInstance3D and (ch as VisualInstance3D).visible:
+			b = Transform3D(t.basis, t.origin - xf.origin) * (ch as VisualInstance3D).get_aabb()
+			b.position += xf.origin - xf.origin
+		var cb := _aabb(ch, t)
+		if cb.size != Vector3.ZERO:
+			b = cb if b.size == Vector3.ZERO else b.merge(cb)
+		if b.size == Vector3.ZERO:
+			continue
+		box = b if first else box.merge(b)
+		first = false
+	return box
 
 
 func _hide_ui(g: Game) -> void:
