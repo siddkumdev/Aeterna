@@ -75,7 +75,13 @@ func _run(mode: String) -> void:
 			await do_abuse()
 		"playthrough":
 			normal = true
+			bot.natural = true
+			if OS.get_environment("VRH_PROBE") != "":
+				hand_probe()
 			bot.aim_error = 0.004
+			await bot.rest("right")
+			await bot.rest("left")
+			await settle_tray()
 			await do_firstloop()
 		"firstloop":
 			clumsy = true
@@ -305,6 +311,54 @@ func grab_tray_handle() -> void:
 	await shot("tray_moved")
 	bot.note("     tray moved %.3f m, turned %.1f deg while carried" % [g._tray.global_position.distance_to(p0), rad_to_deg(angle_difference(g._tray.global_rotation.y, yaw0))])
 	await bot.pinch("right", false)
+
+
+func island_hidden() -> float:
+	## How far (m, on the screen plane at the island's near edge) the tray's top edge rises above the island's near
+	## edge as seen from the eye looking at the island's centre. > 0: the tray hides the near part of the island.
+	var e: Vector3 = bot.eye_world()
+	var c: Vector3 = g.board.global_position
+	var to_eye := Vector3(e.x - c.x, 0.0, e.z - c.z).normalized()
+	var half: float = GameConfig.SIZE * GameConfig.CELL * 0.5 * g.board.global_transform.basis.get_scale().x
+	var near_edge: Vector3 = c + to_eye * half
+	var tray_top: Vector3 = g._tray.global_position + Vector3(0, 0.03, 0)
+	# compare elevation angles from the eye: the tray hides the edge if its top is seen above it
+	var ang := func(p: Vector3) -> float: return atan2(p.y - e.y, Vector2(p.x - e.x, p.z - e.z).length())
+	return (float(ang.call(tray_top)) - float(ang.call(near_edge))) * e.distance_to(near_edge)
+
+
+func settle_tray() -> void:
+	## What a player does first (the user, 2026-11-18): pull the tray down until the whole island shows above it.
+	await bot.look(g.board.global_position)
+	await bot.hold(1.0)
+	for k in 3:
+		var hid := island_hidden()
+		bot.note("     tray hides %.3f m of the island's near edge" % hid)
+		if hid < -0.01:
+			break
+		var hs: Array = g._tray.handles
+		var e: Vector3 = bot.eye_world()
+		var hnd: Node3D = hs[0]
+		for h in hs:
+			if is_instance_valid(h) and (h as Node3D).global_position.distance_to(e) < hnd.global_position.distance_to(e):
+				hnd = h
+		await bot.look(hnd.global_position)
+		await bot.reach("right", hnd.global_position)
+		await bot.pinch("right", true)
+		await bot.hold(0.2)
+		if not check(g._tray_hand != null, "pinching the tray's handle grabs the tray"):
+			await bot.pinch("right", false)
+			break
+		var to_eye := Vector3(e.x - hnd.global_position.x, 0.0, e.z - hnd.global_position.z).normalized()
+		var drop := clampf(hid + 0.04, 0.04, 0.14)
+		await bot.move_with("right", hnd.global_position + Vector3(0, -drop, 0) + to_eye * 0.03, 1.1)
+		await bot.hold(0.2)
+		await bot.pinch("right", false)
+		await bot.rest("right")
+		await bot.look(g.board.global_position)
+		await bot.hold(0.6)
+	check(island_hidden() < 0.0, "after moving the tray the island's near edge shows above it (%.3f m)" % island_hidden())
+	await shot("tray_settled")
 
 
 func do_tray() -> void:
@@ -824,3 +878,19 @@ func do_quest(r) -> void:
 	await bot.pinch("right", false)
 	await bot.hold(0.6)
 	check(r.done, "carrying the item to its goal finishes the quest")
+
+
+func hand_probe() -> void:
+	## Diagnostics: once a second, whether each hand is drawn and where it lands on screen.
+	while true:
+		await bot.hold(1.0)
+		var cam: Camera3D = g._xr_cam
+		var parts: PackedStringArray = []
+		for h in g._hands:
+			if not is_instance_valid(h) or h.visual == null:
+				continue
+			var v: GodHandVisual = h.visual
+			var wp: Vector3 = v.global_transform * v._joints[0].origin if v._joints.size() > 0 else v.global_position
+			var sp := cam.unproject_position(wp)
+			parts.append("%s local=%s scale=%s vis=%s tr=%s fb=%s lost=%.1f in_tree_vis=%s scr=(%d,%d) behind=%s" % [v.side, str(v._joints[0].origin.snapped(Vector3.ONE * 0.01)), str(v.global_transform.basis.get_scale().snapped(Vector3.ONE * 0.01)), str(v.visible), str(v.tracked), str(v.fallback), v._lost, str(v.is_visible_in_tree()), int(sp.x), int(sp.y), str(cam.is_position_behind(wp))])
+		bot.note("     HANDS " + " | ".join(parts))

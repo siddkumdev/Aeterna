@@ -151,7 +151,9 @@ func _make_multimesh(count: int, mesh: Mesh) -> MultiMeshInstance3D:
 	var inst := MultiMeshInstance3D.new()
 	inst.multimesh = mm
 	inst.material_override = _mat
-	inst.custom_aabb = AABB(Vector3(-1, -1, -1), Vector3(2, 2, 2))  # the instances move: never cull on the first pose
+	# the instances are in XROrigin space and the hand can be metres from the origin (seated play away from the play-space
+	# centre): a 2 m box culled the hand there (2026-11-18, "the hand randomly disappears"). Two hands: never cull them.
+	inst.custom_aabb = AABB(Vector3(-50, -50, -50), Vector3(100, 100, 100))
 	inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return inst
 

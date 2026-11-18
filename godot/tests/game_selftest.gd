@@ -460,6 +460,11 @@ func _hand_reach() -> void:
 	await process_frame
 	v.set_pose_from(GodHandVisual.demo_joints(0.2, 1.0))
 	hand.visual = v
+	var far_ok := true  # a hand metres from the XR origin (seated away from the play-space centre) is never culled
+	for c in v.get_children():
+		if c is MultiMeshInstance3D and not (c as MultiMeshInstance3D).custom_aabb.has_point(Vector3(1.3, 1.4, -1.85)):
+			far_ok = false
+	check("the drawn hand is not culled 2 m from the XR origin (it vanished there, 2026-11-18)", far_ok)
 	var mid := (v.thumb_tip_global() + v.index_tip_global()) * 0.5
 	check("tracked hand: the touch point is the hand's own position unless DRAWN_PINCH_TOUCH is on", hand.touch_point().is_equal_approx(mid if GameConfig.DRAWN_PINCH_TOUCH else hand.global_position)
 		and hand.ray_origin().is_equal_approx(hand.touch_point()))

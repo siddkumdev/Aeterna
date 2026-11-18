@@ -26,6 +26,10 @@ var tremor := 0.0015  # m
 var head_rec_t := 120.0  # where in the recording the head is taken from (it plays on from there, for the sway)
 var look_target := Vector3.INF
 var head_offset := Vector3.ZERO  # stress tests: leaning, standing up (origin space, m)
+var natural := false  # playthrough videos (the user, 2026-11-18): curved reaches with overshoot and a correction, a
+# pause before a pinch, breathing drift, spring-like head turns with idle motion, hands resting in view over the tray
+var _head_yaw_v := 0.0
+var _head_pitch_v := 0.0
 var lost := {}  # stress tests: side -> true while that hand's tracking is gone
 var log_lines: PackedStringArray = []
 var rng := RandomNumberGenerator.new()
@@ -77,6 +81,13 @@ func eye_world() -> Vector3:
 
 func rest_point(side: String) -> Vector3:
 	## Hands resting low, near the body, as a seated player does between actions.
+	if natural and game != null and game._tray != null and is_instance_valid(game._tray) and game._tray.visible:
+		# in view: hovering just in front of the tray's front edge, a little below its top, either side of the middle
+		var tr: Node3D = game._tray
+		var eye := eye_world()
+		var to_eye := Vector3(eye.x - tr.global_position.x, 0.0, eye.z - tr.global_position.z).normalized()
+		var side_dir := Vector3.UP.cross(to_eye).normalized()  # the player's left
+		return tr.global_position + to_eye * 0.13 + Vector3(0, -0.02, 0) + side_dir * (-0.16 if side == "right" else 0.16)
 	var ht := head_transform()
 	var fwd := Vector3(-sin(_head_yaw), 0, -cos(_head_yaw))
 	var right := Vector3(cos(_head_yaw), 0, -sin(_head_yaw))
@@ -92,14 +103,44 @@ func reach(side: String, world: Vector3, exact := false, dur := -1.0) -> void:
 	if not exact:
 		target += Vector3(rng.randfn(0.0, aim_error), rng.randfn(0.0, aim_error * 0.7), rng.randfn(0.0, aim_error))
 	var d: float = (s["pos"] as Vector3).distance_to(target)
+	var total: float = dur if dur > 0.0 else clampf(0.25 + 0.16 * log(1.0 + d / 0.01) / log(2.0), 0.25, 1.3)  # Fitts' law
+	look_target = world
+	if natural:
+		total *= rng.randf_range(0.9, 1.2)
+		var drag := dur > 0.0  # a deliberate move while pinching: a flatter arc, no overshoot
+		var dirv: Vector3 = (target - (s["pos"] as Vector3)).normalized() if d > 0.001 else Vector3.ZERO
+		var first := target
+		if not drag and d > 0.06:
+			first = target + dirv * clampf(d * 0.04, 0.004, 0.015)  # the hand overshoots a little, then corrects
+		_start_move(s, first, total * (0.85 if first != target else 1.0), d * (0.08 if drag else 0.18))
+		while float(s["t"]) < 1.0:
+			await get_tree().process_frame
+		if first != target:
+			_start_move(s, target, rng.randf_range(0.14, 0.22), 0.0)
+			while float(s["t"]) < 1.0:
+				await get_tree().process_frame
+		await hold(rng.randf_range(0.08, 0.3))  # a look before the fingers close
+		return
 	s["from"] = s["pos"]
 	s["to"] = target
+	s["ctrl"] = null
 	s["t"] = 0.0
-	s["dur"] = dur if dur > 0.0 else clampf(0.25 + 0.16 * log(1.0 + d / 0.01) / log(2.0), 0.25, 1.3)  # Fitts' law
-	look_target = world
+	s["dur"] = total
 	while float(s["t"]) < 1.0:
 		await get_tree().process_frame
 	await hold(0.06)  # a short settle, as a hand does before it pinches
+
+
+func _start_move(s: Dictionary, to: Vector3, dur: float, arc: float) -> void:
+	## A curved path: the middle is lifted and pushed a little sideways, as an arm swings round rather than along a line.
+	var from: Vector3 = s["pos"]
+	var side := (to - from).cross(Vector3.UP)
+	side = side.normalized() if side.length() > 0.0001 else Vector3.ZERO
+	s["from"] = from
+	s["to"] = to
+	s["ctrl"] = (from + to) * 0.5 + Vector3(0, arc, 0) + side * arc * rng.randf_range(-0.5, 0.5)
+	s["t"] = 0.0
+	s["dur"] = maxf(dur, 0.05)
 
 
 func reach_node(side: String, n: Node3D, offset := Vector3.ZERO) -> void:
@@ -151,7 +192,7 @@ func drag(side: String, from: Vector3, to: Vector3, dur := 0.8) -> void:
 
 
 func rest(side: String) -> void:
-	await reach(side, rest_point(side), true, 0.5)
+	await reach(side, rest_point(side), true, 0.5 if not natural else rng.randf_range(0.6, 0.9))
 
 
 func palm_up(side: String, on: bool) -> void:
@@ -188,9 +229,17 @@ func _tick_head(dt: float) -> void:
 		var v := origin.global_transform.basis.inverse() * (look_target - eye)
 		var want_yaw := atan2(-v.x, -v.z)
 		var want_pitch := clampf(atan2(v.y, Vector2(v.x, v.z).length()) * 0.8, -1.0, 0.2)  # eyes do the last part
-		var k := 1.0 - exp(-dt * 5.0)
-		_head_yaw = lerp_angle(_head_yaw, want_yaw, k)
-		_head_pitch = lerpf(_head_pitch, want_pitch, k)
+		if natural:  # a damped spring: the head starts slowly, speeds up and settles, with a little idle motion
+			var w := 6.0
+			var dy := wrapf(want_yaw - _head_yaw, -PI, PI)
+			_head_yaw_v += (dy * w * w - 2.0 * w * _head_yaw_v) * dt
+			_head_pitch_v += ((want_pitch - _head_pitch) * w * w - 2.0 * w * _head_pitch_v) * dt
+			_head_yaw += _head_yaw_v * dt + (sin(_clock * 0.71) * 0.6 + sin(_clock * 1.37 + 2.0) * 0.4) * 0.012 * dt
+			_head_pitch += _head_pitch_v * dt + (sin(_clock * 0.53 + 1.0) * 0.6 + sin(_clock * 1.11) * 0.4) * 0.010 * dt
+		else:
+			var k := 1.0 - exp(-dt * 5.0)
+			_head_yaw = lerp_angle(_head_yaw, want_yaw, k)
+			_head_pitch = lerpf(_head_pitch, want_pitch, k)
 	if head_node != null and is_instance_valid(head_node):
 		head_node.transform = head_transform()
 
@@ -205,8 +254,17 @@ func _tick_hand(side: String, dt: float) -> void:
 		s["t"] = minf(float(s["t"]) + dt / maxf(float(s["dur"]), 0.01), 1.0)
 		var u: float = s["t"]
 		var mj := u * u * u * (10.0 - 15.0 * u + 6.0 * u * u)  # minimum-jerk profile
-		s["pos"] = (s["from"] as Vector3).lerp(s["to"], mj)
+		var c = s.get("ctrl")
+		if c != null and fol == null:  # quadratic Bezier through the lifted middle
+			var a: Vector3 = (s["from"] as Vector3).lerp(c, mj)
+			var b: Vector3 = (c as Vector3).lerp(s["to"], mj)
+			s["pos"] = a.lerp(b, mj)
+		else:
+			s["pos"] = (s["from"] as Vector3).lerp(s["to"], mj)
 	var p: Vector3 = s["pos"] + Vector3(sin(_clock * 51.0 + 1.3), sin(_clock * 47.0), cos(_clock * 43.0 + 0.7)) * tremor
+	if natural and float(s["t"]) >= 1.0 and float(s["trig_to"]) < 0.5:  # resting, not pinching: slow breathing drift
+		var ph := 0.0 if side == "right" else 1.7
+		p += Vector3(sin(_clock * 0.9 + ph) * 0.003, sin(_clock * 1.6 + ph) * 0.004, cos(_clock * 0.7 + ph) * 0.003)
 	var step := dt / 0.10
 	s["trig"] = move_toward(float(s["trig"]), float(s["trig_to"]), step)
 	var trig: float = s["trig"]
