@@ -52,6 +52,14 @@ func _run(mode: String) -> void:
 		await process_frame
 	g = l.game
 	g._xr_cam.fov = 96.0  # Quest 3, vertical, per eye (about)
+	if mode == "showcase":
+		g._xr_cam.fov = 72.0  # a 16:9 frame: 72 deg vertical is ~104 deg across, about the Quest's own width
+	if OS.get_environment("VRH_NOMUSIC") != "":  # demo footage: the edit lays the score under continuously
+		var mb := AudioServer.get_bus_index("music")
+		if mb >= 0:
+			AudioServer.set_bus_mute(mb, true)
+	if OS.get_environment("VRH_FAST") != "":
+		Engine.time_scale = float(OS.get_environment("VRH_FAST"))
 	g._xr_cam.current = true
 	bot.attach(g)
 	mon = load("res://tools/vr_monitor.gd").new()
@@ -73,6 +81,8 @@ func _run(mode: String) -> void:
 			await do_cutscene()
 		"abuse":
 			await do_abuse()
+		"showcase":
+			await do_showcase()
 		"playthrough":
 			normal = true
 			bot.natural = true
@@ -894,3 +904,310 @@ func hand_probe() -> void:
 			var sp := cam.unproject_position(wp)
 			parts.append("%s local=%s scale=%s vis=%s tr=%s fb=%s lost=%.1f in_tree_vis=%s scr=(%d,%d) behind=%s" % [v.side, str(v._joints[0].origin.snapped(Vector3.ONE * 0.01)), str(v.global_transform.basis.get_scale().snapped(Vector3.ONE * 0.01)), str(v.visible), str(v.tracked), str(v.fallback), v._lost, str(v.is_visible_in_tree()), int(sp.x), int(sp.y), str(cam.is_position_behind(wp))])
 		bot.note("     HANDS " + " | ".join(parts))
+
+
+
+# ---- showcase: the demo video (2026-11-18): a player who knows the game, at 1x ------------------------------------
+
+func route_weights() -> Dictionary:
+	## Cell -> weight: the cells tonight's groups walk, from their forest gap to the nearest standing house; cells
+	## near the houses count more (every group passes there, and it is the last chance to stop them).
+	var w := {}
+	var standing: Array[int] = g.standing_houses()
+	for grp in g.night_plan():
+		var gap: Array = GameConfig.SPAWNS.get(grp["spawn"], [])
+		if gap.is_empty():
+			continue
+		var rt: Dictionary = g.nav.route(gap[gap.size() / 2], standing)
+		if rt.is_empty():
+			continue
+		var path: Array = rt["path"]
+		var n := float((grp["enemies"] as Array).size())
+		for i in path.size():
+			var c: Vector2i = path[i]
+			w[c] = float(w.get(c, 0.0)) + n * (1.0 + 1.5 * float(i) / maxf(path.size() - 1, 1))
+	return w
+
+
+func best_build() -> Array:
+	## [card, cell, score]: the tower card and spot covering the most of tonight's routes per faith spent.
+	var w := route_weights()
+	var best: Array = []
+	var best_v := 0.0
+	for cd in g._tray.cards:
+		if cd.data.get("kind", "") != "tower":
+			continue
+		var id: String = cd.data.get("id", "")
+		var spec: Dictionary = GameConfig.TOWERS.get(id, {})
+		if spec.is_empty() or g.faith < int(spec["cost"]):
+			continue
+		var rng_c: float = float(spec["range"])
+		var dps: float = float(spec["damage"]) / maxf(float(spec["interval"]), 0.1) * (1.6 if spec.get("kind", "") == "spawner" else 1.0)
+		for x in GameConfig.SIZE - 1:
+			for y in GameConfig.SIZE - 1:
+				var c := Vector2i(x, y)
+				if w.has(c) or w.has(c + Vector2i(1, 0)) or w.has(c + Vector2i(0, 1)) or w.has(c + Vector2i(1, 1)):
+					continue  # never on the route itself: the shades would only walk round it
+				if not g.can_build(id, c):
+					continue
+				var centre := Vector2(c) + Vector2(1, 1)
+				var cover := 0.0
+				for pc in w:
+					if centre.distance_to(Vector2(pc) + Vector2(0.5, 0.5)) <= rng_c:
+						cover += float(w[pc])
+				var v := cover * dps / float(spec["cost"])
+				if v > best_v:
+					best_v = v
+					best = [cd, c, cover]
+	return best
+
+
+func smart_build() -> void:
+	for k in 6:
+		if g.phase != Game.Phase.DAY:
+			return
+		var b := best_build()
+		if b.is_empty():
+			return
+		var cd: Node3D = b[0]
+		var c: Vector2i = b[1]
+		var id: String = cd.data.get("id", "")
+		var n0: int = g.towers.size()
+		await bot.look(cell_world(c))  # looks where it will go, then at the card
+		await bot.hold(rng.randf_range(0.4, 0.9))
+		await bot.look(cd.global_position)
+		await bot.reach("right", cd.global_position)
+		await bot.pinch("right", true)
+		await bot.hold(0.15)
+		if g._held_card == null and g.selected == "":
+			await bot.pinch("right", false)
+			await bot.rest("right")
+			continue
+		await bot.look(cell_world(c))
+		await bot.move_with("right", cell_world(c), rng.randf_range(0.9, 1.3))
+		await bot.hold(rng.randf_range(0.15, 0.35))
+		await bot.pinch("right", false)
+		await bot.hold(0.6)
+		bot.note("     %s on %s (covers %.0f): %s, faith %d" % [id, str(c), b[2], "BUILT" if g.towers.size() > n0 else "not built: " + str(g.last_message).left(60), g.faith])
+		await bot.rest("right")
+		await bot.hold(rng.randf_range(0.6, 1.4))
+
+
+func cluster_target() -> Node3D:
+	## The shade with the most others round it, ties to the one nearest a house.
+	var live: Array = g.enemies.filter(func(e): return is_instance_valid(e) and not e.is_queued_for_deletion())
+	var best: Node3D = null
+	var best_v := -1.0
+	for e in live:
+		var p: Vector3 = (e as Node3D).global_position
+		var n := 0.0
+		for o in live:
+			if p.distance_to((o as Node3D).global_position) < 0.14:
+				n += 1.0
+		var near := 9.0
+		for h in g.houses:
+			if is_instance_valid(h) and h.hp > 0:
+				near = minf(near, p.distance_to(h.global_position))
+		var v := n * 2.0 + 1.0 / (0.05 + near)
+		if v > best_v:
+			best_v = v
+			best = e
+	return best
+
+
+func smart_night() -> void:
+	var ready: Array = []
+	for cd in g._tray.cards:
+		if cd.data.get("kind", "") == "spell" and g.spells.is_ready(cd.data.get("id", "")):
+			ready.append(cd)
+	var t := cluster_target()
+	if ready.is_empty() or t == null:
+		if t != null:
+			await bot.look(t.global_position)
+		else:
+			await bot.look(g.board.global_position)
+		await bot.hold(rng.randf_range(0.8, 1.6))
+		return
+	var sc: Node3D = ready[rng.randi_range(0, ready.size() - 1)]
+	var id: String = sc.data.get("id", "")
+	await bot.look(sc.global_position)
+	await bot.reach("right", sc.global_position)
+	await bot.pinch("right", true)
+	await bot.hold(0.15)
+	if g._held_spell_cards.is_empty():
+		await bot.pinch("right", false)
+		await bot.rest("right")
+		return
+	t = cluster_target()  # they moved while the hand went for the card
+	var aim: Vector3 = (t.global_position if t != null else g.board.global_position) + Vector3(0, 0.05, 0)
+	await bot.look(aim)
+	await bot.move_with("right", aim, rng.randf_range(0.6, 0.9))
+	if t != null and is_instance_valid(t):  # follow it a moment, as a player leads a moving target
+		await bot.move_with("right", t.global_position + Vector3(0, 0.05, 0), 0.25)
+	await bot.pinch("right", false)
+	await bot.hold(0.3)
+	bot.note("     cast %s: %s" % [id, "ok" if not g.spells.is_ready(id) else "NO CAST"])
+	await bot.rest("right")
+	await bot.hold(rng.randf_range(0.5, 1.2))
+
+
+var _show_day := -1
+
+
+func showcase_day() -> void:
+	if _show_day == g.night + g.loop * 100:
+		await glance()
+		return
+	_show_day = g.night + g.loop * 100
+	bot.note("DAY %d (loop %d): faith %d, towers %d, requests %d" % [g.night + 1, g.loop + 1, g.faith, g.towers.size(), g.requests.size()])
+	await bot.look(g.board.global_position)
+	await bot.hold(rng.randf_range(1.5, 2.5))
+	if g.night > 0 or g.loop > 0:  # later days: no building (the fall is on purpose); the hourglass calls the night
+		if g.loop == 0:
+			var gp: Vector3 = g._fast_glass.global_position + Vector3(0, 0.03, 0)
+			await bot.look(gp)
+			await bot.reach("right", gp)
+			await bot.pinch("right", true)
+			await bot.hold(GameConfig.FAST_HOLD + 0.4)
+			await bot.pinch("right", false)
+			await bot.rest("right")
+		return
+	for rq in g.requests.duplicate():
+		if is_instance_valid(rq) and not rq.done and g.phase == Game.Phase.DAY:
+			await do_any_quest(rq)
+	# the lens: a look at tonight's paths
+	var lp: Vector3 = g.lens_grip_position()
+	await bot.look(lp)
+	await bot.reach("right", lp)
+	await bot.pinch("right", true)
+	await bot.move_with("right", bot.eye_world().lerp(g.board.global_position, 0.45), 0.9)
+	await wait_until(func(): return g.foresight.showing, 2.0)
+	await bot.look(g.board.global_position)
+	await bot.hold(3.5)
+	await bot.pinch("right", false)
+	await bot.rest("right")
+	await smart_build()
+
+
+func do_showcase() -> void:
+	l._step = Launcher.HINTS.size()
+	l._end_hints()
+	bot.natural = true
+	bot.aim_error = 0.004
+	await bot.rest("right")
+	await bot.rest("left")
+	await settle_tray()
+	# demo framing: the head turns about half way to the tray (the eyes do the rest), so the island stays in shot
+	bot.gaze_anchor = g.board.global_position
+	bot.head_share = 0.45
+	var loop0: int = g.loop
+	var t0 := Time.get_ticks_msec()
+	while g.loop == loop0 and Time.get_ticks_msec() - t0 < 40 * 60 * 1000:
+		if g.is_cutscene():
+			await cutscene_turn()
+			continue
+		# lean in over the board at night (the shades are small), sit back by day
+		var lean := Vector3.ZERO
+		if g.phase == Game.Phase.NIGHT and not g.is_cutscene():
+			var to_b: Vector3 = bot.origin.global_transform.basis.inverse() * (g.board.global_position - bot.eye_world())
+			lean = Vector3(to_b.x, 0.0, to_b.z).normalized() * 0.16 + Vector3(0, -0.05, 0)
+		bot.lean_target = lean
+		match g.phase:
+			Game.Phase.NIGHT:
+				if g.night == 0:
+					await smart_night()
+				else:
+					var tg := cluster_target()
+					await bot.look(tg.global_position if tg != null else g.board.global_position)
+					await bot.hold(rng.randf_range(1.5, 3.0))
+			Game.Phase.DAY:
+				await showcase_day()
+			Game.Phase.CARDS:
+				await cards_turn()
+			_:
+				await bot.hold(0.5)
+	check(g.loop == loop0 + 1, "the first loop ends and loop 2 begins")
+	bot.lean_target = Vector3.ZERO
+	await bot.look(g.board.to_global(Vector3(0, 0.3, 0.05)))  # the loop title card over the board
+	await bot.hold(3.0)
+	await glance()
+	await bot.hold(6.0)
+
+
+
+func quest_goal(rq) -> Vector3:
+	## World point the held item has to be let go at (the request's own rules, help_request.gd _release_new).
+	var pr: Node3D = rq.prop
+	var par: Node3D = pr.get_parent()
+	match rq.kind:
+		"laundry":
+			return par.to_global((rq._line_a + rq._line_b) * 0.5)
+		"weeds":
+			return par.to_global(rq._home + Vector3(0, 0.08, 0))
+		"well", "firewood", "letter", "apples", "cat":
+			return par.to_global(rq._goal + Vector3(0, 0.015, 0))
+	var ends: PackedVector3Array = rq.trail_ends()
+	return rq.to_global(ends[1]) if ends.size() > 1 else pr.global_position
+
+
+func do_any_quest(rq) -> void:
+	if rq == null or not is_instance_valid(rq) or rq.done:
+		return
+	if rq.kind in ["apples", "bell", "cat"]:
+		bot.note("     quest %s skipped (needs its own gesture)" % rq.kind)
+		return
+	if rq.kind == "prayer":
+		var pa: Node3D = rq.asker()
+		if pa != null:
+			await bot.look(pa.global_position)
+			await bot.hold(rng.randf_range(0.5, 0.9))
+			await bot.tap_node("right", pa, Vector3(0, 0.035, 0))
+			await bot.hold(0.5)
+		bot.note("     quest prayer: %s" % ("DONE" if rq.done else "not done"))
+		await bot.rest("right")
+		return
+	if not rq.accepted:
+		var a: Node3D = rq.asker()
+		if a == null:
+			return
+		await bot.look(a.global_position)
+		await bot.hold(rng.randf_range(0.4, 0.8))
+		await bot.tap_node("right", a, Vector3(0, 0.035, 0))
+		await bot.hold(0.6)
+		if not rq.accepted:
+			return
+	if rq.kind == "lights":
+		for i in rq._lamps.size() * 2:
+			i = i % rq._lamps.size()
+			if not rq._lit[i]:
+				var lp: Vector3 = (rq._lamps[i] as Node3D).global_position + Vector3(0, 0.012, 0)
+				await bot.look(lp)
+				await bot.reach("right", lp)
+				await bot.hold(rng.randf_range(0.3, 0.5))
+	elif rq.kind == "warm":
+		var hp: Vector3 = g.board.to_global(g.houses[rq.house].position + Vector3(0, 0.1, 0))
+		await bot.look(hp)
+		await bot.reach("right", hp)
+		await bot.hold(3.6)
+	for k in (0 if rq.kind in ["lights", "warm"] else 8):
+		if rq.done or not is_instance_valid(rq) or g.phase != Game.Phase.DAY:
+			break
+		var gp: Vector3 = rq.grab_point()
+		if gp.y < -100.0:
+			break
+		await bot.look(gp)
+		await bot.reach("right", gp)
+		await bot.pinch("right", true)
+		await bot.hold(0.15)
+		if not rq.held:
+			await bot.pinch("right", false)
+			bot.note("     quest %s: the pinch did not take the item (hand %.3f m from it)" % [rq.kind, bot.hand_point("right").distance_to(gp)])
+			break
+		var goal := quest_goal(rq)
+		await bot.look(goal)
+		await bot.move_with("right", goal, rng.randf_range(0.8, 1.2))
+		await bot.hold(rng.randf_range(0.15, 0.3))
+		await bot.pinch("right", false)
+		await bot.hold(0.4)
+	bot.note("     quest %s: %s" % [rq.kind, "DONE" if rq.done else "not done (progress %.0f)" % rq.progress])
+	await bot.rest("right")

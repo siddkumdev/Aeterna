@@ -26,10 +26,50 @@ var tremor := 0.0015  # m
 var head_rec_t := 120.0  # where in the recording the head is taken from (it plays on from there, for the sway)
 var look_target := Vector3.INF
 var head_offset := Vector3.ZERO  # stress tests: leaning, standing up (origin space, m)
+var gaze_anchor := Vector3.INF  # natural: the head turns only head_share of the way from here to a target, the eyes do the rest
+var head_share := 1.0
+var lean_target := Vector3.ZERO  # natural: head_offset eases toward this (leaning in, origin space, m)
 var natural := false  # playthrough videos (the user, 2026-11-18): curved reaches with overshoot and a correction, a
 # pause before a pinch, breathing drift, spring-like head turns with idle motion, hands resting in view over the tray
 var _head_yaw_v := 0.0
 var _head_pitch_v := 0.0
+var _lib := {}  # res://tools/motion_lib.json (tools/motion_mine.gd): the team's real reaches, pinch holds, head motion
+var _reach_by_d: Array = []  # the real reaches sorted by distance
+
+
+func lib() -> Dictionary:
+	if _lib.is_empty():
+		var f := FileAccess.open("res://tools/motion_lib.json", FileAccess.READ)
+		if f != null:
+			var d: Variant = JSON.parse_string(f.get_as_text())
+			if d is Dictionary:
+				_lib = d
+				_reach_by_d = (d["reaches"] as Array).duplicate()
+				_reach_by_d.sort_custom(func(a, b): return float(a["d"]) < float(b["d"]))
+	return _lib
+
+
+func real_hold(lo: float, hi: float) -> float:
+	## A pinch held as long as a real one (the recorded holds), kept inside lo..hi.
+	var h: Array = lib().get("holds", [])
+	return clampf(float(h[rng.randi_range(0, h.size() - 1)]) if not h.is_empty() else 0.2, lo, hi)
+
+
+func _pick_reach(d: float) -> Dictionary:
+	## One of the eight real reaches closest in distance.
+	lib()
+	if _reach_by_d.is_empty():
+		return {}
+	var lo := 0
+	var hi := _reach_by_d.size() - 1
+	while lo < hi:
+		var mid := (lo + hi) >> 1
+		if float(_reach_by_d[mid]["d"]) < d:
+			lo = mid + 1
+		else:
+			hi = mid
+	var a := clampi(lo - 4, 0, maxi(_reach_by_d.size() - 8, 0))
+	return _reach_by_d[mini(a + rng.randi_range(0, 7), _reach_by_d.size() - 1)]
 var lost := {}  # stress tests: side -> true while that hand's tracking is gone
 var log_lines: PackedStringArray = []
 var rng := RandomNumberGenerator.new()
@@ -72,6 +112,15 @@ func head_transform() -> Transform3D:
 		var tt := fposmod(head_rec_t + _clock, maxf(duration - 1.0, 1.0))
 		sway = (sample(tt)["head"].origin - base.origin).limit_length(0.03)  # the recorded small head motion, not its big moves
 	var o: Vector3 = base.origin + sway + head_offset
+	if natural:
+		var hm: Array = lib().get("head", [])
+		if not hm.is_empty():  # the team's own head jitter (yaw, pitch, roll, position), played on a loop
+			var fi := fposmod(_clock * 30.0, float(hm.size() - 1))
+			var a: Array = hm[int(fi)]
+			var b: Array = hm[mini(int(fi) + 1, hm.size() - 1)]
+			var fr := fi - floorf(fi)
+			var m := Vector3(lerpf(a[0], b[0], fr), lerpf(a[1], b[1], fr), lerpf(a[2], b[2], fr))
+			return Transform3D(Basis.from_euler(Vector3(_head_pitch + m.y, _head_yaw + m.x, m.z)), o)
 	return Transform3D(Basis.from_euler(Vector3(_head_pitch, _head_yaw, 0.0)), o)
 
 
@@ -106,24 +155,31 @@ func reach(side: String, world: Vector3, exact := false, dur := -1.0) -> void:
 	var total: float = dur if dur > 0.0 else clampf(0.25 + 0.16 * log(1.0 + d / 0.01) / log(2.0), 0.25, 1.3)  # Fitts' law
 	look_target = world
 	if natural:
-		total *= rng.randf_range(0.9, 1.2)
-		var drag := dur > 0.0  # a deliberate move while pinching: a flatter arc, no overshoot
-		var dirv: Vector3 = (target - (s["pos"] as Vector3)).normalized() if d > 0.001 else Vector3.ZERO
-		var first := target
-		if not drag and d > 0.06:
-			first = target + dirv * clampf(d * 0.04, 0.004, 0.015)  # the hand overshoots a little, then corrects
-		_start_move(s, first, total * (0.85 if first != target else 1.0), d * (0.08 if drag else 0.18))
+		var drag := dur > 0.0
+		if not drag and d > 0.04:
+			await hold(rng.randf_range(0.12, 0.28))  # the eyes get there first, then the hand goes
+		var clip := _pick_reach(d) if d > 0.03 else {}
+		if clip.is_empty():
+			_start_move(s, target, total, d * 0.1)
+		else:
+			# the real reach's own timing, stretched gently with distance (Fitts), a little slower when dragging
+			var cd: float = float(clip["dur"]) * pow(d / maxf(float(clip["d"]), 0.01), 0.35) * (1.25 if drag else 1.0)
+			s["from"] = s["pos"]
+			s["to"] = target
+			s["ctrl"] = null
+			s["clip"] = clip["path"]
+			s["mirror"] = side == "left"
+			s["t"] = 0.0
+			s["dur"] = clampf(cd, 0.25, 1.8)
 		while float(s["t"]) < 1.0:
 			await get_tree().process_frame
-		if first != target:
-			_start_move(s, target, rng.randf_range(0.14, 0.22), 0.0)
-			while float(s["t"]) < 1.0:
-				await get_tree().process_frame
-		await hold(rng.randf_range(0.08, 0.3))  # a look before the fingers close
+		s["clip"] = null
+		await hold(rng.randf_range(0.05, 0.15))
 		return
 	s["from"] = s["pos"]
 	s["to"] = target
 	s["ctrl"] = null
+	s["clip"] = null
 	s["t"] = 0.0
 	s["dur"] = total
 	while float(s["t"]) < 1.0:
@@ -154,7 +210,7 @@ func reach_node(side: String, n: Node3D, offset := Vector3.ZERO) -> void:
 func tap_node(side: String, n: Node3D, offset := Vector3.ZERO) -> void:
 	await reach_node(side, n, offset)
 	await pinch(side, true)
-	await hold(0.12)
+	await hold(real_hold(0.12, 0.45) if natural else 0.12)
 	await pinch(side, false)
 
 
@@ -178,7 +234,7 @@ func hold(seconds: float) -> void:
 func tap(side: String, world: Vector3) -> void:
 	await reach(side, world)
 	await pinch(side, true)
-	await hold(0.12)
+	await hold(real_hold(0.12, 0.45) if natural else 0.12)
 	await pinch(side, false)
 
 
@@ -224,18 +280,30 @@ func _process(delta: float) -> void:
 
 
 func _tick_head(dt: float) -> void:
+	if natural:
+		head_offset = head_offset.lerp(lean_target, 1.0 - exp(-dt * 1.2))
 	if look_target != Vector3.INF:
 		var eye := eye_world()
-		var v := origin.global_transform.basis.inverse() * (look_target - eye)
+		var tgt := look_target
+		if natural and gaze_anchor != Vector3.INF:
+			tgt = gaze_anchor.lerp(look_target, head_share)  # real gaze shifts: the neck does part, the eyes the rest
+		var v := origin.global_transform.basis.inverse() * (tgt - eye)
 		var want_yaw := atan2(-v.x, -v.z)
 		var want_pitch := clampf(atan2(v.y, Vector2(v.x, v.z).length()) * 0.8, -1.0, 0.2)  # eyes do the last part
-		if natural:  # a damped spring: the head starts slowly, speeds up and settles, with a little idle motion
-			var w := 6.0
+		if natural:
+			# a critically damped spring matched to the recorded turns (15 deg peaks ~1.1 rad/s and settles in ~0.4 s);
+			# big turns saturate near the recorded top speed (~1.9 rad/s) as real necks do
+			var w := 10.0
 			var dy := wrapf(want_yaw - _head_yaw, -PI, PI)
 			_head_yaw_v += (dy * w * w - 2.0 * w * _head_yaw_v) * dt
 			_head_pitch_v += ((want_pitch - _head_pitch) * w * w - 2.0 * w * _head_pitch_v) * dt
-			_head_yaw += _head_yaw_v * dt + (sin(_clock * 0.71) * 0.6 + sin(_clock * 1.37 + 2.0) * 0.4) * 0.012 * dt
-			_head_pitch += _head_pitch_v * dt + (sin(_clock * 0.53 + 1.0) * 0.6 + sin(_clock * 1.11) * 0.4) * 0.010 * dt
+			var sp := Vector2(_head_yaw_v, _head_pitch_v)
+			if sp.length() > 1.9:
+				sp = sp.normalized() * 1.9
+				_head_yaw_v = sp.x
+				_head_pitch_v = sp.y
+			_head_yaw += _head_yaw_v * dt
+			_head_pitch += _head_pitch_v * dt
 		else:
 			var k := 1.0 - exp(-dt * 5.0)
 			_head_yaw = lerp_angle(_head_yaw, want_yaw, k)
@@ -255,7 +323,30 @@ func _tick_hand(side: String, dt: float) -> void:
 		var u: float = s["t"]
 		var mj := u * u * u * (10.0 - 15.0 * u + 6.0 * u * u)  # minimum-jerk profile
 		var c = s.get("ctrl")
-		if c != null and fol == null:  # quadratic Bezier through the lifted middle
+		var clip = s.get("clip")
+		if clip != null:
+			# a real recorded reach, re-aimed: its path in its own start->end frame, laid on this start->target,
+			# with what is left of its end error blended out so it lands where it was aimed
+			var A: Vector3 = s["from"]
+			var B: Vector3 = s["to"]
+			var dd := A.distance_to(B)
+			var e1 := (B - A) / maxf(dd, 0.0001)
+			var e2 := Vector3.UP - e1 * e1.dot(Vector3.UP)
+			e2 = e2.normalized() if e2.length() > 0.05 else Vector3.FORWARD
+			var e3 := e1.cross(e2) * (-1.0 if bool(s.get("mirror", false)) else 1.0)
+			var path: Array = clip
+			var fi := u * float(path.size() - 1)
+			var i0 := int(fi)
+			var i1 := mini(i0 + 1, path.size() - 1)
+			var fr := fi - float(i0)
+			var q0: Array = path[i0]
+			var q1: Array = path[i1]
+			var q := Vector3(lerpf(q0[0], q1[0], fr), lerpf(q0[1], q1[1], fr), lerpf(q0[2], q1[2], fr))
+			var qe: Array = path[path.size() - 1]
+			var end_err := Vector3(float(qe[0]) - 1.0, qe[1], qe[2])
+			q -= end_err * smoothstep(0.6, 1.0, u)
+			s["pos"] = A + (e1 * q.x + e2 * q.y + e3 * q.z) * dd
+		elif c != null and fol == null:  # quadratic Bezier through the lifted middle
 			var a: Vector3 = (s["from"] as Vector3).lerp(c, mj)
 			var b: Vector3 = (c as Vector3).lerp(s["to"], mj)
 			s["pos"] = a.lerp(b, mj)

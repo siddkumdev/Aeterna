@@ -20,7 +20,7 @@ Set up on 2026-11-10. The first install on a Quest 3 worked (`adb install` Succe
    ```
    Inside `<application>`:
    ```xml
-   <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|quest3s" />
+   <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3|quest3s" />
    ```
 5. **Editor settings:** `export/android/java_sdk_path` (JDK 17) and `android_sdk_path` in Godot's editor settings.
 
@@ -38,3 +38,8 @@ For a release-mode APK (requires release keystore set in Godot Editor Settings):
 & (Select-String -Path ..\local.env -Pattern '^GODOT_EXE=(.*)').Matches[0].Groups[1].Value.Trim('"') --headless --xr-mode off --path . --export-release "Quest 3" ../_work/aeterna_quest_release.apk
 ```
 In the headset: Library → Unknown Sources → Aeterna. The headset must allow USB debugging. Check with `adb devices`, which should say `device`, not `unauthorized`.
+
+## Final build (2026-11-18)
+- Supported devices: Quest 2, Quest Pro, Quest 3, Quest 3S (manifest line above; the preset's quest_2/pro/3 flags on). Quest 1 left out (Meta ended its support).
+- One native library: arm64-v8a only (preset architectures).
+- Release-signed with a release keystore kept OUTSIDE the repo on the building machine (Siddharth's: %APPDATA%/Godot/keystores/aeterna_release.keystore, credentials in the .txt beside it). Keep that key: updates of an installed app must be signed with it. Export from the command line with the env vars GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD and --export-release "Quest 3".

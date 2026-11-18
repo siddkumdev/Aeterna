@@ -1,0 +1,182 @@
+{
+ "_about": "The storyboard: each clip starts at a game event (anchor) plus off seconds; len = seconds on screen. make_cuts.py turns it into src/cuts.json.",
+ "hook": [
+  {
+   "at": "cast1",
+   "off": -1.5,
+   "len": 4
+  },
+  {
+   "at": "lost",
+   "off": 9,
+   "len": 4
+  },
+  {
+   "at": "hourglass",
+   "off": 2.2,
+   "len": 4
+  }
+ ],
+ "titlePlate": [
+  {
+   "at": "day1",
+   "off": 56,
+   "len": 0
+  }
+ ],
+ "day": [
+  {
+   "at": "prayer_done",
+   "off": -6,
+   "len": 7,
+   "caption": {
+    "kicker": "By day",
+    "line": "Answer the villagers who believe in you.",
+    "accent": "believe"
+   }
+  },
+  {
+   "at": "warm_done",
+   "off": -7,
+   "len": 6
+  },
+  {
+   "at": "warm_done",
+   "off": 5,
+   "len": 5,
+   "caption": {
+    "kicker": "The lens",
+    "line": "See where tonight's shades will walk.",
+    "accent": "shades",
+    "hold": 4
+   }
+  },
+  {
+   "at": "build1",
+   "off": -8,
+   "len": 8,
+   "caption": {
+    "line": "Raise towers with your own hands.",
+    "accent": "hands",
+    "hold": 6
+   }
+  },
+  {
+   "at": "build3",
+   "off": -7,
+   "len": 7
+  }
+ ],
+ "night": [
+  {
+   "at": "night1",
+   "off": -1,
+   "len": 6,
+   "caption": {
+    "kicker": "By night",
+    "line": "The shades come out of the forest.",
+    "accent": "shades",
+    "hold": 5
+   }
+  },
+  {
+   "at": "cast1",
+   "off": -4.5,
+   "len": 6,
+   "caption": {
+    "line": "Pinch a spell. Throw it where they gather.",
+    "accent": "Throw",
+    "hold": 5
+   }
+  },
+  {
+   "at": "cast3",
+   "off": -5,
+   "len": 7
+  },
+  {
+   "at": "cast2",
+   "off": -3,
+   "len": 6
+  },
+  {
+   "at": "dawn2",
+   "off": -0.5,
+   "len": 5,
+   "caption": {
+    "line": "Hold until dawn.",
+    "accent": "dawn",
+    "hold": 4
+   }
+  }
+ ],
+ "fall": [
+  {
+   "at": "night2",
+   "off": 0,
+   "len": 5,
+   "caption": {
+    "kicker": "Night two",
+    "line": "Every night the dark comes back stronger.",
+    "accent": "stronger",
+    "hold": 4.5
+   }
+  },
+  {
+   "at": "night2",
+   "off": 28,
+   "len": 6
+  },
+  {
+   "at": "lost",
+   "off": -9,
+   "len": 10,
+   "caption": {
+    "line": "And one night, the village falls.",
+    "accent": "falls",
+    "hold": 6
+   }
+  }
+ ],
+ "rewind": [
+  {
+   "at": "lost",
+   "off": 6,
+   "len": 8,
+   "caption": {
+    "kicker": "Skotos",
+    "line": "The god of the dark has been waiting.",
+    "accent": "waiting",
+    "hold": 6
+   }
+  },
+  {
+   "at": "hourglass",
+   "off": -10,
+   "len": 5
+  },
+  {
+   "at": "hourglass",
+   "off": 0,
+   "len": 5.5,
+   "caption": {
+    "line": "Grab the hourglass. Turn back time.",
+    "accent": "time",
+    "hold": 5
+   }
+  }
+ ],
+ "loop2": [
+  {
+   "at": "loop2",
+   "off": 0,
+   "len": 10,
+   "caption": {
+    "kicker": "Loop two",
+    "line": "The village returns. Your cards remember.",
+    "accent": "remember",
+    "hold": 8
+   }
+  }
+ ]
+}

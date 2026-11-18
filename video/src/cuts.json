@@ -1,0 +1,181 @@
+{
+ "hook": [
+  {
+   "from": 193.1,
+   "len": 4,
+   "src": "footage/clips/hook_0.mp4"
+  },
+  {
+   "from": 299.9,
+   "len": 4,
+   "src": "footage/clips/hook_1.mp4"
+  },
+  {
+   "from": 330.3,
+   "len": 4,
+   "src": "footage/clips/hook_2.mp4"
+  }
+ ],
+ "titlePlate": [
+  {
+   "from": 58.3,
+   "len": 0,
+   "src": "footage/clips/titlePlate_0.mp4"
+  }
+ ],
+ "day": [
+  {
+   "from": 14.27,
+   "len": 7,
+   "caption": {
+    "kicker": "By day",
+    "line": "Answer the villagers who believe in you.",
+    "accent": "believe"
+   },
+   "src": "footage/clips/day_0.mp4"
+  },
+  {
+   "from": 33.97,
+   "len": 6,
+   "src": "footage/clips/day_1.mp4"
+  },
+  {
+   "from": 45.97,
+   "len": 5,
+   "caption": {
+    "kicker": "The lens",
+    "line": "See where tonight's shades will walk.",
+    "accent": "shades",
+    "hold": 4
+   },
+   "src": "footage/clips/day_2.mp4"
+  },
+  {
+   "from": 52.0,
+   "len": 8,
+   "caption": {
+    "line": "Raise towers with your own hands.",
+    "accent": "hands",
+    "hold": 6
+   },
+   "src": "footage/clips/day_3.mp4"
+  },
+  {
+   "from": 72.13,
+   "len": 7,
+   "src": "footage/clips/day_4.mp4"
+  }
+ ],
+ "night": [
+  {
+   "from": 183.03,
+   "len": 6,
+   "caption": {
+    "kicker": "By night",
+    "line": "The shades come out of the forest.",
+    "accent": "shades",
+    "hold": 5
+   },
+   "src": "footage/clips/night_0.mp4"
+  },
+  {
+   "from": 190.1,
+   "len": 6,
+   "caption": {
+    "line": "Pinch a spell. Throw it where they gather.",
+    "accent": "Throw",
+    "hold": 5
+   },
+   "src": "footage/clips/night_1.mp4"
+  },
+  {
+   "from": 214.83,
+   "len": 7,
+   "src": "footage/clips/night_2.mp4"
+  },
+  {
+   "from": 208.4,
+   "len": 6,
+   "src": "footage/clips/night_3.mp4"
+  },
+  {
+   "from": 219.23,
+   "len": 5,
+   "caption": {
+    "line": "Hold until dawn.",
+    "accent": "dawn",
+    "hold": 4
+   },
+   "src": "footage/clips/night_4.mp4"
+  }
+ ],
+ "fall": [
+  {
+   "from": 236.67,
+   "len": 5,
+   "caption": {
+    "kicker": "Night two",
+    "line": "Every night the dark comes back stronger.",
+    "accent": "stronger",
+    "hold": 4.5
+   },
+   "src": "footage/clips/fall_0.mp4"
+  },
+  {
+   "from": 264.67,
+   "len": 6,
+   "src": "footage/clips/fall_1.mp4"
+  },
+  {
+   "from": 281.9,
+   "len": 10,
+   "caption": {
+    "line": "And one night, the village falls.",
+    "accent": "falls",
+    "hold": 6
+   },
+   "src": "footage/clips/fall_2.mp4"
+  }
+ ],
+ "rewind": [
+  {
+   "from": 296.9,
+   "len": 8,
+   "caption": {
+    "kicker": "Skotos",
+    "line": "The god of the dark has been waiting.",
+    "accent": "waiting",
+    "hold": 6
+   },
+   "src": "footage/clips/rewind_0.mp4"
+  },
+  {
+   "from": 318.1,
+   "len": 5,
+   "src": "footage/clips/rewind_1.mp4"
+  },
+  {
+   "from": 328.1,
+   "len": 5.5,
+   "caption": {
+    "line": "Grab the hourglass. Turn back time.",
+    "accent": "time",
+    "hold": 5
+   },
+   "src": "footage/clips/rewind_2.mp4"
+  }
+ ],
+ "loop2": [
+  {
+   "from": 335.83,
+   "len": 10,
+   "caption": {
+    "kicker": "Loop two",
+    "line": "The village returns. Your cards remember.",
+    "accent": "remember",
+    "hold": 8
+   },
+   "src": "footage/clips/loop2_0.mp4"
+  }
+ ]
+}

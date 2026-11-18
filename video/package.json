@@ -1,0 +1,21 @@
+{
+  "name": "aeterna-demo-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aeterna demo video (under 3 minutes) composed in Remotion; shot recipes adapted from video-shotcraft (Apache-2.0).",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts AeternaDemo out/aeterna_demo.mp4",
+    "still": "remotion still src/index.ts AeternaDemo"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.484",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.484"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "6.0.3"
+  }
+}
