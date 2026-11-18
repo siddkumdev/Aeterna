@@ -2,7 +2,18 @@
 
 The handoff file. Read this first after a break or a compaction (skill `lean-context`), and update it before stopping. Keep it short: delete what no longer matters.
 
-Last updated: 2026-11-18 (overnight run done, final check passed, submission draft in docs/SUBMISSION_DRAFT.md); before: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
+Last updated: 2026-11-18 night (headset video fixes, see first section); before: 2026-11-18 (overnight run done, final check passed, submission draft in docs/SUBMISSION_DRAFT.md); before: 2026-11-17 (quest tracking + story perf); previously 2026-11-16 (Siddharth: quest clarity & HUD overhaul across `game.gd`, `help_request.gd`, `launcher.gd`, `villager.gd`, `village_life.gd`, `character_rig.gd`, `quest_outline.gdshader`, `quest_act_shot.gd`, `game_selftest.gd`; `608` checks pass, Quest 3 VR test pending).
+
+## 2026-11-18 night (headset video fixes, LAST build) - UNVERIFIED ON HEADSET
+From the user's 10-min headset video (`docs/QUEST_VIDEO_2026-11-18.md`). Commits c5dc5fc, 5c7359f. Selftest 867/0.
+- Tray: one brass handle mid front edge; carried tray never turns (`tray_held_transform` keeps start.basis).
+- Zoom removed (`GameConfig.ZOOM_ENABLED` false); tutorial 13 steps (QUEST 8, SELL 9, REBUILD 10, HOURGLASS 11, NIGHT 12).
+- Continue plaque fixed on the island's near-right; tutorial hint at 0.40; day clock hidden while a hint shows (`Game.hide_clock`).
+- Ledger smaller (0.8) and to the side; Veil lattice fades near the eye (`veil_dome` near_clear/near_full).
+- Shimmer: soft shadow filter 1 (mobile too), sun shadow_blur 2, normal_bias 1.5, village props cast no shadow. Inference: the shimmer was hard shadow edges; not seen on a headset.
+- Loss cutscene: tray + clock hidden during the story; then a big lit hourglass (`_show_big_glass`, 0.36 m toward the board from the eye) - a pinch on it turns it and the rewind runs.
+- Headset-free VR test: `godot/tools/vr_play.gd` (+ `vr_human.gd`) plays the tutorial / tray / cutscene with recorded hand shapes; all pass, 0 fails.
+Not done: double Continue at steps 0/1, waving villagers still move a little, quest slip looks large in shots.
 
 ## 2026-11-18 evening (headset day, round 3) - UNVERIFIED ON HEADSET
 From Siddharth's Quest session (recordings in `quest_data/`, perf avg 64 fps, acceptable). Commit 1027d3c:

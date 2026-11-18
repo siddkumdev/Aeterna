@@ -1257,6 +1257,10 @@ func _cutscene_turn_glass() -> void:
 		return
 	_cutscene_glass_wait = false
 	var serial := _rewind_serial
+	if board:  # the "grab the hourglass" line goes as soon as it is grabbed
+		for c in board.get_children():
+			if str(c.name) == "FallCaption":
+				c.queue_free()
 	_turn_big_glass()
 	get_tree().create_timer(CUTSCENE_GLASS).timeout.connect(func():
 		if serial == _rewind_serial:
@@ -1277,6 +1281,7 @@ func _show_big_glass() -> void:
 	if _big_glass == null:
 		var hg = load("res://assets/vfx/ew_vfx_rewind_hourglass_v02.glb")
 		if hg == null:
+			_cutscene_turn_glass()  # no model: never leave the player stuck in the dark, rewind at once
 			return
 		_big_glass = Node3D.new()
 		_big_glass.name = "BigGlass"
@@ -1298,7 +1303,7 @@ func _show_big_glass() -> void:
 	var fwd := board.global_position - e
 	fwd.y = 0.0
 	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
-	var at := e + fwd * 0.36 + Vector3(0, -0.2, 0)
+	var at := e + fwd * 0.36 + Vector3(0, -0.13, 0)  # above the story caption, still an easy seated reach
 	at.y = maxf(at.y, board.global_position.y + BIG_GLASS_HEIGHT * 0.5 + 0.05)  # never into the table
 	_big_glass.global_transform = Transform3D(Basis(Vector3.UP, atan2(fwd.x, fwd.z)), at)  # local Z toward the island: it flips facing the player
 	var top: Node3D = _big_glass.find_child("*__sand_top", true, false)
